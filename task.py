@@ -8,8 +8,8 @@ import yaml
 from experiment.cli import experiment_group
 from tune.protox.cli import protox_group
 
-main_logger = logging.getLogger("main")
-main_logger.setLevel(logging.INFO)
+task_logger = logging.getLogger("task")
+task_logger.setLevel(logging.INFO)
 
 
 class Config:
@@ -67,7 +67,7 @@ class Config:
 @click.option("--config-path", default="config.yaml")
 @click.option("--no-startup-check", is_flag=True)
 @click.pass_context
-def main(ctx, config_path, no_startup_check):
+def task(ctx, config_path, no_startup_check):
     """💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩"""
     ctx.obj = Config(config_path, startup_check=not no_startup_check)
 
@@ -99,7 +99,7 @@ def config_show(config, keys):
         output_str = output_str.rstrip()
     print(output_str)
 
-    main_logger.info(f"Read: {Path(config_path)}")
+    task_logger.info(f"Read: {Path(config_path)}")
 
 
 @config_group.command(name="write")
@@ -122,7 +122,7 @@ def config_write(config, keys, value_type, value):
     new_yaml = yaml.dump(root_yaml, default_flow_style=False).rstrip()
     Path(config_path).write_text(new_yaml)
 
-    main_logger.info(f"Updated: {Path(config_path)}")
+    task_logger.info(f"Updated: {Path(config_path)}")
 
 
 @config_group.command(name="standardize")
@@ -135,13 +135,13 @@ def config_standardize(config):
     new_yaml = yaml.dump(config_yaml, default_flow_style=False).rstrip()
     Path(config_path).write_text(new_yaml)
 
-    main_logger.info(f"Updated: {Path(config_path)}")
+    task_logger.info(f"Updated: {Path(config_path)}")
 
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s:%(name)s:%(levelname)s - %(message)s")
 
-    main.add_command(config_group)
-    main.add_command(experiment_group)
-    main.add_command(protox_group)
-    main()
+    task.add_command(config_group)
+    task.add_command(experiment_group)
+    task.add_command(protox_group)
+    task()

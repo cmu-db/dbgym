@@ -11,7 +11,7 @@ def conv_inputpath_to_abspath(inputpath: str) -> str:
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     '''
-    # (most) checks
+    # checks
     # regardless of whether the user wants an absolute, relative, or home path, I will do all checks
     # this helps errors surface more quickly
     assert type(inputpath) is str

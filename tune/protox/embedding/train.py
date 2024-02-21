@@ -1,3 +1,4 @@
+from tune.protox import protox_group
 import sys
 import os
 import yaml
@@ -595,3 +596,6 @@ def execute_train(args):
     duration = time.time() - start_time
     with open(f"{output_dir}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")
+
+def train_internal():
+    pass
