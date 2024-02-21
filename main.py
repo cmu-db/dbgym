@@ -5,6 +5,7 @@ import sys
 import click
 import yaml
 
+from experiment.cli import experiment_group
 from tune.protox.cli import protox_group
 
 main_logger = logging.getLogger("main")
@@ -64,7 +65,7 @@ class Config:
 
 @click.group()
 @click.option("--config-path", default="config.yaml")
-@click.option("--no_startup-check", is_flag=True)
+@click.option("--no-startup-check", is_flag=True)
 @click.pass_context
 def main(ctx, config_path, no_startup_check):
     """💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩"""
@@ -141,5 +142,6 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s:%(name)s:%(levelname)s - %(message)s")
 
     main.add_command(config_group)
+    main.add_command(experiment_group)
     main.add_command(protox_group)
     main()
