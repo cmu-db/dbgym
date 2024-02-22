@@ -1,52 +1,41 @@
-from tune.protox import protox_group
 import sys
 import os
 import yaml
 import json
 import random
-import argparse
-import shutil
 import tqdm
+import click
 import numpy as np
 import logging
 import gc
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import quantile_transform
 import pandas as pd
 from pathlib import Path
 import time
 import logging
 from datetime import datetime
-from functools import partialmethod
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torch.utils.data import TensorDataset
-from pytorch_metric_learning import losses, miners
 from pytorch_metric_learning.utils import logging_presets
-from pytorch_metric_learning.distances import CosineSimilarity, LpDistance
 
 import ray
-from ray.tune import with_resources, with_parameters, Tuner, TuneConfig
-from ray.tune.schedulers import MedianStoppingRule
+from ray.tune import with_resources, with_parameters, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search import ConcurrencyLimiter
-from ray.tune import Trainable, SyncConfig
+from ray.tune import SyncConfig
 from ray.air import session, RunConfig, FailureConfig
-from hyperopt import hp
-import hyperopt.pyll
 
-from embeddings.loss import COST_COLUMNS, CostLoss, get_bias_fn
-from embeddings.vae import gen_vae_collate, VAE, VAELoss
-from embeddings.trainer import VAETrainer, StratifiedRandomSampler
-from embeddings.utils import f_unpack_dict, parse_hyperopt_config
+from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
+from tune.protox.embedding.vae import gen_vae_collate, VAE, VAELoss
+from tune.protox.embedding.trainer import VAETrainer, StratifiedRandomSampler
+from tune.protox.embedding.utils import f_unpack_dict, parse_hyperopt_config
 
-from envs.workload import Workload
-from envs.spaces import IndexSpace
-from envs.spaces.index_policy import IndexRepr
+from tune.protox.env.workload import Workload
+from tune.protox.env.space.index_space import IndexSpace
+from tune.protox.env.space.index_policy import IndexRepr
 
 
 def _fetch_index_parameters(data):
@@ -380,14 +369,21 @@ def hpo_train(config, args):
         session.report({"loss": loss})
 
 
-def execute_train(args):
+@click.command()
+@click.option('--seed', default=None, type=int)
+@click.option('--output-dir', default=None, type=str)
+@click.option('--hyperparams-fpath', default=None, type=str)
+@click.pass_context
+def train(ctx, seed, output_dir, hyperparams_fpath):
+    print(ctx)
+    return
+
     # Set initial seed.
-    seed = args.seed if args.seed != 0 else random.randint(0, 1e8)
+    seed = seed if seed != None else random.randint(0, 1e8)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    output_dir = args.output_dir
     logging.getLogger().setLevel(logging.INFO)
 
     start_time = time.time()
@@ -450,6 +446,3 @@ def execute_train(args):
     duration = time.time() - start_time
     with open(f"{output_dir}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")
-
-def train_internal():
-    pass
