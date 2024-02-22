@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 
 TUNE_RELPATH = "tune"
 PROTOX_RELPATH = f"{TUNE_RELPATH}/protox"
@@ -42,3 +43,18 @@ def is_in_base_git_dir(cwd) -> bool:
     except subprocess.CalledProcessError as e:
         # this means we are not in _any_ git repo
         return False
+    
+def open_and_save(ctx, fpath, mode="r"):
+    '''
+    Open a file and "save" it to [workspace]/task_runs/run_*/
+    If the file is a symlink, we traverse it until we get to a real file
+    "Saving" can mean either copying the file or creating a symlink to it
+    We copy the file if it is a "config", meaning it just exists without having been generated
+    We create a symlink if it is a "dependency", meaning a task.py command was run to generate it
+        In these cases we create a symlink so we have full provenance for how the dependency was created
+    '''
+    # TODO: traverse symlinks
+    # TODO: check config vs dependency
+    fname = os.path.basename(fpath)
+    shutil.copy(fpath, os.path.join(ctx.obj.dbgym_this_run_path, fname))
+    return open(fpath, mode=mode)

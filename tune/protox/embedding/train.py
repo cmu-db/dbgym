@@ -37,7 +37,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import conv_inputpath_to_abspath, PROTOX_EMBEDDING_RELPATH
+from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH
 
 
 def _fetch_index_parameters(data):
@@ -350,7 +350,7 @@ def hpo_train(config, args):
 @click.option('--seed', default=None, type=int)
 @click.option('--hpo-space-fpath', default=None, type=str)
 @click.pass_context
-def train(ctx, seed, output_dir, hpo_space_fpath):
+def train(ctx, seed, hpo_space_fpath):
     # set params to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
@@ -367,7 +367,7 @@ def train(ctx, seed, output_dir, hpo_space_fpath):
     start_time = time.time()
 
     # TODO: write helper function to open files
-    with open(hpo_space_fpath, "r") as f:
+    with open_and_save(ctx, hpo_space_fpath, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
