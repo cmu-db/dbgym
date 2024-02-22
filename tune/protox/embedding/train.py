@@ -306,17 +306,14 @@ def create_train_parser(subparser):
     # Arguments for all models.
     parser.add_argument("--iterations-per-epoch", type=int)
 
-    parser.add_argument("--ray-num-gpu", type=int, default=0)
     parser.add_argument("--max-concurrent", default=1, type=int)
     parser.add_argument("--mythril-dir", type=str)
     parser.add_argument("--num-threads", type=int, default=None)
 
-    parser.add_argument("--gen-only", action="store_true", default=False)
     parser.add_argument("--dual-class", action="store_true", default=False)
     parser.add_argument("--inflate-ratio", type=int, default=1)
     parser.add_argument("--pad-min", type=int, default=None)
     parser.add_argument("--rebias", type=float, default=0)
-    parser.add_argument("--manual", action="store_true", default=False)
     parser.set_defaults(func=execute_train)
 
 
@@ -393,83 +390,6 @@ def execute_train(args):
     output_dir = args.output_dir
     logging.getLogger().setLevel(logging.INFO)
 
-    if not Path(f"{args.output_dir}/out.parquet").exists():
-        # Produce table mapping.
-        tbl_dirs = {}
-        with open(args.benchmark_config, "r") as f:
-            benchmark_config = yaml.safe_load(f)["mythril"]
-            tables = benchmark_config["tables"]
-            for i, tbl in enumerate(tables):
-                tbl_dirs[tbl] = i
-
-        files = []
-        for comp in args.input_data.split(","):
-            files.extend([f for f in Path(comp).rglob("*.parquet")])
-
-        def read(file):
-            tbl = Path(file).parts[-2]
-            if tbl not in tbl_dirs:
-                tbl = Path(file).parts[-3]
-            df = pd.read_parquet(file)
-            df["tbl_index"] = tbl_dirs[tbl]
-
-            if args.pad_min is not None:
-                if df.shape[0] < args.pad_min:
-                    df = pd.concat([df] * int(args.pad_min / df.shape[0]))
-            return df
-
-        df = pd.concat(map(read, files))
-
-        if "reference_cost" in df.columns:
-            target_cost = df.target_cost
-
-            # This expression is the improvement expression.
-            act_cost = df.reference_cost - (df.table_reference_cost - target_cost)
-            mult = (df.reference_cost / act_cost)
-            rel = ((df.reference_cost - act_cost) / act_cost)
-            mult_tbl = (df.table_reference_cost / target_cost)
-            rel_tbl = ((df.table_reference_cost - target_cost) / target_cost)
-
-            if args.table_shape:
-                df["quant_mult_cost_improvement"] = quantile_transform(mult_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
-                df["quant_rel_cost_improvement"] = quantile_transform(rel_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
-            else:
-                df["quant_mult_cost_improvement"] = quantile_transform(mult.values.reshape(-1, 1), n_quantiles=min(100000, df.shape[0]), subsample=df.shape[0])
-                df["quant_rel_cost_improvement"] = quantile_transform(rel.values.reshape(-1, 1), n_quantiles=min(100000, df.shape[0]), subsample=df.shape[0])
-
-            df.drop(columns=["reference_cost", "table_reference_cost", "target_cost"], inplace=True, errors="ignore")
-
-        if args.inflate_ratio > 1:
-            df = pd.concat([df] * args.inflate_ratio)
-
-        if args.dual_class:
-            df["real_idx_class"] = df["idx_class"]
-            df["idx_class"] = df["real_idx_class"] * df.col0.max() + df.col1
-
-        df.drop(columns=["table"], inplace=True)
-        df.fillna(0, inplace=True)
-        # Only int-ify non-cost columns.
-        columns = [c for c in df.columns if c not in COST_COLUMNS and "idx_class" not in c and "cmd" != c]
-        df[columns] = df[columns].astype(int)
-
-        if args.rebias > 0:
-            groups = df.groupby(by=["tbl_index", "idx_class"]).quant_mult_cost_improvement.describe().sort_values(by=["max"], ascending=False)
-            datum = []
-            cur_bias = 1.
-            sep_bias = args.rebias
-            for g in groups.itertuples():
-                d = df[(df.tbl_index == g.Index[0]) & (df.idx_class == g.Index[1]) & (df.quant_mult_cost_improvement >= g._6)].copy()
-                d["quant_mult_cost_improvement"] = cur_bias - (args.rebias / 2)
-                datum.append(d)
-                cur_bias -= sep_bias
-            df = pd.concat(datum, ignore_index=True)
-
-        df.to_parquet(f"{args.output_dir}/out.parquet")
-
-    if args.gen_only:
-        # We are done.
-        return
-
     start_time = time.time()
 
     with open(args.config, "r") as f:
@@ -506,7 +426,7 @@ def execute_train(args):
         log_to_file=True,
     )
 
-    resources = {"cpu": 1} if args.ray_num_gpu == 0 else {"gpu": 1 / args.ray_num_gpu}
+    resources = {"cpu": 1}
     trainable = with_resources(with_parameters(hpo_train, args=vars(args)), resources)
 
     # Hopefully this is now serializable.
