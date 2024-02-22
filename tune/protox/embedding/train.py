@@ -37,7 +37,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH
+from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH, restart_ray
 
 
 def _fetch_index_parameters(data):
@@ -351,7 +351,7 @@ def hpo_train(config, args):
 @click.option('--hpo-space-fpath', default=None, type=str)
 @click.pass_context
 def train(ctx, seed, hpo_space_fpath):
-    # set params to defaults programmatically
+    # set args to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
     if hpo_space_fpath == None:
@@ -372,6 +372,7 @@ def train(ctx, seed, hpo_space_fpath):
         space = parse_hyperopt_config(json_dict["config"])
 
     # Connect to cluster or die.
+    restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
 
     scheduler = FIFOScheduler()

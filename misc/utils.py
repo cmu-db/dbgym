@@ -58,3 +58,13 @@ def open_and_save(ctx, fpath, mode="r"):
     fname = os.path.basename(fpath)
     shutil.copy(fpath, os.path.join(ctx.obj.dbgym_this_run_path, fname))
     return open(fpath, mode=mode)
+
+def restart_ray():
+    '''
+    Stop and start Ray.
+    This is good to do between each stage to avoid bugs from carrying over across stages
+    '''
+    os.system('ray stop -f')
+    ncpu = os.cpu_count()
+    # --disable-usage-stats avoids a Y/N prompt
+    os.system(f'OMP_NUM_THREADS={ncpu} ray start --head --num-cpus={ncpu} --disable-usage-stats')

@@ -48,6 +48,7 @@ class Config:
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
         curr_dt = datetime.now()
         self.dbgym_this_run_path = self.dbgym_runs_path / f"run_{curr_dt.strftime('%Y-%m-%d_%H-%M-%S')}"
+        # exist_ok is False because we don't want to override a previous task run's data
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
     def append_group(self, name):
