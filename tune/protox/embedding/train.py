@@ -320,68 +320,6 @@ def create_train_parser(subparser):
     parser.set_defaults(func=execute_train)
 
 
-def execute_manual(args, space):
-    dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_root = args.output_dir / f"embeddings_{dtime}"
-    output_root.mkdir(parents=True, exist_ok=True)
-
-    trial_num = 1
-    total_trials = args.num_trials
-    while trial_num <= total_trials:
-        trial_dir = (output_root / f"trial{trial_num}")
-        trial_dir.mkdir(parents=True, exist_ok=False)
-        logging.info(f"Starting trial {trial_num}")
-
-        config = hyperopt.pyll.stochastic.sample(space)
-        config = f_unpack_dict(config)
-
-        # Seed
-        seed = np.random.randint(1, 1e8)
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        config["seed"] = seed
-        config["iterations_per_epoch"] = args.iterations_per_epoch
-
-        if config.get("use_bias", False):
-            if "bias_separation" in config and "addtl_bias_separation" in config and "output_scale" in config:
-                # Do a hacky reconfigure.
-                if config["output_scale"] > config["bias_separation"] + config["addtl_bias_separation"]:
-                    config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
-            config["metric_loss_md"]["output_scale"] = config["output_scale"]
-        else:
-            config["metric_loss_md"]["output_scale"] = config["output_scale"]
-
-        logging.info(config)
-
-        # Build trainer and train.
-        trainer, epoch_end = build_trainer(
-            config,
-            f"{args.output_dir}/out.parquet",
-            trial_dir,
-            args.benchmark_config,
-            args.train_size
-        )
-
-        # Dump the config that we are executing.
-        with open(f"{trial_dir}/config", "w") as f:
-            f.write(json.dumps(config, indent=4))
-
-        trainer.train(num_epochs=config["num_epochs"])
-        if trainer.failed:
-            # Trainer has failed.
-            with open(f"{trial_dir}/FAILED", "w") as f:
-                if trainer.fail_msg is not None:
-                    f.write(trainer.fail_msg)
-
-            if trainer.fail_data is not None:
-                torch.save(trainer.fail_data, f"{trial_dir}/fail_data.pth")
-        else:
-            loss = epoch_end(trainer, force=True)["total_avg_loss"]
-            logging.info(f"Finished trial with {loss}.")
-            trial_num += 1
-
-
 def hpo_train(config, args):
     assert args is not None
     mythril_dir = os.path.expanduser(args["mythril_dir"])
@@ -537,10 +475,6 @@ def execute_train(args):
     with open(args.config, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
-
-    if args.manual:
-        execute_manual(args, space)
-        return
 
     # Connect to cluster or die.
     ray.init(address="localhost:6379", log_to_driver=False)
