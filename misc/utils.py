@@ -1,6 +1,9 @@
 import os
 import subprocess
-import sys
+
+TUNE_RELPATH = "tune"
+PROTOX_RELPATH = f"{TUNE_RELPATH}/protox"
+PROTOX_EMBEDDING_RELPATH = f"{PROTOX_RELPATH}/embedding"
 
 def conv_inputpath_to_abspath(inputpath: str) -> str:
     '''

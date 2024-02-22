@@ -37,6 +37,8 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
+from misc.utils import conv_inputpath_to_abspath, PROTOX_EMBEDDING_RELPATH
+
 
 def _fetch_index_parameters(data):
     tables = data["mythril"]["tables"]
@@ -281,31 +283,6 @@ def build_trainer(config, input_file, trial_dir, benchmark_config, train_size, d
     ), epoch_end
 
 
-def create_train_parser(subparser):
-    parser = subparser.add_parser("train")
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--input-data", type=str)
-    parser.add_argument("--table-shape", action="store_true")
-    parser.add_argument("--config", type=Path, default="embeddings/config.json")
-    parser.add_argument("--num-trials", type=int, default=1)
-    parser.add_argument("--benchmark-config", type=Path, required=True)
-    parser.add_argument("--train-size", type=float, default=0.8)
-
-    # Arguments for all models.
-    parser.add_argument("--iterations-per-epoch", type=int)
-
-    parser.add_argument("--max-concurrent", default=1, type=int)
-    parser.add_argument("--mythril-dir", type=str)
-    parser.add_argument("--num-threads", type=int, default=None)
-
-    parser.add_argument("--dual-class", action="store_true", default=False)
-    parser.add_argument("--inflate-ratio", type=int, default=1)
-    parser.add_argument("--pad-min", type=int, default=None)
-    parser.add_argument("--rebias", type=float, default=0)
-    parser.set_defaults(func=execute_train)
-
-
 def hpo_train(config, args):
     assert args is not None
     mythril_dir = os.path.expanduser(args["mythril_dir"])
@@ -371,15 +348,16 @@ def hpo_train(config, args):
 
 @click.command()
 @click.option('--seed', default=None, type=int)
-@click.option('--output-dir', default=None, type=str)
-@click.option('--hyperparams-fpath', default=None, type=str)
+@click.option('--hpo-space-fpath', default=None, type=str)
 @click.pass_context
-def train(ctx, seed, output_dir, hyperparams_fpath):
-    print(ctx)
-    return
+def train(ctx, seed, output_dir, hpo_space_fpath):
+    # set params to defaults programmatically
+    if seed == None:
+        seed = random.randint(0, 1e8)
+    if hpo_space_fpath == None:
+        hpo_space_fpath = conv_inputpath_to_abspath(f'{PROTOX_EMBEDDING_RELPATH}/default_hpo_space.json')
 
-    # Set initial seed.
-    seed = seed if seed != None else random.randint(0, 1e8)
+    # set seeds
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -388,7 +366,8 @@ def train(ctx, seed, output_dir, hyperparams_fpath):
 
     start_time = time.time()
 
-    with open(args.config, "r") as f:
+    # TODO: write helper function to open files
+    with open(hpo_space_fpath, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 

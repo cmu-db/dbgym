@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import sys
+from datetime import datetime
 
 import click
 import yaml
@@ -43,8 +44,11 @@ class Config:
         self.dbgym_build_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_data_path = self.dbgym_workspace_path / "data"
         self.dbgym_data_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_runs_path = self.dbgym_workspace_path / "runs"
+        self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
+        curr_dt = datetime.now()
+        self.dbgym_this_run_path = self.dbgym_runs_path / f"run_{curr_dt.strftime('%Y-%m-%d_%H-%M-%S')}"
+        self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
     def append_group(self, name):
         self.cur_path /= name
