@@ -37,7 +37,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH, restart_ray
+from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH, PROTOX_RELPATH, restart_ray
 
 
 def _fetch_index_parameters(data):
@@ -186,12 +186,12 @@ def construct_epoch_end(val_dl, config, hooks, model_folder):
     return epoch_end
 
 
-def build_trainer(config, input_file, trial_dir, benchmark_config, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def build_trainer(config, input_file, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
     # Load the benchmark configuration.
-    with open(benchmark_config, "r") as f:
+    with open_and_save(benchmark_config_fpath, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, att_usage, class_mapping = _fetch_index_parameters(data)
 
@@ -283,14 +283,11 @@ def build_trainer(config, input_file, trial_dir, benchmark_config, train_size, d
     ), epoch_end
 
 
-def hpo_train(config, args):
-    assert args is not None
-    mythril_dir = os.path.expanduser(args["mythril_dir"])
-    sys.path.append(mythril_dir)
+def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpath, train_size):
+    sys.path.append(ctx.obj.dbgym_repo_path)
 
     # Explicitly set the number of torch threads.
-    if args["num_threads"] is not None:
-        os.environ["OMP_NUM_THREADS"] = str(args["num_threads"])
+    os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     config = f_unpack_dict(config)
     if config.get("use_bias", False):
@@ -300,7 +297,7 @@ def hpo_train(config, args):
                 config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = args["output_dir"]
+    output_dir = ctx.obj.dbgym_this_run_path
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
@@ -312,17 +309,17 @@ def hpo_train(config, args):
     np.random.seed(seed)
     torch.manual_seed(seed)
     config["seed"] = seed
-    config["iterations_per_epoch"] = args["iterations_per_epoch"]
+    config["iterations_per_epoch"] = iterations_per_epoch
 
     logging.info(config)
 
     # Build trainer and train.
     trainer, epoch_end = build_trainer(
         config,
-        f"{output_dir}/out.parquet",
+        os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_embedding_traindata.parquet'),
         trial_dir,
-        args["benchmark_config"],
-        args["train_size"],
+        benchmark_config_fpath,
+        train_size,
         dataloader_num_workers=0,
         disable_tqdm=True,
     )
@@ -349,13 +346,21 @@ def hpo_train(config, args):
 @click.command()
 @click.option('--seed', default=None, type=int)
 @click.option('--hpo-space-fpath', default=None, type=str)
+@click.option('--benchmark-config-fpath', default=None, type=str)
+@click.option('--iterations-per-epoch', default=1000)
+@click.option('--train-size', default=0.99)
+@click.argument('benchmark')
 @click.pass_context
-def train(ctx, seed, hpo_space_fpath):
+def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, train_size):
     # set args to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
     if hpo_space_fpath == None:
         hpo_space_fpath = conv_inputpath_to_abspath(f'{PROTOX_EMBEDDING_RELPATH}/default_hpo_space.json')
+    # TODO(phw2): figure out whether different scale factors use the same config
+    # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
+    if benchmark_config_fpath == None:
+        benchmark_config_fpath = conv_inputpath_to_abspath(f'{PROTOX_RELPATH}/default_{benchmark}_config.yaml')
 
     # set seeds
     random.seed(seed)
@@ -366,10 +371,10 @@ def train(ctx, seed, hpo_space_fpath):
 
     start_time = time.time()
 
-    # TODO: write helper function to open files
     with open_and_save(ctx, hpo_space_fpath, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
+        num_samples = json_dict["num_samples"]
 
     # Connect to cluster or die.
     restart_ray()
@@ -377,6 +382,7 @@ def train(ctx, seed, hpo_space_fpath):
 
     scheduler = FIFOScheduler()
     # Search.
+    ncpu = os.cpu_count()
     search = HyperOptSearch(
         metric="loss",
         mode="min",
@@ -384,12 +390,12 @@ def train(ctx, seed, hpo_space_fpath):
         n_initial_points=20,
         space=space,
     )
-    search = ConcurrencyLimiter(search, max_concurrent=args.max_concurrent)
+    search = ConcurrencyLimiter(search, max_concurrent=ncpu)
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
-        num_samples=args.num_trials,
-        max_concurrent_trials=args.max_concurrent,
+        num_samples=num_samples,
+        max_concurrent_trials=ncpu,
         chdir_to_trial_dir=True,
     )
 
@@ -403,11 +409,9 @@ def train(ctx, seed, hpo_space_fpath):
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(hpo_train, args=vars(args)), resources)
+    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, iterations_per_epoch=iterations_per_epoch, benchmark_config_fpath=benchmark_config_fpath, train_size=train_size), resources)
 
     # Hopefully this is now serializable.
-    args = vars(args)
-    args.pop("func")
     tuner = ray.tune.Tuner(
         trainable,
         tune_config=tune_config,
@@ -424,5 +428,5 @@ def train(ctx, seed, hpo_space_fpath):
         assert False
 
     duration = time.time() - start_time
-    with open(f"{output_dir}/hpo_train_time.txt", "w") as f:
+    with open(f"{ctx.obj.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")

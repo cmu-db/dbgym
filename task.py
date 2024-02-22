@@ -2,12 +2,15 @@ import logging
 from pathlib import Path
 import sys
 from datetime import datetime
+import os
 
 import click
 import yaml
 
 from experiment.cli import experiment_group
 from tune.protox.cli import protox_group
+
+from misc.utils import is_base_git_dir
 
 task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
@@ -35,9 +38,11 @@ class Config:
                 sys.exit(0)
 
         # Set and create paths for storing results.
+        cwd = os.getcwd()
+        assert is_base_git_dir(cwd)
+        self.dbgym_repo_path = Path(cwd)
         self.dbgym_workspace_path = Path(self.root_yaml["dbgym_workspace_path"])
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
-
         self.dbgym_bin_path = self.dbgym_workspace_path / "bin"
         self.dbgym_bin_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_build_path = self.dbgym_workspace_path / "build"

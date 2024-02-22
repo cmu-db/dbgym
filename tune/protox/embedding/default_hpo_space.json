@@ -1,89 +1,88 @@
 {
     "_comment": "This file holds the default hyperparameter optimization (HPO) space. It is _not_ a set of hyperparameters. It is just a search space",
     "_comment1": "Generally 10 epochs is usually good enough.",
-    "_comment2": "Need to adjust the compression size! Based on the input dimensions.",
+    "_comment2": "num_samples is defined in the space.json file because the right # of samples depends on how large the search space is.",
 
+    "num_samples": 40,
     "initial_configs": [
     ],
     "config": {
-            "act": {
-                    "choice_name": "act",
-                    "type": "choice",
-                    "choices": ["relu", "mish"]
-            },
-    "mean_output_act": {
-        "choice_name": "mean_output_act",
-        "type": "choice",
-        "choices": ["sigmoid"]
-    },
-            "batch_size": {
-                    "choice_name": "batch_size",
-                    "type": "choice",
-                    "choices": [512, 1024, 2048]
-            },
-            "lr": {
-                    "choice_name": "lr",
-                    "type": "uniform",
-                    "min": 1e-5,
-                    "max": 1e-2
-            },
-            "weight_decay": {
-                    "choice_name": "weight_decay",
-                    "type": "uniform",
-                    "min": 1e-8,
-                    "max": 1e-5
-            },
-    "loss_fn": {
-        "choice_name": "loss_fn",
-        "type": "choice",
-        "choices": [
-            "vae_cat_loss"
-        ]
-    },
-    "model": {
-        "choice_name": "model0",
-        "type": "subspaces",
-        "subspaces": [
-            {
-                "latent_dim": {
-                    "choice_name": "latent_dim",
-                    "type": "constant",
-                    "value": 16
+        "act": {
+                "choice_name": "act",
+                "type": "choice",
+                "choices": ["relu", "mish"]
+        },
+        "mean_output_act": {
+            "choice_name": "mean_output_act",
+            "type": "choice",
+            "choices": ["sigmoid"]
+        },
+        "batch_size": {
+                "choice_name": "batch_size",
+                "type": "choice",
+                "choices": [512, 1024, 2048]
+        },
+        "lr": {
+                "choice_name": "lr",
+                "type": "uniform",
+                "min": 1e-5,
+                "max": 1e-2
+        },
+        "weight_decay": {
+                "choice_name": "weight_decay",
+                "type": "uniform",
+                "min": 1e-8,
+                "max": 1e-5
+        },
+        "loss_fn": {
+            "choice_name": "loss_fn",
+            "type": "choice",
+            "choices": [
+                "vae_cat_loss"
+            ]
+        },
+        "model": {
+            "choice_name": "model0",
+            "type": "subspaces",
+            "subspaces": [
+                {
+                    "latent_dim": {
+                        "choice_name": "latent_dim",
+                        "type": "constant",
+                        "value": 16
+                    },
+                    "hidden_sizes": {
+                        "choice_name": "hidden_sizes2",
+                        "type": "choice",
+                        "choices": [
+                            [128, 32],
+                            [128, 64],
+                            [256, 32],
+                            [256, 64],
+                            [256, 128]
+                        ]
+                    }
                 },
-                "hidden_sizes": {
-                    "choice_name": "hidden_sizes2",
-                    "type": "choice",
-                    "choices": [
-                        [128, 32],
-                        [128, 64],
-                        [256, 32],
-                        [256, 64],
-                        [256, 128]
-                    ]
+                {
+                    "latent_dim": {
+                        "choice_name": "latent_dim",
+                        "type": "constant",
+                        "value": 32
+                    },
+                    "hidden_sizes": {
+                        "choice_name": "hidden_sizes3",
+                        "type": "choice",
+                        "choices": [
+                            [128, 32],
+                            [128, 64],
+                            [256, 32],
+                            [256, 64],
+                            [256, 128]
+                        ]
+                    }
                 }
-            },
-            {
-                "latent_dim": {
-                    "choice_name": "latent_dim",
-                    "type": "constant",
-                    "value": 32
-                },
-                "hidden_sizes": {
-                    "choice_name": "hidden_sizes3",
-                    "type": "choice",
-                    "choices": [
-                        [128, 32],
-                        [128, 64],
-                        [256, 32],
-                        [256, 64],
-                        [256, 128]
-                    ]
-                }
-            }
-        ]
-    },
-
-
+            ]
+        },
             "metric_loss_md": {
                     "choice_name": "metric_loss_md",
                     "type": "subspaces",

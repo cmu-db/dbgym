@@ -22,7 +22,7 @@ def conv_inputpath_to_abspath(inputpath: str) -> str:
     if len(inputpath) == 0:
         raise RuntimeError(f'inputpath ({inputpath}) is empty')
     cwd = os.getcwd()
-    if not is_in_base_git_dir(cwd):
+    if not is_base_git_dir(cwd):
         raise RuntimeError(f'cwd ({cwd}) is not the base directory of a git repo. Please run main.py from the base dbgym/ directory')
 
     # logic
@@ -33,7 +33,7 @@ def conv_inputpath_to_abspath(inputpath: str) -> str:
     else:
         return os.path.normpath(os.path.join(cwd, inputpath))
 
-def is_in_base_git_dir(cwd) -> bool:
+def is_base_git_dir(cwd) -> bool:
     '''
     Returns whether we are in the base directory of some git repository
     '''
@@ -52,9 +52,10 @@ def open_and_save(ctx, fpath, mode="r"):
     We copy the file if it is a "config", meaning it just exists without having been generated
     We create a symlink if it is a "dependency", meaning a task.py command was run to generate it
         In these cases we create a symlink so we have full provenance for how the dependency was created
+    If you are generating a "result", _do not_ use this. Just use the normal open().
     '''
-    # TODO: traverse symlinks
-    # TODO: check config vs dependency
+    # TODO(phw2): traverse symlinks
+    # TODO(phw2): check config vs dependency
     fname = os.path.basename(fpath)
     shutil.copy(fpath, os.path.join(ctx.obj.dbgym_this_run_path, fname))
     return open(fpath, mode=mode)
