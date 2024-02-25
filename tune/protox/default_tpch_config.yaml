@@ -1,4 +1,4 @@
-mythril:
+dbgym:
   benchmark: tpch
   oltp_workload: False
 
@@ -6,8 +6,6 @@ mythril:
     benchbase: False
     allow_per_query: True
     early_workload_kill: True
-    query_directory: "/home/phw2/mythril_runnable/queries/tpch"
-    query_order: "/home/phw2/mythril_runnable/queries/tpch/order.txt"
     tbl_include_subsets_prune: True
 
   max_num_columns: 16

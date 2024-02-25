@@ -37,14 +37,22 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import conv_inputpath_to_abspath, open_and_save, PROTOX_EMBEDDING_RELPATH, PROTOX_RELPATH, restart_ray
+from misc.utils import open_and_save, PROTOX_EMBEDDING_RELPATH, PROTOX_RELPATH, restart_ray
 
 
-def _fetch_index_parameters(data):
-    tables = data["mythril"]["tables"]
-    attributes = data["mythril"]["attributes"]
-    query_spec = data["mythril"]["query_spec"]
-    workload = Workload(tables, attributes, query_spec, pid=None)
+def _fetch_index_parameters(ctx, benchmark, data):
+    tables = data["dbgym"]["tables"]
+    attributes = data["dbgym"]["attributes"]
+    query_spec = data["dbgym"]["query_spec"]
+    
+    # TODO(phw2): figure out how to do query_spec. should the paths be in the .yaml or should they be CLI args?
+    # no need to convert to an absolute path. open_and_save() already does that
+    if "query_directory" not in query_spec:
+        assert "query_order" not in query_spec
+        query_spec["query_directory"] = os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_queries')
+        query_spec["query_order"] = os.path.join(query_spec["query_directory"], f'order.txt')
+
+    workload = Workload(ctx, tables, attributes, query_spec, pid=None)
     att_usage = workload.process_column_usage()
 
     space = IndexSpace(
@@ -186,14 +194,14 @@ def construct_epoch_end(val_dl, config, hooks, model_folder):
     return epoch_end
 
 
-def build_trainer(config, input_file, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def build_trainer(ctx, benchmark, config, input_file, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
     # Load the benchmark configuration.
-    with open_and_save(benchmark_config_fpath, "r") as f:
+    with open_and_save(ctx, benchmark_config_fpath, "r") as f:
         data = yaml.safe_load(f)
-        max_attrs, max_cat_features, att_usage, class_mapping = _fetch_index_parameters(data)
+        max_attrs, max_cat_features, att_usage, class_mapping = _fetch_index_parameters(ctx, benchmark, data)
 
     config["class_mapping"] = {}
     for (tbl, col), key in class_mapping.items():
@@ -315,6 +323,8 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
 
     # Build trainer and train.
     trainer, epoch_end = build_trainer(
+        ctx,
+        benchmark,
         config,
         os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_embedding_traindata.parquet'),
         trial_dir,
@@ -356,11 +366,11 @@ def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterati
     if seed == None:
         seed = random.randint(0, 1e8)
     if hpo_space_fpath == None:
-        hpo_space_fpath = conv_inputpath_to_abspath(f'{PROTOX_EMBEDDING_RELPATH}/default_hpo_space.json')
+        hpo_space_fpath = f"{PROTOX_EMBEDDING_RELPATH}/default_hpo_space.json"
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_fpath == None:
-        benchmark_config_fpath = conv_inputpath_to_abspath(f'{PROTOX_RELPATH}/default_{benchmark}_config.yaml')
+        benchmark_config_fpath = f"{PROTOX_RELPATH}/default_{benchmark}_config.yaml"
 
     # set seeds
     random.seed(seed)
@@ -412,6 +422,7 @@ def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterati
     trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, iterations_per_epoch=iterations_per_epoch, benchmark_config_fpath=benchmark_config_fpath, train_size=train_size), resources)
 
     # Hopefully this is now serializable.
+    os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
     tuner = ray.tune.Tuner(
         trainable,
         tune_config=tune_config,

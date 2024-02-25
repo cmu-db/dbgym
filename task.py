@@ -38,6 +38,7 @@ class Config:
                 sys.exit(0)
 
         # Set and create paths for storing results.
+        # these are all relative paths because I didn't do conv_inputpath_to_abspath()
         cwd = os.getcwd()
         assert is_base_git_dir(cwd)
         self.dbgym_repo_path = Path(cwd)
