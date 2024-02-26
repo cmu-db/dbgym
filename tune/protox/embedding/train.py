@@ -19,6 +19,7 @@ from click.core import Context
 from typing import Dict
 import shutil
 import itertools
+import math
 
 import torch
 import torch.nn as nn
@@ -473,8 +474,10 @@ def train_all_models(ctx, benchmark, dataset_path, hpo_space_path, benchmark_con
 
 
 def compute_num_parts(num_samples):
-    # TODO(phw2): what are the point of parts?
-    return 3
+    # TODO(phw2): in the future, implement running different parts in parallel, set OMP_NUM_THREADS accordingly, and investigate the effect of having more parts
+    # TODO(phw2): if having more parts is effective, figure out a good way to specify num_parts (can it be determined automatically or should it be a CLI arg?)
+    # TODO(phw2): does anything bad happen if num_parts doesn't evenly divide num_samples?
+    return 1
 
 
 def get_part_i_dpath(ctx, part_i) -> str:
@@ -510,12 +513,12 @@ def analyze_embeddings_part(ctx, part_i, benchmark, dataset_path, benchmark_conf
     Analyze all the embedding models in a part*/ dir
     '''
     part_dpath = get_part_i_dpath(ctx, part_i)
-    eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches)
+    create_stats_for_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches)
 
 
-def eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
+def create_stats_for_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
     '''
-    Generates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
+    Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
     '''
 
@@ -532,7 +535,7 @@ def eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, pa
             print("Detected failure in: ", model_config)
             continue
 
-        with open(model_config, "r") as f:
+        with open_and_save(ctx, model_config, "r") as f:
             config = json.load(f)
 
         # Create them here since these are constant for a given "model" configuration.
@@ -680,3 +683,93 @@ def eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, pa
                 del dataloader
                 gc.collect()
                 gc.collect()
+
+
+def analyze_stats_for_part():
+    # TODO(phw2): do the stuff in here:
+    '''
+    paths = sorted([f for f in args.base.rglob("embedder_*.pth") if "optimizer" not in str(f)])
+    for p in tqdm.tqdm(paths):
+        epoch = int(str(p).split("embedder_")[-1].split(".pth")[0])
+        if epoch < args.start_epoch:
+            continue
+
+        vargs["base"] = p.parent.parent.parent
+        vargs["epoch"] = epoch
+        analyze(vargs)
+    '''
+    # note that epoch is an integer while base gets set to an embedding_*/ dir
+    pass
+
+
+def analyze_stats_for_model(ctx, part_i, epoch_i, args):
+    part_i_dpath = get_part_i_dpath(ctx, part_i)
+    stats_fpath = f"{part_i_dpath}/models/epoch{epoch_i}/stats.txt"
+    if args.recon_threshold > 0 and Path(stats_fpath).exists():
+        with open(stats_fpath, "r") as f:
+            stats = json.load(f)
+            if stats["recon_accum"] > args.recon_threshold:
+                # Exceeded the threshold.
+                return
+    elif args.recon_threshold > 0:
+        print(f"{stats_fpath} does not exist.")
+        assert False
+
+    # Load the benchmark configuration.
+    with open(args.benchmark_config, "r") as f:
+        data = yaml.safe_load(f)
+        tables = data["mythril"]["tables"]
+        max_attrs, max_cat_features, att_usage, class_mapping = _fetch_index_parameters(data)
+
+    with open(CONFIG, "r") as f:
+        config = json.load(f)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    vae = _create_vae_model(config, max_attrs, max_cat_features)
+    # Load the specific epoch model.
+    vae.load_state_dict(torch.load(INPUT, map_location=device))
+    vae.to(device=device).eval()
+
+    idxs = IndexSpace(
+        agent_type="wolp",
+        tables=tables,
+        max_num_columns=0,
+        index_repr=IndexRepr.ONE_HOT_DETERMINISTIC.name,
+        seed=np.random.randint(1, 1e10),
+        latent_dim=config["latent_dim"],
+        index_vae_model=vae,
+        index_output_scale=1.,
+        attributes_overwrite=att_usage)
+    idxs.rel_metadata = att_usage
+    idxs._build_mapping(att_usage)
+
+    def decode_to_classes(rand_points):
+        with torch.no_grad():
+            rand_decoded = idxs._decode(act=rand_points)
+            classes = {}
+            for r in range(rand_points.shape[0]):
+                act = idxs.index_repr_policy.sample_action(idxs.np_random, rand_decoded[r], att_usage, False, True)
+                idx_class = idxs.get_index_class(act)
+                if idx_class not in classes:
+                    classes[idx_class] = 0
+                classes[idx_class] += 1
+        return sorted([(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True)
+
+    output_scale = config["metric_loss_md"]["output_scale"]
+    bias_separation = config["metric_loss_md"]["bias_separation"]
+    num_segments = min(args.max_segments, math.ceil(1.0 / bias_separation))
+
+    base = 0
+    with open(f"{args.base}/models/epoch{args.epoch}/analyze.txt", "w") as f:
+        for _ in tqdm.tqdm(range(num_segments), total=num_segments, leave=False):
+            classes = decode_to_classes(torch.rand(args.num_points, config["latent_dim"]) * output_scale + base)
+            if args.top != 0:
+                classes = classes[:args.top]
+
+            f.write(f"Generating range {base} - {base + output_scale}\n")
+            f.write("\n".join([f"{k}: {v / args.num_points}" for (k, v) in classes]))
+            f.write("\n")
+            if not args.glob:
+                print(f"Generating range {base} - {base + output_scale}")
+                print("\n".join([f"{k}: {v / args.num_points}" for (k, v) in classes]))
+            base += output_scale
