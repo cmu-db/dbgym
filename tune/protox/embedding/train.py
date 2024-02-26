@@ -310,7 +310,7 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
                 config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = os.fspath(ctx.obj.dbgym_this_run_path)
+    output_dir = ctx.obj.dbgym_this_run_path
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
