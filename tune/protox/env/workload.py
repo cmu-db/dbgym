@@ -12,6 +12,7 @@ from tune.protox.env import regress_ams, regress_qid_knobs, is_knob_enum, is_bin
 from tune.protox.env.space.utils import fetch_server_knobs
 from tune.protox.env.workload_utils import parse_access_method, acquire_metrics_around_query, execute_serial_variations, extract_aliases, extract_sqltypes, extract_columns, QueryType
 from misc.utils import open_and_save
+from click.core import Context
 
 
 class Workload(object):
@@ -59,7 +60,7 @@ class Workload(object):
             self.queries_mix[stem] = ratio
             sql_mapping[stem] = sql_file
 
-            with open(sql_file, "r") as q:
+            with open_and_save(self.ctx, sql_file, "r", subfolder="queries") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -134,7 +135,7 @@ class Workload(object):
         self.sql_files = {k: str(v) for (k, v, _) in sqls}
 
     def __init__(self,
-            ctx,
+            ctx: Context,
             tables: list[str],
             attributes: dict[str, list[str]],
             query_spec: dict,
@@ -145,6 +146,8 @@ class Workload(object):
             workload_timeout_penalty=1.,
             logger=None):
 
+        print('type(ctx)', type(ctx))
+        self.ctx = ctx
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
         # Whether we should use benchbase or not.

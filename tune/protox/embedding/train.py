@@ -14,6 +14,8 @@ from pathlib import Path
 import time
 import logging
 from datetime import datetime
+from click.core import Context
+from typing import Dict
 
 import torch
 import torch.nn as nn
@@ -40,7 +42,7 @@ from tune.protox.env.space.index_policy import IndexRepr
 from misc.utils import open_and_save, PROTOX_EMBEDDING_RELPATH, PROTOX_RELPATH, restart_ray
 
 
-def _fetch_index_parameters(ctx, benchmark, data):
+def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
     tables = data["dbgym"]["tables"]
     attributes = data["dbgym"]["attributes"]
     query_spec = data["dbgym"]["query_spec"]

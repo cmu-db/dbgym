@@ -1,13 +1,14 @@
 import os
 import subprocess
 import shutil
-from pathlib import Path
+from pathlib import Path, PosixPath
+from click.core import Context
 
 TUNE_RELPATH = "tune"
 PROTOX_RELPATH = f"{TUNE_RELPATH}/protox"
 PROTOX_EMBEDDING_RELPATH = f"{PROTOX_RELPATH}/embedding"
 
-def conv_inputpath_to_abspath(ctx, inputpath: str) -> str:
+def conv_inputpath_to_abspath(ctx: Context, inputpath: os.PathLike) -> str:
     '''
     Convert any user inputted path to an absolute path
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
@@ -18,7 +19,7 @@ def conv_inputpath_to_abspath(ctx, inputpath: str) -> str:
     # checks
     # regardless of whether the user wants an absolute, relative, or home path, I will do all checks
     # this helps errors surface more quickly
-    assert type(inputpath) is str
+    inputpath = os.fspath(inputpath) # it's easier to write just one piece of logic that operates on strings
     if len(inputpath) == 0:
         raise RuntimeError(f'inputpath ({inputpath}) is empty')
 
@@ -41,10 +42,10 @@ def is_base_git_dir(cwd) -> bool:
         # this means we are not in _any_ git repo
         return False
     
-def open_and_save(ctx, open_fpath: str, mode="r", subfolder=None):
+def open_and_save(ctx: Context, open_fpath: os.PathLike, mode="r", subfolder=None):
     '''
     Open a file and "save" it to [workspace]/task_runs/run_*/
-    It takes in a string for fpath instead of a pathlib.Path in order to match the interface of open()
+    It takes in a str | Path to match the interface of open()
     If the file is a symlink, we traverse it until we get to a real file
     "Saving" can mean either copying the file or creating a symlink to it
     We copy the file if it is a "config", meaning it just exists without having been generated
@@ -52,19 +53,15 @@ def open_and_save(ctx, open_fpath: str, mode="r", subfolder=None):
         In these cases we create a symlink so we have full provenance for how the dependency was created
     If you are generating a "result", _do not_ use this. Just use the normal open().
     '''
-    # TODO(phw2): traverse symlinks
-    # TODO(phw2): check config vs dependency
-    # TODO(phw2): add option for saving to subfolder. use that in Workload
-    assert type(open_fpath) is str
-
+    # TODO(phw2): check config vs dependency and handle them differently
     # get open_fpath
+    open_fpath = os.fspath(open_fpath) # it's easier to write just one piece of logic that operates on strings
     open_fpath = conv_inputpath_to_abspath(ctx, open_fpath)
     open_fpath = os.path.realpath(open_fpath) # traverse symlinks
 
     # get copy_fpath
     fname = os.path.basename(open_fpath)
-    # convert to str() because dbgym_this_run_path is a Path
-    dpath = conv_inputpath_to_abspath(ctx, str(ctx.obj.dbgym_this_run_path))
+    dpath = conv_inputpath_to_abspath(ctx, ctx.obj.dbgym_this_run_path)
     if subfolder != None:
         dpath = os.path.join(dpath, subfolder)
         # we know for a fact that dbgym_this_run_path exists. however, if subfolder != None, dpath may not exist so we should mkdir
