@@ -18,6 +18,7 @@ from datetime import datetime
 from click.core import Context
 from typing import Dict
 import shutil
+import itertools
 
 import torch
 import torch.nn as nn
@@ -41,7 +42,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import open_and_save, DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpath, restart_ray
+from misc.utils import open_and_save, restart_ray, DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpath, default_dataset_path, BENCHMARK_PLACEHOLDER, DATA_PATH_PLACEHOLDER
 
 
 def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
@@ -72,7 +73,7 @@ def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def _load_input_data(ctx, input_fpath, train_size, max_attrs, require_cost, seed):
+def _load_input_data(ctx, input_path, train_size, max_attrs, require_cost, seed):
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -80,7 +81,7 @@ def _load_input_data(ctx, input_fpath, train_size, max_attrs, require_cost, seed
     if require_cost:
         columns += COST_COLUMNS
 
-    with open_and_save(ctx, input_fpath, mode="rb") as input_file:
+    with open_and_save(ctx, input_path, mode="rb") as input_file:
         df = pd.read_parquet(input_file, columns=columns)
     num_classes = df.idx_class.max() + 1
 
@@ -198,12 +199,12 @@ def construct_epoch_end(val_dl, config, hooks, model_folder):
     return epoch_end
 
 
-def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
     # Load the benchmark configuration.
-    with open_and_save(ctx, benchmark_config_fpath, "r") as f:
+    with open_and_save(ctx, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, att_usage, class_mapping = _fetch_index_parameters(ctx, benchmark, data)
 
@@ -220,7 +221,7 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = _load_input_data(
         ctx,
-        input_fpath,
+        input_path,
         train_size,
         max_attrs,
         config["metric_loss_md"].get("require_cost", False),
@@ -296,7 +297,7 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     ), epoch_end
 
 
-def hpo_train(config, ctx, benchmark, max_concurrent, iterations_per_epoch, benchmark_config_fpath, train_size):
+def hpo_train(config, ctx, benchmark, dataset_path, benchmark_config_path, max_concurrent, iterations_per_epoch, train_size):
     sys.path.append(os.fspath(ctx.obj.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
@@ -331,9 +332,9 @@ def hpo_train(config, ctx, benchmark, max_concurrent, iterations_per_epoch, benc
         ctx,
         benchmark,
         config,
-        os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_embedding_traindata.parquet'),
+        dataset_path,
         trial_dir,
-        benchmark_config_fpath,
+        benchmark_config_path,
         train_size,
         dataloader_num_workers=0,
         disable_tqdm=True,
@@ -358,24 +359,36 @@ def hpo_train(config, ctx, benchmark, max_concurrent, iterations_per_epoch, benc
         session.report({"loss": loss})
 
 
+# TODO(phw2): rename train specific params to have train in front of them
 @click.command()
-@click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
+@click.option("--dataset-path", default=None, type=str, help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(DATA_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.")
+@click.option("--hpo-space-path", default=DEFAULT_HPO_SPACE_RELPATH, type=str, help="The path to the .json file defining the search space for hyperparameter optimization (HPO).")
+@click.option("--benchmark-config-path", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.")
 @click.option("--max-concurrent", default=1, type=int, help="The max # of concurrent embedding models to train. Setting this too high may overload the machine.")
-@click.option("--hpo-space-fpath", default=DEFAULT_HPO_SPACE_RELPATH, type=str, help="The path to the .json file defining the search space for hyperparameter optimization (HPO).")
-@click.option("--benchmark-config-fpath", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath('[benchmark]')}")
+@click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
-@click.option("--num-samples", default=40, help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train an embedding model with.")
+@click.option("--num-samples", default=40, help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train embedding models with.")
 @click.option("--train-size", default=0.99, help=f"TODO(wz2)")
+@click.option("--analyze-start-epoch", default=0, help="The epoch to start analyzing models at.")
+@click.option("--analyze-batch-size", default=8192, help="The size of batches to use to build stats.txt.")
+@click.option("--analyze-num-batches", default=100, help="The number of batches to use to build stats.txt. Setting it to -1 indicates \"use all batches\".")
 @click.argument("benchmark")
 @click.pass_context
-def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
+def train(ctx, benchmark, dataset_path, hpo_space_path, benchmark_config_path, max_concurrent, seed, iterations_per_epoch, num_samples, train_size, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
+    '''
+    Trains embeddings based on num_samples samples of the hyperparameter space. Analyzes the accuracy of all epochs of all hyperparameter
+    space samples. Selects the best embedding and packages it as a .pth file in the run_*/ dir.
+    '''
+
     # set args to defaults programmatically
-    if seed == None:
-        seed = random.randint(0, 1e8)
+    if dataset_path == None:
+        dataset_path = default_dataset_path(ctx.obj.dbgym_data_path, benchmark)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
-    if benchmark_config_fpath == None:
-        benchmark_config_fpath = default_benchmark_config_relpath(benchmark)
+    if benchmark_config_path == None:
+        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+    if seed == None:
+        seed = random.randint(0, 1e8)
 
     # setup
     random.seed(seed)
@@ -384,22 +397,20 @@ def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_confi
     logging.getLogger().setLevel(logging.INFO)
 
     # run all steps of training
-    train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size)
-    # the point of num_parts is to allocate different embeddings for analysis to different CPUs so we generally set it to os.cpu_count()
-    # note that while we generally *train* less embedding models in parallel than os.cpu_count(), we can safely *analyze* os.cpu_count() number of embedding models in parallel
-    # however, num_parts also cannot be > num_samples so we use min()
-    num_parts = min(os.cpu_count(), num_samples)
+    train_all_models(ctx, benchmark, dataset_path, hpo_space_path, benchmark_config_path, max_concurrent, iterations_per_epoch, num_samples, train_size)
+    num_parts = compute_num_parts(num_samples)
     redist_trained_models(ctx, num_parts)
+    analyze_all_embeddings_parts(ctx, num_parts, benchmark, dataset_path, benchmark_config_path, analyze_start_epoch, analyze_batch_size, analyze_num_batches)
 
 
-def train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
+def train_all_models(ctx, benchmark, dataset_path, hpo_space_path, benchmark_config_path, max_concurrent, iterations_per_epoch, num_samples, train_size):
     '''
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
     '''
     start_time = time.time()
 
-    with open_and_save(ctx, hpo_space_fpath, "r") as f:
+    with open_and_save(ctx, hpo_space_path, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
@@ -436,7 +447,7 @@ def train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, max_concurrent=max_concurrent, iterations_per_epoch=iterations_per_epoch, benchmark_config_fpath=benchmark_config_fpath, train_size=train_size), resources)
+    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, dataset_path=dataset_path, benchmark_config_path=benchmark_config_path, max_concurrent=max_concurrent, iterations_per_epoch=iterations_per_epoch, train_size=train_size), resources)
 
     # Hopefully this is now serializable.
     os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
@@ -461,6 +472,15 @@ def train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_
         f.write(f"{duration}")
 
 
+def compute_num_parts(num_samples):
+    # TODO(phw2): what are the point of parts?
+    return 3
+
+
+def get_part_i_dpath(ctx, part_i) -> str:
+    return os.path.join(ctx.obj.dbgym_this_run_path, f"part{part_i}")
+
+
 # TODO(phw2): check if anything goes wrong in any part of the entire selection process if num_parts doesn't evenly divide num_samples
 def redist_trained_models(ctx, num_parts):
     '''
@@ -468,9 +488,195 @@ def redist_trained_models(ctx, num_parts):
     '''
     inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*")]
 
-    for i in range(num_parts):
-        (ctx.obj.dbgym_this_run_path / f"part{i}").mkdir(parents=True, exist_ok=True)
+    for part_i in range(num_parts):
+        Path(get_part_i_dpath(ctx, part_i)).mkdir(parents=True, exist_ok=True)
 
-    for i, emb in enumerate(inputs):
-        part = f"part{i % num_parts}"
-        shutil.move(emb, ctx.obj.dbgym_this_run_path / part)
+    for model_i, emb in enumerate(inputs):
+        part_i = model_i % num_parts
+        shutil.move(emb, get_part_i_dpath(ctx, part_i))
+
+
+def analyze_all_embeddings_parts(ctx, num_parts, benchmark, dataset_path, benchmark_config_path, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
+    '''
+    Analyze all part*/ dirs _in parallel_
+    '''
+    # TODO(phw2): figure out how to do this in parallel
+    for part_i in range(num_parts):
+        analyze_embeddings_part(ctx, part_i, benchmark, dataset_path, benchmark_config_path, analyze_start_epoch, analyze_batch_size, analyze_num_batches)
+
+
+def analyze_embeddings_part(ctx, part_i, benchmark, dataset_path, benchmark_config_path, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
+    '''
+    Analyze all the embedding models in a part*/ dir
+    '''
+    part_dpath = get_part_i_dpath(ctx, part_i)
+    eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches)
+
+
+def eval_embeddings_part(ctx, benchmark, dataset_path, benchmark_config_path, part_dpath, analyze_start_epoch, analyze_batch_size, analyze_num_batches):
+    '''
+    Generates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
+    TODO(wz2): what does stats.txt contain?
+    '''
+
+    # Load the benchmark configuration.
+    with open_and_save(ctx, benchmark_config_path, "r") as f:
+        data = yaml.safe_load(f)
+        max_attrs, max_cat_features, _, _ = _fetch_index_parameters(ctx, benchmark, data)
+
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    models = itertools.chain(*[Path(part_dpath).rglob("config")])
+    models = [m for m in models]
+    for model_config in tqdm.tqdm(models):
+        if ((Path(model_config).parent) / "FAILED").exists():
+            print("Detected failure in: ", model_config)
+            continue
+
+        with open(model_config, "r") as f:
+            config = json.load(f)
+
+        # Create them here since these are constant for a given "model" configuration.
+        dataset, idx_class, num_classes = None, None, None
+        class_mapping = None
+        metric_loss_fn, vae_loss = None, None
+        vae = _create_vae_model(config, max_attrs, max_cat_features)
+        require_cost = config["metric_loss_md"].get("require_cost", False)
+
+        submodules = [f for f in (Path(model_config).parent / "models").glob("*")]
+        submodules = sorted(submodules, key=lambda x: int(str(x).split("epoch")[-1]))
+        # This is done for semantic sense since the "first" is actually at no epoch.
+        modules = [submodules[r] for r in range(-1, len(submodules)) if r >= 0]
+        if modules[0] != submodules[0]:
+            modules = [submodules[0]] + modules
+
+        if modules[-1] != submodules[-1]:
+            modules.append(submodules[-1])
+
+        modules = [m for m in modules if int(str(m).split("epoch")[-1]) >= analyze_start_epoch]
+
+        for i, module in tqdm.tqdm(enumerate(modules), total=len(modules), leave=False):
+            epoch = int(str(module).split("epoch")[-1])
+            module_path = f"{module}/embedder_{epoch}.pth"
+
+            if Path(f"{module}/stats.txt").exists():
+                continue
+
+            # Load the specific epoch model.
+            vae.load_state_dict(torch.load(module_path, map_location=device))
+            vae.to(device=device).eval()
+            collate_fn = gen_vae_collate(max_cat_features)
+
+            if dataset is None:
+                # Get the dataset if we need to.
+                dataset, _, idx_class, _, num_classes = _load_input_data(
+                    ctx,
+                    dataset_path,
+                    1.,
+                    max_attrs,
+                    require_cost,
+                    seed=0)
+
+                class_mapping = []
+                for c in range(num_classes):
+                    if idx_class[idx_class == c].shape[0] > 0:
+                        class_mapping.append(c)
+
+                # Use a common loss function.
+                metric_loss_fn = CostLoss(config["metric_loss_md"])
+                vae_loss = VAELoss(config["loss_fn"], max_attrs, max_cat_features)
+
+            # Construct the accumulator.
+            accumulated_stats = {}
+            for class_idx in class_mapping:
+                accumulated_stats[f"recon_{class_idx}"] = []
+
+            analyze_all_batches = analyze_num_batches == -1
+            if analyze_num_batches > 0 or analyze_all_batches:
+                accumulated_stats.update({
+                    "recon_accum": [],
+                    "metric_accum": [],
+                })
+
+                # Setup the dataloader.
+                if analyze_all_batches:
+                    dataloader = torch.utils.data.DataLoader(dataset, batch_size=analyze_batch_size, collate_fn=collate_fn)
+                    total = len(dataloader)
+                else:
+                    sampler = StratifiedRandomSampler(idx_class, max_class=num_classes, batch_size=analyze_batch_size, allow_repeats=False)
+                    dataloader = torch.utils.data.DataLoader(dataset, sampler=sampler, batch_size=analyze_batch_size, collate_fn=collate_fn)
+                    total = min(len(sampler), analyze_num_batches)
+                error = False
+                with torch.no_grad():
+                    with tqdm.tqdm(total=total, leave=False) as pbar:
+                        for (x, y) in dataloader:
+                            x = x.to(device=device)
+
+                            if config["use_bias"]:
+                                bias_fn = get_bias_fn(config)
+                                bias = bias_fn(x, y)
+                                if isinstance(bias, torch.Tensor):
+                                    bias = bias.to(device=device)
+                                else:
+                                    lbias = bias[0].to(device=device)
+                                    hbias = bias[1].to(device=device)
+                                    bias = (lbias, hbias)
+                            else:
+                                bias = None
+
+                            # Pass it through the VAE with the settings.
+                            z, decoded, error = vae(x, bias=bias)
+                            if error:
+                                # If we've encountered an error, abort early.
+                                # Don't use a model that can produce errors.
+                                break
+
+                            # Flatten.
+                            classes = y[:, -1].flatten()
+
+                            assert metric_loss_fn is not None
+                            loss_dict = vae_loss.compute_loss(
+                                preds=decoded,
+                                unused0=None,
+                                unused1=None,
+                                data=(x, y),
+                                is_eval=True)
+
+                            assert vae_loss.loss_fn is not None
+                            for class_idx in class_mapping:
+                                y_mask = classes == class_idx
+                                x_extract = x[y_mask.bool()]
+                                if x_extract.shape[0] > 0:
+                                    decoded_extract = decoded[y_mask.bool()]
+                                    loss = vae_loss.loss_fn(decoded_extract, x_extract, y[y_mask.bool()])
+                                    accumulated_stats[f"recon_{class_idx}"].append(loss.mean().item())
+
+                            input_y = y
+                            if y.shape[1] == 1:
+                                input_y = y.flatten()
+
+                            metric_loss = metric_loss_fn(z, input_y, None).item()
+                            accumulated_stats["recon_accum"].append(loss_dict["recon_loss"]["losses"].item())
+                            accumulated_stats["metric_accum"].append(metric_loss)
+
+                            del z
+                            del x
+                            del y
+
+                            # Break out if we are done.
+                            pbar.update(1)
+                            total -= 1
+                            if total == 0:
+                                break
+
+                # Output the evaluated stats.
+                with open(f"{module}/stats.txt", "w") as f:
+                    stats = {
+                        stat_key: (stats if isinstance(stats, np.ScalarType) else (np.mean(stats) if len(stats) > 0 else 0))
+                        for stat_key, stats in accumulated_stats.items()
+                    }
+                    stats["error"] = error.item()
+                    f.write(json.dumps(stats, indent=4))
+
+                del dataloader
+                gc.collect()
+                gc.collect()
