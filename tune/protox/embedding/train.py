@@ -294,11 +294,11 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     ), epoch_end
 
 
-def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpath, train_size):
+def hpo_train(config, ctx, benchmark, max_concurrent, iterations_per_epoch, benchmark_config_fpath, train_size):
     sys.path.append(os.fspath(ctx.obj.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
-    os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
+    os.environ["OMP_NUM_THREADS"] = str(max_concurrent)
 
     config = f_unpack_dict(config)
     if config.get("use_bias", False):
@@ -358,15 +358,15 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
 
 @click.command()
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
-@click.option("--num-concurrent", default=1, type=int, help="The number of concurrent embedding models to train. Setting this too high may overload the machine.")
+@click.option("--max-concurrent", default=1, type=int, help="The max # of concurrent embedding models to train. Setting this too high may overload the machine.")
 @click.option("--hpo-space-fpath", default=DEFAULT_HPO_SPACE_RELPATH, type=str, help="The path to the .json file defining the search space for hyperparameter optimization (HPO).")
 @click.option("--benchmark-config-fpath", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath('[benchmark]')}")
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
-@click.option("--num-samples", default=40, help=f"The number of times to specific hyperparameter configs to sample from the hyperparameter search space and train an embedding model with.")
+@click.option("--num-samples", default=40, help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train an embedding model with.")
 @click.option("--train-size", default=0.99, help=f"TODO(wz2)")
 @click.argument("benchmark")
 @click.pass_context
-def train(ctx, benchmark, seed, num_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
+def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
     # set args to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
@@ -394,7 +394,6 @@ def train(ctx, benchmark, seed, num_concurrent, hpo_space_fpath, benchmark_confi
 
     scheduler = FIFOScheduler()
     # Search.
-    ncpu = os.cpu_count()
     search = HyperOptSearch(
         metric="loss",
         mode="min",
@@ -402,12 +401,12 @@ def train(ctx, benchmark, seed, num_concurrent, hpo_space_fpath, benchmark_confi
         n_initial_points=20,
         space=space,
     )
-    search = ConcurrencyLimiter(search, max_concurrent=ncpu)
+    search = ConcurrencyLimiter(search, max_concurrent=max_concurrent)
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
         num_samples=num_samples,
-        max_concurrent_trials=ncpu,
+        max_concurrent_trials=max_concurrent,
         chdir_to_trial_dir=True,
     )
 
@@ -421,7 +420,7 @@ def train(ctx, benchmark, seed, num_concurrent, hpo_space_fpath, benchmark_confi
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, iterations_per_epoch=iterations_per_epoch, benchmark_config_fpath=benchmark_config_fpath, train_size=train_size), resources)
+    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, benchmark=benchmark, max_concurrent=max_concurrent, iterations_per_epoch=iterations_per_epoch, benchmark_config_fpath=benchmark_config_fpath, train_size=train_size), resources)
 
     # Hopefully this is now serializable.
     os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
