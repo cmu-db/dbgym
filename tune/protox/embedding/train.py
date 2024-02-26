@@ -71,7 +71,7 @@ def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def _load_input_data(input_file, train_size, max_attrs, require_cost, seed):
+def _load_input_data(ctx, input_fpath, train_size, max_attrs, require_cost, seed):
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -79,7 +79,8 @@ def _load_input_data(input_file, train_size, max_attrs, require_cost, seed):
     if require_cost:
         columns += COST_COLUMNS
 
-    df = pd.read_parquet(input_file, columns=columns)
+    with open_and_save(ctx, input_fpath, mode="r"):
+        df = pd.read_parquet(input_fpath, columns=columns)
     num_classes = df.idx_class.max() + 1
 
     # Get the y's and the x's.
@@ -196,7 +197,7 @@ def construct_epoch_end(val_dl, config, hooks, model_folder):
     return epoch_end
 
 
-def build_trainer(ctx, benchmark, config, input_file, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_config_fpath, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
@@ -217,7 +218,8 @@ def build_trainer(ctx, benchmark, config, input_file, trial_dir, benchmark_confi
 
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = _load_input_data(
-        input_file,
+        ctx,
+        input_fpath,
         train_size,
         max_attrs,
         config["metric_loss_md"].get("require_cost", False),
