@@ -23,12 +23,12 @@ from torch.utils.data import TensorDataset
 from pytorch_metric_learning.utils import logging_presets
 
 import ray
+from ray.train import FailureConfig, RunConfig, SyncConfig
 from ray.tune import with_resources, with_parameters, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search import ConcurrencyLimiter
-from ray.tune import SyncConfig
-from ray.air import session, RunConfig, FailureConfig
+from ray.air import session
 
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
 from tune.protox.embedding.vae import gen_vae_collate, VAE, VAELoss
@@ -413,8 +413,9 @@ def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_confi
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_config = RunConfig(
         name=f"MythrilHPO_{dtime}",
+        storage_path=None,
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
-        sync_config=SyncConfig(upload_dir=None, syncer=None),
+        sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
     )
