@@ -47,8 +47,7 @@ def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
     attributes = data["dbgym"]["attributes"]
     query_spec = data["dbgym"]["query_spec"]
     
-    # TODO(phw2): figure out how to do query_spec. should the paths be in the .yaml or should they be CLI args?
-    # no need to convert to an absolute path. open_and_save() already does that
+    # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
     if "query_directory" not in query_spec:
         assert "query_order" not in query_spec
         query_spec["query_directory"] = os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_queries')
@@ -255,7 +254,6 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     sampler = StratifiedRandomSampler(idx_class, max_class=num_classes, batch_size=config["batch_size"], allow_repeats=True)
 
     # Define the tester hook.
-    # TODO(phw2): put these in the run folder
     record_keeper, _, _ = logging_presets.get_record_keeper(f"{trial_dir}/logs", f"{trial_dir}/tboard")
     hooks = logging_presets.get_hook_container(record_keeper)
     model_folder = f"{trial_dir}/models"

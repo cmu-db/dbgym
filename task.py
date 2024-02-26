@@ -7,6 +7,8 @@ import os
 import click
 import yaml
 
+# TODO(phw2): save commit, git diff, and run command
+
 from experiment.cli import experiment_group
 from tune.protox.cli import protox_group
 
