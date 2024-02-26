@@ -39,7 +39,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
 
-from misc.utils import open_and_save, PROTOX_EMBEDDING_RELPATH, PROTOX_RELPATH, restart_ray
+from misc.utils import open_and_save, DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpath, restart_ray
 
 
 def _fetch_index_parameters(ctx: Context, benchmark: str, data: Dict):
@@ -357,24 +357,23 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
 
 
 @click.command()
-@click.option('--seed', default=None, type=int)
-@click.option('--hpo-space-fpath', default=None, type=str)
-@click.option('--benchmark-config-fpath', default=None, type=str)
-@click.option('--iterations-per-epoch', default=1000)
-@click.option('--num-samples', default=40)
-@click.option('--train-size', default=0.99)
-@click.argument('benchmark')
+@click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
+@click.option("--num-concurrent", default=1, type=int, help="The number of concurrent embedding models to train. Setting this too high may overload the machine.")
+@click.option("--hpo-space-fpath", default=DEFAULT_HPO_SPACE_RELPATH, type=str, help="The path to the .json file defining the search space for hyperparameter optimization (HPO).")
+@click.option("--benchmark-config-fpath", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath('[benchmark]')}")
+@click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
+@click.option("--num-samples", default=40, help=f"The number of times to specific hyperparameter configs to sample from the hyperparameter search space and train an embedding model with.")
+@click.option("--train-size", default=0.99, help=f"TODO(wz2)")
+@click.argument("benchmark")
 @click.pass_context
-def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
+def train(ctx, benchmark, seed, num_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
     # set args to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
-    if hpo_space_fpath == None:
-        hpo_space_fpath = f"{PROTOX_EMBEDDING_RELPATH}/default_hpo_space.json"
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_fpath == None:
-        benchmark_config_fpath = f"{PROTOX_RELPATH}/default_{benchmark}_config.yaml"
+        benchmark_config_fpath = default_benchmark_config_relpath(benchmark)
 
     # set seeds
     random.seed(seed)

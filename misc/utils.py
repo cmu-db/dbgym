@@ -1,12 +1,14 @@
 import os
 import subprocess
 import shutil
-from pathlib import Path, PosixPath
 from click.core import Context
 
 TUNE_RELPATH = "tune"
-PROTOX_RELPATH = f"{TUNE_RELPATH}/protox"
-PROTOX_EMBEDDING_RELPATH = f"{PROTOX_RELPATH}/embedding"
+PROTOX_RELPATH = os.path.join(TUNE_RELPATH, "protox")
+PROTOX_EMBEDDING_RELPATH = os.path.join(PROTOX_RELPATH, "embedding")
+DEFAULT_HPO_SPACE_RELPATH = os.path.join(PROTOX_EMBEDDING_RELPATH, "default_hpo_space.json")
+
+default_benchmark_config_relpath = (lambda benchmark : os.path.join(PROTOX_RELPATH, f"default_{benchmark}_config.yaml"))
 
 def conv_inputpath_to_abspath(ctx: Context, inputpath: os.PathLike) -> str:
     '''
