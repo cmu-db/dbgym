@@ -79,8 +79,8 @@ def _load_input_data(ctx, input_fpath, train_size, max_attrs, require_cost, seed
     if require_cost:
         columns += COST_COLUMNS
 
-    with open_and_save(ctx, input_fpath, mode="r"):
-        df = pd.read_parquet(input_fpath, columns=columns)
+    with open_and_save(ctx, input_fpath, mode="rb") as input_file:
+        df = pd.read_parquet(input_file, columns=columns)
     num_classes = df.idx_class.max() + 1
 
     # Get the y's and the x's.
