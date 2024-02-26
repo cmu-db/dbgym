@@ -255,7 +255,7 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     sampler = StratifiedRandomSampler(idx_class, max_class=num_classes, batch_size=config["batch_size"], allow_repeats=True)
 
     # Define the tester hook.
-    # TODO: put these in the run folder
+    # TODO(phw2): put these in the run folder
     record_keeper, _, _ = logging_presets.get_record_keeper(f"{trial_dir}/logs", f"{trial_dir}/tboard")
     hooks = logging_presets.get_hook_container(record_keeper)
     model_folder = f"{trial_dir}/models"
@@ -363,10 +363,11 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
 @click.option('--hpo-space-fpath', default=None, type=str)
 @click.option('--benchmark-config-fpath', default=None, type=str)
 @click.option('--iterations-per-epoch', default=1000)
+@click.option('--num-samples', default=40)
 @click.option('--train-size', default=0.99)
 @click.argument('benchmark')
 @click.pass_context
-def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, train_size):
+def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
     # set args to defaults programmatically
     if seed == None:
         seed = random.randint(0, 1e8)
@@ -389,7 +390,6 @@ def train(ctx, benchmark, seed, hpo_space_fpath, benchmark_config_fpath, iterati
     with open_and_save(ctx, hpo_space_fpath, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
-        num_samples = json_dict["num_samples"]
 
     # Connect to cluster or die.
     restart_ray()

@@ -1,9 +1,7 @@
 {
     "_comment": "This file holds the default hyperparameter optimization (HPO) space. It is _not_ a set of hyperparameters. It is just a search space",
     "_comment1": "Generally 10 epochs is usually good enough.",
-    "_comment2": "num_samples is defined in the space.json file because the right # of samples depends on how large the search space is.",
 
-    "num_samples": 40,
     "initial_configs": [
     ],
     "config": {

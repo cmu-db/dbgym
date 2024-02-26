@@ -16,17 +16,11 @@ def conv_inputpath_to_abspath(ctx: Context, inputpath: os.PathLike) -> str:
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     '''
-    # checks
-    # regardless of whether the user wants an absolute, relative, or home path, I will do all checks
-    # this helps errors surface more quickly
-    inputpath = os.fspath(inputpath) # it's easier to write just one piece of logic that operates on strings
-    if len(inputpath) == 0:
-        raise RuntimeError(f'inputpath ({inputpath}) is empty')
-
-    # logic
-    if inputpath[0] == '~':
-        return os.path.normpath(os.path.expanduser(inputpath))
-    elif inputpath[0] == '/':
+    # expanduser() is always "safe" to call
+    # the reason we don't call os.path.abspath() is because the path should be relative to ctx.obj.dbgym_repo_path,
+    #   which is not necessary where cwd() points at the time of calling this function
+    inputpath = os.path.expanduser(inputpath)
+    if os.path.isabs(inputpath):
         return os.path.normpath(inputpath)
     else:
         return os.path.normpath(os.path.join(ctx.obj.dbgym_repo_path, inputpath))
@@ -42,36 +36,86 @@ def is_base_git_dir(cwd) -> bool:
         # this means we are not in _any_ git repo
         return False
     
-def open_and_save(ctx: Context, open_fpath: os.PathLike, mode="r", subfolder=None):
+def parent_dir(dpath: os.PathLike) -> os.PathLike:
     '''
-    Open a file and "save" it to [workspace]/task_runs/run_*/
+    Return a path of the parent directory of a directory path
+    Note that os.path.dirname() does not always return the parent directory (it only does when the path doesn't end with a '/')
+    '''
+    assert os.path.isdir(dpath) and os.path.isabs(dpath)
+    return os.path.abspath(os.path.join(dpath, os.pardir))
+
+def dir_basename(dpath: os.PathLike) -> str:
+    '''
+    Return the directory name of a directory path
+    Note that os.path.basename() does not always return the directory name (it only does when the path doesn't end with a '/')
+    '''
+    assert os.path.isdir(dpath) and os.path.isabs(dpath)
+    dpath_dirname, dpath_basename = os.path.split(dpath)
+    # this means the path ended with a '/' so all os.path.split() does is get rid of the slash
+    if dpath_basename == '':
+        return os.path.basename(dpath_dirname)
+    else:
+        return dpath_basename
+
+def open_and_save(ctx: Context, open_fpath: os.PathLike, mode="r"):
+    '''
+    Open a file or symlink and "save" it to [workspace]/task_runs/run_*/
     It takes in a str | Path to match the interface of open()
-    If the file is a symlink, we traverse it until we get to a real file
+    Note that open() only opens files, not symlinks, so the interface is not exactly the same. Opening symlinks is
+        crucial because it means we can change symlink files in [workspace]/data/ instead of changing config files
     "Saving" can mean either copying the file or creating a symlink to it
     We copy the file if it is a "config", meaning it just exists without having been generated
     We create a symlink if it is a "dependency", meaning a task.py command was run to generate it
         In these cases we create a symlink so we have full provenance for how the dependency was created
-    If you are generating a "result", _do not_ use this. Just use the normal open().
+    If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
+        This shouldn't be too hard to remember because this function crashes if open_fpath doesn't exist,
+        and when you write results you're usually opening open_fpaths which do not exist
+    
+    **Notable Behavior**
+     - If you open the same "config" file twice in the same run, it'll only be saved the first time (even if the file has changed in between)
+        - "Dependency" files should be immutable so there's no problem here
+     - If you open two "config" files of the same name but different paths, only the first open will be saved
+        - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked
     '''
-    # TODO(phw2): check config vs dependency and handle them differently
-    # get open_fpath
-    open_fpath = os.fspath(open_fpath) # it's easier to write just one piece of logic that operates on strings
+    # process open_fpath and ensure that it's a file at the end
     open_fpath = conv_inputpath_to_abspath(ctx, open_fpath)
     open_fpath = os.path.realpath(open_fpath) # traverse symlinks
+    assert os.path.isfile(open_fpath)
 
-    # get copy_fpath
-    fname = os.path.basename(open_fpath)
-    dpath = conv_inputpath_to_abspath(ctx, ctx.obj.dbgym_this_run_path)
-    if subfolder != None:
-        dpath = os.path.join(dpath, subfolder)
-        # we know for a fact that dbgym_this_run_path exists. however, if subfolder != None, dpath may not exist so we should mkdir
-        # parents=True because subfolder could have a "/" in it
-        # exist_ok=True because we could have called open_and_save() earlier with the same subfolder argument
-        Path(dpath).mkdir(parents=True, exist_ok=True)
-    copy_fpath = os.path.join(dpath, fname)
+    # save. symlink if the opened file was generated by a run (since it'll be immutable in this case). copy if it wasn't
+    if os.path.samefile(os.path.commonpath([ctx.obj.dbgym_runs_path, open_fpath]), ctx.obj.dbgym_runs_path):
+        # get open_dpath and open_run_dpath. open_run_dpath is the run_*/ dir that open_fpath is in
+        open_dpath = os.path.dirname(open_fpath)
+        assert not os.path.samefile(open_dpath, ctx.obj.dbgym_runs_path), f'open_fpath ({open_fpath}) should be inside a run_*/ dir instead of directly in ctx.obj.dbgym_runs_path ({ctx.obj.dbgym_runs_path})'
+        open_run_dpath = open_dpath
+        while not os.path.samefile(parent_dir(open_run_dpath), ctx.obj.dbgym_runs_path):
+            open_run_dpath = parent_dir(open_run_dpath)
+        
+        # if the open_fpath file is directly in the run_*/ dir, we symlink the file directly
+        if os.path.samefile(open_dpath, open_run_dpath):
+            open_fname = os.path.basename(open_fpath)
+            symlink_fpath = os.path.join(ctx.obj.dbgym_this_run_path, open_fname)
+            if not os.path.exists(symlink_fpath):
+                os.symlink(open_fpath, symlink_fpath)
+        # else, we know the open_fpath file is _not_ directly in the run_*/ dir
+        # we go as far back as we can while still staying in the run_*/ and symlink that "base" dir
+        # this is because lots of runs create dirs and it's just a waste of space to symlink every individual file
+        else:
+            # set open_base_dpath such that its parent is the run_*/ dir (meaning its grandparent is dbgym_runs_path)
+            open_base_dpath = open_dpath
+            while not os.path.samefile(parent_dir(open_base_dpath), open_run_dpath):
+                open_base_dpath = parent_dir(open_base_dpath)
 
-    # copy
-    shutil.copy(open_fpath, copy_fpath)
+            # create symlink
+            open_base_dname = dir_basename(open_base_dpath)
+            symlink_dpath = os.path.join(ctx.obj.dbgym_this_run_path, open_base_dname)
+            if not os.path.exists(symlink_dpath):
+                os.symlink(open_base_dpath, symlink_dpath)
+    else:
+        fname = os.path.basename(open_fpath)
+        dpath = conv_inputpath_to_abspath(ctx, ctx.obj.dbgym_this_run_path)
+        copy_fpath = os.path.join(dpath, fname)
+        shutil.copy(open_fpath, copy_fpath)
 
     # open
     return open(open_fpath, mode=mode)

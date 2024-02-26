@@ -38,11 +38,11 @@ class Config:
                 sys.exit(0)
 
         # Set and create paths for storing results.
-        # these are all relative paths because I didn't do conv_inputpath_to_abspath()
         cwd = os.getcwd()
         assert is_base_git_dir(cwd)
         self.dbgym_repo_path = Path(cwd)
-        self.dbgym_workspace_path = Path(self.root_yaml["dbgym_workspace_path"])
+        # these are all abspaths because dbgym_workspace_path is an abspath and the rest are built from dbgym_workspace_path
+        self.dbgym_workspace_path = Path(os.path.abspath(self.root_yaml["dbgym_workspace_path"]))
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_bin_path = self.dbgym_workspace_path / "bin"
         self.dbgym_bin_path.mkdir(parents=True, exist_ok=True)
