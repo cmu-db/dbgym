@@ -255,6 +255,7 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
     sampler = StratifiedRandomSampler(idx_class, max_class=num_classes, batch_size=config["batch_size"], allow_repeats=True)
 
     # Define the tester hook.
+    # TODO: put these in the run folder
     record_keeper, _, _ = logging_presets.get_record_keeper(f"{trial_dir}/logs", f"{trial_dir}/tboard")
     hooks = logging_presets.get_hook_container(record_keeper)
     model_folder = f"{trial_dir}/models"
@@ -296,7 +297,7 @@ def build_trainer(ctx, benchmark, config, input_fpath, trial_dir, benchmark_conf
 
 
 def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpath, train_size):
-    sys.path.append(ctx.obj.dbgym_repo_path)
+    sys.path.append(os.fspath(ctx.obj.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
@@ -309,7 +310,7 @@ def hpo_train(config, ctx, benchmark, iterations_per_epoch, benchmark_config_fpa
                 config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = ctx.obj.dbgym_this_run_path
+    output_dir = os.fspath(ctx.obj.dbgym_this_run_path)
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
