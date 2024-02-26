@@ -17,6 +17,7 @@ import logging
 from datetime import datetime
 from click.core import Context
 from typing import Dict
+import shutil
 
 import torch
 import torch.nn as nn
@@ -376,13 +377,26 @@ def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_confi
     if benchmark_config_fpath == None:
         benchmark_config_fpath = default_benchmark_config_relpath(benchmark)
 
-    # set seeds
+    # setup
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-
     logging.getLogger().setLevel(logging.INFO)
 
+    # run all steps of training
+    train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size)
+    # the point of num_parts is to allocate different embeddings for analysis to different CPUs so we generally set it to os.cpu_count()
+    # note that while we generally *train* less embedding models in parallel than os.cpu_count(), we can safely *analyze* os.cpu_count() number of embedding models in parallel
+    # however, num_parts also cannot be > num_samples so we use min()
+    num_parts = min(os.cpu_count(), num_samples)
+    redist_trained_models(ctx, num_parts)
+
+
+def train_all_models(ctx, benchmark, max_concurrent, hpo_space_fpath, benchmark_config_fpath, iterations_per_epoch, num_samples, train_size):
+    '''
+    Trains all num_samples models using different samples of the hyperparameter space, writing their
+    results to different embedding_*/ folders in the run_*/ folder
+    '''
     start_time = time.time()
 
     with open_and_save(ctx, hpo_space_fpath, "r") as f:
@@ -445,3 +459,18 @@ def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_confi
     duration = time.time() - start_time
     with open(f"{ctx.obj.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")
+
+
+# TODO(phw2): check if anything goes wrong in any part of the entire selection process if num_parts doesn't evenly divide num_samples
+def redist_trained_models(ctx, num_parts):
+    '''
+    Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
+    '''
+    inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*")]
+
+    for i in range(num_parts):
+        (ctx.obj.dbgym_this_run_path / f"part{i}").mkdir(parents=True, exist_ok=True)
+
+    for i, emb in enumerate(inputs):
+        part = f"part{i % num_parts}"
+        shutil.move(emb, ctx.obj.dbgym_this_run_path / part)
