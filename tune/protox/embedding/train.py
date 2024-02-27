@@ -555,8 +555,12 @@ def analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args):
     Analyze all part*/ dirs _in parallel_
     '''
     # TODO(phw2): figure out how to do this in parallel
+    start_time = time.time()
     for part_i in range(num_parts):
         analyze_embeddings_part(ctx, part_i, generic_args, analyze_args)
+    duration = time.time() - start_time
+    with open(os.path.join(ctx.obj.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
+        f.write(f"{duration}")
 
 
 def analyze_embeddings_part(ctx, part_i, generic_args, analyze_args):
