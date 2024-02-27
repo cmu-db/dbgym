@@ -540,7 +540,7 @@ def redist_trained_models(ctx, num_parts):
     '''
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     '''
-    inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*")]
+    inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)]
 
     for part_i in range(num_parts):
         Path(get_part_i_dpath(ctx, part_i)).mkdir(parents=True, exist_ok=True)
@@ -564,8 +564,18 @@ def analyze_embeddings_part(ctx, part_i, generic_args, analyze_args):
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     '''
     part_dpath = get_part_i_dpath(ctx, part_i)
+
+    start_time = time.time()
     create_stats_for_part(ctx, part_dpath, generic_args, analyze_args)
+    duration = time.time() - start_time
+    with open(os.path.join(part_dpath, "stats_time.txt"), "w") as f:
+        f.write(f"{duration}")
+
+    start_time = time.time()
     create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args)
+    duration = time.time() - start_time
+    with open(os.path.join(part_dpath, "ranges_time.txt"), "w") as f:
+        f.write(f"{duration}")
 
 
 def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
@@ -573,6 +583,8 @@ def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
     '''
+    # Unlike for training, we're safe to use all threads for creating stats
+    os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     # Load the benchmark configuration.
     with open_and_save(ctx, generic_args.benchmark_config_path, "r") as f:
@@ -611,9 +623,9 @@ def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
 
         for i, module in tqdm.tqdm(enumerate(modules), total=len(modules), leave=False):
             epoch = int(str(module).split("epoch")[-1])
-            module_path = f"{module}/embedder_{epoch}.pth"
+            module_path = os.path.join(module, f"embedder_{epoch}.pth")
 
-            if Path(f"{module}/{STATS_FNAME}").exists():
+            if Path(os.path.join(module, f"{STATS_FNAME}")).exists():
                 continue
 
             # Load the specific epoch model.
@@ -724,7 +736,7 @@ def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
                                 break
 
                 # Output the evaluated stats.
-                with open(f"{module}/{STATS_FNAME}", "w") as f:
+                with open(os.path.join(module, f"{STATS_FNAME}"), "w") as f:
                     stats = {
                         stat_key: (stats if isinstance(stats, np.ScalarType) else (np.mean(stats) if len(stats) > 0 else 0))
                         for stat_key, stats in accumulated_stats.items()
@@ -742,6 +754,8 @@ def create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
     '''
+    # Unlike for training, we're safe to use all threads for creating ranges
+    os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
     paths = sorted([f for f in Path(part_dpath).rglob("embedder_*.pth") if "optimizer" not in str(f)])
     for embedder_fpath in tqdm.tqdm(paths):
         create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
