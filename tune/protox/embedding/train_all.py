@@ -28,7 +28,7 @@ from tune.protox.embedding.trainer import VAETrainer, StratifiedRandomSampler
 
 from misc.utils import open_and_save, restart_ray
 
-def train_all(ctx, generic_args, train_args):
+def train_all_embeddings(ctx, generic_args, train_args):
     '''
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
@@ -72,7 +72,7 @@ def train_all(ctx, generic_args, train_args):
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(hpo_train, ctx=ctx, generic_args=generic_args, train_args=train_args), resources)
+    trainable = with_resources(with_parameters(_hpo_train, ctx=ctx, generic_args=generic_args, train_args=train_args), resources)
 
     # Hopefully this is now serializable.
     os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
@@ -96,7 +96,7 @@ def train_all(ctx, generic_args, train_args):
         f.write(f"{duration}")
 
 
-def hpo_train(config, ctx, generic_args, train_args):
+def _hpo_train(config, ctx, generic_args, train_args):
     sys.path.append(os.fspath(ctx.obj.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
@@ -127,7 +127,7 @@ def hpo_train(config, ctx, generic_args, train_args):
     logging.info(config)
 
     # Build trainer and train.
-    trainer, epoch_end = build_trainer(
+    trainer, epoch_end = _build_trainer(
         ctx,
         generic_args.benchmark,
         config,
@@ -158,7 +158,7 @@ def hpo_train(config, ctx, generic_args, train_args):
         session.report({"loss": loss})
 
 
-def build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def _build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
@@ -222,7 +222,7 @@ def build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_confi
 
     # Validation step loop.
     val_dl = torch.utils.data.DataLoader(val_dataset, batch_size=4096, collate_fn=collate_fn)
-    epoch_end = construct_epoch_end(val_dl, config, hooks, model_folder)
+    epoch_end = _construct_epoch_end(val_dl, config, hooks, model_folder)
 
     def clip_grad():
         if config["grad_clip_amount"] is not None:
@@ -256,7 +256,7 @@ def build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_confi
     ), epoch_end
 
 
-def construct_epoch_end(val_dl, config, hooks, model_folder):
+def _construct_epoch_end(val_dl, config, hooks, model_folder):
     def epoch_end(trainer, *args, **kwargs):
         save_interval = config.get("save_every", 1)
         if (trainer.epoch - 1) % save_interval == 0:

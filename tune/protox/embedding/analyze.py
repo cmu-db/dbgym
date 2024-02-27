@@ -39,11 +39,11 @@ def redist_trained_models(ctx, num_parts):
     inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)]
 
     for part_i in range(num_parts):
-        Path(get_part_i_dpath(ctx, part_i)).mkdir(parents=True, exist_ok=True)
+        Path(_get_part_i_dpath(ctx, part_i)).mkdir(parents=True, exist_ok=True)
 
     for model_i, emb in enumerate(inputs):
         part_i = model_i % num_parts
-        shutil.move(emb, get_part_i_dpath(ctx, part_i))
+        shutil.move(emb, _get_part_i_dpath(ctx, part_i))
 
 
 def analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args):
@@ -52,32 +52,32 @@ def analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args):
     '''
     start_time = time.time()
     for part_i in range(num_parts):
-        analyze_embeddings_part(ctx, part_i, generic_args, analyze_args)
+        _analyze_embeddings_part(ctx, part_i, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(ctx.obj.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def analyze_embeddings_part(ctx, part_i, generic_args, analyze_args):
+def _analyze_embeddings_part(ctx, part_i, generic_args, analyze_args):
     '''
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     '''
-    part_dpath = get_part_i_dpath(ctx, part_i)
+    part_dpath = _get_part_i_dpath(ctx, part_i)
 
     start_time = time.time()
-    create_stats_for_part(ctx, part_dpath, generic_args, analyze_args)
+    _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "stats_time.txt"), "w") as f:
         f.write(f"{duration}")
 
     start_time = time.time()
-    create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args)
+    _create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "ranges_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
+def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
     '''
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -248,7 +248,7 @@ def create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
                 gc.collect()
 
 
-def create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
+def _create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
     '''
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -257,10 +257,10 @@ def create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
     paths = sorted([f for f in Path(part_dpath).rglob("embedder_*.pth") if "optimizer" not in str(f)])
     for embedder_fpath in tqdm.tqdm(paths):
-        create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
+        _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
 
 
-def create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args):
+def _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args):
     '''
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     '''
@@ -331,5 +331,5 @@ def create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args):
             base += output_scale
 
 
-def get_part_i_dpath(ctx, part_i) -> str:
+def _get_part_i_dpath(ctx, part_i) -> str:
     return os.path.join(ctx.obj.dbgym_this_run_path, f"part{part_i}")

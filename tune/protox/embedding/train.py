@@ -4,8 +4,9 @@ import numpy as np
 import logging
 import torch
 
-from tune.protox.embedding.train_all import train_all
+from tune.protox.embedding.train_all import train_all_embeddings
 from tune.protox.embedding.analyze import redist_trained_models, analyze_all_embeddings_parts, compute_num_parts, STATS_FNAME, RANGES_FNAME
+from tune.protox.embedding.select import select_best_embedding
 
 from misc.utils import DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpath, default_dataset_path, BENCHMARK_PLACEHOLDER, DATA_PATH_PLACEHOLDER
 
@@ -68,7 +69,7 @@ class EmbeddingAnalyzeArgs:
 
 def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size, start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep, seed):
     '''
-    Trains embeddings based on num_samples samples of the hyperparameter space. Analyzes the accuracy of all epochs of all hyperparameter
+    Trains embeddings with num_samples samples of the hyperparameter space. Analyzes the accuracy of all epochs of all hyperparameter
     space samples. Selects the best embedding and packages it as a .pth file in the run_*/ dir.
     '''
     # set args to defaults programmatically (do this BEFORE creating arg objects)
@@ -94,8 +95,9 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, t
     train_args = EmbeddingTrainArgs(hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size)
     analyze_args = EmbeddingAnalyzeArgs(start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep)
 
-    # run all steps of training
-    train_all(ctx, generic_args, train_args)
+    # run all steps
+    train_all_embeddings(ctx, generic_args, train_args)
     num_parts = compute_num_parts(num_samples)
     redist_trained_models(ctx, num_parts)
     analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args)
+    # select_best_embedding()
