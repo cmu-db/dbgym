@@ -535,7 +535,6 @@ def get_part_i_dpath(ctx, part_i) -> str:
     return os.path.join(ctx.obj.dbgym_this_run_path, f"part{part_i}")
 
 
-# TODO(phw2): check if anything goes wrong in any part of the entire selection process if num_parts doesn't evenly divide num_samples
 def redist_trained_models(ctx, num_parts):
     '''
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
@@ -554,7 +553,6 @@ def analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args):
     '''
     Analyze all part*/ dirs _in parallel_
     '''
-    # TODO(phw2): figure out how to do this in parallel
     start_time = time.time()
     for part_i in range(num_parts):
         analyze_embeddings_part(ctx, part_i, generic_args, analyze_args)

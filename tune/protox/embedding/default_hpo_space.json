@@ -143,8 +143,7 @@
             "num_epochs": {
                     "choice_name": "num_epochs",
                     "type": "constant",
-                    "TODO(phw2)": "make \"value\" 20 again",
-                    "value": 2
+                    "value": 20
             },
             "bias_init": {
                     "choice_name": "bias_init",
