@@ -10,3 +10,4 @@ tell Will I combined train, analyze, and selection into a single step because:
  1. only the final model is important for the user
  2. old run_*/ dirs should be immutable so I'd have to change the code as we currently create stats.txt and analyze.txt directly inside the models
 tell Will I combined the "start_epoch" args of eval and analyze
+tell Will I tried to leave most of the options intact. this resulted in way too many CLI args, but those can be pruned in the future. it's better to have too many than too little

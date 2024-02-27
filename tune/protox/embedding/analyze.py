@@ -157,7 +157,7 @@ def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
                 accumulated_stats[f"recon_{class_idx}"] = []
 
             analyze_all_batches = analyze_args.num_batches == -1
-            if analyze_args.num_batches > 0 or analyze_all_batches:
+            if analyze_all_batches or analyze_args.num_batches > 0:
                 accumulated_stats.update({
                     "recon_accum": [],
                     "metric_accum": [],
@@ -273,7 +273,7 @@ def _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
     with open_and_save(ctx, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         tables = data["protox"]["tables"]
-        max_attrs, max_cat_features, att_usage, class_mapping = fetch_index_parameters(ctx, generic_args.benchmark, data)
+        max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(ctx, generic_args.benchmark, data)
 
     # don't use open_and_save() because we generated embeddings_config_fpath in this run
     embeddings_dpath = embedder_fpath.parent.parent.parent # part*/embeddings_*/

@@ -6,62 +6,64 @@ import numpy as np
 from pathlib import Path
 import tqdm
 
+from tune.protox.embedding.analyze import STATS_FNAME, RANGES_FNAME
+
 class DotDict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
 
-def select_best_embedding():
-    data = _load_data(args)
+def select_best_embeddings(ctx, generic_args, select_args):
+    data = _load_data(ctx, select_args)
 
-    if args.data is not None and args.data.exists():
-        raw_data = pd.read_parquet(args.data)
-        data = _attach(data, raw_data, args.idx_limit)
+    if generic_args.dataset_path is not None and os.path.exists(generic_args.dataset_path):
+        raw_data = pd.read_parquet(generic_args.dataset_path)
+        data = _attach(data, raw_data, select_args.idx_limit)
 
-    data.to_csv(args.out, index=False)
+    data.to_csv(os.path.join(ctx.obj.dbgym_this_run_path, "curated_results.csv"), index=False)
 
-    if args.curate:
-        if (args.input / "curated").exists():
-            shutil.rmtree(args.input / "curated")
-        os.mkdir(args.input / "curated")
+    if (ctx.obj.dbgym_this_run_path / "curated").exists():
+        shutil.rmtree(ctx.obj.dbgym_this_run_path / "curated")
+    os.mkdir(ctx.obj.dbgym_this_run_path / "curated")
 
-        if "idx_class_total_error" in data:
-            data["elbo"] = data.elbo + data.idx_class_total_error
+    if "idx_class_total_error" in data:
+        data["elbo"] = data.elbo + data.idx_class_total_error
 
-        if args.allow_all:
-            df = data.sort_values(by=["elbo"]).iloc[:args.num_curate]
-        else:
-            df = data.sort_values(by=["elbo"]).groupby(by=["root"]).head(1).iloc[:args.num_curate]
+    if select_args.allow_all:
+        df = data.sort_values(by=["elbo"]).iloc[:select_args.num_curate]
+    else:
+        df = data.sort_values(by=["elbo"]).groupby(by=["root"]).head(1).iloc[:select_args.num_curate]
 
-        if not args.flatten:
-            for tup in df.itertuples():
-                shutil.copytree(tup.path, f"{args.input}/curated/{tup.path}", dirs_exist_ok=True)
-                shutil.copy(Path(tup.root) / "config", f"{args.input}/curated/{tup.root}/config")
-        else:
-            idx = args.flatten_idx
-            Path(f"{args.input}/curated").mkdir(parents=True, exist_ok=True)
-            info_txt = open(f"{args.input}/curated/info.txt", "w")
+    if select_args.flatten_idx == -1:
+        for tup in df.itertuples():
+            shutil.copytree(tup.path, f"{ctx.obj.dbgym_this_run_path}/curated/{tup.path}", dirs_exist_ok=True)
+            shutil.copy(Path(tup.root) / "config", f"{ctx.obj.dbgym_this_run_path}/curated/{tup.root}/config")
+    else:
+        idx = select_args.flatten_idx
+        Path(f"{ctx.obj.dbgym_this_run_path}/curated").mkdir(parents=True, exist_ok=True)
+        info_txt = open(f"{ctx.obj.dbgym_this_run_path}/curated/info.txt", "w")
 
-            for tup in df.itertuples():
-                epoch = int(str(tup.path).split("epoch")[-1])
-                shutil.copytree(tup.path, f"{args.input}/curated/model{idx}")
-                shutil.copy(Path(tup.root) / "config", f"{args.input}/curated/model{idx}/config")
+        for tup in df.itertuples():
+            epoch = int(str(tup.path).split("epoch")[-1])
+            shutil.copytree(tup.path, f"{ctx.obj.dbgym_this_run_path}/curated/model{idx}")
+            shutil.copy(Path(tup.root) / "config", f"{ctx.obj.dbgym_this_run_path}/curated/model{idx}/config")
 
-                info_txt.write(f"model{idx}/embedder_{epoch}.pth\n")
-                idx += 1
+            info_txt.write(f"model{idx}/embedder_{epoch}.pth\n")
+            idx += 1
 
-            info_txt.close()
+        info_txt.close()
 
 
-def _load_data():
+def _load_data(ctx, select_args):
     data = []
-    stats = [s for s in args.input.rglob("stats.txt")]
+    stats = [s for s in ctx.obj.dbgym_this_run_path.rglob(STATS_FNAME)]
     for stat in stats:
         if "curated" in str(stat):
             continue
 
         info = {}
+        # don't use open_and_save() because we generated stat in this run
         with open(stat, "r") as f:
             stat_dict = json.load(f)
             info["recon"] = stat_dict["recon_accum"]
@@ -70,13 +72,14 @@ def _load_data():
             info["elbo_metric"] = info["recon"] + info["metric"]
             info["all_loss"] = info["recon"] + info["metric"]
 
-            if args.recon is not None and args.recon < info["recon"]:
+            if select_args.recon is not None and select_args.recon < info["recon"]:
                 # Did not pass reconstruction threshold.
                 continue
 
             info["path"] = str(stat.parent)
             info["root"] = str(stat.parent.parent.parent)
 
+        # don't use open_and_save() because we generated config in this run
         with open(stat.parent.parent.parent / "config", "r") as f:
             config = json.load(f)
             def recurse_set(source, target):
@@ -86,8 +89,8 @@ def _load_data():
                     else:
                         target[k] = v
             recurse_set(config, info)
-            if args.latent_dim is not None:
-                if info["latent_dim"] != args.latent_dim:
+            if select_args.latent_dim is not None:
+                if info["latent_dim"] != select_args.latent_dim:
                     continue
 
             if not info["weak_bias"]:
@@ -96,11 +99,11 @@ def _load_data():
             output_scale = config["metric_loss_md"]["output_scale"]
             bias_sep = config["metric_loss_md"]["bias_separation"]
 
-            if args.bias_sep is not None:
-                if args.bias_sep != bias_sep:
+            if select_args.bias_sep is not None:
+                if select_args.bias_sep != bias_sep:
                     continue
 
-            info["analyze_file"] = str(Path(stat).parent / "analyze.txt")
+            info["ranges_file"] = str(Path(stat).parent / RANGES_FNAME)
 
         data.append(info)
 
@@ -120,7 +123,7 @@ def _attach(data, raw_data, num_limit=0):
     new_data = []
     for tup in tqdm.tqdm(data.itertuples(), total=data.shape[0]):
         tup = DotDict({k: getattr(tup, k) for k in data.columns})
-        if raw_data is not None and Path(tup.analyze_file).exists():
+        if raw_data is not None and Path(tup.ranges_file).exists():
             def compute_dist_score(current_dists, base, upper):
                 nonlocal filtered_data
                 key = (base, upper)
@@ -145,7 +148,8 @@ def _attach(data, raw_data, num_limit=0):
                         error += abs(current_dists[str(key)] - dist)
                 return error
 
-            with open(tup.analyze_file, "r") as f:
+            # don't use open_and_save() because we generated ranges in this run
+            with open(tup.ranges_file, "r") as f:
                 errors = []
                 drange = (None, None)
                 current_dists = {}
