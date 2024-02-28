@@ -94,10 +94,11 @@ class EmbeddingSelectArgs:
 
 def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size, start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep, recon, latent_dim, bias_sep, idx_limit, num_curate, allow_all, flatten_idx, seed):
     '''
-    Trains embeddings with num_samples samples of the hyperparameter space. Analyzes the accuracy of all epochs of all hyperparameter
-    space samples. Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
+    Trains embeddings with num_samples samples of the hyperparameter space.
+    Analyzes the accuracy of all epochs of all hyperparameter space samples.
+    Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     '''
-    # set args to defaults programmatically (do this BEFORE creating arg objects)
+    # set args to defaults programmatically (do this BEFORE creating Embedding*Args objects)
     if dataset_path == None:
         dataset_path = default_dataset_path(ctx.obj.dbgym_data_path, benchmark)
     # TODO(phw2): figure out whether different scale factors use the same config
