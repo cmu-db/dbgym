@@ -11,48 +11,6 @@ from tune.protox.embedding.select import select_best_embeddings
 from misc.utils import DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpath, default_dataset_path, BENCHMARK_PLACEHOLDER, DATA_PATH_PLACEHOLDER
 
 
-class EmbeddingTrainGenericArgs:
-    '''Same comment as EmbeddingDatagenGenericArgs'''
-    def __init__(self, benchmark, benchmark_config_path, dataset_path, seed):
-        self.benchmark = benchmark
-        self.benchmark_config_path = benchmark_config_path
-        self.dataset_path = dataset_path
-        self.seed = seed
-
-
-class EmbeddingTrainAllArgs:
-    '''Same comment as EmbeddingDatagenGenericArgs'''
-    def __init__(self, hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size):
-        self.hpo_space_path = hpo_space_path
-        self.train_max_concurrent = train_max_concurrent
-        self.iterations_per_epoch = iterations_per_epoch
-        self.num_samples = num_samples
-        self.train_size = train_size
-
-
-class EmbeddingAnalyzeArgs:
-    '''Same comment as EmbeddingDatagenGenericArgs'''
-    def __init__(self, start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep):
-        self.start_epoch = start_epoch
-        self.batch_size = batch_size
-        self.num_batches = num_batches
-        self.max_segments = max_segments
-        self.num_points_to_sample = num_points_to_sample
-        self.num_classes_to_keep = num_classes_to_keep
-
-
-class EmbeddingSelectArgs:
-    '''Same comment as EmbeddingDatagenGenericArgs'''
-    def __init__(self, recon, latent_dim, bias_sep, idx_limit, num_curate, allow_all, flatten_idx):
-        self.recon = recon
-        self.latent_dim = latent_dim
-        self.bias_sep = bias_sep
-        self.idx_limit = idx_limit
-        self.num_curate = num_curate
-        self.allow_all = allow_all
-        self.flatten_idx = flatten_idx
-
-
 # click setup
 @click.command()
 @click.pass_context
@@ -122,3 +80,45 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, seed, hpo_space_p
     redist_trained_models(cfg, num_parts)
     analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args)
     select_best_embeddings(cfg, generic_args, select_args)
+
+
+class EmbeddingTrainGenericArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, benchmark, benchmark_config_path, dataset_path, seed):
+        self.benchmark = benchmark
+        self.benchmark_config_path = benchmark_config_path
+        self.dataset_path = dataset_path
+        self.seed = seed
+
+
+class EmbeddingTrainAllArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size):
+        self.hpo_space_path = hpo_space_path
+        self.train_max_concurrent = train_max_concurrent
+        self.iterations_per_epoch = iterations_per_epoch
+        self.num_samples = num_samples
+        self.train_size = train_size
+
+
+class EmbeddingAnalyzeArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep):
+        self.start_epoch = start_epoch
+        self.batch_size = batch_size
+        self.num_batches = num_batches
+        self.max_segments = max_segments
+        self.num_points_to_sample = num_points_to_sample
+        self.num_classes_to_keep = num_classes_to_keep
+
+
+class EmbeddingSelectArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, recon, latent_dim, bias_sep, idx_limit, num_curate, allow_all, flatten_idx):
+        self.recon = recon
+        self.latent_dim = latent_dim
+        self.bias_sep = bias_sep
+        self.idx_limit = idx_limit
+        self.num_curate = num_curate
+        self.allow_all = allow_all
+        self.flatten_idx = flatten_idx
