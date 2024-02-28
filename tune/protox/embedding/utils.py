@@ -10,9 +10,7 @@ from sklearn.model_selection import train_test_split
 from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
-
 from tune.protox.embedding.loss import COST_COLUMNS
-
 from misc.utils import open_and_save
 
 

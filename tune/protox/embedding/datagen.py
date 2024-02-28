@@ -12,11 +12,12 @@ import random
 import numpy as np
 import os
 import time
+from sklearn.preprocessing import quantile_transform
 
 from tune.protox.env.workload import Workload
 from tune.protox.env.workload_utils import QueryType
 from tune.protox.env.space.index_space import IndexSpace, IndexRepr
-
+from tune.protox.embedding.loss import COST_COLUMNS
 from misc.utils import open_and_save, BENCHMARK_PLACEHOLDER, default_benchmark_config_relpath
 
 # FUTURE(oltp)
@@ -27,9 +28,16 @@ from misc.utils import open_and_save, BENCHMARK_PLACEHOLDER, default_benchmark_c
 #     pass
 
 
+# click steup
+@click.command()
+@click.pass_context
+
+# generic args
 @click.argument("benchmark")
 @click.option("--benchmark-config-path", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.")
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
+
+# dir gen args
 @click.option("--leading-col-tbls", default=None, type=str, help="All tables included here will have indexes created s.t. each column is represented equally often as the \"leading column\" of the index.")
 # TODO(wz2): what if we sample tbl_sample_limit / len(cols) for tables in leading_col_tbls? this way, tbl_sample_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
 @click.option("--default-sample-limit", default=2048, type=int, help="The default sample limit of all tables, used unless override sample limit is specified. If the table is in --leading-col-tbls, sample limit is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, sample limit is the # of indexes to sample total for that table.")
@@ -42,9 +50,14 @@ from misc.utils import open_and_save, BENCHMARK_PLACEHOLDER, default_benchmark_c
 # TODO(wz2): when would we not want to generate costs?
 @click.option("--no-generate-costs", is_flag=True, help="Turn off generating costs.")
 @click.option("--truncate-target", default=None, type=int, help="TODO(wz2)")
-@click.command()
-@click.pass_context
-def datagen(ctx, benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target):
+
+# file gen args
+@click.option("--table-shape", is_flag=True, help="TODO(wz2)")
+@click.option("--dual-class", is_flag=True, help="TODO(wz2)")
+@click.option("--pad-min", default=None, type=int, help="TODO(wz2)")
+@click.option("--rebias", default=0, type=float, help="TODO(wz2)")
+
+def datagen(ctx, benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target, table_shape, dual_class, pad_min, rebias):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
@@ -83,12 +96,12 @@ def datagen(ctx, benchmark, benchmark_config_path, seed, leading_col_tbls, defau
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(benchmark, benchmark_config_path, seed)
     dir_gen_args = EmbeddingDirGenArgs(leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target)
-    file_gen_args = None
+    file_gen_args = EmbeddingFileGenArgs(table_shape, dual_class, pad_min, rebias)
 
     # run all steps
     start_time = time.time()
     _gen_traindata_dir(cfg, generic_args, dir_gen_args)
-    # _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args)
+    _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
     with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
@@ -119,6 +132,19 @@ class EmbeddingDirGenArgs:
         self.truncate_target = truncate_target
 
 
+class EmbeddingFileGenArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, table_shape, dual_class, pad_min, rebias):
+        self.table_shape = table_shape
+        self.dual_class = dual_class
+        self.pad_min = pad_min
+        self.rebias = rebias
+
+
+def get_traindata_dir(cfg):
+    return cfg.dbgym_this_run_path / "traindata_dir"
+
+
 def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
     with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
@@ -130,7 +156,7 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
 
     workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     modified_attrs = workload.process_column_usage()
-    traindata_dir = cfg.dbgym_this_run_path / "traindata_dir"
+    traindata_dir = get_traindata_dir(cfg)
 
     with Pool(dir_gen_args.max_concurrent) as pool:
         results = []
@@ -178,15 +204,14 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
 
 def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
     tbl_dirs = {}
-    with open(args.benchmark_config, "r") as f:
+    with open(generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)["mythril"]
         tables = benchmark_config["tables"]
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
 
-    files = []
-    for comp in args.input_data.split(","):
-        files.extend([f for f in Path(comp).rglob("*.parquet")])
+    traindata_dir = get_traindata_dir(cfg)
+    files = [f for f in Path(traindata_dir).rglob("*.parquet")]
 
     def read(file):
         tbl = Path(file).parts[-2]
@@ -195,9 +220,9 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
         df = pd.read_parquet(file)
         df["tbl_index"] = tbl_dirs[tbl]
 
-        if args.pad_min is not None:
-            if df.shape[0] < args.pad_min:
-                df = pd.concat([df] * int(args.pad_min / df.shape[0]))
+        if file_gen_args.pad_min is not None:
+            if df.shape[0] < file_gen_args.pad_min:
+                df = pd.concat([df] * int(file_gen_args.pad_min / df.shape[0]))
         return df
 
     df = pd.concat(map(read, files))
@@ -212,7 +237,7 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
         mult_tbl = (df.table_reference_cost / target_cost)
         rel_tbl = ((df.table_reference_cost - target_cost) / target_cost)
 
-        if args.table_shape:
+        if file_gen_args.table_shape:
             df["quant_mult_cost_improvement"] = quantile_transform(mult_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
             df["quant_rel_cost_improvement"] = quantile_transform(rel_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
         else:
@@ -221,10 +246,7 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
 
         df.drop(columns=["reference_cost", "table_reference_cost", "target_cost"], inplace=True, errors="ignore")
 
-    if args.inflate_ratio > 1:
-        df = pd.concat([df] * args.inflate_ratio)
-
-    if args.dual_class:
+    if file_gen_args.dual_class:
         df["real_idx_class"] = df["idx_class"]
         df["idx_class"] = df["real_idx_class"] * df.col0.max() + df.col1
 
@@ -234,19 +256,19 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
     columns = [c for c in df.columns if c not in COST_COLUMNS and "idx_class" not in c and "cmd" != c]
     df[columns] = df[columns].astype(int)
 
-    if args.rebias > 0:
+    if file_gen_args.rebias > 0:
         groups = df.groupby(by=["tbl_index", "idx_class"]).quant_mult_cost_improvement.describe().sort_values(by=["max"], ascending=False)
         datum = []
         cur_bias = 1.
-        sep_bias = args.rebias
+        sep_bias = file_gen_args.rebias
         for g in groups.itertuples():
             d = df[(df.tbl_index == g.Index[0]) & (df.idx_class == g.Index[1]) & (df.quant_mult_cost_improvement >= g._6)].copy()
-            d["quant_mult_cost_improvement"] = cur_bias - (args.rebias / 2)
+            d["quant_mult_cost_improvement"] = cur_bias - (file_gen_args.rebias / 2)
             datum.append(d)
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    df.to_parquet(f"{args.output_dir}/out.parquet")
+    df.to_parquet(os.path.join(cfg.dbgym_this_run_path, f"{generic_args.benchmark}_embedding_traindata.parquet"))
 
 
 def _all_subsets(ss):
