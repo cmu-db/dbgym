@@ -179,6 +179,7 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
 
 
 def _produce_index_data(
+    ctx,
     connection,
     tables,
     attributes,
@@ -200,7 +201,7 @@ def _produce_index_data(
     #     models = load_ou_models(model_dir)
 
     # Construct workload.
-    workload = Workload(tables, attributes, query_spec, pid=str(p))
+    workload = Workload(ctx, tables, attributes, query_spec, pid=str(p))
     modified_attrs = workload.process_column_usage()
 
     seed = (os.getpid() * int(time.time())) % 123456789
@@ -368,12 +369,14 @@ def create_datagen_parser(subparser):
 @click.option("--truncate-target", default=None, type=int, help="TODO(wz2)")
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 
-def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target, seed):
+def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target, seed):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     '''
+    # TODO(phw2): manage postgres
+
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -388,25 +391,28 @@ def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, overrid
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
     # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
     # I felt this was better than introducing a new delimiter which might conflict with the name of a table
-    override_sample_limits_str = override_sample_limits
-    override_sample_limits = dict()
-    override_sample_limits_str_split = override_sample_limits_str.split(",")
-    assert len(override_sample_limits_str_split) % 2 == 0, f"override_sample_limits (\"{override_sample_limits_str}\") does not have an even number of values"
-    for i in range(0, len(override_sample_limits_str_split), 2):
-        tbl = override_sample_limits_str_split[i]
-        limit = int(override_sample_limits_str_split[i + 1])
-        override_sample_limits[tbl] = limit
+    if override_sample_limits == None:
+        override_sample_limits = dict()
+    else:
+        override_sample_limits_str = override_sample_limits
+        override_sample_limits = dict()
+        override_sample_limits_str_split = override_sample_limits_str.split(",")
+        assert len(override_sample_limits_str_split) % 2 == 0, f"override_sample_limits (\"{override_sample_limits_str}\") does not have an even number of values"
+        for i in range(0, len(override_sample_limits_str_split), 2):
+            tbl = override_sample_limits_str_split[i]
+            limit = int(override_sample_limits_str_split[i + 1])
+            override_sample_limits[tbl] = limit
 
     # function start
     with open_and_save(ctx, benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
-    max_num_columns = benchmark_config["mythril"]["max_num_columns"]
-    tables = benchmark_config["mythril"]["tables"]
-    attributes = benchmark_config["mythril"]["attributes"]
-    query_spec = benchmark_config["mythril"]["query_spec"]
+    max_num_columns = benchmark_config["protox"]["max_num_columns"]
+    tables = benchmark_config["protox"]["tables"]
+    attributes = benchmark_config["protox"]["attributes"]
+    query_spec = benchmark_config["protox"]["query_spec"]
 
-    workload = Workload(tables, attributes, query_spec, pid=None)
+    workload = Workload(ctx, tables, attributes, query_spec, pid=None)
     modified_attrs = workload.process_column_usage()
 
     start_time = time.time()
@@ -429,6 +435,7 @@ def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, overrid
                     results.append(pool.apply_async(
                         _produce_index_data,
                         args=(
+                            ctx,
                             connection_str,
                             tables,
                             attributes,
@@ -442,7 +449,8 @@ def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, overrid
                             col,
                             truncate_target,
                             job_id,
-                            output)))
+                            output),
+                        ))
                     job_id += 1
 
         pool.close()

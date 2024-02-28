@@ -19,7 +19,10 @@ task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
 
 
-class Config:
+class DBGymConfig:
+    '''
+    Global configurations that apply to all parts of DB-Gym
+    '''
     def __init__(self, config_path, startup_check=False):
         self.path = config_path
         # Parse the YAML file.
@@ -83,7 +86,7 @@ class Config:
 @click.pass_context
 def task(ctx, config_path, no_startup_check):
     """💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩"""
-    ctx.obj = Config(config_path, startup_check=not no_startup_check)
+    ctx.obj = DBGymConfig(config_path, startup_check=not no_startup_check)
 
 
 @click.group(name="config")

@@ -179,12 +179,12 @@ class Workload(object):
         # Get the order in which we should execute in.
         sqls = []
         if "query_order" in query_spec:
-            with open_and_save(ctx, query_spec["query_order"], "r") as f:
+            with open_and_save(self.ctx, query_spec["query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [(line.split(",")[0], Path(query_spec["query_directory"]) / line.split(",")[1], 1) for line in lines]
 
         if "query_transactional" in query_spec:
-            with open_and_save(ctx, query_spec["query_transactional"], "r") as f:
+            with open_and_save(self.ctx, query_spec["query_transactional"], "r") as f:
                 lines = f.read().splitlines()
                 splits = [line.split(",") for line in lines]
                 sqls = [(split[0], Path(query_spec["query_directory"]) / split[1], float(split[2])) for split in splits]
@@ -195,7 +195,7 @@ class Workload(object):
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
         if "execute_query_order" in query_spec:
-            with open_and_save(ctx, query_spec["execute_query_order"], "r") as f:
+            with open_and_save(self.ctx, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [(line.split(",")[0], Path(query_spec["execute_query_directory"]) / line.split(",")[1], 1) for line in lines]
 
@@ -281,14 +281,14 @@ class Workload(object):
 
         if workload_qdir is not None and workload_qdir[0] is not None:
             workload_qdir, workload_qlist = workload_qdir
-            with open_and_save(ctx, workload_qlist, "r") as f:
+            with open_and_save(self.ctx, workload_qlist, "r") as f:
                 psql_order = [(f"Q{i+1}", workload_qdir / l.strip()) for i, l in enumerate(f.readlines())]
 
             actual_order = [p[0] for p in psql_order]
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with open_and_save(ctx, qpat, "r") as f:
+                with open_and_save(self.ctx, qpat, "r") as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:
