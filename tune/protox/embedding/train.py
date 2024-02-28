@@ -98,7 +98,7 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, t
     Analyzes the accuracy of all epochs of all hyperparameter space samples.
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     '''
-    # set args to defaults programmatically (do this BEFORE creating Embedding*Args objects)
+    # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
         dataset_path = default_dataset_path(ctx.obj.dbgym_data_path, benchmark)
     # TODO(phw2): figure out whether different scale factors use the same config

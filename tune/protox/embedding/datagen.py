@@ -17,7 +17,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.workload_utils import QueryType
 from tune.protox.env.space.index_space import IndexSpace, IndexRepr
 
-from misc.utils import open_and_save, default_benchmark_config_relpath
+from misc.utils import open_and_save, BENCHMARK_PLACEHOLDER, default_benchmark_config_relpath
 
 # FUTURE(oltp)
 # try:
@@ -328,7 +328,7 @@ def _produce_index_data(
                 gc.collect()
                 gc.collect()
     # Log that we finished.
-    print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
+    print(f"{target} {p} progress update: {file_limit} / {file_limit}.")
 
 
 def create_datagen_parser(subparser):
@@ -336,8 +336,8 @@ def create_datagen_parser(subparser):
     parser.add_argument("--config", type=Path, default="configs/config.yaml")
     parser.add_argument("--benchmark-config", type=Path, default="configs/benchmark/tpch.yaml")
     parser.add_argument("--generate-costs", default=False, action="store_true")
-    parser.add_argument("--sample-limit", default=100000, type=int)
-    parser.add_argument("--batch-limit", type=str)
+    parser.add_argument("--file-limit", default=100000, type=int)
+    parser.add_argument("--sample-limit", type=str)
     parser.add_argument("--num-processes", default=1, type=int)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--connection", type=str)
@@ -357,19 +357,22 @@ def create_datagen_parser(subparser):
 # args
 @click.argument("benchmark")
 @click.option("--benchmark-config-path", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.")
-@click.option("--leading-col-tbls", default=None, type=str, help="If the table is in --leading-col-tbls, it is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, it is the # of indexes to sample total for that table.")
-# TODO(wz2): what if we sample tbl_batch_limit / len(cols) for tables in leading_col_tbls? this way, tbl_batch_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
-@click.option("--batch-limits", default="2048", type=str, help="If the table is in --leading-col-tbls, it is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, it is the # of indexes to sample total for that table.")
+@click.option("--leading-col-tbls", default=None, type=str, help="All tables included here will have indexes created s.t. each column is represented equally often as the \"leading column\" of the index.")
+# TODO(wz2): what if we sample tbl_sample_limit / len(cols) for tables in leading_col_tbls? this way, tbl_sample_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
+@click.option("--default-sample-limit", default=2048, type=int, help="The default sample limit of all tables, used unless override sample limit is specified. If the table is in --leading-col-tbls, sample limit is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, sample limit is the # of indexes to sample total for that table.")
+@click.option("--override-sample-limits", default=None, type=str, help="Override the sample limit for specific tables. An example input would be \"lineitem,32768,orders,4096\".")
+# TODO(wz2): if I'm just outputting out.parquet instead of the full directory, do we even need file limit at all?
+@click.option("--file-limit", default=1024, type=int, help="The max # of data points (one data point = one hypothetical index) per file")
 @click.option("--max-concurrent", default=None, type=int, help="The max # of concurrent threads that will be creating hypothetical indexes. The default is `nproc`.")
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 
-def datagen(ctx, benchmark, benchmark_config_path, batch_limits, max_concurrent, seed):
+def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, override_sample_limits, file_limit, max_concurrent, seed):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     '''
-    # set args to defaults programmatically (do this BEFORE creating Embedding*Args objects)
+    # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -379,13 +382,18 @@ def datagen(ctx, benchmark, benchmark_config_path, batch_limits, max_concurrent,
     if seed == None:
         seed = random.randint(0, 1e8)
 
-    # process the "array-like" args
+    # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
-    batch_limits = str(batch_limits)
-    if "," in batch_limits:
-        batch_limits = [int(bl) for bl in batch_limits.split(",")]
-    else:
-        batch_limits = int(batch_limits)
+    # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
+    # I felt this was better than introducing a new delimiter which might conflict with the name of a table
+    override_sample_limits_str = override_sample_limits
+    override_sample_limits = dict()
+    override_sample_limits_str_split = override_sample_limits_str.split(",")
+    assert len(override_sample_limits_str_split) % 2 == 0, f"override_sample_limits (\"{override_sample_limits_str}\") does not have an even number of values"
+    for i in range(0, len(override_sample_limits_str_split), 2):
+        tbl = override_sample_limits_str_split[i]
+        limit = int(override_sample_limits_str_split[i + 1])
+        override_sample_limits[tbl] = limit
 
     # function start
     with open_and_save(ctx, benchmark_config_path, "r") as f:
@@ -402,31 +410,18 @@ def datagen(ctx, benchmark, benchmark_config_path, batch_limits, max_concurrent,
     start_time = time.time()
     with Pool(max_concurrent) as pool:
         results = []
-        if args.per_table:
-            tbls = tables
-        else:
-            assert args.table is not None
-            tbls = args.table.split(",")
-            for tbl in tbls:
-                assert tbl in tables
-
         job_id = 0
-        for tbli, tbl in enumerate(tbls):
+        for tbl in tables:
             cols = [None] if tbl not in leading_col_tbls else modified_attrs[tbl]
             for colidx, col in enumerate(cols):
                 if col is None:
-                    output = args.output_dir / tbl
+                    output = ctx.obj.dbgym_this_run_path / tbl
                 else:
-                    output = args.output_dir / tbl / col
+                    output = ctx.obj.dbgym_this_run_path / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
-                tbl_batch_limit = None
-                if isinstance(batch_limits, list):
-                    num_slices = math.ceil(batch_limits[tbli] / args.sample_limit)
-                    tbl_batch_limit = batch_limits[tbli]
-                else:
-                    num_slices = math.ceil(batch_limits / args.sample_limit)
-                    tbl_batch_limit = batch_limits
+                tbl_sample_limit = override_sample_limits.get(tbl, default_sample_limit)
+                num_slices = math.ceil(tbl_sample_limit / file_limit)
 
                 for _ in range(0, num_slices):
                     results.append(pool.apply_async(
@@ -442,7 +437,7 @@ def datagen(ctx, benchmark, benchmark_config_path, batch_limits, max_concurrent,
                             seed,
                             args.generate_costs,
                             args.model_dir,
-                            min(tbl_batch_limit, args.sample_limit),
+                            min(tbl_sample_limit, file_limit),
                             tbl, # target
                             colidx if col is not None else None,
                             col,
