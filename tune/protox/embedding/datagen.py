@@ -18,7 +18,7 @@ from tune.protox.env.workload import Workload
 from tune.protox.env.workload_utils import QueryType
 from tune.protox.env.space.index_space import IndexSpace, IndexRepr
 from tune.protox.embedding.loss import COST_COLUMNS
-from misc.utils import open_and_save, BENCHMARK_PLACEHOLDER, default_benchmark_config_relpath
+from misc.utils import open_and_save, link_result, BENCHMARK_PLACEHOLDER, default_benchmark_config_relpath
 
 # FUTURE(oltp)
 # try:
@@ -143,6 +143,10 @@ class EmbeddingFileGenArgs:
 
 def get_traindata_dir(cfg):
     return cfg.dbgym_this_run_path / "traindata_dir"
+
+
+def get_traindata_path(cfg, generic_args):
+    return os.path.join(cfg.dbgym_this_run_path, f"{generic_args.benchmark}_embedding_traindata.parquet")
 
 
 def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
@@ -274,7 +278,9 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    df.to_parquet(os.path.join(cfg.dbgym_this_run_path, f"{generic_args.benchmark}_embedding_traindata.parquet"))
+    traindata_path = get_traindata_path(cfg, generic_args)
+    df.to_parquet(traindata_path)
+    link_result(cfg, traindata_path)
 
 
 def _all_subsets(ss):
