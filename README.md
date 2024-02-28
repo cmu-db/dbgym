@@ -4,6 +4,7 @@ However, it's still useful to note down what needs to be included as it comes up
 Here is the list:
 - The `dbgym_workspace/` directory and its structure
 - What `open_and_save()` as well as the distinction between configs, dependencies, and results
+We used a conda env with Python 3.10.13
 
 ## to include in PR
 tell Will I combined train, analyze, and selection into a single step because:
