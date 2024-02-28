@@ -48,11 +48,11 @@ def _fetch_server_indexes(connection):
         _INDEX_SERVER_COUNTS[rr[0]] += 1
 
 # FUTURE(oltp)
-# def load_ou_models(model_dir):
+# def load_ou_models(ctx, model_dir):
 #     models = {}
 #     for f in Path(model_dir).rglob("*.pkl"):
 #         ou_name = str(f.parts[-1]).split(".")[0]
-#         with open(f, "rb") as model:
+#         with open_and_save(ctx, f, "rb") as model:
 #             models[ou_name] = pickle.load(model)
 #     return models
 
@@ -179,8 +179,6 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
 
 
 def _produce_index_data(
-    config_path,
-    benchmark_config,
     connection,
     tables,
     attributes,
@@ -188,7 +186,6 @@ def _produce_index_data(
     max_num_columns,
     seed,
     generate_costs,
-    model_dir,
     sample_limit,
     target,
     leading_col,
@@ -328,7 +325,7 @@ def _produce_index_data(
                 gc.collect()
                 gc.collect()
     # Log that we finished.
-    print(f"{target} {p} progress update: {file_limit} / {file_limit}.")
+    print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
 
 
 def create_datagen_parser(subparser):
@@ -364,9 +361,14 @@ def create_datagen_parser(subparser):
 # TODO(wz2): if I'm just outputting out.parquet instead of the full directory, do we even need file limit at all?
 @click.option("--file-limit", default=1024, type=int, help="The max # of data points (one data point = one hypothetical index) per file")
 @click.option("--max-concurrent", default=None, type=int, help="The max # of concurrent threads that will be creating hypothetical indexes. The default is `nproc`.")
+# TODO(phw2): figure out a better way to do Postgres connections
+@click.option("--connection-str", required=True, default=None, type=str, help="The Postgres connection string.")
+# TODO(wz2): when would we not want to generate costs?
+@click.option("--no-generate-costs", is_flag=True, help="Turn off generating costs.")
+@click.option("--truncate-target", default=None, type=int, help="TODO(wz2)")
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 
-def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, override_sample_limits, file_limit, max_concurrent, seed):
+def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target, seed):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
@@ -427,21 +429,18 @@ def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, overrid
                     results.append(pool.apply_async(
                         _produce_index_data,
                         args=(
-                            args.config,
-                            args.benchmark_config,
-                            args.connection,
+                            connection_str,
                             tables,
                             attributes,
                             query_spec,
                             max_num_columns,
                             seed,
-                            args.generate_costs,
-                            args.model_dir,
+                            not no_generate_costs,
                             min(tbl_sample_limit, file_limit),
                             tbl, # target
                             colidx if col is not None else None,
                             col,
-                            args.truncate_target,
+                            truncate_target,
                             job_id,
                             output)))
                     job_id += 1
@@ -453,5 +452,5 @@ def datagen(ctx, benchmark, benchmark_config_path, default_sample_limit, overrid
             result.get()
 
     duration = time.time() - start_time
-    with open(f"{args.output_dir}/time.txt", "w") as f:
+    with open(f"{ctx.obj.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
