@@ -154,6 +154,12 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
     attributes = benchmark_config["protox"]["attributes"]
     query_spec = benchmark_config["protox"]["query_spec"]
 
+    # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
+    if "query_directory" not in query_spec:
+        assert "query_order" not in query_spec
+        query_spec["query_directory"] = os.path.join(cfg.dbgym_data_path, f'{generic_args.benchmark}_queries')
+        query_spec["query_order"] = os.path.join(query_spec["query_directory"], f'order.txt')
+
     workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     modified_attrs = workload.process_column_usage()
     traindata_dir = get_traindata_dir(cfg)
@@ -205,7 +211,7 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
 def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
-        benchmark_config = yaml.safe_load(f)["mythril"]
+        benchmark_config = yaml.safe_load(f)["protox"]
         tables = benchmark_config["tables"]
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
@@ -449,7 +455,6 @@ def _produce_index_data(
     workload = Workload(cfg, tables, attributes, query_spec, pid=str(p))
     modified_attrs = workload.process_column_usage()
 
-    seed = (os.getpid() * int(time.time())) % 123456789
     np.random.seed(seed)
     random.seed(seed)
 
