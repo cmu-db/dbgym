@@ -48,11 +48,11 @@ def _fetch_server_indexes(connection):
         _INDEX_SERVER_COUNTS[rr[0]] += 1
 
 # FUTURE(oltp)
-# def load_ou_models(ctx, model_dir):
+# def load_ou_models(cfg, model_dir):
 #     models = {}
 #     for f in Path(model_dir).rglob("*.pkl"):
 #         ou_name = str(f.parts[-1]).split(".")[0]
-#         with open_and_save(ctx, f, "rb") as model:
+#         with open_and_save(cfg, f, "rb") as model:
 #             models[ou_name] = pickle.load(model)
 #     return models
 
@@ -179,7 +179,7 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
 
 
 def _produce_index_data(
-    ctx,
+    cfg,
     connection,
     tables,
     attributes,
@@ -201,7 +201,7 @@ def _produce_index_data(
     #     models = load_ou_models(model_dir)
 
     # Construct workload.
-    workload = Workload(ctx, tables, attributes, query_spec, pid=str(p))
+    workload = Workload(cfg, tables, attributes, query_spec, pid=str(p))
     modified_attrs = workload.process_column_usage()
 
     seed = (os.getpid() * int(time.time())) % 123456789
@@ -378,6 +378,7 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
     # TODO(phw2): manage postgres
 
     # set args to defaults programmatically (do this before doing anything else in the function)
+    cfg = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -404,7 +405,7 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
             override_sample_limits[tbl] = limit
 
     # function start
-    with open_and_save(ctx, benchmark_config_path, "r") as f:
+    with open_and_save(cfg, benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
     max_num_columns = benchmark_config["protox"]["max_num_columns"]
@@ -412,7 +413,7 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
     attributes = benchmark_config["protox"]["attributes"]
     query_spec = benchmark_config["protox"]["query_spec"]
 
-    workload = Workload(ctx, tables, attributes, query_spec, pid=None)
+    workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     modified_attrs = workload.process_column_usage()
 
     start_time = time.time()
@@ -423,9 +424,9 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
             cols = [None] if tbl not in leading_col_tbls else modified_attrs[tbl]
             for colidx, col in enumerate(cols):
                 if col is None:
-                    output = ctx.obj.dbgym_this_run_path / tbl
+                    output = cfg.dbgym_this_run_path / tbl
                 else:
-                    output = ctx.obj.dbgym_this_run_path / tbl / col
+                    output = cfg.dbgym_this_run_path / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
                 tbl_sample_limit = override_sample_limits.get(tbl, default_sample_limit)
@@ -435,7 +436,7 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
                     results.append(pool.apply_async(
                         _produce_index_data,
                         args=(
-                            ctx,
+                            cfg,
                             connection_str,
                             tables,
                             attributes,
@@ -460,5 +461,5 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
             result.get()
 
     duration = time.time() - start_time
-    with open(f"{ctx.obj.dbgym_this_run_path}/datagen_time.txt", "w") as f:
+    with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")

@@ -14,18 +14,18 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def select_best_embeddings(ctx, generic_args, select_args):
-    data = _load_data(ctx, select_args)
+def select_best_embeddings(cfg, generic_args, select_args):
+    data = _load_data(cfg, select_args)
 
     if generic_args.dataset_path is not None and os.path.exists(generic_args.dataset_path):
         raw_data = pd.read_parquet(generic_args.dataset_path)
         data = _attach(data, raw_data, select_args.idx_limit)
 
-    data.to_csv(os.path.join(ctx.obj.dbgym_this_run_path, "curated_results.csv"), index=False)
+    data.to_csv(os.path.join(cfg.dbgym_this_run_path, "curated_results.csv"), index=False)
 
-    if (ctx.obj.dbgym_this_run_path / "curated").exists():
-        shutil.rmtree(ctx.obj.dbgym_this_run_path / "curated")
-    os.mkdir(ctx.obj.dbgym_this_run_path / "curated")
+    if (cfg.dbgym_this_run_path / "curated").exists():
+        shutil.rmtree(cfg.dbgym_this_run_path / "curated")
+    os.mkdir(cfg.dbgym_this_run_path / "curated")
 
     if "idx_class_total_error" in data:
         data["elbo"] = data.elbo + data.idx_class_total_error
@@ -37,17 +37,17 @@ def select_best_embeddings(ctx, generic_args, select_args):
 
     if select_args.flatten_idx == -1:
         for tup in df.itertuples():
-            shutil.copytree(tup.path, f"{ctx.obj.dbgym_this_run_path}/curated/{tup.path}", dirs_exist_ok=True)
-            shutil.copy(Path(tup.root) / "config", f"{ctx.obj.dbgym_this_run_path}/curated/{tup.root}/config")
+            shutil.copytree(tup.path, f"{cfg.dbgym_this_run_path}/curated/{tup.path}", dirs_exist_ok=True)
+            shutil.copy(Path(tup.root) / "config", f"{cfg.dbgym_this_run_path}/curated/{tup.root}/config")
     else:
         idx = select_args.flatten_idx
-        Path(f"{ctx.obj.dbgym_this_run_path}/curated").mkdir(parents=True, exist_ok=True)
-        info_txt = open(f"{ctx.obj.dbgym_this_run_path}/curated/info.txt", "w")
+        Path(f"{cfg.dbgym_this_run_path}/curated").mkdir(parents=True, exist_ok=True)
+        info_txt = open(f"{cfg.dbgym_this_run_path}/curated/info.txt", "w")
 
         for tup in df.itertuples():
             epoch = int(str(tup.path).split("epoch")[-1])
-            shutil.copytree(tup.path, f"{ctx.obj.dbgym_this_run_path}/curated/model{idx}")
-            shutil.copy(Path(tup.root) / "config", f"{ctx.obj.dbgym_this_run_path}/curated/model{idx}/config")
+            shutil.copytree(tup.path, f"{cfg.dbgym_this_run_path}/curated/model{idx}")
+            shutil.copy(Path(tup.root) / "config", f"{cfg.dbgym_this_run_path}/curated/model{idx}/config")
 
             info_txt.write(f"model{idx}/embedder_{epoch}.pth\n")
             idx += 1
@@ -55,9 +55,9 @@ def select_best_embeddings(ctx, generic_args, select_args):
         info_txt.close()
 
 
-def _load_data(ctx, select_args):
+def _load_data(cfg, select_args):
     data = []
-    stats = [s for s in ctx.obj.dbgym_this_run_path.rglob(STATS_FNAME)]
+    stats = [s for s in cfg.dbgym_this_run_path.rglob(STATS_FNAME)]
     for stat in stats:
         if "curated" in str(stat):
             continue

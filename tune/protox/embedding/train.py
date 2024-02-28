@@ -99,8 +99,9 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, t
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     '''
     # set args to defaults programmatically (do this before doing anything else in the function)
+    cfg = ctx.obj
     if dataset_path == None:
-        dataset_path = default_dataset_path(ctx.obj.dbgym_data_path, benchmark)
+        dataset_path = default_dataset_path(cfg.dbgym_data_path, benchmark)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -123,8 +124,8 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, hpo_space_path, t
     select_args = EmbeddingSelectArgs(recon, latent_dim, bias_sep, idx_limit, num_curate, allow_all, flatten_idx)
 
     # run all steps
-    train_all_embeddings(ctx, generic_args, train_args)
+    train_all_embeddings(cfg, generic_args, train_args)
     num_parts = compute_num_parts(num_samples)
-    redist_trained_models(ctx, num_parts)
-    analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args)
-    select_best_embeddings(ctx, generic_args, select_args)
+    redist_trained_models(cfg, num_parts)
+    analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args)
+    select_best_embeddings(cfg, generic_args, select_args)

@@ -1,9 +1,5 @@
 import logging
 from pathlib import Path
-import sys
-from datetime import datetime
-import os
-
 import click
 import yaml
 
@@ -13,71 +9,10 @@ import yaml
 from experiment.cli import experiment_group
 from tune.protox.cli import protox_group
 
-from misc.utils import is_base_git_dir
+from misc.utils import DBGymConfig
 
 task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
-
-
-class DBGymConfig:
-    '''
-    Global configurations that apply to all parts of DB-Gym
-    '''
-    def __init__(self, config_path, startup_check=False):
-        self.path = config_path
-        # Parse the YAML file.
-        contents = Path(self.path).read_text()
-        self.root_yaml = yaml.safe_load(contents)
-        self.cur_path = Path(".")
-        self.cur_yaml = self.root_yaml
-
-        # Quickly display options.
-        if startup_check:
-            msg = (
-                "💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩\n"
-                f"\tdbgym_workspace_path: {self.root_yaml['dbgym_workspace_path']}\n"
-                "\n"
-                "Proceed?"
-            )
-            if not click.confirm(msg):
-                print("Goodbye.")
-                sys.exit(0)
-
-        # Set and create paths for storing results.
-        cwd = os.getcwd()
-        assert is_base_git_dir(cwd)
-        self.dbgym_repo_path = Path(cwd)
-        # these are all abspaths because dbgym_workspace_path is an abspath and the rest are built from dbgym_workspace_path
-        self.dbgym_workspace_path = Path(os.path.abspath(self.root_yaml["dbgym_workspace_path"]))
-        self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_bin_path = self.dbgym_workspace_path / "bin"
-        self.dbgym_bin_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_build_path = self.dbgym_workspace_path / "build"
-        self.dbgym_build_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_data_path = self.dbgym_workspace_path / "data"
-        self.dbgym_data_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
-        self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
-        curr_dt = datetime.now()
-        self.dbgym_this_run_path = self.dbgym_runs_path / f"run_{curr_dt.strftime('%Y-%m-%d_%H-%M-%S')}"
-        # exist_ok is False because we don't want to override a previous task run's data
-        self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
-
-    def append_group(self, name):
-        self.cur_path /= name
-        self.cur_yaml = config.cur_yaml.get(name, {})
-
-    @property
-    def cur_bin_path(self):
-        return self.dbgym_bin_path / self.cur_path
-
-    @property
-    def cur_build_path(self):
-        return self.dbgym_build_path / self.cur_path
-
-    @property
-    def cur_data_path(self):
-        return self.dbgym_data_path / self.cur_path
 
 
 @click.group()

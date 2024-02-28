@@ -28,14 +28,14 @@ from tune.protox.embedding.trainer import VAETrainer, StratifiedRandomSampler
 
 from misc.utils import open_and_save, restart_ray
 
-def train_all_embeddings(ctx, generic_args, train_args):
+def train_all_embeddings(cfg, generic_args, train_args):
     '''
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
     '''
     start_time = time.time()
 
-    with open_and_save(ctx, train_args.hpo_space_path, "r") as f:
+    with open_and_save(cfg, train_args.hpo_space_path, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
@@ -72,7 +72,7 @@ def train_all_embeddings(ctx, generic_args, train_args):
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(_hpo_train, ctx=ctx, generic_args=generic_args, train_args=train_args), resources)
+    trainable = with_resources(with_parameters(_hpo_train, cfg=cfg, generic_args=generic_args, train_args=train_args), resources)
 
     # Hopefully this is now serializable.
     os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
@@ -92,12 +92,12 @@ def train_all_embeddings(ctx, generic_args, train_args):
         assert False
 
     duration = time.time() - start_time
-    with open(f"{ctx.obj.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
+    with open(f"{cfg.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")
 
 
-def _hpo_train(config, ctx, generic_args, train_args):
-    sys.path.append(os.fspath(ctx.obj.dbgym_repo_path))
+def _hpo_train(config, cfg, generic_args, train_args):
+    sys.path.append(os.fspath(cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
     os.environ["OMP_NUM_THREADS"] = str(train_args.train_max_concurrent)
@@ -110,7 +110,7 @@ def _hpo_train(config, ctx, generic_args, train_args):
                 config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = ctx.obj.dbgym_this_run_path
+    output_dir = cfg.dbgym_this_run_path
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
@@ -128,7 +128,7 @@ def _hpo_train(config, ctx, generic_args, train_args):
 
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(
-        ctx,
+        cfg,
         generic_args.benchmark,
         config,
         generic_args.dataset_path,
@@ -158,14 +158,14 @@ def _hpo_train(config, ctx, generic_args, train_args):
         session.report({"loss": loss})
 
 
-def _build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def _build_trainer(cfg, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
     max_cat_features = 0
     max_attrs = 0
 
     # Load the benchmark configuration.
-    with open_and_save(ctx, benchmark_config_path, "r") as f:
+    with open_and_save(cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
-        max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(ctx, benchmark, data)
+        max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(cfg, benchmark, data)
 
     config["class_mapping"] = {}
     for (tbl, col), key in class_mapping.items():
@@ -179,7 +179,7 @@ def _build_trainer(ctx, benchmark, config, input_path, trial_dir, benchmark_conf
 
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = load_input_data(
-        ctx,
+        cfg,
         input_path,
         train_size,
         max_attrs,
