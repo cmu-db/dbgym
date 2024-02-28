@@ -12,7 +12,7 @@ from misc.utils import DEFAULT_HPO_SPACE_RELPATH, default_benchmark_config_relpa
 
 
 class EmbeddingTrainGenericArgs:
-    '''Same comment as EmbeddingDatagenArgs'''
+    '''Same comment as EmbeddingDatagenGenericArgs'''
     def __init__(self, benchmark, benchmark_config_path, dataset_path, seed):
         self.benchmark = benchmark
         self.benchmark_config_path = benchmark_config_path
@@ -21,7 +21,7 @@ class EmbeddingTrainGenericArgs:
 
 
 class EmbeddingTrainAllArgs:
-    '''Same comment as EmbeddingDatagenArgs'''
+    '''Same comment as EmbeddingDatagenGenericArgs'''
     def __init__(self, hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size):
         self.hpo_space_path = hpo_space_path
         self.train_max_concurrent = train_max_concurrent
@@ -31,7 +31,7 @@ class EmbeddingTrainAllArgs:
 
 
 class EmbeddingAnalyzeArgs:
-    '''Same comment as EmbeddingDatagenArgs'''
+    '''Same comment as EmbeddingDatagenGenericArgs'''
     def __init__(self, start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep):
         self.start_epoch = start_epoch
         self.batch_size = batch_size
@@ -42,7 +42,7 @@ class EmbeddingAnalyzeArgs:
 
 
 class EmbeddingSelectArgs:
-    '''Same comment as EmbeddingDatagenArgs'''
+    '''Same comment as EmbeddingDatagenGenericArgs'''
     def __init__(self, recon, latent_dim, bias_sep, idx_limit, num_curate, allow_all, flatten_idx):
         self.recon = recon
         self.latent_dim = latent_dim
@@ -110,9 +110,7 @@ def train(ctx, benchmark, benchmark_config_path, dataset_path, seed, hpo_space_p
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    # group args together to reduce the # of parameters we pass into functions
-    # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
-    # I didn't group misc args because they're just miscellaneous
+    # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(benchmark, benchmark_config_path, dataset_path, seed)
     train_args = EmbeddingTrainAllArgs(hpo_space_path, train_max_concurrent, iterations_per_epoch, num_samples, train_size)
     analyze_args = EmbeddingAnalyzeArgs(start_epoch, batch_size, num_batches, max_segments, num_points_to_sample, num_classes_to_keep)

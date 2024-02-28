@@ -329,16 +329,21 @@ def _produce_index_data(
     print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
 
 
-class EmbeddingDatagenArgs:
+class EmbeddingDatagenGenericArgs:
     '''
     I made Embedding*Args classes to reduce the # of parameters we pass into functions
     I wanted to use classes over dictionaries to enforce which fields are allowed to be present
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     '''
-    def __init__(self, benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target):
+    def __init__(self, benchmark, benchmark_config_path, seed):
         self.benchmark = benchmark
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
+
+
+class EmbeddingDirGenArgs:
+    '''Same comment as EmbeddingDatagenGenericArgs'''
+    def __init__(self, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target):
         self.leading_col_tbls = leading_col_tbls
         self.default_sample_limit = default_sample_limit
         self.override_sample_limits = override_sample_limits
@@ -401,20 +406,23 @@ def datagen(ctx, benchmark, benchmark_config_path, seed, leading_col_tbls, defau
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    # function start
-    datagen_args = EmbeddingDatagenArgs(benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target)
+    # group args together to reduce the # of parameters we pass into functions
+    # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
+    generic_args = EmbeddingDatagenGenericArgs(benchmark, benchmark_config_path, seed)
+    dir_gen_args = EmbeddingDirGenArgs(leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target)
+    file_gen_args = None
 
     # run all steps
     start_time = time.time()
-    _gen_traindata_dir(cfg, datagen_args)
-    # _combine_traindata_dir_into_parquet(cfg, datagen_args)
+    _gen_traindata_dir(cfg, generic_args, dir_gen_args)
+    # _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
     with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
 
 
-def _gen_traindata_dir(cfg, datagen_args):
-    with open_and_save(cfg, datagen_args.benchmark_config_path, "r") as f:
+def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
+    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
         
     max_num_columns = benchmark_config["protox"]["max_num_columns"]
@@ -426,11 +434,11 @@ def _gen_traindata_dir(cfg, datagen_args):
     modified_attrs = workload.process_column_usage()
     traindata_dir = cfg.dbgym_this_run_path / "traindata_dir"
 
-    with Pool(datagen_args.max_concurrent) as pool:
+    with Pool(dir_gen_args.max_concurrent) as pool:
         results = []
         job_id = 0
         for tbl in tables:
-            cols = [None] if tbl not in datagen_args.leading_col_tbls else modified_attrs[tbl]
+            cols = [None] if tbl not in dir_gen_args.leading_col_tbls else modified_attrs[tbl]
             for colidx, col in enumerate(cols):
                 if col is None:
                     output = traindata_dir / tbl
@@ -438,26 +446,26 @@ def _gen_traindata_dir(cfg, datagen_args):
                     output = traindata_dir / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
-                tbl_sample_limit = datagen_args.override_sample_limits.get(tbl, datagen_args.default_sample_limit)
-                num_slices = math.ceil(tbl_sample_limit / datagen_args.file_limit)
+                tbl_sample_limit = dir_gen_args.override_sample_limits.get(tbl, dir_gen_args.default_sample_limit)
+                num_slices = math.ceil(tbl_sample_limit / dir_gen_args.file_limit)
 
                 for _ in range(0, num_slices):
                     results.append(pool.apply_async(
                         _produce_index_data,
                         args=(
                             cfg,
-                            datagen_args.connection_str,
+                            dir_gen_args.connection_str,
                             tables,
                             attributes,
                             query_spec,
                             max_num_columns,
-                            datagen_args.seed,
-                            not datagen_args.no_generate_costs,
-                            min(tbl_sample_limit, datagen_args.file_limit),
+                            generic_args.seed,
+                            not dir_gen_args.no_generate_costs,
+                            min(tbl_sample_limit, dir_gen_args.file_limit),
                             tbl, # target
                             colidx if col is not None else None,
                             col,
-                            datagen_args.truncate_target,
+                            dir_gen_args.truncate_target,
                             job_id,
                             output),
                         ))
@@ -470,7 +478,7 @@ def _gen_traindata_dir(cfg, datagen_args):
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(cfg, datagen_args):
+def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
     tbl_dirs = {}
     with open(args.benchmark_config, "r") as f:
         benchmark_config = yaml.safe_load(f)["mythril"]
