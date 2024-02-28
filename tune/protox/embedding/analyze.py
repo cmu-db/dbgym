@@ -32,52 +32,52 @@ def compute_num_parts(num_samples):
     return 1
 
 
-def redist_trained_models(ctx, num_parts):
+def redist_trained_models(cfg, num_parts):
     '''
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     '''
-    inputs = [f for f in ctx.obj.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)]
+    inputs = [f for f in cfg.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)]
 
     for part_i in range(num_parts):
-        Path(_get_part_i_dpath(ctx, part_i)).mkdir(parents=True, exist_ok=True)
+        Path(_get_part_i_dpath(cfg, part_i)).mkdir(parents=True, exist_ok=True)
 
     for model_i, emb in enumerate(inputs):
         part_i = model_i % num_parts
-        shutil.move(emb, _get_part_i_dpath(ctx, part_i))
+        shutil.move(emb, _get_part_i_dpath(cfg, part_i))
 
 
-def analyze_all_embeddings_parts(ctx, num_parts, generic_args, analyze_args):
+def analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args):
     '''
     Analyze all part*/ dirs _in parallel_
     '''
     start_time = time.time()
     for part_i in range(num_parts):
-        _analyze_embeddings_part(ctx, part_i, generic_args, analyze_args)
+        _analyze_embeddings_part(cfg, part_i, generic_args, analyze_args)
     duration = time.time() - start_time
-    with open(os.path.join(ctx.obj.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
+    with open(os.path.join(cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def _analyze_embeddings_part(ctx, part_i, generic_args, analyze_args):
+def _analyze_embeddings_part(cfg, part_i, generic_args, analyze_args):
     '''
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     '''
-    part_dpath = _get_part_i_dpath(ctx, part_i)
+    part_dpath = _get_part_i_dpath(cfg, part_i)
 
     start_time = time.time()
-    _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args)
+    _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "stats_time.txt"), "w") as f:
         f.write(f"{duration}")
 
     start_time = time.time()
-    _create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args)
+    _create_ranges_for_part(cfg, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "ranges_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
+def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
     '''
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -86,9 +86,9 @@ def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     # Load the benchmark configuration.
-    with open_and_save(ctx, generic_args.benchmark_config_path, "r") as f:
+    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
-        max_attrs, max_cat_features, _, _ = fetch_index_parameters(ctx, generic_args.benchmark, data)
+        max_attrs, max_cat_features, _, _ = fetch_index_parameters(cfg, generic_args.benchmark, data)
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     models = itertools.chain(*[Path(part_dpath).rglob("config")])
@@ -98,7 +98,7 @@ def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
             print("Detected failure in: ", model_config)
             continue
 
-        with open_and_save(ctx, model_config, "r") as f:
+        with open_and_save(cfg, model_config, "r") as f:
             config = json.load(f)
 
         # Create them here since these are constant for a given "model" configuration.
@@ -135,7 +135,7 @@ def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
             if dataset is None:
                 # Get the dataset if we need to.
                 dataset, _, idx_class, _, num_classes = load_input_data(
-                    ctx,
+                    cfg,
                     generic_args.dataset_path,
                     1.,
                     max_attrs,
@@ -248,7 +248,7 @@ def _create_stats_for_part(ctx, part_dpath, generic_args, analyze_args):
                 gc.collect()
 
 
-def _create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
+def _create_ranges_for_part(cfg, part_dpath, generic_args, analyze_args):
     '''
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -257,10 +257,10 @@ def _create_ranges_for_part(ctx, part_dpath, generic_args, analyze_args):
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
     paths = sorted([f for f in Path(part_dpath).rglob("embedder_*.pth") if "optimizer" not in str(f)])
     for embedder_fpath in tqdm.tqdm(paths):
-        _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
+        _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args)
 
 
-def _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args):
+def _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args):
     '''
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     '''
@@ -270,10 +270,10 @@ def _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
         return
     
     # Load the benchmark configuration.
-    with open_and_save(ctx, generic_args.benchmark_config_path, "r") as f:
+    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         tables = data["protox"]["tables"]
-        max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(ctx, generic_args.benchmark, data)
+        max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(cfg, generic_args.benchmark, data)
 
     # don't use open_and_save() because we generated embeddings_config_fpath in this run
     embeddings_dpath = embedder_fpath.parent.parent.parent # part*/embeddings_*/
@@ -331,5 +331,5 @@ def _create_ranges_for_embedder(ctx, embedder_fpath, generic_args, analyze_args)
             base += output_scale
 
 
-def _get_part_i_dpath(ctx, part_i) -> str:
-    return os.path.join(ctx.obj.dbgym_this_run_path, f"part{part_i}")
+def _get_part_i_dpath(cfg, part_i) -> str:
+    return os.path.join(cfg.dbgym_this_run_path, f"part{part_i}")
