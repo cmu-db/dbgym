@@ -67,7 +67,7 @@ class EmbeddingSelectArgs:
 
 # train args
 @click.option("--hpo-space-path", default=DEFAULT_HPO_SPACE_RELPATH, type=str, help="The path to the .json file defining the search space for hyperparameter optimization (HPO).")
-@click.option("--train-max-concurrent", default=1, type=int, help="The max # of concurrent embedding models to train. Setting this too high may overload the machine.")
+@click.option("--train-max-concurrent", default=1, type=int, help="The max # of concurrent embedding models to train. This is usually set lower than `nproc` to reduce memory pressure.")
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
 @click.option("--num-samples", default=40, help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train embedding models with.")
 @click.option("--train-size", default=0.99, help=f"TODO(wz2)")

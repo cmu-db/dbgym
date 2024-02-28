@@ -7,15 +7,17 @@ import gc
 import yaml
 from pathlib import Path
 import psycopg
-
-from tune.protox.env.workload import Workload
-from tune.protox.env.workload_utils import QueryType
-from tune.protox.env.space.index_space import IndexSpace, IndexRepr
 from multiprocessing import Pool
 import random
 import numpy as np
 import os
 import time
+
+from tune.protox.env.workload import Workload
+from tune.protox.env.workload_utils import QueryType
+from tune.protox.env.space.index_space import IndexSpace, IndexRepr
+
+from misc.utils import open_and_save, default_benchmark_config_relpath
 
 # FUTURE(oltp)
 # try:
@@ -354,27 +356,39 @@ def create_datagen_parser(subparser):
 
 # args
 @click.argument("benchmark")
-@click.option("--batch-limit", default="2048", type=str, help="The")
+@click.option("--benchmark-config-path", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.")
+@click.option("--leading-col-tbls", default=None, type=str, help="If the table is in --leading-col-tbls, it is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, it is the # of indexes to sample total for that table.")
+# TODO(wz2): what if we sample tbl_batch_limit / len(cols) for tables in leading_col_tbls? this way, tbl_batch_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
+@click.option("--batch-limits", default="2048", type=str, help="If the table is in --leading-col-tbls, it is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, it is the # of indexes to sample total for that table.")
+@click.option("--max-concurrent", default=None, type=int, help="The max # of concurrent threads that will be creating hypothetical indexes. The default is `nproc`.")
 @click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 
-def datagen(ctx, benchmark, batch_limit, seed):
+def datagen(ctx, benchmark, benchmark_config_path, batch_limits, max_concurrent, seed):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     '''
     # set args to defaults programmatically (do this BEFORE creating Embedding*Args objects)
+    # TODO(phw2): figure out whether different scale factors use the same config
+    # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
+    if benchmark_config_path == None:
+        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+    if max_concurrent == None:
+        max_concurrent = os.cpu_count()
     if seed == None:
         seed = random.randint(0, 1e8)
 
-    batch_limit = str(batch_limit)
-    if "," in batch_limit:
-        batch_limit = [int(bl) for bl in batch_limit.split(",")]
+    # process the "array-like" args
+    leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
+    batch_limits = str(batch_limits)
+    if "," in batch_limits:
+        batch_limits = [int(bl) for bl in batch_limits.split(",")]
     else:
-        batch_limit = int(batch_limit)
+        batch_limits = int(batch_limits)
 
-    benchmark_config = args.benchmark_config
-    with open(benchmark_config, "r") as f:
+    # function start
+    with open_and_save(ctx, benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
     max_num_columns = benchmark_config["mythril"]["max_num_columns"]
@@ -386,7 +400,7 @@ def datagen(ctx, benchmark, batch_limit, seed):
     modified_attrs = workload.process_column_usage()
 
     start_time = time.time()
-    with Pool(args.num_processes) as pool:
+    with Pool(max_concurrent) as pool:
         results = []
         if args.per_table:
             tbls = tables
@@ -406,13 +420,13 @@ def datagen(ctx, benchmark, batch_limit, seed):
                     output = args.output_dir / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
-                limit = None
-                if isinstance(batch_limit, list):
-                    num_slices = math.ceil(batch_limit[tbli] / args.sample_limit)
-                    limit = batch_limit[tbli]
+                tbl_batch_limit = None
+                if isinstance(batch_limits, list):
+                    num_slices = math.ceil(batch_limits[tbli] / args.sample_limit)
+                    tbl_batch_limit = batch_limits[tbli]
                 else:
-                    num_slices = math.ceil(batch_limit / args.sample_limit)
-                    limit = batch_limit
+                    num_slices = math.ceil(batch_limits / args.sample_limit)
+                    tbl_batch_limit = batch_limits
 
                 for _ in range(0, num_slices):
                     results.append(pool.apply_async(
@@ -428,7 +442,7 @@ def datagen(ctx, benchmark, batch_limit, seed):
                             seed,
                             args.generate_costs,
                             args.model_dir,
-                            min(limit, args.sample_limit),
+                            min(tbl_batch_limit, args.sample_limit),
                             tbl, # target
                             colidx if col is not None else None,
                             col,
