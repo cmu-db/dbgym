@@ -329,32 +329,29 @@ def _produce_index_data(
     print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
 
 
-def create_datagen_parser(subparser):
-    parser = subparser.add_parser("generate")
-    parser.add_argument("--config", type=Path, default="configs/config.yaml")
-    parser.add_argument("--benchmark-config", type=Path, default="configs/benchmark/tpch.yaml")
-    parser.add_argument("--generate-costs", default=False, action="store_true")
-    parser.add_argument("--file-limit", default=100000, type=int)
-    parser.add_argument("--sample-limit", type=str)
-    parser.add_argument("--num-processes", default=1, type=int)
-    parser.add_argument("--output-dir", type=Path)
-    parser.add_argument("--connection", type=str)
-    parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--per-table", default=False, action="store_true")
-    parser.add_argument("--table", default=None, type=str)
-    parser.add_argument("--per-leading-col", default="", type=str)
-    parser.add_argument("--model-dir", default=None, type=Path)
-    parser.add_argument("--truncate-target", default=None, type=int)
-    parser.set_defaults(func=datagen)
+class EmbeddingDatagenArgs:
+    '''
+    I made Embedding*Args classes to reduce the # of parameters we pass into functions
+    I wanted to use classes over dictionaries to enforce which fields are allowed to be present
+    I wanted to make multiple classes instead of just one to conceptually separate the different args
+    '''
+    def __init__(self, benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target):
+        self.benchmark = benchmark
+        self.benchmark_config_path = benchmark_config_path
+        self.seed = seed
+        self.leading_col_tbls = leading_col_tbls
+        self.default_sample_limit = default_sample_limit
+        self.override_sample_limits = override_sample_limits
+        self.file_limit = file_limit
+        self.max_concurrent = max_concurrent
+        self.connection_str = connection_str
+        self.no_generate_costs = no_generate_costs
+        self.truncate_target = truncate_target
 
 
-# click setup
-@click.command()
-@click.pass_context
-
-# args
 @click.argument("benchmark")
 @click.option("--benchmark-config-path", default=None, type=str, help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.")
+@click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
 @click.option("--leading-col-tbls", default=None, type=str, help="All tables included here will have indexes created s.t. each column is represented equally often as the \"leading column\" of the index.")
 # TODO(wz2): what if we sample tbl_sample_limit / len(cols) for tables in leading_col_tbls? this way, tbl_sample_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
 @click.option("--default-sample-limit", default=2048, type=int, help="The default sample limit of all tables, used unless override sample limit is specified. If the table is in --leading-col-tbls, sample limit is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, sample limit is the # of indexes to sample total for that table.")
@@ -367,15 +364,15 @@ def create_datagen_parser(subparser):
 # TODO(wz2): when would we not want to generate costs?
 @click.option("--no-generate-costs", is_flag=True, help="Turn off generating costs.")
 @click.option("--truncate-target", default=None, type=int, help="TODO(wz2)")
-@click.option("--seed", default=None, type=int, help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.")
-
-def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target, seed):
+@click.command()
+@click.pass_context
+def datagen(ctx, benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target):
     '''
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     '''
-    # TODO(phw2): manage postgres
+    # TODO(phw2): do stuff to automatically manage postgres
 
     # set args to defaults programmatically (do this before doing anything else in the function)
     cfg = ctx.obj
@@ -405,9 +402,21 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
             override_sample_limits[tbl] = limit
 
     # function start
-    with open_and_save(cfg, benchmark_config_path, "r") as f:
-        benchmark_config = yaml.safe_load(f)
+    datagen_args = EmbeddingDatagenArgs(benchmark, benchmark_config_path, seed, leading_col_tbls, default_sample_limit, override_sample_limits, file_limit, max_concurrent, connection_str, no_generate_costs, truncate_target)
 
+    # run all steps
+    start_time = time.time()
+    _gen_traindata_dir(cfg, datagen_args)
+    # _combine_traindata_dir_into_parquet(cfg, datagen_args)
+    duration = time.time() - start_time
+    with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
+        f.write(f"{duration}")
+
+
+def _gen_traindata_dir(cfg, datagen_args):
+    with open_and_save(cfg, datagen_args.benchmark_config_path, "r") as f:
+        benchmark_config = yaml.safe_load(f)
+        
     max_num_columns = benchmark_config["protox"]["max_num_columns"]
     tables = benchmark_config["protox"]["tables"]
     attributes = benchmark_config["protox"]["attributes"]
@@ -415,40 +424,40 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
 
     workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     modified_attrs = workload.process_column_usage()
+    traindata_dir = cfg.dbgym_this_run_path / "traindata_dir"
 
-    start_time = time.time()
-    with Pool(max_concurrent) as pool:
+    with Pool(datagen_args.max_concurrent) as pool:
         results = []
         job_id = 0
         for tbl in tables:
-            cols = [None] if tbl not in leading_col_tbls else modified_attrs[tbl]
+            cols = [None] if tbl not in datagen_args.leading_col_tbls else modified_attrs[tbl]
             for colidx, col in enumerate(cols):
                 if col is None:
-                    output = cfg.dbgym_this_run_path / tbl
+                    output = traindata_dir / tbl
                 else:
-                    output = cfg.dbgym_this_run_path / tbl / col
+                    output = traindata_dir / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
-                tbl_sample_limit = override_sample_limits.get(tbl, default_sample_limit)
-                num_slices = math.ceil(tbl_sample_limit / file_limit)
+                tbl_sample_limit = datagen_args.override_sample_limits.get(tbl, datagen_args.default_sample_limit)
+                num_slices = math.ceil(tbl_sample_limit / datagen_args.file_limit)
 
                 for _ in range(0, num_slices):
                     results.append(pool.apply_async(
                         _produce_index_data,
                         args=(
                             cfg,
-                            connection_str,
+                            datagen_args.connection_str,
                             tables,
                             attributes,
                             query_spec,
                             max_num_columns,
-                            seed,
-                            not no_generate_costs,
-                            min(tbl_sample_limit, file_limit),
+                            datagen_args.seed,
+                            not datagen_args.no_generate_costs,
+                            min(tbl_sample_limit, datagen_args.file_limit),
                             tbl, # target
                             colidx if col is not None else None,
                             col,
-                            truncate_target,
+                            datagen_args.truncate_target,
                             job_id,
                             output),
                         ))
@@ -460,6 +469,75 @@ def datagen(ctx, benchmark, benchmark_config_path, leading_col_tbls, default_sam
         for result in results:
             result.get()
 
-    duration = time.time() - start_time
-    with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
-        f.write(f"{duration}")
+
+def _combine_traindata_dir_into_parquet(cfg, datagen_args):
+    tbl_dirs = {}
+    with open(args.benchmark_config, "r") as f:
+        benchmark_config = yaml.safe_load(f)["mythril"]
+        tables = benchmark_config["tables"]
+        for i, tbl in enumerate(tables):
+            tbl_dirs[tbl] = i
+
+    files = []
+    for comp in args.input_data.split(","):
+        files.extend([f for f in Path(comp).rglob("*.parquet")])
+
+    def read(file):
+        tbl = Path(file).parts[-2]
+        if tbl not in tbl_dirs:
+            tbl = Path(file).parts[-3]
+        df = pd.read_parquet(file)
+        df["tbl_index"] = tbl_dirs[tbl]
+
+        if args.pad_min is not None:
+            if df.shape[0] < args.pad_min:
+                df = pd.concat([df] * int(args.pad_min / df.shape[0]))
+        return df
+
+    df = pd.concat(map(read, files))
+
+    if "reference_cost" in df.columns:
+        target_cost = df.target_cost
+
+        # This expression is the improvement expression.
+        act_cost = df.reference_cost - (df.table_reference_cost - target_cost)
+        mult = (df.reference_cost / act_cost)
+        rel = ((df.reference_cost - act_cost) / act_cost)
+        mult_tbl = (df.table_reference_cost / target_cost)
+        rel_tbl = ((df.table_reference_cost - target_cost) / target_cost)
+
+        if args.table_shape:
+            df["quant_mult_cost_improvement"] = quantile_transform(mult_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
+            df["quant_rel_cost_improvement"] = quantile_transform(rel_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0])
+        else:
+            df["quant_mult_cost_improvement"] = quantile_transform(mult.values.reshape(-1, 1), n_quantiles=min(100000, df.shape[0]), subsample=df.shape[0])
+            df["quant_rel_cost_improvement"] = quantile_transform(rel.values.reshape(-1, 1), n_quantiles=min(100000, df.shape[0]), subsample=df.shape[0])
+
+        df.drop(columns=["reference_cost", "table_reference_cost", "target_cost"], inplace=True, errors="ignore")
+
+    if args.inflate_ratio > 1:
+        df = pd.concat([df] * args.inflate_ratio)
+
+    if args.dual_class:
+        df["real_idx_class"] = df["idx_class"]
+        df["idx_class"] = df["real_idx_class"] * df.col0.max() + df.col1
+
+    df.drop(columns=["table"], inplace=True)
+    df.fillna(0, inplace=True)
+    # Only int-ify non-cost columns.
+    columns = [c for c in df.columns if c not in COST_COLUMNS and "idx_class" not in c and "cmd" != c]
+    df[columns] = df[columns].astype(int)
+
+    if args.rebias > 0:
+        groups = df.groupby(by=["tbl_index", "idx_class"]).quant_mult_cost_improvement.describe().sort_values(by=["max"], ascending=False)
+        datum = []
+        cur_bias = 1.
+        sep_bias = args.rebias
+        for g in groups.itertuples():
+            d = df[(df.tbl_index == g.Index[0]) & (df.idx_class == g.Index[1]) & (df.quant_mult_cost_improvement >= g._6)].copy()
+            d["quant_mult_cost_improvement"] = cur_bias - (args.rebias / 2)
+            datum.append(d)
+            cur_bias -= sep_bias
+        df = pd.concat(datum, ignore_index=True)
+
+    df.to_parquet(f"{args.output_dir}/out.parquet")
