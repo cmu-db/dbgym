@@ -1,0 +1,179 @@
+{
+    "_comment": "This file holds the default hyperparameter optimization (HPO) space. It is _not_ a set of hyperparameters. It is just a search space",
+    "_comment1": "Generally 10 epochs is usually good enough.",
+
+    "initial_configs": [
+    ],
+    "config": {
+        "act": {
+                "choice_name": "act",
+                "type": "choice",
+                "choices": ["relu", "mish"]
+        },
+        "mean_output_act": {
+            "choice_name": "mean_output_act",
+            "type": "choice",
+            "choices": ["sigmoid"]
+        },
+        "batch_size": {
+                "choice_name": "batch_size",
+                "type": "choice",
+                "choices": [512, 1024, 2048]
+        },
+        "lr": {
+                "choice_name": "lr",
+                "type": "uniform",
+                "min": 1e-5,
+                "max": 1e-2
+        },
+        "weight_decay": {
+                "choice_name": "weight_decay",
+                "type": "uniform",
+                "min": 1e-8,
+                "max": 1e-5
+        },
+        "loss_fn": {
+            "choice_name": "loss_fn",
+            "type": "choice",
+            "choices": [
+                "vae_cat_loss"
+            ]
+        },
+        "model": {
+            "choice_name": "model0",
+            "type": "subspaces",
+            "subspaces": [
+                {
+                    "latent_dim": {
+                        "choice_name": "latent_dim",
+                        "type": "constant",
+                        "value": 16
+                    },
+                    "hidden_sizes": {
+                        "choice_name": "hidden_sizes2",
+                        "type": "choice",
+                        "choices": [
+                            [128, 32],
+                            [128, 64],
+                            [256, 32],
+                            [256, 64],
+                            [256, 128]
+                        ]
+                    }
+                },
+                {
+                    "latent_dim": {
+                        "choice_name": "latent_dim",
+                        "type": "constant",
+                        "value": 32
+                    },
+                    "hidden_sizes": {
+                        "choice_name": "hidden_sizes3",
+                        "type": "choice",
+                        "choices": [
+                            [128, 32],
+                            [128, 64],
+                            [256, 32],
+                            [256, 64],
+                            [256, 128]
+                        ]
+                    }
+                }
+            ]
+        },
+            "metric_loss_md": {
+                    "choice_name": "metric_loss_md",
+                    "type": "subspaces",
+                    "subspaces": [
+                            {
+                                    "metric_loss": {
+                                            "choice_name": "metric_loss",
+                                            "type": "constant",
+                                            "value": "l2_distance_loss"
+                                    },
+                                    "require_cost": {
+                                            "choice_name": "require_cost",
+                                            "type": "constant",
+                                            "value": true
+                                    },
+                                    "cost_reduction_type": {
+                                            "choice_name": "cost_reduction_type1",
+                                            "type": "choice",
+                                            "choices": ["quant_mult_cost_improvement"]
+                                    },
+                                    "distance_fn": {
+                                            "choice_name": "distance_fn7",
+                                            "type": "choice",
+                                            "choices": ["hard,l1"]
+                                    },
+                                    "distance_scale": {
+                                            "choice_name": "distance_scale",
+                                            "type": "choice",
+                                            "choices": ["1"]
+                                    },
+                                    "bias_separation": {
+                                            "choice_name": "bias_separation",
+                                            "type": "choice",
+                                            "choices": [0.01]
+                                    },
+                                    "addtl_bias_separation": {
+                                            "choice_name": "addtl_bias_separation",
+                                            "type": "choice",
+                                            "choices": [0.015]
+                                    }
+                            }
+                    ]
+            },
+
+            "metric_loss_weight": {
+                    "choice_name": "metric_loss_weight",
+                    "type": "choice",
+                    "choices": [0]
+            },
+            "grad_clip_amount": {
+                    "choice_name": "grad_clip_amount",
+                    "type": "choice",
+                    "choices": [1, 5, 10]
+            },
+            "save_every": {
+                "choice_name": "save_every",
+                "type": "constant",
+                "value": 1
+            },
+            "num_epochs": {
+                    "choice_name": "num_epochs",
+                    "type": "constant",
+                    "value": 20
+            },
+            "bias_init": {
+                    "choice_name": "bias_init",
+                    "type": "choice",
+                    "choices": ["default", "zeros", "constant0.05"]
+            },
+            "weight_init": {
+                    "choice_name": "weight_init",
+                    "type": "choice",
+                    "choices": ["xavier", "spectral", "orthogonal"]
+            },
+            "weight_uniform": {
+                    "choice_name": "weight_uniform",
+                    "type": "choice",
+                    "choices": [true, false]
+            },
+            "weak_bias": {
+                    "choice_name": "weak_bias",
+                    "type": "choice",
+                    "choices": [true, false]
+            },
+            "use_bias": {
+                    "choice_name": "use_bias",
+                    "type": "choice",
+                    "choices": [true]
+            },
+            "output_scale": {
+                    "choice_name": "output_scale",
+                    "type": "choice",
+                    "choices": [1.0]
+            }
+    }
+}
