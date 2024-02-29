@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 from pathlib import Path
 import time
+import traceback
 import logging
 from datetime import datetime
 from click.core import Context
@@ -438,6 +439,7 @@ def train(ctx, benchmark, seed, max_concurrent, hpo_space_fpath, benchmark_confi
         for i in range(len(results)):
             if results[i].error:
                 print(f"Trial {results[i]} FAILED")
+                print(traceback.print_exception(results[i].error))
         assert False
 
     duration = time.time() - start_time
