@@ -5,6 +5,7 @@ import shutil
 import json
 import time
 import pglast
+import pglast.ast
 import logging
 from plumbum import local
 from pathlib import Path
@@ -64,7 +65,7 @@ class Workload(object):
                 sql = q.read()
                 assert not sql.startswith("/*")
 
-                stmts = pglast.Node(pglast.parse_sql(sql))
+                stmts = pglast.parse_sql(sql)
 
                 # Extract aliases.
                 self.query_aliases[stem] = extract_aliases(stmts)
