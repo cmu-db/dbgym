@@ -263,10 +263,10 @@ class IndexSpace(spaces.Tuple):
             if index_vae_model is not None:
                 self.vae = index_vae_model
             else:
-                from embeddings.train import _create_vae_model
+                from tune.protox.embedding.vae import create_vae_model
                 max_attrs = max_num_columns + 1
                 max_cat_features = max(max_num_columns + 1, len(self.tables))
-                self.vae = _create_vae_model(index_vae_config[0], max_attrs, max_cat_features)
+                self.vae = create_vae_model(index_vae_config[0], max_attrs, max_cat_features)
                 self.vae.load_state_dict(torch.load(index_vae_config[1], map_location="cpu"))
 
             device = "cuda" if torch.cuda.is_available() else "cpu"

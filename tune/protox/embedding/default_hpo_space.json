@@ -143,7 +143,8 @@
             "num_epochs": {
                     "choice_name": "num_epochs",
                     "type": "constant",
-                    "value": 20
+                    "DEBUG(phw2)": "make value 20",
+                    "value": 2
             },
             "bias_init": {
                     "choice_name": "bias_init",

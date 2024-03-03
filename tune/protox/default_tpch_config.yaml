@@ -1,4 +1,4 @@
-dbgym:
+protox:
   benchmark: tpch
   oltp_workload: False
 

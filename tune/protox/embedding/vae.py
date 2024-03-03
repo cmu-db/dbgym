@@ -61,6 +61,33 @@ def acquire_loss_function(loss_type, max_attrs, max_categorical):
     return loss_fn
 
 
+def create_vae_model(config, max_attrs, max_cat_features):
+    cat_input = max_attrs * max_cat_features
+
+    assert config["act"] in ["relu", "mish"]
+    assert config["mean_output_act"] in ["tanh_squash", "sigmoid"]
+
+    mean_output_act = {
+        "sigmoid": nn.Sigmoid,
+    }[config["mean_output_act"]]
+
+    torch.set_float32_matmul_precision("high")
+    model = VAE(
+        max_categorical=max_cat_features,
+        input_dim=cat_input,
+        hidden_sizes=list(config["hidden_sizes"]),
+        latent_dim=config["latent_dim"],
+        act=nn.ReLU if config["act"] == "relu" else nn.Mish,
+        bias_init=config["bias_init"],
+        weight_init=config["weight_init"],
+        weight_uniform=config["weight_uniform"],
+        mean_output_act=mean_output_act,
+        output_scale=config.get("output_scale", 1.0),
+    )
+
+    return model
+
+
 class VAEReducer(reducers.MultipleReducers):
     def __init__(self, *args, **kwargs):
         reducer = {

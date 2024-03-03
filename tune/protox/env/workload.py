@@ -147,7 +147,6 @@ class Workload(object):
             workload_timeout_penalty=1.,
             logger=None):
 
-        print('type(ctx)', type(ctx))
         self.ctx = ctx
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
