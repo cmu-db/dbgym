@@ -12,7 +12,6 @@ from tune.protox.cli import protox_group
 # TODO(phw2): remove write permissions on old run_*/ dirs to enforce that they are immutable
 
 
-
 task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
 
