@@ -48,17 +48,11 @@ order by
 	l_returnflag,
 	l_linestatus;
 """
-
-
-    @staticmethod
-    def pglast3_parse(sql):
-        return pglast.Node(pglast.parse_sql(sql))
     
 
     @staticmethod
     def pglast_parse(sql):
         return pglast.parse_sql(sql)
-        # return WorkloadUtilsTests.pglast3_parse(sql)
 
 
     def test_extract_aliases(self):

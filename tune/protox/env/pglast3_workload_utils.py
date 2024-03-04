@@ -1,12 +1,9 @@
 from enum import unique, Enum
 import time
 import pglast
-import pglast.ast
 from pglast import stream
-from pglast.visitors import Visitor, Continue
 import logging
 import time
-from collections import Counter
 import psycopg
 from psycopg.errors import QueryCanceled
 import math
@@ -138,45 +135,21 @@ def execute_serial_variations(env_spec, connection, timeout, logger, qid, query,
 
     return best_metric, best_time, best_timeout, best_explain_data, runs_idx
 
-
-def traverse(stmt):
-    '''
-    Trying to mimic the .traverse() function pglast v3 in pglast v6
-    For context, we switched from pglast v3 to pglast v6
-    '''
-    visitor = Visitor()
-    generator = visitor.iterate(stmt)
-
-    try:
-        item = generator.send(None)
-        yield item
-    except StopIteration:
-        return
-
-    while True:
-        try:
-            item = generator.send(Continue)
-            yield item
-        except StopIteration:
-            return
-
-
 def extract_aliases(stmts):
     # Extract the aliases.
     aliases = {}
     ctes = set()
     for stmt in stmts:
-        for _, node in traverse(stmt):
-            if isinstance(node, pglast.ast.Node):
-                if isinstance(node, pglast.ast.CommonTableExpr):
-                    ctes.add(node.ctename)
-                elif isinstance(node, pglast.ast.RangeVar):
-                    ft = node
+        for node in stmt.traverse():
+            if isinstance(node, pglast.node.Node):
+                if isinstance(node.ast_node, pglast.ast.CommonTableExpr):
+                    ctes.add(node.ast_node.ctename)
+                elif isinstance(node.ast_node, pglast.ast.RangeVar):
+                    ft = node.ast_node
                     relname = ft.relname
-                    # TODO(phw2): convert to pglast v6
-                    # if stmt.stmt["node_tag"] == "ViewStmt":
-                    #     if node == stmt.stmt.view:
-                    #         continue
+                    if stmt.stmt["node_tag"] == "ViewStmt":
+                        if node == stmt.stmt.view:
+                            continue
 
                     alias = ft.relname if (ft.alias is None or ft.alias.aliasname is None or ft.alias.aliasname == "") else ft.alias.aliasname
                     if relname not in aliases:
@@ -192,19 +165,15 @@ def extract_sqltypes(stmts, pid):
     sqls = []
     for stmt in stmts:
         sql_type = QueryType.UNKNOWN
-        if isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.SelectStmt):
+        if stmt["node_tag"] == "RawStmt" and stmt.stmt["node_tag"] == "SelectStmt":
             sql_type = QueryType.SELECT
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.ViewStmt):
+        elif stmt["node_tag"] == "RawStmt" and stmt.stmt["node_tag"] == "ViewStmt":
             sql_type = QueryType.CREATE_VIEW
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.DropStmt):
-            drop_ast = stmt.stmt
+        elif stmt["node_tag"] == "RawStmt" and stmt.stmt["node_tag"] == "DropStmt":
+            drop_ast = stmt.stmt.ast_node
             if drop_ast.removeType == pglast.enums.parsenodes.ObjectType.OBJECT_VIEW:
                 sql_type = QueryType.DROP_VIEW
-        elif isinstance(stmt, pglast.ast.RawStmt) and any([
-            isinstance(stmt.stmt, pglast.ast.InsertStmt),
-            isinstance(stmt.stmt, pglast.ast.UpdateStmt),
-            isinstance(stmt.stmt, pglast.ast.DeleteStmt),
-        ]):
+        elif stmt["node_tag"] == "RawStmt" and stmt.stmt["node_tag"] in ["InsertStmt", "UpdateStmt", "DeleteStmt"]:
             sql_type = QueryType.INS_UPD_DEL
 
         q = stream.RawStream()(stmt)
@@ -216,6 +185,9 @@ def extract_sqltypes(stmts, pid):
         sqls.append((sql_type, q))
     return sqls
 
+# Returns a tuple of two items:
+#   - The first item of the tuple is the columns used in the WHERE clause
+#   - The second item of the tuple is the columns used in any part of the stmt
 def extract_columns(stmt, tables, all_attributes, query_aliases):
     tbl_col_usages = {t: set() for t in tables}
     def traverse_extract_columns(alias_set, node, update=True):
@@ -223,22 +195,22 @@ def extract_columns(stmt, tables, all_attributes, query_aliases):
             return []
 
         columns = []
-        for _, expr in traverse(node):
-            if isinstance(expr, pglast.ast.Node) and isinstance(expr, pglast.ast.ColumnRef):
-                if len(expr.fields) == 2:
-                    tbl, col = expr.fields[0], expr.fields[1]
+        for expr in pglast.node.Node(node).traverse():
+            if isinstance(expr, pglast.node.Node) and isinstance(expr.ast_node, pglast.ast.ColumnRef):
+                if len(expr.ast_node.fields) == 2:
+                    tbl, col = expr.ast_node.fields[0], expr.ast_node.fields[1]
                     assert isinstance(tbl, pglast.ast.String) and isinstance(col, pglast.ast.String)
 
-                    tbl = tbl.sval
-                    col = col.sval
+                    tbl = tbl.val
+                    col = col.val
                     if tbl in alias_set and (tbl in tbl_col_usages or alias_set[tbl] in tbl_col_usages):
                         tbl = alias_set[tbl]
                         if update:
                             tbl_col_usages[tbl].add(col)
                         else:
                             columns.append((tbl, col))
-                elif isinstance(expr.fields[0], pglast.ast.String):
-                    col = expr.fields[0].sval
+                elif isinstance(expr.ast_node.fields[0], pglast.ast.String):
+                    col = expr.ast_node.fields[0].val
                     if col in all_attributes:
                         for tbl in all_attributes[col]:
                             if tbl in alias_set.values():
@@ -250,15 +222,15 @@ def extract_columns(stmt, tables, all_attributes, query_aliases):
 
     # This is the query column usage.
     all_refs = []
-    for _, node in traverse(stmt):
-        if isinstance(node, pglast.ast.Node):
-            if isinstance(node, pglast.ast.SelectStmt):
+    for node in stmt.traverse():
+        if isinstance(node, pglast.node.Node):
+            if isinstance(node.ast_node, pglast.ast.SelectStmt):
                 aliases = {}
                 for relname, relalias in query_aliases.items():
                     for alias in relalias:
                         aliases[alias] = relname
 
                 # We derive the "touched" columns only from the WHERE clause.
-                traverse_extract_columns(aliases, node.whereClause)
-                all_refs.extend(traverse_extract_columns(aliases, node, update=False))
+                traverse_extract_columns(aliases, node.ast_node.whereClause)
+                all_refs.extend(traverse_extract_columns(aliases, node.ast_node, update=False))
     return tbl_col_usages, all_refs
