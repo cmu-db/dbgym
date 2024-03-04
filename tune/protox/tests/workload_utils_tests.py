@@ -111,8 +111,24 @@ order by
         sql = "select * from t1 as t1_alias; select * from t1;"
         stmts = WorkloadUtilsTests.pglast_parse(sql)
         aliases = extract_aliases(stmts)
+        # if a table has more than one alias we have to do this more verbose assertion code
+        #     to make it order invariant
         self.assertTrue("t1" in aliases and len(aliases) == 1)
         self.assertEqual(set(aliases["t1"]), set(["t1", "t1_alias"]))
+
+    def test_extract_aliases_ignores_views_in_create_view(self):
+        sql = "create view view1 (view1_c1) as select c1 from t1;"
+        stmts = WorkloadUtilsTests.pglast_parse(sql)
+        aliases = extract_aliases(stmts)
+        # all tables have only one alias so we can do this simpler assertion code
+        self.assertEqual(aliases, {"t1": ["t1"]})
+
+    def test_extract_aliases_doesnt_ignore_views_that_are_used(self):
+        sql = "create view view1 (view1_c1) as select c1 from t1; select * from view1;"
+        stmts = WorkloadUtilsTests.pglast_parse(sql)
+        aliases = extract_aliases(stmts)
+        # all tables have only one alias so we can do this simpler assertion code
+        self.assertEqual(aliases, {"t1": ["t1"], "view1": ["view1"]})
 
     def test_extract_sqltypes(self):
         sql = """

@@ -201,10 +201,9 @@ def extract_aliases(stmts):
                 elif isinstance(node, pglast.ast.RangeVar):
                     ft = node
                     relname = ft.relname
-                    # TODO(phw2): convert to pglast v6
-                    # if stmt.stmt["node_tag"] == "ViewStmt":
-                    #     if node == stmt.stmt.view:
-                    #         continue
+                    if isinstance(stmt.stmt, pglast.ast.ViewStmt):
+                        if node == stmt.stmt.view:
+                            continue
 
                     alias = (
                         ft.relname
