@@ -10,9 +10,7 @@ from sklearn.model_selection import train_test_split
 from tune.protox.env.workload import Workload
 from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.index_policy import IndexRepr
-
 from tune.protox.embedding.loss import COST_COLUMNS
-
 from misc.utils import open_and_save
 
 
@@ -63,7 +61,7 @@ def parse_hyperopt_config(config):
     return parsed_config
 
 
-def fetch_index_parameters(ctx, benchmark, data):
+def fetch_index_parameters(cfg, benchmark, data):
     tables = data["protox"]["tables"]
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
@@ -71,10 +69,10 @@ def fetch_index_parameters(ctx, benchmark, data):
     # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
     if "query_directory" not in query_spec:
         assert "query_order" not in query_spec
-        query_spec["query_directory"] = os.path.join(ctx.obj.dbgym_data_path, f'{benchmark}_queries')
+        query_spec["query_directory"] = os.path.join(cfg.dbgym_data_path, f'{benchmark}_queries')
         query_spec["query_order"] = os.path.join(query_spec["query_directory"], f'order.txt')
 
-    workload = Workload(ctx, tables, attributes, query_spec, pid=None)
+    workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     att_usage = workload.process_column_usage()
 
     space = IndexSpace(
@@ -91,7 +89,7 @@ def fetch_index_parameters(ctx, benchmark, data):
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def load_input_data(ctx, input_path, train_size, max_attrs, require_cost, seed):
+def load_input_data(cfg, input_path, train_size, max_attrs, require_cost, seed):
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -99,7 +97,7 @@ def load_input_data(ctx, input_path, train_size, max_attrs, require_cost, seed):
     if require_cost:
         columns += COST_COLUMNS
 
-    with open_and_save(ctx, input_path, mode="rb") as input_file:
+    with open_and_save(cfg, input_path, mode="rb") as input_file:
         df = pd.read_parquet(input_file, columns=columns)
     num_classes = df.idx_class.max() + 1
 

@@ -3,8 +3,10 @@ import time
 import pglast
 import pglast.ast
 from pglast import stream
+from pglast.visitors import Visitor, Continue
 import logging
 import time
+from collections import Counter
 import psycopg
 from psycopg.errors import QueryCanceled
 import math
@@ -136,21 +138,45 @@ def execute_serial_variations(env_spec, connection, timeout, logger, qid, query,
 
     return best_metric, best_time, best_timeout, best_explain_data, runs_idx
 
+
+def traverse(stmt):
+    '''
+    Trying to mimic the .traverse() function pglast v3 in pglast v6
+    For context, we switched from pglast v3 to pglast v6
+    '''
+    visitor = Visitor()
+    generator = visitor.iterate(stmt)
+
+    try:
+        item = generator.send(None)
+        yield item
+    except StopIteration:
+        return
+
+    while True:
+        try:
+            item = generator.send(Continue)
+            yield item
+        except StopIteration:
+            return
+
+
 def extract_aliases(stmts):
     # Extract the aliases.
     aliases = {}
     ctes = set()
     for stmt in stmts:
-        for node in stmt:
+        for _, node in traverse(stmt):
             if isinstance(node, pglast.ast.Node):
                 if isinstance(node, pglast.ast.CommonTableExpr):
                     ctes.add(node.ctename)
                 elif isinstance(node, pglast.ast.RangeVar):
                     ft = node
                     relname = ft.relname
-                    if stmt.stmt["node_tag"] == "ViewStmt":
-                        if node == stmt.stmt.view:
-                            continue
+                    # TODO(phw2): convert to pglast v6
+                    # if stmt.stmt["node_tag"] == "ViewStmt":
+                    #     if node == stmt.stmt.view:
+                    #         continue
 
                     alias = ft.relname if (ft.alias is None or ft.alias.aliasname is None or ft.alias.aliasname == "") else ft.alias.aliasname
                     if relname not in aliases:
@@ -197,14 +223,14 @@ def extract_columns(stmt, tables, all_attributes, query_aliases):
             return []
 
         columns = []
-        for expr in node:
+        for _, expr in traverse(node):
             if isinstance(expr, pglast.ast.Node) and isinstance(expr, pglast.ast.ColumnRef):
                 if len(expr.fields) == 2:
                     tbl, col = expr.fields[0], expr.fields[1]
                     assert isinstance(tbl, pglast.ast.String) and isinstance(col, pglast.ast.String)
 
-                    tbl = tbl.val
-                    col = col.val
+                    tbl = tbl.sval
+                    col = col.sval
                     if tbl in alias_set and (tbl in tbl_col_usages or alias_set[tbl] in tbl_col_usages):
                         tbl = alias_set[tbl]
                         if update:
@@ -212,7 +238,7 @@ def extract_columns(stmt, tables, all_attributes, query_aliases):
                         else:
                             columns.append((tbl, col))
                 elif isinstance(expr.fields[0], pglast.ast.String):
-                    col = expr.fields[0].val
+                    col = expr.fields[0].sval
                     if col in all_attributes:
                         for tbl in all_attributes[col]:
                             if tbl in alias_set.values():
@@ -224,7 +250,7 @@ def extract_columns(stmt, tables, all_attributes, query_aliases):
 
     # This is the query column usage.
     all_refs = []
-    for node in stmt:
+    for _, node in traverse(stmt):
         if isinstance(node, pglast.ast.Node):
             if isinstance(node, pglast.ast.SelectStmt):
                 aliases = {}
