@@ -175,7 +175,7 @@ class Workload(object):
                 if col not in all_attributes:
                     all_attributes[col] = []
                 all_attributes[col].append(tbl)
-
+        
         # Get the order in which we should execute in.
         sqls = []
         if "query_order" in query_spec:
