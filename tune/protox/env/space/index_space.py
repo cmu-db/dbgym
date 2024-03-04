@@ -1,12 +1,13 @@
 import logging
-import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
-import torch
 
+import gymnasium as gym
+import numpy as np
+import torch
+from gymnasium import spaces
+
+from tune.protox.env.lsc import LSC
 from tune.protox.env.space.index_policy import IndexRepr, OneHotIndexPolicy
 from tune.protox.env.space.utils import check_subspace, fetch_server_indexes
-from tune.protox.env.lsc import LSC
 
 
 class IndexAction(object):
@@ -25,10 +26,24 @@ class IndexAction(object):
 
     @property
     def is_valid(self):
-        return self.tbl_name is not None and self.columns is not None and len(self.columns) > 0
+        return (
+            self.tbl_name is not None
+            and self.columns is not None
+            and len(self.columns) > 0
+        )
 
     @classmethod
-    def construct(cls, idx_type, tbl, columns, col_idxs, inc_names, raw_repr, index_counter, bias=0):
+    def construct(
+        cls,
+        idx_type,
+        tbl,
+        columns,
+        col_idxs,
+        inc_names,
+        raw_repr,
+        index_counter,
+        bias=0,
+    ):
         ia = IndexAction()
         ia.idx_type = idx_type
         ia.tbl_name = tbl
@@ -64,7 +79,12 @@ class IndexAction(object):
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
             columns=",".join(self.columns),
-            inc_clause="" if len(self.inc_names) == 0 else "INCLUDE (" + ",".join(self.inc_names) + ")")
+            inc_clause=(
+                ""
+                if len(self.inc_names) == 0
+                else "INCLUDE (" + ",".join(self.inc_names) + ")"
+            ),
+        )
 
     # This equality/hash mechanism is purely based off of index identity.
     # We ensure that all other flags are exclusive from a "validity" pre-check.
@@ -76,21 +96,38 @@ class IndexAction(object):
         if type(other) is type(self):
             ts = set(self.inc_names)
             os = set(other.inc_names)
-            return self.idx_type == other.idx_type and self.tbl_name == other.tbl_name and self.columns == other.columns and ts == os
+            return (
+                self.idx_type == other.idx_type
+                and self.tbl_name == other.tbl_name
+                and self.columns == other.columns
+                and ts == os
+            )
         return False
 
     def __hash__(self):
-        h = hash((self.idx_type, self.tbl_name, tuple(self.columns), tuple(sorted(set(self.inc_names)))))
+        h = hash(
+            (
+                self.idx_type,
+                self.tbl_name,
+                tuple(self.columns),
+                tuple(sorted(set(self.inc_names))),
+            )
+        )
         return h
 
     def __repr__(self, add=True):
         return "{a} {idx_name} ON {tbl_name} USING {idx_type} ({columns}) {inc_clause}".format(
-            a="CREATE" if add else "NOOP", #"DROP",
+            a="CREATE" if add else "NOOP",  # "DROP",
             idx_name=self._idx_name,
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
             columns=",".join(self.columns),
-            inc_clause="" if len(self.inc_names) == 0 else "INCLUDE (" + ",".join(self.inc_names) + ")")
+            inc_clause=(
+                ""
+                if len(self.inc_names) == 0
+                else "INCLUDE (" + ",".join(self.inc_names) + ")"
+            ),
+        )
 
     def get_idx_name(self):
         assert self._idx_name is not None
@@ -150,7 +187,11 @@ class IndexSpace(spaces.Tuple):
     def get_state_with_bias(self, env):
         if self.state_container is None:
             return []
-        return [(ia.raw_repr, ia.bias) for ia in self.state_container if ia.raw_repr is not None]
+        return [
+            (ia.raw_repr, ia.bias)
+            for ia in self.state_container
+            if ia.raw_repr is not None
+        ]
 
     def get_latent_dim(self):
         return self.latent_dim
@@ -179,9 +220,13 @@ class IndexSpace(spaces.Tuple):
         if self.latent:
             # Similar to above reasoning.
             if self.scale_noise_perturb:
-                return torch.clamp(proto + noise * self.index_output_scale, 0., self.index_output_scale)
+                return torch.clamp(
+                    proto + noise * self.index_output_scale,
+                    0.0,
+                    self.index_output_scale,
+                )
             else:
-                return torch.clamp(proto + noise, 0., 1.)
+                return torch.clamp(proto + noise, 0.0, 1.0)
         # Otherwise perturb the noise.
         return self.index_repr_policy.perturb_noise(proto, noise)
 
@@ -195,18 +240,30 @@ class IndexSpace(spaces.Tuple):
             # Then we pass the decoded representation through the fixer.
             device = "cuda" if torch.cuda.is_available() else "cpu"
             device = override_device if override_device else device
-            act = self.vae.decoder(act.to(device=device)).cpu().detach().view(act.shape[0], -1)
+            act = (
+                self.vae.decoder(act.to(device=device))
+                .cpu()
+                .detach()
+                .view(act.shape[0], -1)
+            )
 
             if select:
                 # Only need to do additional processing if we are treating as one-hot softmax representation.
                 # Now treat it as it came out of the neural network and process it.
                 if len(self.tables) < self.max_num_columns + 1:
                     # Yoink only the table components that we care about.
-                    distort = [l for l in range(0, len(self.tables))] + [l for l in range(self.max_num_columns + 1, act.shape[1])]
+                    distort = [l for l in range(0, len(self.tables))] + [
+                        l for l in range(self.max_num_columns + 1, act.shape[1])
+                    ]
                 else:
                     # Yoink only the index components that we care about.
                     distort = [l for l in range(0, len(self.tables))]
-                    [distort.extend([b + i for i in range(0, self.max_num_columns + 1)]) for b in range(len(self.tables), act.shape[1], len(self.tables))]
+                    [
+                        distort.extend(
+                            [b + i for i in range(0, self.max_num_columns + 1)]
+                        )
+                        for b in range(len(self.tables), act.shape[1], len(self.tables))
+                    ]
 
                 act = torch.index_select(act, 1, torch.tensor(distort))
 
@@ -214,28 +271,33 @@ class IndexSpace(spaces.Tuple):
             act = self.index_repr_policy.process_network_output(act, select=select)
         return act
 
-    def __init__(self,
-            agent_type: str,
-            tables: list[str],
-            max_num_columns: int,
-            index_repr, seed,
-            latent_dim,
-            index_output_scale=1.,
-            index_output_func=torch.tanh,
-            index_vae_config=None,
-            index_vae_model=None,
-            attributes_overwrite=None,
-            tbl_include_subsets=None,
-            lsc=None,
-            scale_noise_perturb=False,
-            index_space_aux_type=False,
-            index_space_aux_include=False):
+    def __init__(
+        self,
+        agent_type: str,
+        tables: list[str],
+        max_num_columns: int,
+        index_repr,
+        seed,
+        latent_dim,
+        index_output_scale=1.0,
+        index_output_func=torch.tanh,
+        index_vae_config=None,
+        index_vae_model=None,
+        attributes_overwrite=None,
+        tbl_include_subsets=None,
+        lsc=None,
+        scale_noise_perturb=False,
+        index_space_aux_type=False,
+        index_space_aux_include=False,
+    ):
 
         self.index_space_aux_type_dim = 2 if index_space_aux_type else 0
         self.index_space_aux_include = max_num_columns if index_space_aux_include else 0
         if attributes_overwrite is not None:
             # Overwrite the maximum number of columns.
-            max_num_columns = max([len(cols) for _, cols in attributes_overwrite.items()])
+            max_num_columns = max(
+                [len(cols) for _, cols in attributes_overwrite.items()]
+            )
             self._rel_metadata = attributes_overwrite
         else:
             self._rel_metadata = None
@@ -252,10 +314,22 @@ class IndexSpace(spaces.Tuple):
         # Initialize the policy depending on the representation.
         self.index_repr = index_repr = IndexRepr[index_repr]
         if index_repr == IndexRepr.ONE_HOT:
-            self.index_repr_policy = OneHotIndexPolicy(self.tables, max_num_columns, index_space_aux_type, self.index_space_aux_include, maximize=False)
+            self.index_repr_policy = OneHotIndexPolicy(
+                self.tables,
+                max_num_columns,
+                index_space_aux_type,
+                self.index_space_aux_include,
+                maximize=False,
+            )
             # Not allowed to use SAC for a sampling index interpretation.
         elif index_repr == IndexRepr.ONE_HOT_DETERMINISTIC:
-            self.index_repr_policy = OneHotIndexPolicy(self.tables, max_num_columns, index_space_aux_type, self.index_space_aux_include, maximize=True)
+            self.index_repr_policy = OneHotIndexPolicy(
+                self.tables,
+                max_num_columns,
+                index_space_aux_type,
+                self.index_space_aux_include,
+                maximize=True,
+            )
             assert self.latent_dim > 0
 
         if self.latent_dim > 0:
@@ -264,10 +338,15 @@ class IndexSpace(spaces.Tuple):
                 self.vae = index_vae_model
             else:
                 from tune.protox.embedding.vae import create_vae_model
+
                 max_attrs = max_num_columns + 1
                 max_cat_features = max(max_num_columns + 1, len(self.tables))
-                self.vae = create_vae_model(index_vae_config[0], max_attrs, max_cat_features)
-                self.vae.load_state_dict(torch.load(index_vae_config[1], map_location="cpu"))
+                self.vae = create_vae_model(
+                    index_vae_config[0], max_attrs, max_cat_features
+                )
+                self.vae.load_state_dict(
+                    torch.load(index_vae_config[1], map_location="cpu")
+                )
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
             self.vae.to(device=device)
@@ -284,9 +363,20 @@ class IndexSpace(spaces.Tuple):
     def construct_indexaction(self, act):
         assert check_subspace(self, act)
         # Invoke the policy to get the table and column names.
-        idx_type, tbl_name, col_names, col_idxs, inc_names = self.index_repr_policy.act_to_columns(act, self.rel_metadata)
+        idx_type, tbl_name, col_names, col_idxs, inc_names = (
+            self.index_repr_policy.act_to_columns(act, self.rel_metadata)
+        )
         bias = 0 if self.lsc is None else self.lsc.current_bias()
-        return IndexAction.construct(idx_type, tbl_name, col_names, col_idxs, inc_names, act, self.index_counter, bias)
+        return IndexAction.construct(
+            idx_type,
+            tbl_name,
+            col_names,
+            col_idxs,
+            inc_names,
+            act,
+            self.index_counter,
+            bias,
+        )
 
     def _env_to_embedding(self, env_act):
         if not isinstance(env_act, list):
@@ -313,8 +403,10 @@ class IndexSpace(spaces.Tuple):
                 env_act = env_act[:, 1:]
 
             if self.index_space_aux_include > 0:
-                include_col = torch.tensor(env_act[:, -self.index_space_aux_include:]).float()
-                env_act = env_act[:, :-self.index_space_aux_include]
+                include_col = torch.tensor(
+                    env_act[:, -self.index_space_aux_include :]
+                ).float()
+                env_act = env_act[:, : -self.index_space_aux_include]
 
             nets = self.vae.get_collate()(env_act).to(device=device).float()
 
@@ -338,7 +430,9 @@ class IndexSpace(spaces.Tuple):
     def _random_embed_action(self, num_action):
         if not self.latent:
             # To acquire a random action, we just randomly distribute weights.
-            return np.random.uniform(low=0., high=1., size=(num_action, gym.spaces.utils.flatdim(self)))
+            return np.random.uniform(
+                low=0.0, high=1.0, size=(num_action, gym.spaces.utils.flatdim(self))
+            )
         else:
             # Require latent space.
             assert self.latent
@@ -350,49 +444,78 @@ class IndexSpace(spaces.Tuple):
             return np.random.uniform(
                 low=0.0,
                 high=self.index_output_scale,
-                size=(num_action, self.latent_dim,)).reshape(num_action, -1)
+                size=(
+                    num_action,
+                    self.latent_dim,
+                ),
+            ).reshape(num_action, -1)
 
-    def random_action_table(self, table_idx, col_idx = None, truncate_target = None):
+    def random_action_table(self, table_idx, col_idx=None, truncate_target=None):
         action = np.zeros(gym.spaces.utils.flatdim(self))
         if table_idx is None:
             # Make equal weight.
-            action[0:len(self.tables)] = 1. / len(self.tables)
+            action[0 : len(self.tables)] = 1.0 / len(self.tables)
         else:
             # Hit only the targeted table.
             action[table_idx] = 1
 
         if col_idx is not None:
-            action[len(self.tables) + col_idx + 1] = 1.
+            action[len(self.tables) + col_idx + 1] = 1.0
             # Evenly distribute the column weights.
-            action[len(self.tables) + (self.max_num_columns + 1):] = 1. / (self.max_num_columns + 1)
+            action[len(self.tables) + (self.max_num_columns + 1) :] = 1.0 / (
+                self.max_num_columns + 1
+            )
         else:
-            action[len(self.tables):] = 1. / (self.max_num_columns + 1)
+            action[len(self.tables) :] = 1.0 / (self.max_num_columns + 1)
         # Don't allow breaking early since we are sampling the length of the index already.
         # But only sample if truncate_target is not -1.
         if truncate_target == -1:
-            return self._sample_action_distribution(torch.tensor(action), sample_num_columns=False, allow_break=False)
-        return self._sample_action_distribution(torch.tensor(action), sample_num_columns=True, allow_break=False, column_override=truncate_target)
+            return self._sample_action_distribution(
+                torch.tensor(action), sample_num_columns=False, allow_break=False
+            )
+        return self._sample_action_distribution(
+            torch.tensor(action),
+            sample_num_columns=True,
+            allow_break=False,
+            column_override=truncate_target,
+        )
 
     def null_action(self):
-        dim = gym.spaces.utils.flatdim(self) - self.index_space_aux_type_dim - self.index_space_aux_include
+        dim = (
+            gym.spaces.utils.flatdim(self)
+            - self.index_space_aux_type_dim
+            - self.index_space_aux_include
+        )
         action = np.zeros(dim)
         action[0] = 1
-        action = self._sample_action_distribution(torch.tensor(action), sample_num_columns=False)
+        action = self._sample_action_distribution(
+            torch.tensor(action), sample_num_columns=False
+        )
         assert self.contains(action)
         return action
 
-    def _sample_action_distribution(self, action, sample_num_columns=False, allow_break=True, column_override=None): # Sample a real action given the network outputs.
-        ret = self.index_repr_policy.sample_action(self.np_random, action, self.rel_metadata, sample_num_columns, allow_break=allow_break, column_override=column_override)
+    def _sample_action_distribution(
+        self, action, sample_num_columns=False, allow_break=True, column_override=None
+    ):  # Sample a real action given the network outputs.
+        ret = self.index_repr_policy.sample_action(
+            self.np_random,
+            action,
+            self.rel_metadata,
+            sample_num_columns,
+            allow_break=allow_break,
+            column_override=column_override,
+        )
         assert check_subspace(self, ret)
         return ret
 
     def _sample_action_subsets(self, action, column_ordinal_mask=None):
         # Sample all subsets of an index action.
         new_candidates = self.index_repr_policy.sample_subsets(
-                action,
-                rel_metadata=self.rel_metadata,
-                tbl_include_subsets=self.tbl_include_subsets,
-                column_ordinal_mask=column_ordinal_mask)
+            action,
+            rel_metadata=self.rel_metadata,
+            tbl_include_subsets=self.tbl_include_subsets,
+            column_ordinal_mask=column_ordinal_mask,
+        )
 
         for act in new_candidates:
             assert check_subspace(self, act)
@@ -418,7 +541,9 @@ class IndexSpace(spaces.Tuple):
                     candidates.append(random_act)
 
                 # Sample subsets if we aren't sampling the length of the index already.
-                if ("index_subset" not in neighbor_parameters) or neighbor_parameters["index_subset"]:
+                if ("index_subset" not in neighbor_parameters) or neighbor_parameters[
+                    "index_subset"
+                ]:
                     candidates.extend(self._sample_action_subsets(sampled_action))
 
                 for candidate in candidates:
@@ -435,7 +560,9 @@ class IndexSpace(spaces.Tuple):
             num_enter += 1
             if num_enter >= 100:
                 # Log but don't crash.
-                logging.error("Spent 100 iterations and could not find any valid index action. This should not happen.")
+                logging.error(
+                    "Spent 100 iterations and could not find any valid index action. This should not happen."
+                )
                 allow_random_samples = True
         return actions
 
@@ -463,7 +590,9 @@ class IndexSpace(spaces.Tuple):
         connection = kwargs["connection"]
 
         # Get the metadata and indices.
-        self.rel_metadata, existing_indexes = fetch_server_indexes(connection, self.tables)
+        self.rel_metadata, existing_indexes = fetch_server_indexes(
+            connection, self.tables
+        )
         if self._rel_metadata is not None:
             # Validate the relation metadata that we were provided.
             for tbl, cols in self._rel_metadata.items():
@@ -497,11 +626,19 @@ class IndexSpace(spaces.Tuple):
             for idxname, idx_desc in indexes.items():
                 idx_type = idx_desc["index_type"]
                 col_repr = ",".join(idx_desc["columns"])
-                inc_col_repr = ("INCLUDE (" + ",".join(idx_desc["include"]) + ")") if len(idx_desc["include"]) > 0 else ""
+                inc_col_repr = (
+                    ("INCLUDE (" + ",".join(idx_desc["include"]) + ")")
+                    if len(idx_desc["include"]) > 0
+                    else ""
+                )
 
-                logging.debug(f"Existing index: {idxname} ON {relname} USING {idx_type} ({col_repr}) {inc_col_repr}")
+                logging.debug(
+                    f"Existing index: {idxname} ON {relname} USING {idx_type} ({col_repr}) {inc_col_repr}"
+                )
 
-                ia = IndexAction.construct_md(idxname, relname, idx_type, idx_desc["columns"], idx_desc["include"])
+                ia = IndexAction.construct_md(
+                    idxname, relname, idx_type, idx_desc["columns"], idx_desc["include"]
+                )
                 if ia in indices_check:
                     # Keep the old index action if the index already exists.
                     self.state_container.append(indices_check[indices_check.index(ia)])
@@ -537,7 +674,10 @@ class IndexSpace(spaces.Tuple):
 
         exist_ia = ia in self.state_container
         if exist_ia:
-            logging.info("Contemplating %s (exist: True)", self.state_container[self.state_container.index(ia)])
+            logging.info(
+                "Contemplating %s (exist: True)",
+                self.state_container[self.state_container.index(ia)],
+            )
         else:
             logging.info("Contemplating %s (exist: False)", ia)
             # Add the new index with the current index counter.

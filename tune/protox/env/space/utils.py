@@ -1,10 +1,12 @@
-import re
 import logging
-from distutils import util
-from psycopg.rows import dict_row
+import re
 import xml.etree.ElementTree as ET
+from distutils import util
+
+from psycopg.rows import dict_row
+
 from tune.protox.env import KnobClass, SettingType
-from tune.protox.env.space.knob import Knob, CategoricalKnob, full_knob_name
+from tune.protox.env.space.knob import CategoricalKnob, Knob, full_knob_name
 
 
 def check_subspace(space, action):
@@ -18,6 +20,7 @@ def check_subspace(space, action):
                 logging.error("Subspace %s rejects %s", subspace, action[i])
                 return False
     return True
+
 
 # Defines the relevant metrics that we care about from benchbase.
 # <filter_db>: whether to filter with the benchbase database.
@@ -141,7 +144,9 @@ def _parse_field(type, value):
         field_bytes = None
         for number, unit in bytes_regex.findall(value):
             field_bytes = int(number) * (1024 ** order.index(unit.lower()))
-        assert field_bytes is not None, f"Failed to parse bytes from value string {value}"
+        assert (
+            field_bytes is not None
+        ), f"Failed to parse bytes from value string {value}"
         return field_bytes
     elif type == SettingType.INTEGER_TIME:
         if value == "-1":
@@ -178,10 +183,15 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
                 knob_targets[setting_name] = value
 
         for tbl in tables:
-            pgc_record = [r for r in cursor.execute(f"SELECT * FROM pg_class where relname = '{tbl}'", prepare=False)][0]
+            pgc_record = [
+                r
+                for r in cursor.execute(
+                    f"SELECT * FROM pg_class where relname = '{tbl}'", prepare=False
+                )
+            ][0]
             if pgc_record["reloptions"] is not None:
                 for record in pgc_record["reloptions"]:
-                    for key, value in re.findall(r'(\w+)=(\w*)', record):
+                    for key, value in re.findall(r"(\w+)=(\w*)", record):
                         tbl_key = full_knob_name(table=tbl, knob_name=key)
                         if tbl_key in knobs:
                             value = _project_pg_setting(knobs[tbl_key], value)
@@ -190,9 +200,10 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
                 for knobname, knob in knobs.items():
                     if knob.knob_class == KnobClass.TABLE:
                         if knob.knob_name == "fillfactor":
-                            tbl_key = full_knob_name(table=tbl, knob_name=knob.knob_name)
-                            knob_targets[tbl_key] = _project_pg_setting(knob, 100.)
-
+                            tbl_key = full_knob_name(
+                                table=tbl, knob_name=knob.knob_name
+                            )
+                            knob_targets[tbl_key] = _project_pg_setting(knob, 100.0)
 
     q_ams = None
     for knobname, knob in knobs.items():
@@ -220,17 +231,17 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
                         installed = True
 
                 if not installed:
-                    knob_targets[knobname] = 0.
+                    knob_targets[knobname] = 0.0
             elif knob.knob_type == SettingType.BOOLEAN:
-                knob_targets[knobname] = 1.
+                knob_targets[knobname] = 1.0
             elif knob.knob_name == "random_page_cost":
-                value = _project_pg_setting(knob, 4.)
+                value = _project_pg_setting(knob, 4.0)
                 knob_targets[knobname] = value
             elif knob.knob_name == "seq_page_cost":
-                value = _project_pg_setting(knob, 1.)
+                value = _project_pg_setting(knob, 1.0)
                 knob_targets[knobname] = value
             elif knob.knob_name == "hash_mem_multiplier":
-                value = _project_pg_setting(knob, 2.)
+                value = _project_pg_setting(knob, 2.0)
                 knob_targets[knobname] = value
     return knob_targets
 
@@ -239,18 +250,21 @@ def fetch_server_indexes(connection, tables):
     rel_metadata = {t: [] for t in tables}
     existing_indexes = {}
     with connection.cursor(row_factory=dict_row) as cursor:
-        records = cursor.execute("""
+        records = cursor.execute(
+            """
             SELECT c.relname, a.attname
             FROM pg_attribute a, pg_class c
             WHERE a.attrelid = c.oid AND a.attnum > 0
-            ORDER BY c.relname, a.attnum""")
+            ORDER BY c.relname, a.attnum"""
+        )
         for record in records:
             relname = record["relname"]
             attname = record["attname"]
             if relname in rel_metadata:
                 rel_metadata[relname].append(attname)
 
-        records = cursor.execute("""
+        records = cursor.execute(
+            """
             SELECT
                 t.relname as table_name,
                 i.relname as index_name,
@@ -267,7 +281,8 @@ def fetch_server_indexes(connection, tables):
             and t.relkind = 'r'
             and ix.indisunique = false
             order by t.relname, i.relname, pos;
-        """)
+        """
+        )
 
         for record in records:
             relname = record["table_name"]
@@ -291,6 +306,7 @@ def fetch_server_indexes(connection, tables):
                 else:
                     existing_indexes[relname][idxname]["columns"].append(colname)
     return rel_metadata, existing_indexes
+
 
 def overwrite_benchbase_hintset(root, query_name, set_str):
     ttypes = root.find("transactiontypes")

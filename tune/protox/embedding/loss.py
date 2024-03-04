@@ -1,4 +1,5 @@
 import math
+
 import torch
 import torch.nn as nn
 from pytorch_metric_learning import losses
@@ -17,6 +18,7 @@ def get_loss(distance_fn):
         return nn.MSELoss(reduction="none")
     else:
         assert False
+
 
 def get_bias_fn(config):
     def bias_fn(data, labels):
@@ -40,16 +42,24 @@ def get_bias_fn(config):
 
         if config.get("weak_bias", False):
             # Assign the weak bias allocation based on "separation margin".
-            percent_sep = (target_loc - perf_degrees * bias_separation) / bias_separation
+            percent_sep = (
+                target_loc - perf_degrees * bias_separation
+            ) / bias_separation
             weak_bias = (bias_separation + addtl_bias_separation) * 0.95 * percent_sep
             top_clamp = (perf_degrees + 1) * (bias_separation + addtl_bias_separation)
-            return perf_degrees * (bias_separation + addtl_bias_separation) + weak_bias, top_clamp
+            return (
+                perf_degrees * (bias_separation + addtl_bias_separation) + weak_bias,
+                top_clamp,
+            )
         else:
             return perf_degrees * (bias_separation + addtl_bias_separation)
 
     return bias_fn
 
-def _distance_cost(distance_fn, distance_scale, reduction_type, preds, targets, bias, output_scale):
+
+def _distance_cost(
+    distance_fn, distance_scale, reduction_type, preds, targets, bias, output_scale
+):
     bias_vals = bias(preds, targets)
     preds = preds - bias_vals
 
@@ -109,7 +119,8 @@ class CostLoss(losses.BaseMetricLossFunction):
             preds,
             data,
             self.bias_fn,
-            self.spec["output_scale"])
+            self.spec["output_scale"],
+        )
 
         return {
             "loss": {
@@ -118,7 +129,6 @@ class CostLoss(losses.BaseMetricLossFunction):
                 "reduction_type": "already_reduced",
             },
         }
-
 
     def forward(
         self, embeddings, labels=None, indices_tuple=None, ref_emb=None, ref_labels=None

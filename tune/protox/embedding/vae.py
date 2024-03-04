@@ -1,4 +1,5 @@
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,19 +23,24 @@ def gen_vae_collate(max_categorical, infer=False):
         scatter_dim = len(x.size())
         x_tensor = x.view(*x.size(), -1)
         x = torch.zeros(*x.size(), max_categorical, dtype=x.dtype)
-        x = x.scatter_(scatter_dim, x_tensor, 1).view(x.shape[0], -1).type(torch.float32)
+        x = (
+            x.scatter_(scatter_dim, x_tensor, 1)
+            .view(x.shape[0], -1)
+            .type(torch.float32)
+        )
 
         if infer:
             return x
         else:
             return x, y
+
     return vae_collate
 
 
 def acquire_loss_function(loss_type, max_attrs, max_categorical):
     def vae_cat_loss(preds, data, labels):
         if len(labels.shape) == 2:
-            labels = labels[: , -1].flatten()
+            labels = labels[:, -1].flatten()
 
         preds = preds.view(preds.shape[0], -1, max_categorical)
         data = data.view(data.shape[0], -1, max_categorical)
@@ -46,7 +52,14 @@ def acquire_loss_function(loss_type, max_attrs, max_categorical):
         # Pray for ignore_index..?
         data[:, 1:][data[:, 1:] == 0] = -100
 
-        recon_loss = F.cross_entropy(preds, data, weight=None, ignore_index=-100, label_smoothing=1./max_categorical, reduction="none")
+        recon_loss = F.cross_entropy(
+            preds,
+            data,
+            weight=None,
+            ignore_index=-100,
+            label_smoothing=1.0 / max_categorical,
+            reduction="none",
+        )
         if torch.isnan(recon_loss).any():
             # Dump any found nan in the loss.
             print(preds[torch.isnan(recon_loss)])
@@ -109,11 +122,18 @@ class VAELoss(losses.BaseMetricLossFunction):
         self.loss_fn = acquire_loss_function(loss_fn, max_attrs, max_categorical)
 
         eval_loss_fn_name = "vae_cat_loss"
-        self.eval_loss_fn = acquire_loss_function(eval_loss_fn_name, max_attrs, max_categorical)
-
+        self.eval_loss_fn = acquire_loss_function(
+            eval_loss_fn_name, max_attrs, max_categorical
+        )
 
     def forward(
-        self, embeddings, labels=None, indices_tuple=None, ref_emb=None, ref_labels=None, is_eval=False
+        self,
+        embeddings,
+        labels=None,
+        indices_tuple=None,
+        ref_emb=None,
+        ref_labels=None,
+        is_eval=False,
     ):
         """
         Args:
@@ -135,7 +155,6 @@ class VAELoss(losses.BaseMetricLossFunction):
         self.add_embedding_regularization_to_loss_dict(loss_dict, embeddings)
         return self.reducer(loss_dict, embeddings, labels)
 
-
     def compute_loss(self, preds, unused0, unused1, data, *args, **kwargs):
         is_eval = kwargs.get("is_eval", False)
         eval_fn = self.eval_loss_fn if is_eval else self.loss_fn
@@ -156,7 +175,7 @@ class VAELoss(losses.BaseMetricLossFunction):
                 "losses": elbo.mean(),
                 "indices": None,
                 "reduction_type": "already_reduced",
-            }
+            },
         }
         return self.last_loss_dict
 
@@ -172,7 +191,7 @@ class Network(nn.Module):
         dims = [input_dim] + hidden_sizes + [output_dim]
 
         layers = []
-        for (d1, d2) in zip(dims[:-1], dims[1:]):
+        for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
                 layers.append(act())
@@ -193,7 +212,7 @@ class Encoder(nn.Module):
         dims = [input_dim] + hidden_sizes + [latent_dim]
 
         layers = []
-        for (d1, d2) in zip(dims[:-1], dims[1:]):
+        for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
                 layers.append(act())
@@ -224,7 +243,7 @@ class Decoder(nn.Module):
 
         dims = [latent_dim] + [l for l in hidden_sizes] + [input_dim]
         layers = []
-        for (d1, d2) in zip(dims[:-1], dims[1:]):
+        for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
                 layers.append(act())
@@ -271,20 +290,23 @@ def init_modules(encoder, decoder, bias_init, weight_init, weight_uniform):
 
 # Define the model
 class VAE(nn.Module):
-    def __init__(self,
-            max_categorical,
-            input_dim,
-            hidden_sizes,
-            latent_dim,
-            act,
-            bias_init="default",
-            weight_init="default",
-            weight_uniform=None,
-            mean_output_act=None,
-            output_scale=1.,
-            ):
+    def __init__(
+        self,
+        max_categorical,
+        input_dim,
+        hidden_sizes,
+        latent_dim,
+        act,
+        bias_init="default",
+        weight_init="default",
+        weight_uniform=None,
+        mean_output_act=None,
+        output_scale=1.0,
+    ):
         super(VAE, self).__init__()
-        self.encoder = Encoder(input_dim, hidden_sizes, latent_dim, act, mean_output_act=mean_output_act)
+        self.encoder = Encoder(
+            input_dim, hidden_sizes, latent_dim, act, mean_output_act=mean_output_act
+        )
         self.decoder = Decoder(latent_dim, reversed(hidden_sizes), input_dim, act)
         init_modules(self.encoder, self.decoder, bias_init, weight_init, weight_uniform)
 

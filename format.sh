@@ -1,5 +1,5 @@
 #!/bin/bash
 set -euxo pipefail
 
-black **/*.py
-isort --profile black **/*.py
+find . -name '*.py' -exec black {} +
+find . -name '*.py' -exec isort --profile black {} +

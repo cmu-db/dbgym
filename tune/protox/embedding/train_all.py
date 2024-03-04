@@ -1,38 +1,43 @@
-import time
-import sys
 import json
-import os
-import numpy as np
-import random
 import logging
-import torch
-import torch.nn as nn
+import os
+import random
+import sys
+import time
 from datetime import datetime
-import yaml
-from pytorch_metric_learning.utils import logging_presets
-import tqdm
 from pathlib import Path
 
+import numpy as np
 import ray
-from ray.train import FailureConfig, RunConfig, SyncConfig
-from ray.tune import with_resources, with_parameters, TuneConfig
-from ray.tune.schedulers import FIFOScheduler
-from ray.tune.search.hyperopt import HyperOptSearch
-from ray.tune.search import ConcurrencyLimiter
+import torch
+import torch.nn as nn
+import tqdm
+import yaml
+from pytorch_metric_learning.utils import logging_presets
 from ray.air import session
-
-from tune.protox.embedding.loss import CostLoss, get_bias_fn
-from tune.protox.embedding.utils import parse_hyperopt_config, fetch_index_parameters, load_input_data, f_unpack_dict
-from tune.protox.embedding.vae import gen_vae_collate, VAELoss, create_vae_model
-from tune.protox.embedding.trainer import VAETrainer, StratifiedRandomSampler
+from ray.train import FailureConfig, RunConfig, SyncConfig
+from ray.tune import TuneConfig, with_parameters, with_resources
+from ray.tune.schedulers import FIFOScheduler
+from ray.tune.search import ConcurrencyLimiter
+from ray.tune.search.hyperopt import HyperOptSearch
 
 from misc.utils import open_and_save, restart_ray
+from tune.protox.embedding.loss import CostLoss, get_bias_fn
+from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
+from tune.protox.embedding.utils import (
+    f_unpack_dict,
+    fetch_index_parameters,
+    load_input_data,
+    parse_hyperopt_config,
+)
+from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
+
 
 def train_all_embeddings(cfg, generic_args, train_args):
-    '''
+    """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
-    '''
+    """
     start_time = time.time()
 
     with open_and_save(cfg, train_args.hpo_space_path, "r") as f:
@@ -72,10 +77,15 @@ def train_all_embeddings(cfg, generic_args, train_args):
     )
 
     resources = {"cpu": 1}
-    trainable = with_resources(with_parameters(_hpo_train, cfg=cfg, generic_args=generic_args, train_args=train_args), resources)
+    trainable = with_resources(
+        with_parameters(
+            _hpo_train, cfg=cfg, generic_args=generic_args, train_args=train_args
+        ),
+        resources,
+    )
 
     # Hopefully this is now serializable.
-    os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0" # makes it so Ray doesn't change dir
+    os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0"  # makes it so Ray doesn't change dir
     tuner = ray.tune.Tuner(
         trainable,
         tune_config=tune_config,
@@ -83,7 +93,10 @@ def train_all_embeddings(cfg, generic_args, train_args):
     )
 
     results = tuner.fit()
-    print("Best hyperparameters found were: ", results.get_best_result(metric="loss", mode="min").config)
+    print(
+        "Best hyperparameters found were: ",
+        results.get_best_result(metric="loss", mode="min").config,
+    )
     if results.num_errors > 0:
         print("Encountered exceptions!")
         for i in range(len(results)):
@@ -104,10 +117,19 @@ def _hpo_train(config, cfg, generic_args, train_args):
 
     config = f_unpack_dict(config)
     if config.get("use_bias", False):
-        if "bias_separation" in config and "addtl_bias_separation" in config and "output_scale" in config:
+        if (
+            "bias_separation" in config
+            and "addtl_bias_separation" in config
+            and "output_scale" in config
+        ):
             # Do a hacky reconfigure.
-            if config["output_scale"] > config["bias_separation"] + config["addtl_bias_separation"]:
-                config["output_scale"] = config["bias_separation"] + config["addtl_bias_separation"]
+            if (
+                config["output_scale"]
+                > config["bias_separation"] + config["addtl_bias_separation"]
+            ):
+                config["output_scale"] = (
+                    config["bias_separation"] + config["addtl_bias_separation"]
+                )
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
     output_dir = cfg.dbgym_this_run_path
@@ -158,14 +180,26 @@ def _hpo_train(config, cfg, generic_args, train_args):
         session.report({"loss": loss})
 
 
-def _build_trainer(cfg, benchmark, config, input_path, trial_dir, benchmark_config_path, train_size, dataloader_num_workers=0, disable_tqdm=False):
+def _build_trainer(
+    cfg,
+    benchmark,
+    config,
+    input_path,
+    trial_dir,
+    benchmark_config_path,
+    train_size,
+    dataloader_num_workers=0,
+    disable_tqdm=False,
+):
     max_cat_features = 0
     max_attrs = 0
 
     # Load the benchmark configuration.
     with open_and_save(cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
-        max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(cfg, benchmark, data)
+        max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
+            cfg, benchmark, data
+        )
 
     config["class_mapping"] = {}
     for (tbl, col), key in class_mapping.items():
@@ -184,7 +218,8 @@ def _build_trainer(cfg, benchmark, config, input_path, trial_dir, benchmark_conf
         train_size,
         max_attrs,
         config["metric_loss_md"].get("require_cost", False),
-        config["seed"])
+        config["seed"],
+    )
 
     # Acquire the collation function.
     collate_fn = gen_vae_collate(max_cat_features)
@@ -198,7 +233,11 @@ def _build_trainer(cfg, benchmark, config, input_path, trial_dir, benchmark_conf
     trunk.to(device=device)
 
     models = {"trunk": trunk, "embedder": model}
-    optimizers = { "embedder_optimizer": torch.optim.Adam(model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]), }
+    optimizers = {
+        "embedder_optimizer": torch.optim.Adam(
+            model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]
+        ),
+    }
 
     metric_loss = CostLoss(config["metric_loss_md"])
     # Default miner.
@@ -213,47 +252,65 @@ def _build_trainer(cfg, benchmark, config, input_path, trial_dir, benchmark_conf
     loss_weights = {"metric_loss": config["metric_loss_weight"], "vae_loss": 1}
 
     # Define the sampler.
-    sampler = StratifiedRandomSampler(idx_class, max_class=num_classes, batch_size=config["batch_size"], allow_repeats=True)
+    sampler = StratifiedRandomSampler(
+        idx_class,
+        max_class=num_classes,
+        batch_size=config["batch_size"],
+        allow_repeats=True,
+    )
 
     # Define the tester hook.
-    record_keeper, _, _ = logging_presets.get_record_keeper(f"{trial_dir}/logs", f"{trial_dir}/tboard")
+    record_keeper, _, _ = logging_presets.get_record_keeper(
+        f"{trial_dir}/logs", f"{trial_dir}/tboard"
+    )
     hooks = logging_presets.get_hook_container(record_keeper)
     model_folder = f"{trial_dir}/models"
 
     # Validation step loop.
-    val_dl = torch.utils.data.DataLoader(val_dataset, batch_size=4096, collate_fn=collate_fn)
+    val_dl = torch.utils.data.DataLoader(
+        val_dataset, batch_size=4096, collate_fn=collate_fn
+    )
     epoch_end = _construct_epoch_end(val_dl, config, hooks, model_folder)
 
     def clip_grad():
         if config["grad_clip_amount"] is not None:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), config["grad_clip_amount"])
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), config["grad_clip_amount"]
+            )
 
     bias_fn = None
     if config["use_bias"]:
         bias_fn = get_bias_fn(config)
 
     # Build the trainer.
-    return VAETrainer(
-        disable_tqdm=disable_tqdm,
-        bias_fn=bias_fn,
-        models=models,
-        optimizers=optimizers,
-        batch_size=config["batch_size"],
-        loss_funcs=loss_funcs,
-        mining_funcs=tminers,
-        dataset=train_dataset,
-        sampler=sampler,
-        iterations_per_epoch=config["iterations_per_epoch"] if config["iterations_per_epoch"] is not None else int(len(train_dataset) / config["batch_size"]),
-        data_device=device,
-        dtype=None,
-        loss_weights=loss_weights,
-        collate_fn=collate_fn,
-        lr_schedulers=None,
-        gradient_clippers={"embedder_grad_clipper": clip_grad},
-        dataloader_num_workers=dataloader_num_workers,
-        end_of_iteration_hook=hooks.end_of_iteration_hook,
-        end_of_epoch_hook=epoch_end,
-    ), epoch_end
+    return (
+        VAETrainer(
+            disable_tqdm=disable_tqdm,
+            bias_fn=bias_fn,
+            models=models,
+            optimizers=optimizers,
+            batch_size=config["batch_size"],
+            loss_funcs=loss_funcs,
+            mining_funcs=tminers,
+            dataset=train_dataset,
+            sampler=sampler,
+            iterations_per_epoch=(
+                config["iterations_per_epoch"]
+                if config["iterations_per_epoch"] is not None
+                else int(len(train_dataset) / config["batch_size"])
+            ),
+            data_device=device,
+            dtype=None,
+            loss_weights=loss_weights,
+            collate_fn=collate_fn,
+            lr_schedulers=None,
+            gradient_clippers={"embedder_grad_clipper": clip_grad},
+            dataloader_num_workers=dataloader_num_workers,
+            end_of_iteration_hook=hooks.end_of_iteration_hook,
+            end_of_epoch_hook=epoch_end,
+        ),
+        epoch_end,
+    )
 
 
 def _construct_epoch_end(val_dl, config, hooks, model_folder):
@@ -286,7 +343,10 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
                     total_recon_loss.append(trainer.last_recon_loss)
 
                     if pbar is not None:
-                        pbar.set_description("total_recon=%.5f total_metric=%.5f" % (total_recon_loss[-1], total_metric_loss[-1]))
+                        pbar.set_description(
+                            "total_recon=%.5f total_metric=%.5f"
+                            % (total_recon_loss[-1], total_metric_loss[-1])
+                        )
                         pbar.update(1)
 
                 # Switch to train mode.
@@ -296,7 +356,8 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
             return {
                 "avg_metric": np.mean(total_metric_loss),
                 "avg_recon": np.mean(total_recon_loss),
-                "total_avg_loss": np.mean(total_metric_loss) + np.mean(total_recon_loss),
+                "total_avg_loss": np.mean(total_metric_loss)
+                + np.mean(total_recon_loss),
             }
 
     return epoch_end

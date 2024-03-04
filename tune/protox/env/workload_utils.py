@@ -1,15 +1,16 @@
-from enum import unique, Enum
-import time
-import pglast
-import pglast.ast
-from pglast import stream
-from pglast.visitors import Visitor, Continue
 import logging
+import math
 import time
 from collections import Counter
+from enum import Enum, unique
+
+import pglast
+import pglast.ast
 import psycopg
+from pglast import stream
+from pglast.visitors import Continue, Visitor
 from psycopg.errors import QueryCanceled
-import math
+
 
 @unique
 class QueryType(Enum):
@@ -32,6 +33,7 @@ def parse_access_method(explain_data):
         if "Alias" in data:
             sub_data[data["Alias"]] = data["Node Type"]
         return sub_data
+
     return recurse(explain_data)
 
 
@@ -43,6 +45,7 @@ def force_statement_timeout(connection, timeout_ms):
             connection.execute(f"SET statement_timeout = {timeout_ms}")
         except QueryCanceled:
             retry = True
+
 
 def time_query(prefix, connection, qid, query, timeout):
     has_timeout = False
@@ -72,7 +75,9 @@ def time_query(prefix, connection, qid, query, timeout):
     return qid_runtime, has_timeout, explain_data
 
 
-def acquire_metrics_around_query(prefix, env_spec, connection, qid, query, qtimeout, metrics=False):
+def acquire_metrics_around_query(
+    prefix, env_spec, connection, qid, query, qtimeout, metrics=False
+):
     args = {"connection": connection}
     force_statement_timeout(connection, 0)
     if metrics:
@@ -81,30 +86,52 @@ def acquire_metrics_around_query(prefix, env_spec, connection, qid, query, qtime
     if qtimeout is not None and qtimeout > 0:
         force_statement_timeout(connection, qtimeout * 1000)
 
-    qid_runtime, main_timeout, explain_data = time_query(prefix, connection, qid, query, qtimeout)
+    qid_runtime, main_timeout, explain_data = time_query(
+        prefix, connection, qid, query, qtimeout
+    )
 
     # Wipe the statement timeout.
     force_statement_timeout(connection, 0)
     if metrics:
         final_metrics = env_spec.observation_space.construct_online(**args)
-        diff = env_spec.observation_space.construct_metric_delta(initial_metrics, final_metrics)
+        diff = env_spec.observation_space.construct_metric_delta(
+            initial_metrics, final_metrics
+        )
     else:
         diff = None
     # qid_runtime is in microseconds.
     return diff, qid_runtime, main_timeout, explain_data
 
 
-def execute_serial_variations(env_spec, connection, timeout, logger, qid, query, runs, real_knobs):
+def execute_serial_variations(
+    env_spec, connection, timeout, logger, qid, query, runs, real_knobs
+):
     # Whether need metric.
     need_metric = env_spec.observation_space.metrics()
     # Initial timeout.
     timeout_limit = timeout
     # Best run invocation.
-    best_metric, best_time, best_timeout, best_explain_data, runs_idx = None, None, True, None, None
+    best_metric, best_time, best_timeout, best_explain_data, runs_idx = (
+        None,
+        None,
+        True,
+        None,
+        None,
+    )
 
     for prefix, pqk in runs:
         # Attach the specific per-query knobs.
-        pqk_query = "/*+ " + " ".join([knob.resolve_per_query_knob(value, all_knobs=real_knobs) for (knob, value) in pqk]) + " */" + query
+        pqk_query = (
+            "/*+ "
+            + " ".join(
+                [
+                    knob.resolve_per_query_knob(value, all_knobs=real_knobs)
+                    for (knob, value) in pqk
+                ]
+            )
+            + " */"
+            + query
+        )
         # Log the query plan.
         pqk_query = "EXPLAIN (ANALYZE, FORMAT JSON, TIMING OFF) " + pqk_query
 
@@ -119,10 +146,11 @@ def execute_serial_variations(env_spec, connection, timeout, logger, qid, query,
             qid=qid,
             query=pqk_query,
             qtimeout=timeout_limit,
-            metrics=need_metric)
+            metrics=need_metric,
+        )
 
         if not did_timeout:
-            new_timeout_limit = math.ceil(runtime / 1e3) / 1.e3
+            new_timeout_limit = math.ceil(runtime / 1e3) / 1.0e3
             if new_timeout_limit < timeout_limit:
                 timeout_limit = new_timeout_limit
 
@@ -140,10 +168,10 @@ def execute_serial_variations(env_spec, connection, timeout, logger, qid, query,
 
 
 def traverse(stmt):
-    '''
+    """
     Trying to mimic the .traverse() function pglast v3 in pglast v6
     For context, we switched from pglast v3 to pglast v6
-    '''
+    """
     visitor = Visitor()
     generator = visitor.iterate(stmt)
 
@@ -178,33 +206,50 @@ def extract_aliases(stmts):
                     #     if node == stmt.stmt.view:
                     #         continue
 
-                    alias = ft.relname if (ft.alias is None or ft.alias.aliasname is None or ft.alias.aliasname == "") else ft.alias.aliasname
+                    alias = (
+                        ft.relname
+                        if (
+                            ft.alias is None
+                            or ft.alias.aliasname is None
+                            or ft.alias.aliasname == ""
+                        )
+                        else ft.alias.aliasname
+                    )
                     if relname not in aliases:
                         aliases[relname] = []
                     if alias not in aliases[relname]:
                         aliases[relname].append(alias)
-                    #else:
+                    # else:
                     #    logging.warn(f"Squashing {relname} {alias} on {sql_file}")
-    aliases = {k:v for k,v in aliases.items() if k not in ctes}
+    aliases = {k: v for k, v in aliases.items() if k not in ctes}
     return aliases
+
 
 def extract_sqltypes(stmts, pid):
     sqls = []
     for stmt in stmts:
         sql_type = QueryType.UNKNOWN
-        if isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.SelectStmt):
+        if isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.SelectStmt
+        ):
             sql_type = QueryType.SELECT
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.ViewStmt):
+        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.ViewStmt
+        ):
             sql_type = QueryType.CREATE_VIEW
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.DropStmt):
+        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.DropStmt
+        ):
             drop_ast = stmt.stmt
             if drop_ast.removeType == pglast.enums.parsenodes.ObjectType.OBJECT_VIEW:
                 sql_type = QueryType.DROP_VIEW
-        elif isinstance(stmt, pglast.ast.RawStmt) and any([
-            isinstance(stmt.stmt, pglast.ast.InsertStmt),
-            isinstance(stmt.stmt, pglast.ast.UpdateStmt),
-            isinstance(stmt.stmt, pglast.ast.DeleteStmt),
-        ]):
+        elif isinstance(stmt, pglast.ast.RawStmt) and any(
+            [
+                isinstance(stmt.stmt, pglast.ast.InsertStmt),
+                isinstance(stmt.stmt, pglast.ast.UpdateStmt),
+                isinstance(stmt.stmt, pglast.ast.DeleteStmt),
+            ]
+        ):
             sql_type = QueryType.INS_UPD_DEL
 
         q = stream.RawStream()(stmt)
@@ -216,22 +261,30 @@ def extract_sqltypes(stmts, pid):
         sqls.append((sql_type, q))
     return sqls
 
+
 def extract_columns(stmt, tables, all_attributes, query_aliases):
     tbl_col_usages = {t: set() for t in tables}
+
     def traverse_extract_columns(alias_set, node, update=True):
         if node is None:
             return []
 
         columns = []
         for _, expr in traverse(node):
-            if isinstance(expr, pglast.ast.Node) and isinstance(expr, pglast.ast.ColumnRef):
+            if isinstance(expr, pglast.ast.Node) and isinstance(
+                expr, pglast.ast.ColumnRef
+            ):
                 if len(expr.fields) == 2:
                     tbl, col = expr.fields[0], expr.fields[1]
-                    assert isinstance(tbl, pglast.ast.String) and isinstance(col, pglast.ast.String)
+                    assert isinstance(tbl, pglast.ast.String) and isinstance(
+                        col, pglast.ast.String
+                    )
 
                     tbl = tbl.sval
                     col = col.sval
-                    if tbl in alias_set and (tbl in tbl_col_usages or alias_set[tbl] in tbl_col_usages):
+                    if tbl in alias_set and (
+                        tbl in tbl_col_usages or alias_set[tbl] in tbl_col_usages
+                    ):
                         tbl = alias_set[tbl]
                         if update:
                             tbl_col_usages[tbl].add(col)
