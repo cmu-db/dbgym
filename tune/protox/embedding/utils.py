@@ -1,17 +1,18 @@
-import os
-import pandas as pd
-from hyperopt import hp
-import torch
-import logging
 import gc
-from torch.utils.data import TensorDataset
-from sklearn.model_selection import train_test_split
+import logging
+import os
 
-from tune.protox.env.workload import Workload
-from tune.protox.env.space.index_space import IndexSpace
-from tune.protox.env.space.index_policy import IndexRepr
-from tune.protox.embedding.loss import COST_COLUMNS
+import pandas as pd
+import torch
+from hyperopt import hp
+from sklearn.model_selection import train_test_split
+from torch.utils.data import TensorDataset
+
 from misc.utils import open_and_save
+from tune.protox.embedding.loss import COST_COLUMNS
+from tune.protox.env.space.index_policy import IndexRepr
+from tune.protox.env.space.index_space import IndexSpace
+from tune.protox.env.workload import Workload
 
 
 def f_unpack_dict(dct):
@@ -31,9 +32,9 @@ def f_unpack_dict(dct):
     : unpacked dictionary
     """
     res = {}
-    for (k, v) in dct.items():
+    for k, v in dct.items():
         if isinstance(v, dict):
-            res = {**res, k:v, **f_unpack_dict(v)}
+            res = {**res, k: v, **f_unpack_dict(v)}
         else:
             res[k] = v
     return res
@@ -41,6 +42,7 @@ def f_unpack_dict(dct):
 
 def parse_hyperopt_config(config):
     assert isinstance(config, dict)
+
     def parse_key(key_dict):
         if key_dict["type"] == "constant":
             return key_dict["value"]
@@ -65,12 +67,16 @@ def fetch_index_parameters(cfg, benchmark, data):
     tables = data["protox"]["tables"]
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
-    
+
     # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
     if "query_directory" not in query_spec:
         assert "query_order" not in query_spec
-        query_spec["query_directory"] = os.path.join(cfg.dbgym_data_path, f'{benchmark}_queries')
-        query_spec["query_order"] = os.path.join(query_spec["query_directory"], f'order.txt')
+        query_spec["query_directory"] = os.path.join(
+            cfg.dbgym_data_path, f"{benchmark}_queries"
+        )
+        query_spec["query_order"] = os.path.join(
+            query_spec["query_directory"], f"order.txt"
+        )
 
     workload = Workload(cfg, tables, attributes, query_spec, pid=None)
     att_usage = workload.process_column_usage()
@@ -82,10 +88,13 @@ def fetch_index_parameters(cfg, benchmark, data):
         index_repr=IndexRepr.ONE_HOT.name,
         seed=0,
         latent_dim=0,
-        attributes_overwrite=att_usage)
+        attributes_overwrite=att_usage,
+    )
     space._build_mapping(att_usage)
-    max_cat_features = max(len(tables), space.max_num_columns + 1) # +1 for the one hot encoding.
-    max_attrs = space.max_num_columns + 1 # +1 to account for the table index.
+    max_cat_features = max(
+        len(tables), space.max_num_columns + 1
+    )  # +1 for the one hot encoding.
+    max_attrs = space.max_num_columns + 1  # +1 to account for the table index.
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
@@ -119,12 +128,14 @@ def load_input_data(cfg, input_path, train_size, max_attrs, require_cost, seed):
 
     # Perform the train test split.
     train_x, val_x, train_y, val_y = train_test_split(
-        x, y,
+        x,
+        y,
         test_size=1 - train_size,
         train_size=train_size,
         random_state=seed,
         shuffle=True,
-        stratify=y[:, -1])
+        stratify=y[:, -1],
+    )
     del x
     del y
     gc.collect()

@@ -1,11 +1,14 @@
 from __future__ import annotations
-from typing import Any, Sequence
-import numpy as np
-import gymnasium as gym
+
 import math
+from typing import Any, Sequence
+
+import gymnasium as gym
+import numpy as np
+from gymnasium.spaces import Box, Discrete, Space
+from gymnasium.spaces.utils import flatdim, flatten, flatten_space, unflatten
+
 from tune.protox.env import KnobClass, SettingType, is_knob_enum, resolve_enum_value
-from gymnasium.spaces import Space, Box, Discrete
-from gymnasium.spaces.utils import flatten, flatten_space, flatdim, unflatten
 
 
 def full_knob_name(table=None, query=None, knob_name=None):
@@ -49,7 +52,7 @@ def _treat_boolean(setting_type):
     return setting_type in [
         SettingType.BOOLEAN,
         SettingType.BINARY_ENUM,
-        SettingType.SCANMETHOD_ENUM
+        SettingType.SCANMETHOD_ENUM,
     ]
 
 
@@ -89,7 +92,6 @@ class Knob(Space):
     # Whether to round or floor.
     should_round: bool = False
 
-
     def __init__(
         self,
         table_name: str,
@@ -98,7 +100,8 @@ class Knob(Space):
         metadata: dict,
         do_quantize: bool,
         default_quantize_factor: int,
-        seed):
+        seed,
+    ):
 
         self.table_name = table_name
         self.query_name = query_name
@@ -112,7 +115,15 @@ class Knob(Space):
 
         self.knob_type, self.knob_dtype = _parse_setting_dtype(metadata["type"])
         self.knob_unit = metadata["unit"]
-        self.quantize_factor = (default_quantize_factor if metadata["quantize"] == -1 else metadata["quantize"]) if do_quantize else 0
+        self.quantize_factor = (
+            (
+                default_quantize_factor
+                if metadata["quantize"] == -1
+                else metadata["quantize"]
+            )
+            if do_quantize
+            else 0
+        )
         self.log2_scale = metadata["log_scale"]
         assert not self.log2_scale or (self.log2_scale and self.quantize_factor == 0)
         self.should_round = metadata.get("round", False)
@@ -122,7 +133,7 @@ class Knob(Space):
         self.space_min_value = self.min_value = metadata["min"]
         self.space_max_value = self.max_value = metadata["max"]
         if self.log2_scale:
-            self.space_correction_value = (1 - self.space_min_value)
+            self.space_correction_value = 1 - self.space_min_value
             self.space_min_value += self.space_correction_value
             self.space_max_value += self.space_correction_value
 
@@ -130,7 +141,9 @@ class Knob(Space):
             self.space_max_value = math.ceil(math.log2(self.space_max_value))
         elif self.quantize_factor > 0:
             if self.knob_type == SettingType.FLOAT:
-                self.bucket_size = (self.max_value - self.min_value) / self.quantize_factor
+                self.bucket_size = (
+                    self.max_value - self.min_value
+                ) / self.quantize_factor
             else:
                 max_buckets = min(self.max_value - self.min_value, self.quantize_factor)
                 self.bucket_size = (self.max_value - self.min_value) / max_buckets
@@ -143,10 +156,10 @@ class Knob(Space):
 
     def invert(self, val):
         if _treat_boolean(self.knob_type):
-            if val == 1.:
-                return 0.
+            if val == 1.0:
+                return 0.0
             else:
-                return 1.
+                return 1.0
         return val
 
     def _log2_quantize_to_internal(self, transform_value: Any):
@@ -157,11 +170,13 @@ class Knob(Space):
         return transform_value
 
     def _project_embedding_into_internal_space(self, value: Any):
-        network_space = (-1., 1.)
+        network_space = (-1.0, 1.0)
         # Assume that network space and internal space obey a simple scale mapping.
         # First project into the [space_min_value, space_max_value] range.
-        relative_old_space = np.round((value + 1) / 2., 8)
-        new_space = (self.space_max_value - self.space_min_value) * relative_old_space + self.space_min_value
+        relative_old_space = np.round((value + 1) / 2.0, 8)
+        new_space = (
+            self.space_max_value - self.space_min_value
+        ) * relative_old_space + self.space_min_value
         # Internal space might differ if scaling and/or other transformations are done.
         return new_space
 
@@ -187,7 +202,9 @@ class Knob(Space):
         if self.should_round:
             quantized_value = round(raw_value / self.bucket_size) * self.bucket_size
         else:
-            quantized_value = math.floor(raw_value / self.bucket_size) * self.bucket_size
+            quantized_value = (
+                math.floor(raw_value / self.bucket_size) * self.bucket_size
+            )
         return np.clip(quantized_value, self.min_value, self.max_value)
 
     def adjust_quantize_bin(self, value: Any, bin_shift: int):
@@ -205,12 +222,20 @@ class Knob(Space):
             log2_bin = self._log2_quantize_to_internal(value)
             new_bin = log2_bin + bin_shift
             # We use the space_min_value because that is the bounds on the log scale.
-            if new_bin >= self.space_min_value and new_bin <= self.space_max_value and new_bin != log2_bin:
+            if (
+                new_bin >= self.space_min_value
+                and new_bin <= self.space_max_value
+                and new_bin != log2_bin
+            ):
                 new_internal_value = new_bin
         else:
             # Adjust the raw value itself if we don't use log2 scaling.
             target_value = value + self.bucket_size * bin_shift
-            if target_value >= self.min_value and target_value <= self.max_value and target_value != value:
+            if (
+                target_value >= self.min_value
+                and target_value <= self.max_value
+                and target_value != value
+            ):
                 new_internal_value = target_value
 
         if new_internal_value is None:
@@ -234,16 +259,22 @@ class Knob(Space):
             transform_value = value
 
         # Scale into the network space.
-        network_space = (-1., 1.)
-        relative_point = (transform_value - self.space_min_value) / (self.space_max_value - self.space_min_value)
-        network_space = relative_point * (network_space[1] - network_space[0]) + network_space[0]
+        network_space = (-1.0, 1.0)
+        relative_point = (transform_value - self.space_min_value) / (
+            self.space_max_value - self.space_min_value
+        )
+        network_space = (
+            relative_point * (network_space[1] - network_space[0]) + network_space[0]
+        )
         return network_space
 
     def project_embedding_to_env(self, value: Any):
         """Projects a point from network to the environment space."""
         # This functionally assumes that the network_space and internal space maps linearly.
         # If that assumption doesn't hold, project_embedding_into_internal_space will do something wonky to the values.
-        raw_value = self._quantize_internal_to_raw(self._project_embedding_into_internal_space(value))
+        raw_value = self._quantize_internal_to_raw(
+            self._project_embedding_into_internal_space(value)
+        )
         if _treat_boolean(self.knob_type):
             return round(raw_value)
         elif self.knob_type == SettingType.FLOAT:
@@ -310,7 +341,12 @@ def _unflatten_knob(space: Knob, x: NDArray[Any]) -> Any:
 
 @flatten_space.register(Knob)
 def _flatten_space_knob(space: Knob) -> Box:
-    return Box(low=space.space_min_value, high=space.space_max_value, shape=(1,), dtype=space.knob_dtype)
+    return Box(
+        low=space.space_min_value,
+        high=space.space_max_value,
+        shape=(1,),
+        dtype=space.knob_dtype,
+    )
 
 
 @flatdim.register(Knob)
@@ -341,12 +377,8 @@ class CategoricalKnob(Discrete):
         return val
 
     def __init__(
-        self,
-        table_name: str,
-        query_name: str,
-        knob_name: str,
-        metadata: dict,
-        seed):
+        self, table_name: str, query_name: str, knob_name: str, metadata: dict, seed
+    ):
 
         self.table_name = table_name
         self.query_name = query_name
@@ -395,7 +427,8 @@ class CategoricalKnob(Discrete):
     def _sample_weights(self, weights) -> Any:
         return np.random.choice(
             [i for i in range(self.num_elems)],
-            p=(weights / np.sum(weights)) if np.sum(weights) > 0 else None)
+            p=(weights / np.sum(weights)) if np.sum(weights) > 0 else None,
+        )
 
 
 def _create_knob(
@@ -405,7 +438,8 @@ def _create_knob(
     metadata: dict,
     do_quantize: bool,
     default_quantize_factor: int,
-    seed):
+    seed,
+):
 
     if "default" in metadata:
         return CategoricalKnob(
@@ -413,7 +447,8 @@ def _create_knob(
             query_name=query_name,
             knob_name=knob_name,
             metadata=metadata,
-            seed=seed)
+            seed=seed,
+        )
 
     return Knob(
         table_name=table_name,
@@ -422,4 +457,5 @@ def _create_knob(
         metadata=metadata,
         do_quantize=do_quantize,
         default_quantize_factor=default_quantize_factor,
-        seed=seed)
+        seed=seed,
+    )

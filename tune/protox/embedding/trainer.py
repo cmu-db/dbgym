@@ -1,13 +1,13 @@
-import tqdm
-import random
 import itertools
-import numpy as np
-import torch
-from torch.utils.data import Sampler
+import random
 from typing import Iterator
 
+import numpy as np
+import torch
+import tqdm
 from pytorch_metric_learning import trainers
 from pytorch_metric_learning.utils import common_functions as c_f
+from torch.utils.data import Sampler
 
 
 class StratifiedRandomSampler(Sampler[int]):
@@ -17,11 +17,7 @@ class StratifiedRandomSampler(Sampler[int]):
     batch_size = 0
     elem_per_class = 0
 
-    def __init__(self,
-                 labels,
-                 max_class: int,
-                 batch_size: int,
-                 allow_repeats=True):
+    def __init__(self, labels, max_class: int, batch_size: int, allow_repeats=True):
         self.allow_repeats = allow_repeats
         self.labels = labels
         self.max_class = max_class
@@ -44,7 +40,13 @@ class StratifiedRandomSampler(Sampler[int]):
         r, elem_per_class, min_steps = self.compute()
         if self.allow_repeats:
             for _ in range(len(self.labels) // self.batch_size):
-                elems = [r[k][1][np.random.randint(0, high=r[k][0], size=(elem_per_class,))].tolist() for k in r if r[k][0] > 0]
+                elems = [
+                    r[k][1][
+                        np.random.randint(0, high=r[k][0], size=(elem_per_class,))
+                    ].tolist()
+                    for k in r
+                    if r[k][0] > 0
+                ]
                 yield from itertools.chain(*elems)
         else:
             for k in r:
@@ -52,9 +54,14 @@ class StratifiedRandomSampler(Sampler[int]):
                     random.shuffle(r[k][1])
 
             for i in range(min_steps):
-                elems = [r[k][1][i*elem_per_class:i*elem_per_class + elem_per_class].tolist() for k in r if r[k][0] > 0]
+                elems = [
+                    r[k][1][
+                        i * elem_per_class : i * elem_per_class + elem_per_class
+                    ].tolist()
+                    for k in r
+                    if r[k][0] > 0
+                ]
                 yield from itertools.chain(*elems)
-
 
     def __len__(self) -> int:
         if self.allow_repeats:
@@ -86,7 +93,9 @@ class VAETrainer(trainers.BaseTrainer):
 
     def maybe_get_vae_loss(self, preds, data, labels):
         if self.loss_weights.get("vae_loss", 0) > 0:
-            return self.loss_funcs["vae_loss"](preds, None, None, (data, labels), is_eval=self.eval)
+            return self.loss_funcs["vae_loss"](
+                preds, None, None, (data, labels), is_eval=self.eval
+            )
         return 0
 
     def calculate_loss(self, curr_batch):
@@ -125,7 +134,9 @@ class VAETrainer(trainers.BaseTrainer):
 
         self.losses["metric_loss"] = ml
         self.losses["vae_loss"] = self.maybe_get_vae_loss(preds, data, labels)
-        self.last_recon_loss = self.loss_funcs["vae_loss"].last_loss_dict["recon_loss"]["losses"].item()
+        self.last_recon_loss = (
+            self.loss_funcs["vae_loss"].last_loss_dict["recon_loss"]["losses"].item()
+        )
 
     def backward(self):
         if not self.failed:
@@ -145,10 +156,15 @@ class VAETrainer(trainers.BaseTrainer):
             for self.iteration in pbar:
                 self.forward_and_backward()
                 self.end_of_iteration_hook(self)
-                if self.failed or \
-                   np.isnan(self.losses["total_loss"].item()) or np.isinf(self.losses["total_loss"].item()) or \
-                   np.isnan(self.losses["vae_loss"].item()) or np.isinf(self.losses["vae_loss"].item()) or \
-                   np.isnan(self.last_recon_loss) or np.isinf(self.last_recon_loss):
+                if (
+                    self.failed
+                    or np.isnan(self.losses["total_loss"].item())
+                    or np.isinf(self.losses["total_loss"].item())
+                    or np.isnan(self.losses["vae_loss"].item())
+                    or np.isinf(self.losses["vae_loss"].item())
+                    or np.isnan(self.last_recon_loss)
+                    or np.isinf(self.last_recon_loss)
+                ):
                     # Abort this particular run in this case.
                     self.failed = True
 
@@ -157,18 +173,37 @@ class VAETrainer(trainers.BaseTrainer):
 
                     if self.fail_msg is not None:
                         pass
-                    elif np.isnan(self.losses["total_loss"].item()) or np.isinf(self.losses["total_loss"].item()):
-                        self.fail_msg = f"Total Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
-                    elif np.isnan(self.losses["vae_loss"].item()) or np.isinf(self.losses["vae_loss"].item()):
-                        self.fail_msg = "VAE Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
-                    elif np.isnan(self.last_recon_loss) or np.isinf(self.last_recon_loss):
-                        self.fail_msg = "Recon Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
+                    elif np.isnan(self.losses["total_loss"].item()) or np.isinf(
+                        self.losses["total_loss"].item()
+                    ):
+                        self.fail_msg = (
+                            f"Total Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
+                        )
+                    elif np.isnan(self.losses["vae_loss"].item()) or np.isinf(
+                        self.losses["vae_loss"].item()
+                    ):
+                        self.fail_msg = (
+                            "VAE Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
+                        )
+                    elif np.isnan(self.last_recon_loss) or np.isinf(
+                        self.last_recon_loss
+                    ):
+                        self.fail_msg = (
+                            "Recon Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
+                        )
 
                     print(self.fail_msg)
                     return
 
                 if not self.disable_tqdm:
-                    pbar.set_description("total=%.5f recon=%.5f metric=%.5f" % (self.losses["total_loss"], self.last_recon_loss, self.losses["metric_loss"]))
+                    pbar.set_description(
+                        "total=%.5f recon=%.5f metric=%.5f"
+                        % (
+                            self.losses["total_loss"],
+                            self.last_recon_loss,
+                            self.losses["metric_loss"],
+                        )
+                    )
                 self.step_lr_schedulers(end_of_epoch=False)
             self.step_lr_schedulers(end_of_epoch=True)
             self.zero_losses()

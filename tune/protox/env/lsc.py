@@ -1,6 +1,7 @@
+import logging
+
 import numpy as np
 import torch
-import logging
 
 
 class LSC(object):
@@ -46,7 +47,9 @@ class LSC(object):
             assert len(lsc_max) == horizon
             lsc_max = [float(f) for f in lsc_max]
 
-        self.lsc_shift_schedule_eps_freq = spec.lsc_parameters["lsc_shift_schedule_eps_freq"]
+        self.lsc_shift_schedule_eps_freq = spec.lsc_parameters[
+            "lsc_shift_schedule_eps_freq"
+        ]
         self.lsc_shift = np.array(lsc_splits)
         self.lsc_shift_increment = np.array(lsc_increments)
         self.lsc_shift_max = np.array(lsc_max)
@@ -73,11 +76,11 @@ class LSC(object):
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
         lsc_max = self.lsc_shift_max[(self.num_steps % self.horizon)]
         rel = lsc_shift / lsc_max
-        return np.array([(rel * 2.) - 1], dtype=np.float32)
+        return np.array([(rel * 2.0) - 1], dtype=np.float32)
 
     def inverse_scale(self, value):
         lsc_max = self.lsc_shift_max[0]
-        lsc_shift = ((value + 1) / 2.) * lsc_max
+        lsc_shift = ((value + 1) / 2.0) * lsc_max
         return lsc_shift * self.vae_configuration["output_scale"]
 
     def advance(self):
@@ -98,7 +101,11 @@ class LSC(object):
 
         # Advance the episode count.
         self.num_episodes += 1
-        if (self.num_episodes <= self.lsc_shift_after) or ((self.num_episodes - self.lsc_shift_after) % self.lsc_shift_schedule_eps_freq != 0):
+        if (self.num_episodes <= self.lsc_shift_after) or (
+            (self.num_episodes - self.lsc_shift_after)
+            % self.lsc_shift_schedule_eps_freq
+            != 0
+        ):
             # Reset the number of steps we've taken.
             self.num_steps = 0
         else:

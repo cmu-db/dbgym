@@ -1,16 +1,14 @@
 """Implementation of a space that represents closed boxes in euclidean space."""
+
 from __future__ import annotations
 
 from typing import Any, Iterable, Mapping, Sequence, SupportsFloat
 
-import numpy as np
-from numpy.typing import NDArray
-
 import gymnasium as gym
+import numpy as np
 from gymnasium.spaces.space import Space
-from gymnasium.spaces.utils import flatdim
-from gymnasium.spaces.utils import flatten
-from gymnasium.spaces.utils import unflatten
+from gymnasium.spaces.utils import flatdim, flatten, unflatten
+from numpy.typing import NDArray
 
 
 class Real(Space[Any]):
@@ -67,13 +65,16 @@ class Real(Space[Any]):
             and self.high == other.high
         )
 
+
 @flatdim.register(Real)
 def _flatdim_real(space: Real) -> int:
     return 1
 
+
 @flatten.register(Real)
 def _flatten_real(space: Real, x: Any) -> Any:
     return [x]
+
 
 @unflatten.register(Real)
 def _unflatten_real(space: Real, x: Any) -> Any:

@@ -1,12 +1,14 @@
-import shutil
-import os
-import pandas as pd
 import json
-import numpy as np
+import os
+import shutil
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import tqdm
 
-from tune.protox.embedding.analyze import STATS_FNAME, RANGES_FNAME
+from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
+
 
 class DotDict(dict):
     __getattr__ = dict.get
@@ -17,11 +19,15 @@ class DotDict(dict):
 def select_best_embeddings(cfg, generic_args, select_args):
     data = _load_data(cfg, select_args)
 
-    if generic_args.dataset_path is not None and os.path.exists(generic_args.dataset_path):
+    if generic_args.dataset_path is not None and os.path.exists(
+        generic_args.dataset_path
+    ):
         raw_data = pd.read_parquet(generic_args.dataset_path)
         data = _attach(data, raw_data, select_args.idx_limit)
 
-    data.to_csv(os.path.join(cfg.dbgym_this_run_path, "curated_results.csv"), index=False)
+    data.to_csv(
+        os.path.join(cfg.dbgym_this_run_path, "curated_results.csv"), index=False
+    )
 
     if (cfg.dbgym_this_run_path / "curated").exists():
         shutil.rmtree(cfg.dbgym_this_run_path / "curated")
@@ -31,14 +37,26 @@ def select_best_embeddings(cfg, generic_args, select_args):
         data["elbo"] = data.elbo + data.idx_class_total_error
 
     if select_args.allow_all:
-        df = data.sort_values(by=["elbo"]).iloc[:select_args.num_curate]
+        df = data.sort_values(by=["elbo"]).iloc[: select_args.num_curate]
     else:
-        df = data.sort_values(by=["elbo"]).groupby(by=["root"]).head(1).iloc[:select_args.num_curate]
+        df = (
+            data.sort_values(by=["elbo"])
+            .groupby(by=["root"])
+            .head(1)
+            .iloc[: select_args.num_curate]
+        )
 
     if select_args.flatten_idx == -1:
         for tup in df.itertuples():
-            shutil.copytree(tup.path, f"{cfg.dbgym_this_run_path}/curated/{tup.path}", dirs_exist_ok=True)
-            shutil.copy(Path(tup.root) / "config", f"{cfg.dbgym_this_run_path}/curated/{tup.root}/config")
+            shutil.copytree(
+                tup.path,
+                f"{cfg.dbgym_this_run_path}/curated/{tup.path}",
+                dirs_exist_ok=True,
+            )
+            shutil.copy(
+                Path(tup.root) / "config",
+                f"{cfg.dbgym_this_run_path}/curated/{tup.root}/config",
+            )
     else:
         idx = select_args.flatten_idx
         Path(f"{cfg.dbgym_this_run_path}/curated").mkdir(parents=True, exist_ok=True)
@@ -47,7 +65,10 @@ def select_best_embeddings(cfg, generic_args, select_args):
         for tup in df.itertuples():
             epoch = int(str(tup.path).split("epoch")[-1])
             shutil.copytree(tup.path, f"{cfg.dbgym_this_run_path}/curated/model{idx}")
-            shutil.copy(Path(tup.root) / "config", f"{cfg.dbgym_this_run_path}/curated/model{idx}/config")
+            shutil.copy(
+                Path(tup.root) / "config",
+                f"{cfg.dbgym_this_run_path}/curated/model{idx}/config",
+            )
 
             info_txt.write(f"model{idx}/embedder_{epoch}.pth\n")
             idx += 1
@@ -82,12 +103,14 @@ def _load_data(cfg, select_args):
         # don't use open_and_save() because we generated config in this run
         with open(stat.parent.parent.parent / "config", "r") as f:
             config = json.load(f)
+
             def recurse_set(source, target):
                 for k, v in source.items():
                     if isinstance(v, dict):
                         recurse_set(v, target)
                     else:
                         target[k] = v
+
             recurse_set(config, info)
             if select_args.latent_dim is not None:
                 if info["latent_dim"] != select_args.latent_dim:
@@ -124,11 +147,15 @@ def _attach(data, raw_data, num_limit=0):
     for tup in tqdm.tqdm(data.itertuples(), total=data.shape[0]):
         tup = DotDict({k: getattr(tup, k) for k in data.columns})
         if raw_data is not None and Path(tup.ranges_file).exists():
+
             def compute_dist_score(current_dists, base, upper):
                 nonlocal filtered_data
                 key = (base, upper)
                 if key not in filtered_data:
-                    data_range = raw_data[(raw_data.quant_mult_cost_improvement >= base) & (raw_data.quant_mult_cost_improvement < upper)]
+                    data_range = raw_data[
+                        (raw_data.quant_mult_cost_improvement >= base)
+                        & (raw_data.quant_mult_cost_improvement < upper)
+                    ]
                     filtered_data[key] = data_range
                     if data_range.shape[0] == 0:
                         return 0
@@ -137,11 +164,15 @@ def _attach(data, raw_data, num_limit=0):
 
                 error = 0
                 if "real_idx_class" in data_range:
-                    data_dists = data_range.real_idx_class.value_counts() / data_range.shape[0]
+                    data_dists = (
+                        data_range.real_idx_class.value_counts() / data_range.shape[0]
+                    )
                 else:
-                    data_dists = data_range.idx_class.value_counts() / data_range.shape[0]
+                    data_dists = (
+                        data_range.idx_class.value_counts() / data_range.shape[0]
+                    )
 
-                for (key, dist) in zip(data_dists.index, data_dists):
+                for key, dist in zip(data_dists.index, data_dists):
                     if str(key) not in current_dists:
                         error += dist
                     else:
@@ -158,13 +189,15 @@ def _attach(data, raw_data, num_limit=0):
                     if "Generating range" in line:
                         if len(current_dists) > 0:
                             assert drange[0] is not None
-                            errors.append(compute_dist_score(current_dists, drange[0], drange[1]))
+                            errors.append(
+                                compute_dist_score(current_dists, drange[0], drange[1])
+                            )
                             if num_limit > 0 and len(errors) >= num_limit:
                                 current_dists = {}
                                 break
 
                         if drange[0] is None:
-                            drange = (1. - tup.bias_separation, 1.01)
+                            drange = (1.0 - tup.bias_separation, 1.01)
                         else:
                             drange = (drange[0] - tup.bias_separation, drange[0])
                         current_dists = {}
@@ -176,9 +209,13 @@ def _attach(data, raw_data, num_limit=0):
 
                 if len(current_dists) > 0:
                     # Put the error in.
-                    errors.append(compute_dist_score(current_dists, 0., tup.bias_separation))
+                    errors.append(
+                        compute_dist_score(current_dists, 0.0, tup.bias_separation)
+                    )
 
-                tup["idx_class_errors"] = ",".join([str(np.round(e, 2)) for e in errors])
+                tup["idx_class_errors"] = ",".join(
+                    [str(np.round(e, 2)) for e in errors]
+                )
                 for i, e in enumerate(errors):
                     tup[f"idx_class_error{i}"] = np.round(e, 2)
 

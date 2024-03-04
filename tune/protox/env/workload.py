@@ -1,19 +1,29 @@
 import copy
-from typing import Dict, List, Tuple
-import numpy as np
-import shutil
 import json
+import logging
+import shutil
 import time
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+import numpy as np
 import pglast
 import pglast.ast
-import logging
-from plumbum import local
-from pathlib import Path
-from tune.protox.env import regress_ams, regress_qid_knobs, is_knob_enum, is_binary_enum
-from tune.protox.env.space.utils import fetch_server_knobs
-from tune.protox.env.workload_utils import parse_access_method, acquire_metrics_around_query, execute_serial_variations, extract_aliases, extract_sqltypes, extract_columns, QueryType
-from misc.utils import open_and_save
 from click.core import Context
+from plumbum import local
+
+from misc.utils import open_and_save
+from tune.protox.env import is_binary_enum, is_knob_enum, regress_ams, regress_qid_knobs
+from tune.protox.env.space.utils import fetch_server_knobs
+from tune.protox.env.workload_utils import (
+    QueryType,
+    acquire_metrics_around_query,
+    execute_serial_variations,
+    extract_aliases,
+    extract_columns,
+    extract_sqltypes,
+    parse_access_method,
+)
 
 
 class Workload(object):
@@ -25,7 +35,7 @@ class Workload(object):
 
     early_workload_kill: bool = False
     workload_timeout: float = 0
-    workload_timeout_penalty: float = 1.
+    workload_timeout_penalty: float = 1.0
 
     order: list[str] = None
     queries: Dict[str, List[Tuple[QueryType, str]]] = None
@@ -80,8 +90,13 @@ class Workload(object):
                     self.tbl_queries_usage[tbl].add(stem)
 
                 for stmt in stmts:
-                    tbl_col_usages, all_refs = extract_columns(stmt, self.tables, all_attributes, self.query_aliases[stem])
-                    tbl_col_usages = {t: [a for a in atts if a in self.attributes[t]] for t, atts in tbl_col_usages.items()}
+                    tbl_col_usages, all_refs = extract_columns(
+                        stmt, self.tables, all_attributes, self.query_aliases[stem]
+                    )
+                    tbl_col_usages = {
+                        t: [a for a in atts if a in self.attributes[t]]
+                        for t, atts in tbl_col_usages.items()
+                    }
                     for tbl, atts in tbl_col_usages.items():
                         for att in atts:
                             if (tbl, att) not in self.tbl_filter_queries_usage:
@@ -96,12 +111,21 @@ class Workload(object):
 
                     all_refs = set(all_refs)
                     all_qref_sets = set([r[0] for r in all_refs])
-                    all_qref_sets = {k: tuple(sorted([r[1] for r in all_refs if r[0] == k])) for k in all_qref_sets}
+                    all_qref_sets = {
+                        k: tuple(sorted([r[1] for r in all_refs if r[0] == k]))
+                        for k in all_qref_sets
+                    }
                     for k, s in all_qref_sets.items():
                         tbl_include_subsets[k].add(s)
 
         for k, v in self.tbl_wheres.items():
-            self.tbl_wheres[k] = [k for k, kk in zip(v, [not any(set(v0) <= set(v1) for v1 in v if v0 != v1) for v0 in v]) if kk]
+            self.tbl_wheres[k] = [
+                k
+                for k, kk in zip(
+                    v, [not any(set(v0) <= set(v1) for v1 in v if v0 != v1) for v0 in v]
+                )
+                if kk
+            ]
 
         # Do this so query_usages is actually in the right order.
         self.query_usages = {
@@ -112,7 +136,17 @@ class Workload(object):
         if self.tbl_include_subsets_prune:
             self.tbl_include_subsets = {}
             for k, v in tbl_include_subsets.items():
-                self.tbl_include_subsets[k] = [k for k, kk in zip(v, [not any(set(v0) <= set(v1) for v1 in v if v0 != v1) for v0 in v]) if kk]
+                self.tbl_include_subsets[k] = [
+                    k
+                    for k, kk in zip(
+                        v,
+                        [
+                            not any(set(v0) <= set(v1) for v1 in v if v0 != v1)
+                            for v0 in v
+                        ],
+                    )
+                    if kk
+                ]
 
             if self.tbl_fold_subsets:
                 tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
@@ -121,31 +155,41 @@ class Workload(object):
                     for _ in range(self.tbl_fold_iterations):
                         for i in range(len(subsets)):
                             s0 = set(subsets[i])
-                            for j in range(i+1, len(subsets)):
+                            for j in range(i + 1, len(subsets)):
                                 s1 = set(subsets[j])
                                 if len(s0 - s1) <= self.tbl_fold_delta:
                                     subsets[i] = None
-                                    subsets[j] = tuple(sorted(set(subsets[j]).union(s0)))
+                                    subsets[j] = tuple(
+                                        sorted(set(subsets[j]).union(s0))
+                                    )
                         subsets = [s for s in subsets if s is not None]
                         subsets = sorted(subsets, key=lambda x: len(x))
                     self.tbl_include_subsets[tbl] = subsets
         else:
             self.tbl_include_subsets = tbl_include_subsets
 
-        self.readonly_workload = not any([q == QueryType.INS_UPD_DEL for _, sqls in self.queries.items() for (q, _) in sqls])
+        self.readonly_workload = not any(
+            [
+                q == QueryType.INS_UPD_DEL
+                for _, sqls in self.queries.items()
+                for (q, _) in sqls
+            ]
+        )
         self.sql_files = {k: str(v) for (k, v, _) in sqls}
 
-    def __init__(self,
-            cfg: Context,
-            tables: list[str],
-            attributes: dict[str, list[str]],
-            query_spec: dict,
-            pid=None,
-            workload_eval_mode="all",
-            workload_eval_inverse=False,
-            workload_timeout=0,
-            workload_timeout_penalty=1.,
-            logger=None):
+    def __init__(
+        self,
+        cfg: Context,
+        tables: list[str],
+        attributes: dict[str, list[str]],
+        query_spec: dict,
+        pid=None,
+        workload_eval_mode="all",
+        workload_eval_inverse=False,
+        workload_timeout=0,
+        workload_timeout_penalty=1.0,
+        logger=None,
+    ):
 
         self.cfg = cfg
         self.workload_eval_mode = workload_eval_mode
@@ -156,7 +200,9 @@ class Workload(object):
         self.early_workload_kill = query_spec["early_workload_kill"]
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
-        self.tbl_include_subsets_prune = query_spec.get("tbl_include_subsets_prune", False)
+        self.tbl_include_subsets_prune = query_spec.get(
+            "tbl_include_subsets_prune", False
+        )
 
         self.tbl_fold_subsets = query_spec.get("tbl_fold_subsets", False)
         self.tbl_fold_delta = query_spec.get("tbl_fold_delta", False)
@@ -175,19 +221,33 @@ class Workload(object):
                 if col not in all_attributes:
                     all_attributes[col] = []
                 all_attributes[col].append(tbl)
-        
+
         # Get the order in which we should execute in.
         sqls = []
         if "query_order" in query_spec:
             with open_and_save(self.cfg, query_spec["query_order"], "r") as f:
                 lines = f.read().splitlines()
-                sqls = [(line.split(",")[0], Path(query_spec["query_directory"]) / line.split(",")[1], 1) for line in lines]
+                sqls = [
+                    (
+                        line.split(",")[0],
+                        Path(query_spec["query_directory"]) / line.split(",")[1],
+                        1,
+                    )
+                    for line in lines
+                ]
 
         if "query_transactional" in query_spec:
             with open_and_save(self.cfg, query_spec["query_transactional"], "r") as f:
                 lines = f.read().splitlines()
                 splits = [line.split(",") for line in lines]
-                sqls = [(split[0], Path(query_spec["query_directory"]) / split[1], float(split[2])) for split in splits]
+                sqls = [
+                    (
+                        split[0],
+                        Path(query_spec["query_directory"]) / split[1],
+                        float(split[2]),
+                    )
+                    for split in splits
+                ]
 
         self._crunch(all_attributes, sqls, pid)
 
@@ -197,7 +257,15 @@ class Workload(object):
         if "execute_query_order" in query_spec:
             with open_and_save(self.cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
-                sqls = [(line.split(",")[0], Path(query_spec["execute_query_directory"]) / line.split(",")[1], 1) for line in lines]
+                sqls = [
+                    (
+                        line.split(",")[0],
+                        Path(query_spec["execute_query_directory"])
+                        / line.split(",")[1],
+                        1,
+                    )
+                    for line in lines
+                ]
 
             # Re-crunch with the new data.
             self._crunch(all_attributes, sqls, pid)
@@ -207,14 +275,24 @@ class Workload(object):
     def process_column_usage(self):
         return self.query_usages
 
-    def reset(self, env_spec=None, connection=None, reward_utility=None, timeout=None, accum_metric=None):
+    def reset(
+        self,
+        env_spec=None,
+        connection=None,
+        reward_utility=None,
+        timeout=None,
+        accum_metric=None,
+    ):
         if connection is not None and accum_metric is not None and self.allow_per_query:
             # Construct an empty action.
-            action = (env_spec.action_space.get_knob_space().get_state(None).copy(), env_spec.action_space.get_index_space().null_action())
+            action = (
+                env_spec.action_space.get_knob_space().get_state(None).copy(),
+                env_spec.action_space.get_index_space().null_action(),
+            )
 
             # Replace per-query with the "known best".
             for qid, (qid_set, _) in self.best_observed.items():
-                for (knob, val) in qid_set:
+                for knob, val in qid_set:
                     action[0][knob.name()] = val
             assert env_spec.action_space.contains(action)
 
@@ -222,7 +300,15 @@ class Workload(object):
             shutil.rmtree(results, ignore_errors=True)
 
             # Determine whether the "known best" is good or not.
-            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(env_spec, results, connection, action, timeout, reset_eval=True, reset_accum_metric=accum_metric)
+            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
+                env_spec,
+                results,
+                connection,
+                action,
+                timeout,
+                reset_eval=True,
+                reset_accum_metric=accum_metric,
+            )
             assert success
 
             # Forcefully reconstruct based on the output.
@@ -232,9 +318,15 @@ class Workload(object):
                 "action": mutilated if mutilated is not None else action,
             }
             state = env_spec.observation_space.construct_offline(**args)
-            metric, _ = reward_utility(result_dir=results, update=False, did_error=False)
-            env_spec.action_space.get_knob_space().advance(args["action"][0], connection=connection, workload=self)
-            logging.debug(f"[permute_via_reset]: {env_spec.action_space.get_knob_space().get_state(None)}")
+            metric, _ = reward_utility(
+                result_dir=results, update=False, did_error=False
+            )
+            env_spec.action_space.get_knob_space().advance(
+                args["action"][0], connection=connection, workload=self
+            )
+            logging.debug(
+                f"[permute_via_reset]: {env_spec.action_space.get_knob_space().get_state(None)}"
+            )
             return state, metric
 
         return None, None
@@ -252,29 +344,47 @@ class Workload(object):
     def check_queries_for_table_col(self, table, col):
         if (table, col) not in self.tbl_filter_queries_usage:
             return []
-        return [q for q in self.order if q in self.tbl_filter_queries_usage[(table, col)]]
+        return [
+            q for q in self.order if q in self.tbl_filter_queries_usage[(table, col)]
+        ]
 
     def _execute_benchbase(self, env_spec, results):
         with local.cwd(f"{env_spec.benchbase_path}"):
             code, _, _ = local["java"][
-                "-jar", "benchbase.jar",
-                "-b", env_spec.benchmark,
-                "-c", env_spec.benchbase_config_path,
-                "-d", results,
-                "--execute=true"].run(retcode=None)
+                "-jar",
+                "benchbase.jar",
+                "-b",
+                env_spec.benchmark,
+                "-c",
+                env_spec.benchbase_config_path,
+                "-d",
+                results,
+                "--execute=true",
+            ].run(retcode=None)
 
             if code != 0:
                 return False
         return True
 
-    def _execute_workload(self, connection, workload_timeout, ql_knobs={}, output_file=None, workload_qdir=None, env_spec=None, disable_pg_hint=False, blocklist=[]):
+    def _execute_workload(
+        self,
+        connection,
+        workload_timeout,
+        ql_knobs={},
+        output_file=None,
+        workload_qdir=None,
+        env_spec=None,
+        disable_pg_hint=False,
+        blocklist=[],
+    ):
         # Get the knobs.
         real_knobs = {}
         if env_spec is not None:
             real_knobs = fetch_server_knobs(
                 connection,
                 tables=env_spec.action_space.get_knob_space().tables,
-                knobs=env_spec.action_space.get_knob_space().knobs)
+                knobs=env_spec.action_space.get_knob_space().knobs,
+            )
 
         workload_time = 0
         time_left = workload_timeout
@@ -282,7 +392,10 @@ class Workload(object):
         if workload_qdir is not None and workload_qdir[0] is not None:
             workload_qdir, workload_qlist = workload_qdir
             with open_and_save(self.cfg, workload_qlist, "r") as f:
-                psql_order = [(f"Q{i+1}", workload_qdir / l.strip()) for i, l in enumerate(f.readlines())]
+                psql_order = [
+                    (f"Q{i+1}", workload_qdir / l.strip())
+                    for i, l in enumerate(f.readlines())
+                ]
 
             actual_order = [p[0] for p in psql_order]
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
@@ -310,30 +423,57 @@ class Workload(object):
 
                 if time_left > 0:
                     # Relevant qid knobs.
-                    qid_knobs = [ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob]
+                    qid_knobs = [
+                        ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
+                    ]
 
                     undo_disable = None
                     if disable_pg_hint:
                         # Alter the session first.
-                        disable = ";".join([f"SET {knob.knob_name} = OFF" for (knob, value) in qid_knobs if value == 0])
+                        disable = ";".join(
+                            [
+                                f"SET {knob.knob_name} = OFF"
+                                for (knob, value) in qid_knobs
+                                if value == 0
+                            ]
+                        )
                         connection.execute(disable)
 
-                        undo_disable  = ";".join([f"SET {knob.knob_name} = ON" for (knob, value) in qid_knobs if value == 0])
+                        undo_disable = ";".join(
+                            [
+                                f"SET {knob.knob_name} = ON"
+                                for (knob, value) in qid_knobs
+                                if value == 0
+                            ]
+                        )
                     else:
-                        query = "/*+ " + " ".join([knob.resolve_per_query_knob(value, all_knobs=real_knobs) for (knob, value) in qid_knobs]) + " */" + query
-
+                        query = (
+                            "/*+ "
+                            + " ".join(
+                                [
+                                    knob.resolve_per_query_knob(
+                                        value, all_knobs=real_knobs
+                                    )
+                                    for (knob, value) in qid_knobs
+                                ]
+                            )
+                            + " */"
+                            + query
+                        )
 
                     if output_file is not None:
                         query = "EXPLAIN (ANALYZE, TIMING OFF) " + query
 
-                    _, qid_runtime, timeout, explain = acquire_metrics_around_query("", None, connection, qid, query, time_left, metrics=False)
+                    _, qid_runtime, timeout, explain = acquire_metrics_around_query(
+                        "", None, connection, qid, query, time_left, metrics=False
+                    )
 
                     if disable_pg_hint:
                         # Now undo the session.
                         connection.execute(undo_disable)
 
-                    time_left -= (qid_runtime / 1e6)
-                    workload_time += (qid_runtime / 1e6)
+                    time_left -= qid_runtime / 1e6
+                    workload_time += qid_runtime / 1e6
 
                     if output_file is not None and explain is not None:
                         pqkk = [(knob.name(), val) for (knob, val) in qid_knobs]
@@ -344,14 +484,30 @@ class Workload(object):
                         output_file.write("\n")
         return workload_time
 
-    def _execute_psycopg(self, env_spec, results, connection, action, timeout, reset_eval=False, reset_accum_metric=None, baseline=False):
+    def _execute_psycopg(
+        self,
+        env_spec,
+        results,
+        connection,
+        action,
+        timeout,
+        reset_eval=False,
+        reset_accum_metric=None,
+        baseline=False,
+    ):
         # Values of knobs that were really utilized.
         ks = env_spec.action_space.get_knob_space()
-        real_knobs = fetch_server_knobs(connection, tables=ks.tables if ks else [], knobs=ks.knobs if ks else {})
+        real_knobs = fetch_server_knobs(
+            connection, tables=ks.tables if ks else [], knobs=ks.knobs if ks else {}
+        )
         # Prior knob stae.
         all_knobs = ks.get_state(None) if ks else {}
         # Current action's per-query knobs.
-        ql_knobs = env_spec.action_space.get_query_level_knobs(action) if action is not None else {}
+        ql_knobs = (
+            env_spec.action_space.get_query_level_knobs(action)
+            if action is not None
+            else {}
+        )
 
         # Setup the mutilated action.
         mutilated = None
@@ -372,8 +528,12 @@ class Workload(object):
                 for qqid_index in range(qid_index, len(self.order)):
                     # Relevant qid knobs.
                     qid = self.order[qqid_index]
-                    qid_knobs = [ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob]
-                    qid_global = [(knob, all_knobs[knob.name()]) for (knob, _) in qid_knobs]
+                    qid_knobs = [
+                        ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
+                    ]
+                    qid_global = [
+                        (knob, all_knobs[knob.name()]) for (knob, _) in qid_knobs
+                    ]
                     for knob, val in qid_global:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
@@ -387,8 +547,14 @@ class Workload(object):
                 break
 
             # Relevant qid knobs.
-            qid_knobs = [ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob]
-            inverse_knobs = [(knob, knob.invert(val)) for knobname, (knob, val) in ql_knobs.items() if f"{qid}_" in knobname]
+            qid_knobs = [
+                ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
+            ]
+            inverse_knobs = [
+                (knob, knob.invert(val))
+                for knobname, (knob, val) in ql_knobs.items()
+                if f"{qid}_" in knobname
+            ]
             # Rebuild the previous global per-query knob setting.
             qid_global = [(knob, all_knobs[knob.name()]) for (knob, _) in qid_knobs]
 
@@ -402,7 +568,9 @@ class Workload(object):
                     continue
 
                 # Construct the baseline! by regressing it into knob form.
-                ams, explain = self._parse_single_access_method(connection, qid, ignore=True)
+                ams, explain = self._parse_single_access_method(
+                    connection, qid, ignore=True
+                )
                 qid_default = regress_qid_knobs(qid_knobs, real_knobs, ams, explain)
 
                 # Start time.
@@ -411,17 +579,32 @@ class Workload(object):
                 # Construct runs.
                 runs = []
                 if not reset_eval:
-                    if (self.workload_eval_mode in ["prev_dual", "all", "all_enum"] and len(qid_global) > 0):
+                    if (
+                        self.workload_eval_mode in ["prev_dual", "all", "all_enum"]
+                        and len(qid_global) > 0
+                    ):
                         # If reset_eval, then we basically want to evaluate with what we are tracking.
                         # In the reset_eval case, tracking is the previous known-best!
                         runs.append(("PrevDual", qid_global))
 
-                    if (self.workload_eval_mode in ["global_dual", "all", "all_enum"] or (self.workload_eval_mode == "prev_dual" and len(qid_global) == 0)):
-                        if len(runs) == 0 or [v[1] for v in qid_global] != [v[1] for v in qid_default]:
+                    if self.workload_eval_mode in [
+                        "global_dual",
+                        "all",
+                        "all_enum",
+                    ] or (
+                        self.workload_eval_mode == "prev_dual" and len(qid_global) == 0
+                    ):
+                        if len(runs) == 0 or [v[1] for v in qid_global] != [
+                            v[1] for v in qid_default
+                        ]:
                             # Run only if the knobs don't match prev dual.
                             runs.append(("GlobalDual", qid_default))
 
-                    if self.workload_eval_mode == "all_enum" and len(qid_knobs) > 0 and any([is_knob_enum(k) for k, _ in qid_knobs]):
+                    if (
+                        self.workload_eval_mode == "all_enum"
+                        and len(qid_knobs) > 0
+                        and any([is_knob_enum(k) for k, _ in qid_knobs])
+                    ):
                         # Run the "complete" binary version.
                         top_enums = []
                         bottom_enums = []
@@ -452,7 +635,11 @@ class Workload(object):
 
                 assert len(runs) > 0
 
-                if reset_eval and [v[1] for v in qid_global] == [v[1] for v in qid_knobs] and qid in reset_accum_metric:
+                if (
+                    reset_eval
+                    and [v[1] for v in qid_global] == [v[1] for v in qid_knobs]
+                    and qid in reset_accum_metric
+                ):
                     # Case where the per-query and global match each other.
                     assert qid in reset_accum_metric
                     best_metric, best_time, best_timeout = reset_accum_metric[qid]
@@ -461,7 +648,13 @@ class Workload(object):
                     # Note that we skipped.
                     logging.debug(f"reset_eval re-using prior computation for {qid}")
                 else:
-                    best_metric, best_time, best_timeout, best_explain_data, runs_idx = execute_serial_variations(
+                    (
+                        best_metric,
+                        best_time,
+                        best_timeout,
+                        best_explain_data,
+                        runs_idx,
+                    ) = execute_serial_variations(
                         env_spec=env_spec,
                         connection=connection,
                         timeout=min(timeout, self.workload_timeout - running_time + 1),
@@ -473,11 +666,17 @@ class Workload(object):
                     )
 
                 if not reset_eval and best_explain_data is not None:
-                    query_explain_data.append((qid, runs_idx[0], runs_idx[1], best_explain_data))
+                    query_explain_data.append(
+                        (qid, runs_idx[0], runs_idx[1], best_explain_data)
+                    )
 
                 # Compare against the old if we have a record available.
                 # Note that PerQuery refers to the best observed record -- PrevDual is best of state.
-                if reset_eval and runs_idx[0] == "PerQuery" and qid in reset_accum_metric:
+                if (
+                    reset_eval
+                    and runs_idx[0] == "PerQuery"
+                    and qid in reset_accum_metric
+                ):
                     # Note this is a little awkward if we're doing "best-of" ness.
                     # Old record is PrevDual which is the state being restored.
                     # PerQuery in action refers to the best observed that is being tested.
@@ -494,7 +693,15 @@ class Workload(object):
 
                 assert qid not in qid_runtime_data
                 assert best_metric is not None or (not need_metric)
-                assert runs_idx[0] in ["TopEnum", "BottomEnum", "Default", "PrevDual", "GlobalDual", "PerQuery", "PerQueryInverse"]
+                assert runs_idx[0] in [
+                    "TopEnum",
+                    "BottomEnum",
+                    "Default",
+                    "PrevDual",
+                    "GlobalDual",
+                    "PerQuery",
+                    "PerQueryInverse",
+                ]
                 if reset_eval:
                     assert runs_idx[0] in ["PrevDual", "PerQuery"]
                 qid_runtime_data[qid] = {
@@ -528,7 +735,17 @@ class Workload(object):
                     enum_knobs = runs_idx[1]
 
                     # Get the actual access method utilized.
-                    pqk_query = "/*+ " + " ".join([knob.resolve_per_query_knob(value, all_knobs=real_knobs) for (knob, value) in enum_knobs]) + " */" + query
+                    pqk_query = (
+                        "/*+ "
+                        + " ".join(
+                            [
+                                knob.resolve_per_query_knob(value, all_knobs=real_knobs)
+                                for (knob, value) in enum_knobs
+                            ]
+                        )
+                        + " */"
+                        + query
+                    )
                     pqk_query = "EXPLAIN (FORMAT JSON) " + pqk_query
                     ams, explain = self._parse_query_am(connection, pqk_query)
                     # Regress the access methods.
@@ -538,16 +755,32 @@ class Workload(object):
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
 
-                if qid not in self.best_observed or (best_time < self.best_observed[qid][1] and not best_timeout) or reset_eval:
+                if (
+                    qid not in self.best_observed
+                    or (best_time < self.best_observed[qid][1] and not best_timeout)
+                    or reset_eval
+                ):
                     # Knobs that are actually set.
-                    qid_set = [(knob, action[env_spec.action_space.knob_space_ind][knob.name()]) for (knob, _) in qid_knobs]
+                    qid_set = [
+                        (
+                            knob,
+                            action[env_spec.action_space.knob_space_ind][knob.name()],
+                        )
+                        for (knob, _) in qid_knobs
+                    ]
                     self.best_observed[qid] = (qid_set, best_time)
-                    logging.debug(f"[best_observe] {qid}: {best_time / 1.0e6} ({reset_eval})")
+                    logging.debug(
+                        f"[best_observe] {qid}: {best_time / 1.0e6} ({reset_eval})"
+                    )
 
                 # Break if we've exceeded the minimum time.
                 # Note that runtime is in microseconds.
-                running_time += (qid_runtime_data[qid]["runtime"] / 1.0e6)
-                if self.early_workload_kill and self.workload_timeout > 0 and running_time > self.workload_timeout:
+                running_time += qid_runtime_data[qid]["runtime"] / 1.0e6
+                if (
+                    self.early_workload_kill
+                    and self.workload_timeout > 0
+                    and running_time > self.workload_timeout
+                ):
                     logging.info("Aborting workload early.")
                     # Don't penalize for now since it should anyways have negative reward.
                     stop_running = True
@@ -564,14 +797,17 @@ class Workload(object):
         # Get the timeouts flag.
         timeouts = [v["timeout"] for _, v in qid_runtime_data.items()]
         # Get the accumulated metrics.
-        accum_metric = {q: (v["metric"], v["runtime"], v["timeout"]) for q, v in qid_runtime_data.items()}
+        accum_metric = {
+            q: (v["metric"], v["runtime"], v["timeout"])
+            for q, v in qid_runtime_data.items()
+        }
 
         results_dir = Path(results)
         if not results_dir.exists():
             results_dir.mkdir(parents=True, exist_ok=True)
 
         with open(results_dir / "run.plans", "w") as f:
-            for (qid, prefix, pqk, explain) in query_explain_data:
+            for qid, prefix, pqk, explain in query_explain_data:
                 pqkk = [(knob.name(), val) for (knob, val) in pqk]
 
                 f.write(f"{qid}\n")
@@ -585,6 +821,7 @@ class Workload(object):
             accum_stats = env_spec.observation_space.merge_data(accum_data)
 
             with open(results_dir / "run.metrics.json", "w") as f:
+
                 def flatten(d):
                     flat = {}
                     for k, v in d.items():
@@ -606,7 +843,9 @@ class Workload(object):
                 f.write(json.dumps(output, indent=4))
 
         with open(results_dir / "run.raw.csv", "w") as f:
-            f.write("Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n")
+            f.write(
+                "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
+            )
             for i, qid in enumerate(self.order):
                 if qid in qid_runtime_data:
                     start = qid_runtime_data[qid]["start"]
@@ -616,7 +855,9 @@ class Workload(object):
 
             if stop_running and self.workload_timeout_penalty > 1:
                 # Get the penalty.
-                penalty = self.workload_timeout * self.workload_timeout_penalty - running_time
+                penalty = (
+                    self.workload_timeout * self.workload_timeout_penalty - running_time
+                )
                 if not baseline:
                     # Always make it a bit worse...
                     penalty = (penalty + 1.05) * 1e6
@@ -636,15 +877,25 @@ class Workload(object):
 
         return True, mutilated, (any(timeouts) or stop_running), accum_metric
 
-
-    def execute(self, connection, reward_utility, env_spec, timeout=None, action=None, current_state=None, update=True):
+    def execute(
+        self,
+        connection,
+        reward_utility,
+        env_spec,
+        timeout=None,
+        action=None,
+        current_state=None,
+        update=True,
+    ):
         success = True
         logging.info("Starting to run benchmark...")
 
         if self.benchbase:
             # Attach a timeout if necessary to prevent really bad OLAP configs from running.
             if timeout is not None and timeout > 0:
-                connection.execute(f"ALTER SYSTEM SET statement_timeout = {timeout * 1000}")
+                connection.execute(
+                    f"ALTER SYSTEM SET statement_timeout = {timeout * 1000}"
+                )
                 connection.execute("SELECT pg_reload_conf()")
 
             # Purge results directory first.
@@ -673,7 +924,9 @@ class Workload(object):
 
             metric, reward = None, None
             if reward_utility is not None:
-                metric, reward = reward_utility(result_dir=results, update=update, did_error=not success)
+                metric, reward = reward_utility(
+                    result_dir=results, update=update, did_error=not success
+                )
 
             if timeout is not None and timeout > 0:
                 connection.execute("ALTER SYSTEM SET statement_timeout = 0")
@@ -689,7 +942,9 @@ class Workload(object):
             shutil.rmtree(results, ignore_errors=True)
             baseline = current_state is None
 
-            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(env_spec, results, connection, action, timeout, baseline=baseline)
+            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
+                env_spec, results, connection, action, timeout, baseline=baseline
+            )
             assert success
 
             args = {
@@ -698,26 +953,40 @@ class Workload(object):
                 "action": mutilated if mutilated is not None else action,
             }
             state = env_spec.observation_space.construct_offline(**args)
-            assert success, logging.error("Invalid benchbase results information created from per-query run.")
+            assert success, logging.error(
+                "Invalid benchbase results information created from per-query run."
+            )
 
             metric, reward = None, None
             if reward_utility is not None:
-                metric, reward = reward_utility(result_dir=results, update=update, did_error=not success)
+                metric, reward = reward_utility(
+                    result_dir=results, update=update, did_error=not success
+                )
         else:
             assert False, "Currently don't support not running with benchbase."
 
-        logging.info(f"Benchmark iteration with metric {metric} (reward: {reward}) (q_timeout: {q_timeout})")
-        return success, metric, reward, results, state, mutilated, q_timeout, accum_metric
+        logging.info(
+            f"Benchmark iteration with metric {metric} (reward: {reward}) (q_timeout: {q_timeout})"
+        )
+        return (
+            success,
+            metric,
+            reward,
+            results,
+            state,
+            mutilated,
+            q_timeout,
+            accum_metric,
+        )
 
     def _parse_query_am(self, connection, query):
         data = [r for r in connection.execute(query)][0][0]
         data = data[0]
         return parse_access_method(data), data
 
-
     def _parse_single_access_method(self, connection, qid, ignore=False):
         qams = {}
-        explain=None
+        explain = None
         queries = self.queries[qid]
         for sql_type, query in queries:
             if sql_type != QueryType.SELECT:
@@ -727,10 +996,9 @@ class Workload(object):
                 continue
 
             explain = "EXPLAIN (FORMAT JSON) " + query
-            qams_delta, explain = self._parse_query_am(connection,explain)
+            qams_delta, explain = self._parse_query_am(connection, explain)
             qams.update(qams_delta)
         return qams, explain
-
 
     def parse_all_access_methods(self, connection):
         q_ams = {}
@@ -741,7 +1009,11 @@ class Workload(object):
     def save_state(self):
         kv = {}
         for attr in dir(self):
-            if attr == "logger" or attr.startswith("_") or callable(getattr(self, attr)):
+            if (
+                attr == "logger"
+                or attr.startswith("_")
+                or callable(getattr(self, attr))
+            ):
                 continue
             kv[attr] = getattr(self, attr)
         return kv
