@@ -81,7 +81,7 @@ class DBGymConfig:
 
     def append_group(self, name):
         self.cur_path /= name
-        self.cur_yaml = config.cur_yaml.get(name, {})
+        self.cur_yaml = self.cur_yaml.get(name, {})
 
     @property
     def cur_bin_path(self):
