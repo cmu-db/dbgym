@@ -17,15 +17,6 @@ def tpch_group(config):
     config.append_group("tpch")
 
 
-@tpch_group.command(name="generate-queries")
-@click.argument("seed-start", type=int)
-@click.argument("seed-end", type=int)
-@click.pass_obj
-def tpch_generate_queries(config, seed_start, seed_end):
-    clone(config)
-    generate_queries(config, seed_start, seed_end)
-
-
 @tpch_group.command(name="generate-sf")
 @click.argument("sf", type=int)
 @click.pass_obj
