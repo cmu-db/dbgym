@@ -29,6 +29,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 
 # generic args
 @click.argument("benchmark")
+@click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
     default=None,
@@ -134,6 +135,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 def train(
     ctx,
     benchmark,
+    workload_name,
     benchmark_config_path,
     dataset_path,
     seed,
@@ -178,9 +180,12 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
+    workload_folder_path = (
+        ctx.obj.dbgym_data_path / "benchmark" / benchmark / "workloads" / workload_name
+    )
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark, benchmark_config_path, dataset_path, seed
+        benchmark, benchmark_config_path, dataset_path, seed, workload_folder_path
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,
@@ -212,11 +217,14 @@ def train(
 class EmbeddingTrainGenericArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
-    def __init__(self, benchmark, benchmark_config_path, dataset_path, seed):
+    def __init__(
+        self, benchmark, benchmark_config_path, dataset_path, seed, workload_folder_path
+    ):
         self.benchmark = benchmark
         self.benchmark_config_path = benchmark_config_path
         self.dataset_path = dataset_path
         self.seed = seed
+        self.workload_folder_path = workload_folder_path
 
 
 class EmbeddingTrainAllArgs:
