@@ -116,9 +116,6 @@ def _load_data(cfg, select_args):
                 if info["latent_dim"] != select_args.latent_dim:
                     continue
 
-            if not info["weak_bias"]:
-                continue
-
             output_scale = config["metric_loss_md"]["output_scale"]
             bias_sep = config["metric_loss_md"]["bias_separation"]
 
