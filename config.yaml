@@ -1,1 +1,7 @@
-dbgym_workspace_path: ../dbgym_workspace # relative paths are relative to base repo dir
+dbgym_workspace_path: ../dbgym_workspace
+
+dbms:
+  postgres:
+    user: noisepage_user
+    pass: noisepage_pass
+    port: 15721
