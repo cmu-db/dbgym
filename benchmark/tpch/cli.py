@@ -26,7 +26,7 @@ def tpch_generate_sf(config, sf):
 
 
 @tpch_group.command(name="generate-workload")
-@click.argument("output-dir", type=str)
+@click.argument("workload-name", type=str)
 @click.argument("seed-start", type=int)
 @click.argument("seed-end", type=int)
 @click.option(
@@ -35,10 +35,10 @@ def tpch_generate_sf(config, sf):
     default="sequential",
 )
 @click.pass_obj
-def tpch_generate_workload(config, output_dir, seed_start, seed_end, generate_type):
+def tpch_generate_workload(config, workload_name, seed_start, seed_end, generate_type):
     clone(config)
     generate_queries(config, seed_start, seed_end)
-    generate_workload(config, output_dir, seed_start, seed_end, generate_type)
+    generate_workload(config, workload_name, seed_start, seed_end, generate_type)
 
 
 @tpch_group.command(name="load-sf")
@@ -114,9 +114,9 @@ def generate_tables(config, sf):
     benchmark_tpch_logger.info(f"Generated: {data_path}")
 
 
-def generate_workload(config, output_dir, seed_start, seed_end, generate_type):
+def generate_workload(config, workload_name, seed_start, seed_end, generate_type):
     data_path = config.cur_data_path / "workloads"
-    output_dir = (data_path / output_dir).resolve().absolute()
+    output_dir = (data_path / workload_name).resolve().absolute()
 
     if output_dir.exists():
         benchmark_tpch_logger.error(f"Workload directory exists: {output_dir}")
