@@ -90,7 +90,7 @@ def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
     with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, _ = fetch_index_parameters(
-            cfg, generic_args.benchmark, data
+            cfg, generic_args.benchmark, data, generic_args.workload_folder_path
         )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -310,7 +310,7 @@ def _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args)
         data = yaml.safe_load(f)
         tables = data["protox"]["tables"]
         max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(
-            cfg, generic_args.benchmark, data
+            cfg, generic_args.benchmark, data, generic_args.workload_folder_path
         )
 
     # don't use open_and_save() because we generated embeddings_config_fpath in this run

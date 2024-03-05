@@ -63,22 +63,14 @@ def parse_hyperopt_config(config):
     return parsed_config
 
 
-def fetch_index_parameters(cfg, benchmark, data):
+def fetch_index_parameters(cfg, benchmark, data, workload_folder_path):
     tables = data["protox"]["tables"]
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
 
-    # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
-    if "query_directory" not in query_spec:
-        assert "query_order" not in query_spec
-        query_spec["query_directory"] = os.path.join(
-            cfg.dbgym_data_path, f"{benchmark}_queries"
-        )
-        query_spec["query_order"] = os.path.join(
-            query_spec["query_directory"], f"order.txt"
-        )
-
-    workload = Workload(cfg, tables, attributes, query_spec, pid=None)
+    workload = Workload(
+        cfg, tables, attributes, query_spec, workload_folder_path, pid=None
+    )
     att_usage = workload.process_column_usage()
 
     space = IndexSpace(

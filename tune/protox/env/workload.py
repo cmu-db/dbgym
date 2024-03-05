@@ -75,6 +75,12 @@ class Workload(object):
                 sql = q.read()
                 assert not sql.startswith("/*")
 
+                # TODO(WAN): HACK HACK HACK
+                if Path(sql_file).name == "15.sql" and "/tpch/" in str(
+                    Path(sql_file).absolute()
+                ):
+                    sql = sql.replace("revenue0", "revenue0_PID")
+
                 stmts = pglast.parse_sql(sql)
 
                 # Extract aliases.
@@ -183,6 +189,7 @@ class Workload(object):
         tables: list[str],
         attributes: dict[str, list[str]],
         query_spec: dict,
+        workload_folder_path: Path,
         pid=None,
         workload_eval_mode="all",
         workload_eval_inverse=False,
@@ -207,9 +214,10 @@ class Workload(object):
         self.tbl_fold_subsets = query_spec.get("tbl_fold_subsets", False)
         self.tbl_fold_delta = query_spec.get("tbl_fold_delta", False)
         self.tbl_fold_iterations = query_spec.get("tbl_fold_iterations", False)
-        logging.info(f"Initialized with workload timeout {workload_timeout}")
 
         self.logger = logger
+        if self.logger is not None:
+            self.logger.info(f"Initialized with workload timeout {workload_timeout}")
 
         self.tables = tables
         self.attributes = attributes
@@ -224,30 +232,20 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        if "query_order" in query_spec:
-            with open_and_save(self.cfg, query_spec["query_order"], "r") as f:
-                lines = f.read().splitlines()
-                sqls = [
-                    (
-                        line.split(",")[0],
-                        Path(query_spec["query_directory"]) / line.split(",")[1],
-                        1,
+        workload_order_file = workload_folder_path / "order.txt"
+        with open_and_save(self.cfg, workload_order_file, "r") as f:
+            lines = f.read().splitlines()
+            for line in lines:
+                contents = line.split(",")
+                if len(contents) == 2:
+                    key, sqlfile, weight = contents[0], contents[1], 1
+                elif len(contents) == 3:
+                    key, sqlfile, weight = contents[0], contents[1], float(contents[2])
+                else:
+                    raise RuntimeError(
+                        f"Invalid workload order.txt: {workload_order_file}"
                     )
-                    for line in lines
-                ]
-
-        if "query_transactional" in query_spec:
-            with open_and_save(self.cfg, query_spec["query_transactional"], "r") as f:
-                lines = f.read().splitlines()
-                splits = [line.split(",") for line in lines]
-                sqls = [
-                    (
-                        split[0],
-                        Path(query_spec["query_directory"]) / split[1],
-                        float(split[2]),
-                    )
-                    for split in splits
-                ]
+                sqls.append((key, sqlfile, weight))
 
         self._crunch(all_attributes, sqls, pid)
 
@@ -255,6 +253,7 @@ class Workload(object):
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
         if "execute_query_order" in query_spec:
+            # TODO(WAN): can this be folded into workload_folder_path?
             with open_and_save(self.cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [

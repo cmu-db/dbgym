@@ -39,6 +39,7 @@ from tune.protox.env.workload_utils import QueryType
 
 # generic args
 @click.argument("benchmark")
+@click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
     default=None,
@@ -105,6 +106,7 @@ from tune.protox.env.workload_utils import QueryType
 def datagen(
     ctx,
     benchmark,
+    workload_name,
     benchmark_config_path,
     seed,
     leading_col_tbls,
@@ -156,9 +158,15 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
+    workload_folder_path = (
+        ctx.obj.dbgym_data_path / "benchmark" / benchmark / "workloads" / workload_name
+    )
+
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
-    generic_args = EmbeddingDatagenGenericArgs(benchmark, benchmark_config_path, seed)
+    generic_args = EmbeddingDatagenGenericArgs(
+        benchmark, benchmark_config_path, seed, workload_folder_path
+    )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
         default_sample_limit,
@@ -187,10 +195,11 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark, benchmark_config_path, seed):
+    def __init__(self, benchmark, benchmark_config_path, seed, workload_folder_path):
         self.benchmark = benchmark
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
+        self.workload_folder_path = workload_folder_path
 
 
 class EmbeddingDirGenArgs:
@@ -246,17 +255,7 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
     attributes = benchmark_config["protox"]["attributes"]
     query_spec = benchmark_config["protox"]["query_spec"]
 
-    # TODO(phw2): figure out how to pass query_directory. should it in the .yaml or should it be a CLI args?
-    if "query_directory" not in query_spec:
-        assert "query_order" not in query_spec
-        query_spec["query_directory"] = os.path.join(
-            cfg.dbgym_data_path, f"{generic_args.benchmark}_queries"
-        )
-        query_spec["query_order"] = os.path.join(
-            query_spec["query_directory"], f"order.txt"
-        )
-
-    workload = Workload(cfg, tables, attributes, query_spec, pid=None)
+    workload = Workload(cfg, tables, attributes, query_spec, generic_args.workload_folder_path, pid=None)
     modified_attrs = workload.process_column_usage()
     traindata_dir = get_traindata_dir(cfg)
 
@@ -291,6 +290,7 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
                                 tables,
                                 attributes,
                                 query_spec,
+                                generic_args.workload_folder_path,
                                 max_num_columns,
                                 generic_args.seed,
                                 not dir_gen_args.no_generate_costs,
@@ -582,6 +582,7 @@ def _produce_index_data(
     tables,
     attributes,
     query_spec,
+    workload_folder_path,
     max_num_columns,
     seed,
     generate_costs,
@@ -600,7 +601,7 @@ def _produce_index_data(
     #     models = load_ou_models(model_dir)
 
     # Construct workload.
-    workload = Workload(cfg, tables, attributes, query_spec, pid=str(p))
+    workload = Workload(cfg, tables, attributes, query_spec, workload_folder_path, pid=str(p))
     modified_attrs = workload.process_column_usage()
 
     np.random.seed(seed)
