@@ -36,18 +36,31 @@ class DBGymConfig:
     """
 
     def __init__(self, config_path, startup_check=False):
-        self.path = config_path
+        """
+        Parameters
+        ----------
+        config_path : Path
+        startup_check : bool
+            True if startup_check shoul
+        """
+        cwd = os.getcwd()
+        assert is_base_git_dir(
+            cwd
+        ), "This script should be invoked from the root of the dbgym repo."
+
         # Parse the YAML file.
-        contents = Path(self.path).read_text()
-        self.root_yaml = yaml.safe_load(contents)
-        self.cur_path = Path(".")
-        self.cur_yaml = self.root_yaml
+        contents = Path(config_path).read_text()
+        yaml_config = yaml.safe_load(contents)
+
+        dbgym_workspace_path = (
+            Path(yaml_config["dbgym_workspace_path"]).resolve().absolute()
+        )
 
         # Quickly display options.
         if startup_check:
             msg = (
                 "💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩\n"
-                f"\tdbgym_workspace_path: {self.root_yaml['dbgym_workspace_path']}\n"
+                f"\tdbgym_workspace_path: {dbgym_workspace_path}\n"
                 "\n"
                 "Proceed?"
             )
@@ -55,9 +68,12 @@ class DBGymConfig:
                 print("Goodbye.")
                 sys.exit(0)
 
+        self.path = config_path
+        self.cur_path = Path(".")
+        self.root_yaml = yaml_config
+        self.cur_yaml = self.root_yaml
+
         # Set and create paths for storing results.
-        cwd = os.getcwd()
-        assert is_base_git_dir(cwd)
         self.dbgym_repo_path = Path(cwd)
         # these are all abspaths because dbgym_workspace_path is an abspath and the rest are built from dbgym_workspace_path
         self.dbgym_workspace_path = Path(
