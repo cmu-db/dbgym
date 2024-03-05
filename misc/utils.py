@@ -95,6 +95,10 @@ class DBGymConfig:
     def cur_data_path(self):
         return self.dbgym_data_path / self.cur_path
 
+    @property
+    def cur_run_path(self):
+        return self.dbgym_runs_path / self.dbgym_this_run_path / self.cur_path
+
 
 def conv_inputpath_to_abspath(cfg: DBGymConfig, inputpath: os.PathLike) -> str:
     """
