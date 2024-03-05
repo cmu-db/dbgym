@@ -4,6 +4,8 @@ from pathlib import Path
 import click
 import yaml
 
+from benchmark.cli import benchmark_group
+from dbms.cli import dbms_group
 from experiment.cli import experiment_group
 from misc.utils import DBGymConfig
 from tune.protox.cli import protox_group
@@ -94,7 +96,9 @@ def config_standardize(config):
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s:%(name)s:%(levelname)s - %(message)s")
 
+    task.add_command(benchmark_group)
     task.add_command(config_group)
+    task.add_command(dbms_group)
     task.add_command(experiment_group)
     task.add_command(protox_group)
     task()
