@@ -1,13 +1,9 @@
 import click
 
-from tune.protox.embedding.datagen import datagen
-from tune.protox.embedding.train import train
+from misc.utils import DBGymConfig
 
 
 @click.group("embedding")
-def embedding_group():
-    pass
-
-
-embedding_group.add_command(train)
-embedding_group.add_command(datagen)
+@click.pass_obj
+def embedding_group(config: DBGymConfig):
+    config.append_group("embedding")
