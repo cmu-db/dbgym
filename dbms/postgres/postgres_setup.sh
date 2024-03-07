@@ -4,7 +4,7 @@ set -euxo pipefail
 
 PG_REPO_ROOT="$1"
 
-if [ ! -d "${PG_REPO_ROOT}" ]; then
+if [ ! -d "${PG_REPO_ROOT}/boot" ]; then
   mkdir -p "${PG_REPO_ROOT}"
   cd "${PG_REPO_ROOT}"
   git clone git@github.com:lmwnshn/boot.git --single-branch --branch boot --depth 1

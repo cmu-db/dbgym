@@ -9,6 +9,7 @@ from misc.utils import (
     BENCHMARK_PLACEHOLDER,
     DATA_PATH_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
+    DBGymConfig,
     default_benchmark_config_relpath,
     default_dataset_path,
 )
@@ -164,9 +165,9 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg = ctx.obj
+    cfg: DBGymConfig = ctx.obj
     if dataset_path == None:
-        dataset_path = default_dataset_path(cfg.dbgym_data_path, benchmark)
+        dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -181,7 +182,10 @@ def train(
     logging.getLogger().setLevel(logging.INFO)
 
     workload_folder_path = (
-        ctx.obj.dbgym_data_path / "benchmark" / benchmark / "workloads" / workload_name
+        cfg.dbgym_symlinks_path
+        / f"dbgym_benchmark_{benchmark}"
+        / "data"
+        / f"workload_{workload_name}"
     )
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
