@@ -10,36 +10,27 @@ import yaml
 
 
 # Relpaths of different folders in the codebase
-TUNE_RELPATH = "tune"
-PROTOX_RELPATH = os.path.join(TUNE_RELPATH, "protox")
-PROTOX_EMBEDDING_RELPATH = os.path.join(PROTOX_RELPATH, "embedding")
-PROTOX_AGENT_RELPATH = os.path.join(PROTOX_RELPATH, "agent")
+TUNE_RELPATH = Path("tune")
+PROTOX_RELPATH = TUNE_RELPATH / "protox"
+PROTOX_EMBEDDING_RELPATH = PROTOX_RELPATH / "embedding"
+PROTOX_AGENT_RELPATH = PROTOX_RELPATH / "agent"
 
 # Paths of different parts of the workspace
-WORKSPACE_PATH_PLACEHOLDER = "[workspace]"
-SYMLINKS_PATH_PLACEHOLDER = os.path.join(WORKSPACE_PATH_PLACEHOLDER, "symlinks")
+# I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
+WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
+SYMLINKS_PATH_PLACEHOLDER = WORKSPACE_PATH_PLACEHOLDER / "symlinks"
 
 # Other parameters
 BENCHMARK_PLACEHOLDER = "[benchmark]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
-DEFAULT_HPO_SPACE_RELPATH = os.path.join(
-    PROTOX_EMBEDDING_RELPATH, "default_hpo_space.json"
-)
-DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH = os.path.join(
-    PROTOX_AGENT_RELPATH, "default_system_knob_config.yaml"
-)
-default_benchmark_config_relpath = lambda benchmark: os.path.join(
-    PROTOX_RELPATH, f"default_{benchmark}_config.yaml"
-)
+DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
+DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_system_knob_config.yaml"
+default_benchmark_config_relpath = lambda benchmark: PROTOX_RELPATH / f"default_{benchmark}_config.yaml"
 
 # Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
-default_dataset_path = lambda symlinks_path, benchmark: os.path.join(
-    symlinks_path, f"{benchmark}_embedding_traindata.parquet"
-)
-default_hpoed_agent_params_path = lambda symlinks_path: os.path.join(
-    symlinks_path, f"hpoed_agent_params.yaml"
-)
+default_dataset_path = lambda symlinks_path, benchmark: symlinks_path / f"{benchmark}_embedding_traindata.parquet"
+default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
 
 
 class DBGymConfig:

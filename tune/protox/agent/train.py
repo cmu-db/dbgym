@@ -30,7 +30,13 @@ from misc.utils import open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, defaul
 )
 @click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, type=Path, help=f"The path to the file configuring the ranges and quantization of system knobs.")
 @click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
-def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path):
+@click.option("--max-hpo-concurrent", default=1, type=int, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
+@click.option(
+    "--num-samples",
+    default=40,
+    help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
+)
+def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, max_hpo_concurrent, num_samples):
     # set args to defaults programmatically (do this before doing anything else in the function)
     cfg = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
@@ -54,6 +60,7 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
         per_query_knobs = bb_config["per_query_knobs"]
         per_query_knob_gen = bb_config["per_query_knob_gen"]
         query_spec = bb_config["query_spec"]
+        is_oltp = bb_config["oltp_workload"]
 
     # Connect to cluster or die.
     ray.init(address="localhost:6379", log_to_driver=False)
@@ -62,42 +69,42 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
     config = construct_wolp_config()
 
     # Pass the knobs through.
-    config["mythril_system_knobs"] = system_knobs
-    config["mythril_per_query_knobs"] = per_query_knobs
-    config["mythril_per_query_scan_method"] = per_query_scan_method
-    config["mythril_per_query_select_parallel"] = per_query_select_parallel
-    config["mythril_index_space_aux_type"] = index_space_aux_type
-    config["mythril_index_space_aux_include"] = index_space_aux_include
-    config["mythril_per_query_knob_gen"] = per_query_knob_gen
-    config["mythril_query_spec"] = query_spec
+    config["protox_system_knobs"] = system_knobs
+    config["protox_per_query_knobs"] = per_query_knobs
+    config["protox_per_query_scan_method"] = per_query_scan_method
+    config["protox_per_query_select_parallel"] = per_query_select_parallel
+    config["protox_index_space_aux_type"] = index_space_aux_type
+    config["protox_index_space_aux_include"] = index_space_aux_include
+    config["protox_per_query_knob_gen"] = per_query_knob_gen
+    config["protox_query_spec"] = query_spec
 
     # Scheduler.
     scheduler = FIFOScheduler()
 
     hpoed_agent_params = None
-    if hpoed_agent_params_path is not None and Path(hpoed_agent_params_path).exists():
+    if hpoed_agent_params_path is not None and hpoed_agent_params_path.exists():
         tmp_hpoed_agent_params = []
         with open_and_save(hpoed_agent_params_path, "r") as f:
             hpoed_agent_params = json.load(f)
 
             for config in hpoed_agent_params:
-                if "mythril_per_query_knobs" not in config:
-                    config["mythril_per_query_knobs"] = per_query_knobs
-                if "mythril_per_query_scan_method" not in config:
-                    config["mythril_per_query_scan_method"] = per_query_scan_method
-                if "mythril_per_query_select_parallel" not in config:
-                    config["mythril_per_query_select_parallel"] = per_query_select_parallel
-                if "mythril_index_space_aux_type" not in config:
-                    config["mythril_index_space_aux_type"] = index_space_aux_type
-                if "mythril_index_space_aux_include" not in config:
-                    config["mythril_index_space_aux_include"] = index_space_aux_include
-                if "mythril_per_query_knob_gen" not in config:
-                    config["mythril_per_query_knob_gen"] = per_query_knob_gen
-                if "mythril_system_knobs" not in config:
-                    config["mythril_system_knobs"] = system_knobs
+                if "protox_per_query_knobs" not in config:
+                    config["protox_per_query_knobs"] = per_query_knobs
+                if "protox_per_query_scan_method" not in config:
+                    config["protox_per_query_scan_method"] = per_query_scan_method
+                if "protox_per_query_select_parallel" not in config:
+                    config["protox_per_query_select_parallel"] = per_query_select_parallel
+                if "protox_index_space_aux_type" not in config:
+                    config["protox_index_space_aux_type"] = index_space_aux_type
+                if "protox_index_space_aux_include" not in config:
+                    config["protox_index_space_aux_include"] = index_space_aux_include
+                if "protox_per_query_knob_gen" not in config:
+                    config["protox_per_query_knob_gen"] = per_query_knob_gen
+                if "protox_system_knobs" not in config:
+                    config["protox_system_knobs"] = system_knobs
 
-                assert "mythril_args" in config
-                config["mythril_args"]["early_kill"] = early_kill
+                assert "protox_args" in config
+                config["protox_args"]["early_kill"] = early_kill
 
                 for _ in range(initial_repeats):
                     tmp_hpoed_agent_params.append(config)
@@ -106,21 +113,23 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
     # Search.
     # if hpoed_agent_params == None, hyperparameter optimization will be performend
     # if hpoed_agent_params != None, we will just run a single tuning job with the params hpoed_agent_params
-    search = BasicVariantGenerator(points_to_evaluate=hpoed_agent_params, max_concurrent=max_concurrent)
+    search = BasicVariantGenerator(points_to_evaluate=hpoed_agent_params, max_concurrent=max_hpo_concurrent)
 
+    # for OLTP, we're trying to *maximize* txn / sec. for OLAP, we're trying to *minimize* total runtime
+    mode = "max" if is_oltp else "min"
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
-        num_samples=num_trials,
-        max_concurrent_trials=max_concurrent,
+        num_samples=num_samples,
+        max_concurrent_trials=max_hpo_concurrent,
         chdir_to_trial_dir=True,
         metric=METRIC,
-        mode=obj,
+        mode=mode,
     )
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_config = RunConfig(
-        name=f"MythrilHPO_{dtime}",
+        name=f"ProtoxHPO_{dtime}",
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
         sync_config=SyncConfig(upload_dir=None, syncer=None),
         verbose=2,
@@ -176,7 +185,7 @@ class TuneOpt(Trainable):
         """
         res = {}
         for (k, v) in dct.items():
-            if "mythril_" in k:
+            if "protox_" in k:
                 res[k] = v
             elif isinstance(v, dict):
                 res = {**res, **self.f_unpack_dict(v)}
@@ -187,44 +196,44 @@ class TuneOpt(Trainable):
 
     def setup(self, hpo_config):
         print("HPO Configuration: ", hpo_config)
-        assert "mythril_args" in hpo_config
-        mythril_args = hpo_config["mythril_args"]
-        mythril_dir = os.path.expanduser(mythril_args["mythril_dir"])
-        sys.path.append(mythril_dir)
+        assert "protox_args" in hpo_config
+        protox_args = hpo_config["protox_args"]
+        protox_dir = os.path.expanduser(protox_args["protox_dir"])
+        sys.path.append(protox_dir)
 
         from tune import TuneTrial, TimeoutChecker
         from tune.protox.tune.hpo import mutate_wolp_config
         hpo_config = DotDict(self.f_unpack_dict(hpo_config))
-        mythril_args = DotDict(self.f_unpack_dict(mythril_args))
+        protox_args = DotDict(self.f_unpack_dict(protox_args))
 
         # Compute the limit.
-        self.early_kill = mythril_args["early_kill"]
+        self.early_kill = protox_args["early_kill"]
         self.stabilize_kill = 0
-        if "stabilize_kill" in mythril_args:
-            self.stabilize_kill = mythril_args["stabilize_kill"]
+        if "stabilize_kill" in protox_args:
+            self.stabilize_kill = protox_args["stabilize_kill"]
 
         self.last_best_time = None
         self.last_best_metric = None
 
-        self.duration = mythril_args["duration"] * 3600
-        self.workload_timeout = mythril_args["workload_timeout"]
-        self.timeout = TimeoutChecker(mythril_args["duration"])
-        if mythril_args.agent == "wolp":
-            benchmark, pg_path, port = mutate_wolp_config(self.logdir, mythril_dir, hpo_config, mythril_args)
+        self.duration = protox_args["duration"] * 3600
+        self.workload_timeout = protox_args["workload_timeout"]
+        self.timeout = TimeoutChecker(protox_args["duration"])
+        if protox_args.agent == "wolp":
+            benchmark, pg_path, port = mutate_wolp_config(self.logdir, protox_dir, hpo_config, protox_args)
         else:
-            assert False, f"Unspecified agent {mythril_args.agent}"
+            assert False, f"Unspecified agent {protox_args.agent}"
 
         self.pg_path = pg_path
         self.port = port
 
         # We will now overwrite the config files.
-        mythril_args["config"] = str(Path(self.logdir) / "config.yaml")
-        mythril_args["model_config"] = str(Path(self.logdir) / "model_params.yaml")
-        mythril_args["benchmark_config"] = str(Path(self.logdir) / f"{benchmark}.yaml")
-        mythril_args["reward"] = hpo_config.reward
-        mythril_args["horizon"] = hpo_config.horizon
+        protox_args["config"] = str(Path(self.logdir) / "config.yaml")
+        protox_args["model_config"] = str(Path(self.logdir) / "model_params.yaml")
+        protox_args["benchmark_config"] = str(Path(self.logdir) / f"{benchmark}.yaml")
+        protox_args["reward"] = hpo_config.reward
+        protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()
-        self.trial.setup(mythril_args, self.timeout)
+        self.trial.setup(protox_args, self.timeout)
         self.start_time = time.time()
 
     def step(self):

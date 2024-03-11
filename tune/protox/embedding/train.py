@@ -62,7 +62,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
     "--train-max-concurrent",
     default=1,
     type=int,
-    help="The max # of concurrent embedding models to train. This is usually set lower than `nproc` to reduce memory pressure.",
+    help="The max # of concurrent embedding models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.",
 )
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
 @click.option(
