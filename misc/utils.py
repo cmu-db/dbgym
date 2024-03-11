@@ -11,20 +11,23 @@ import yaml
 TUNE_RELPATH = "tune"
 PROTOX_RELPATH = os.path.join(TUNE_RELPATH, "protox")
 PROTOX_EMBEDDING_RELPATH = os.path.join(PROTOX_RELPATH, "embedding")
-DEFAULT_HPO_SPACE_RELPATH = os.path.join(
-    PROTOX_EMBEDDING_RELPATH, "default_hpo_space.json"
-)
+PROTOX_AGENT_RELPATH = os.path.join(PROTOX_RELPATH, "agent")
 WORKSPACE_PLACEHOLDER = "[workspace]"
 DATA_PATH_PLACEHOLDER = os.path.join(WORKSPACE_PLACEHOLDER, "data")
 BENCHMARK_PLACEHOLDER = "[benchmark]"
 
 
+DEFAULT_HPO_SPACE_RELPATH = os.path.join(
+    PROTOX_EMBEDDING_RELPATH, "default_hpo_space.json"
+)
+DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH = os.path.join(
+    PROTOX_AGENT_RELPATH, "default_system_knob_config.yaml"
+)
 # this one is named "*_path" because it could be either a relpath or abspath depending on the data_path arg
 default_dataset_path = lambda data_path, benchmark: os.path.join(
     data_path, f"{benchmark}_embedding_traindata.parquet"
 )
 # this one is named "*_relpath" because it's always a relative path
-# note that the argument corresponding to this is named "*_path" because the argument in principle could take in any kind of path
 default_benchmark_config_relpath = lambda benchmark: os.path.join(
     PROTOX_RELPATH, f"default_{benchmark}_config.yaml"
 )
