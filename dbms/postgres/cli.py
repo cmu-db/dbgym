@@ -63,7 +63,7 @@ def postgres_pgctl(config: DBGymConfig, pgctl_str: str):
 
 
 @postgres_group.command(name="run-sql-file")
-@click.argument("sql-path", type=str)
+@click.argument("sql-path", type=Path)
 @click.pass_obj
 def postgres_run_sql(config: DBGymConfig, sql_path: str):
     run_sql_file(config, sql_path)

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import random
 
 import click
@@ -34,13 +35,13 @@ from tune.protox.embedding.train_all import train_all_embeddings
 @click.option(
     "--benchmark-config-path",
     default=None,
-    type=str,
+    type=Path,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
 )
 @click.option(
     "--dataset-path",
     default=None,
-    type=str,
+    type=Path,
     help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(SYMLINKS_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.",
 )
 @click.option(
