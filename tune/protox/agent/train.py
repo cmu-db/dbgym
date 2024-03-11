@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-import argparse
 import yaml
 from pathlib import Path
 from datetime import datetime
@@ -16,21 +15,38 @@ from ray.tune import Trainable, SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH
+from misc.utils import open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, default_benchmark_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
 
 
 @click.command()
 @click.pass_context
-@click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, type=str, help=f"The path to the file configuring the ranges and quantization of system knobs.")
-def train(config, system_knob_config_path):
+@click.argument("benchmark")
+@click.argument("workload-name")
+@click.option(
+    "--benchmark-config-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+)
+@click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, type=Path, help=f"The path to the file configuring the ranges and quantization of system knobs.")
+@click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
+def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path):
+    # set args to defaults programmatically (do this before doing anything else in the function)
+    cfg = ctx.obj
+    # TODO(phw2): figure out whether different scale factors use the same config
+    # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
+    if benchmark_config_path == None:
+        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+    if hpoed_agent_params_path == None:
+        hpoed_agent_params_path = default_hpoed_agent_params_path(cfg.dbgym_symlinks_path)
+
     # Get the system knobs.
-    with open(system_knob_config_path, "r") as f:
+    with open_and_save(cfg, system_knob_config_path, "r") as f:
         system_knobs = yaml.safe_load(f)["system_knobs"]
 
     # Per query knobs.
-    benchmark_config = hpo_benchmark_config if hpo_benchmark_config else benchmark_config
-    with open(benchmark_config, "r") as f:
-        bb_config = yaml.safe_load(f)["mythril"]
+    with open_and_save(cfg, benchmark_config_path, "r") as f:
+        bb_config = yaml.safe_load(f)["protox"]
         per_query_scan_method = bb_config["per_query_scan_method"]
         per_query_select_parallel = bb_config["per_query_select_parallel"]
         index_space_aux_type = bb_config["index_space_aux_type"]
@@ -43,7 +59,7 @@ def train(config, system_knob_config_path):
     ray.init(address="localhost:6379", log_to_driver=False)
 
     # Config.
-    config = construct_wolp_config(dict(args))
+    config = construct_wolp_config()
 
     # Pass the knobs through.
     config["mythril_system_knobs"] = system_knobs
@@ -58,13 +74,13 @@ def train(config, system_knob_config_path):
     # Scheduler.
     scheduler = FIFOScheduler()
 
-    initial_configs = None
-    if initial_configs is not None and initial_configs.exists():
-        initial_tmp_configs = []
-        with open(initial_configs, "r") as f:
-            initial_configs = json.load(f)
+    hpoed_agent_params = None
+    if hpoed_agent_params_path is not None and Path(hpoed_agent_params_path).exists():
+        tmp_hpoed_agent_params = []
+        with open_and_save(hpoed_agent_params_path, "r") as f:
+            hpoed_agent_params = json.load(f)
 
-            for config in initial_configs:
+            for config in hpoed_agent_params:
                 if "mythril_per_query_knobs" not in config:
                     config["mythril_per_query_knobs"] = per_query_knobs
                 if "mythril_per_query_scan_method" not in config:
@@ -84,17 +100,19 @@ def train(config, system_knob_config_path):
                 config["mythril_args"]["early_kill"] = early_kill
 
                 for _ in range(initial_repeats):
-                    initial_tmp_configs.append(config)
-        initial_configs = initial_tmp_configs
+                    tmp_hpoed_agent_params.append(config)
+        hpoed_agent_params = tmp_hpoed_agent_params
 
     # Search.
-    search = BasicVariantGenerator(points_to_evaluate=initial_configs, max_concurrent=max_concurrent)
+    # if hpoed_agent_params == None, hyperparameter optimization will be performend
+    # if hpoed_agent_params != None, we will just run a single tuning job with the params hpoed_agent_params
+    search = BasicVariantGenerator(points_to_evaluate=hpoed_agent_params, max_concurrent=max_concurrent)
 
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
-        num_samples=args.num_trials,
-        max_concurrent_trials=args.max_concurrent,
+        num_samples=num_trials,
+        max_concurrent_trials=max_concurrent,
         chdir_to_trial_dir=True,
         metric=METRIC,
         mode=obj,

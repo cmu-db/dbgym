@@ -7,7 +7,7 @@ import torch
 
 from misc.utils import (
     BENCHMARK_PLACEHOLDER,
-    DATA_PATH_PLACEHOLDER,
+    SYMLINKS_PATH_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
     DBGymConfig,
     default_benchmark_config_relpath,
@@ -41,7 +41,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
     "--dataset-path",
     default=None,
     type=str,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(DATA_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(SYMLINKS_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",

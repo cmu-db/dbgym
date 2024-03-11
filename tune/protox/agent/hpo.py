@@ -140,14 +140,7 @@ def _mutate_common_config(logdir, mythril_dir, hpo_config, mythril_args):
     return benchmark_config, pg_path, port
 
 
-def _construct_common_config(args):
-    args.pop("horizon", None)
-    args.pop("reward", None)
-    args.pop("max_concurrent", None)
-    args.pop("num_trials", None)
-    args.pop("initial_configs", None)
-    args.pop("initial_repeats", None)
-
+def _construct_common_config():
     return {
         # These are command line parameters.
         # Horizon before resetting.
@@ -180,13 +173,11 @@ def _construct_common_config(args):
         "gamma": tune.choice([0, 0.9, 0.95, 0.995, 1.0]),
         # Gradient Clipping.
         "grad_clip": tune.choice([1.0, 5.0, 10.0]),
-        # Stash the mythril arguments here.
-        "mythril_args": args,
     }
 
 
-def construct_wolp_config(args):
-    config = _construct_common_config(args)
+def construct_wolp_config():
+    config = _construct_common_config()
     config.update(_construct_wolp_config())
     return config
 
