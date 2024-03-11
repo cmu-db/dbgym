@@ -1,11 +1,9 @@
 import click
 
-from tune.protox.embedding.cli import embedding_group
+from misc.utils import DBGymConfig
 
 
 @click.group(name="protox")
-def protox_group():
-    pass
-
-
-protox_group.add_command(embedding_group)
+@click.pass_obj
+def protox_group(config: DBGymConfig):
+    config.append_group("protox")

@@ -16,6 +16,7 @@ from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
     BENCHMARK_PLACEHOLDER,
+    DBGymConfig,
     default_benchmark_config_relpath,
     link_result,
     open_and_save,
@@ -130,7 +131,7 @@ def datagen(
     # TODO(phw2): do stuff to automatically manage postgres
 
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg = ctx.obj
+    cfg: DBGymConfig = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -159,7 +160,10 @@ def datagen(
             override_sample_limits[tbl] = limit
 
     workload_folder_path = (
-        ctx.obj.dbgym_data_path / "benchmark" / benchmark / "workloads" / workload_name
+        cfg.dbgym_symlinks_path
+        / f"dbgym_benchmark_{benchmark}"
+        / "data"
+        / f"workload_{workload_name}"
     )
 
     # group args together to reduce the # of parameters we pass into functions
@@ -255,7 +259,9 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
     attributes = benchmark_config["protox"]["attributes"]
     query_spec = benchmark_config["protox"]["query_spec"]
 
-    workload = Workload(cfg, tables, attributes, query_spec, generic_args.workload_folder_path, pid=None)
+    workload = Workload(
+        cfg, tables, attributes, query_spec, generic_args.workload_folder_path, pid=None
+    )
     modified_attrs = workload.process_column_usage()
     traindata_dir = get_traindata_dir(cfg)
 
@@ -601,7 +607,9 @@ def _produce_index_data(
     #     models = load_ou_models(model_dir)
 
     # Construct workload.
-    workload = Workload(cfg, tables, attributes, query_spec, workload_folder_path, pid=str(p))
+    workload = Workload(
+        cfg, tables, attributes, query_spec, workload_folder_path, pid=str(p)
+    )
     modified_attrs = workload.process_column_usage()
 
     np.random.seed(seed)

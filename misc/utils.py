@@ -36,18 +36,32 @@ class DBGymConfig:
     """
 
     def __init__(self, config_path, startup_check=False):
-        self.path = config_path
+        """
+        Parameters
+        ----------
+        config_path : Path
+        startup_check : bool
+            True if startup_check shoul
+        """
+        assert is_base_git_dir(
+            os.getcwd()
+        ), "This script should be invoked from the root of the dbgym repo."
+
         # Parse the YAML file.
-        contents = Path(self.path).read_text()
-        self.root_yaml = yaml.safe_load(contents)
-        self.cur_path = Path(".")
-        self.cur_yaml = self.root_yaml
+        contents: str = Path(config_path).read_text()
+        yaml_config: dict = yaml.safe_load(contents)
+
+        # Require dbgym_workspace_path to be absolute.
+        # All future paths should be constructed from dbgym_workspace_path.
+        dbgym_workspace_path = (
+            Path(yaml_config["dbgym_workspace_path"]).resolve().absolute()
+        )
 
         # Quickly display options.
         if startup_check:
             msg = (
                 "💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩\n"
-                f"\tdbgym_workspace_path: {self.root_yaml['dbgym_workspace_path']}\n"
+                f"\tdbgym_workspace_path: {dbgym_workspace_path}\n"
                 "\n"
                 "Proceed?"
             )
@@ -55,45 +69,72 @@ class DBGymConfig:
                 print("Goodbye.")
                 sys.exit(0)
 
-        # Set and create paths for storing results.
-        cwd = os.getcwd()
-        assert is_base_git_dir(cwd)
-        self.dbgym_repo_path = Path(cwd)
-        # these are all abspaths because dbgym_workspace_path is an abspath and the rest are built from dbgym_workspace_path
-        self.dbgym_workspace_path = Path(
-            os.path.abspath(self.root_yaml["dbgym_workspace_path"])
-        )
+        self.path: Path = config_path
+        self.cur_path_list: list[str] = ["dbgym"]
+        self.root_yaml: dict = yaml_config
+        self.cur_yaml: dict = self.root_yaml
+
+        # Set and create paths.
+        self.dbgym_repo_path = Path(os.getcwd())
+        self.dbgym_workspace_path = dbgym_workspace_path
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_bin_path = self.dbgym_workspace_path / "bin"
-        self.dbgym_bin_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_build_path = self.dbgym_workspace_path / "build"
-        self.dbgym_build_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_data_path = self.dbgym_workspace_path / "data"
-        self.dbgym_data_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
-        curr_dt = datetime.now()
+        self.dbgym_symlinks_path = self.dbgym_workspace_path / "symlinks"
+        self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
+
+        # Set the path for this task run's results.
         self.dbgym_this_run_path = (
-            self.dbgym_runs_path / f"run_{curr_dt.strftime('%Y-%m-%d_%H-%M-%S')}"
+            self.dbgym_runs_path / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
-        # exist_ok is False because we don't want to override a previous task run's data
+        # exist_ok is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
-    def append_group(self, name):
-        self.cur_path /= name
-        self.cur_yaml = config.cur_yaml.get(name, {})
+    def append_group(self, name) -> None:
+        self.cur_path_list.append(name)
+        self.cur_yaml = self.cur_yaml.get(name, {})
 
-    @property
-    def cur_bin_path(self):
-        return self.dbgym_bin_path / self.cur_path
+    def cur_source_path(self, *dirs) -> Path:
+        cur_path = self.dbgym_repo_path
+        assert self.cur_path_list[0] == "dbgym"
+        for folder in self.cur_path_list[1:]:
+            cur_path = cur_path / folder
+        for dir in dirs:
+            cur_path = cur_path / dir
+        return cur_path
 
-    @property
-    def cur_build_path(self):
-        return self.dbgym_build_path / self.cur_path
+    def cur_symlinks_path(self, *dirs, mkdir=False) -> Path:
+        flattened_structure = "_".join(self.cur_path_list)
+        cur_path = self.dbgym_symlinks_path / flattened_structure
+        for dir in dirs:
+            cur_path = cur_path / dir
+        if mkdir:
+            cur_path.mkdir(parents=True, exist_ok=True)
+        return cur_path
 
-    @property
-    def cur_data_path(self):
-        return self.dbgym_data_path / self.cur_path
+    def cur_task_runs_path(self, *dirs, mkdir=False) -> Path:
+        flattened_structure = "_".join(self.cur_path_list)
+        cur_path = self.dbgym_this_run_path / flattened_structure
+        for dir in dirs:
+            cur_path = cur_path / dir
+        if mkdir:
+            cur_path.mkdir(parents=True, exist_ok=True)
+        return cur_path
+
+    def cur_symlinks_bin_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_symlinks_path("bin", *dirs, mkdir=mkdir)
+
+    def cur_symlinks_build_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_symlinks_path("build", *dirs, mkdir=mkdir)
+
+    def cur_symlinks_data_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_symlinks_path("data", *dirs, mkdir=mkdir)
+
+    def cur_task_runs_build_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_task_runs_path("build", *dirs, mkdir=mkdir)
+
+    def cur_task_runs_data_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
 
 def conv_inputpath_to_abspath(cfg: DBGymConfig, inputpath: os.PathLike) -> str:
@@ -231,7 +272,7 @@ def open_and_save(cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     return open(open_fpath, mode=mode)
 
 
-def link_result(cfg, result_path):
+def link_result(cfg: DBGymConfig, result_path):
     """
     result_path must be a "result", meaning it was generated inside cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
@@ -249,7 +290,7 @@ def link_result(cfg, result_path):
         result_name = dir_basename(result_path)
     else:
         raise NotImplementedError
-    symlink_path = cfg.dbgym_data_path / result_name
+    symlink_path = cfg.cur_symlinks_data_path(mkdir=True) / result_name
 
     if os.path.exists(symlink_path):
         os.remove(symlink_path)
