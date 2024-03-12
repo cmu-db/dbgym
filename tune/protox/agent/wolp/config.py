@@ -176,13 +176,6 @@ def _construct_wolp_config():
         "vae_metadata": {
             "index_vae": True,
             "index_repr": tune.choice(["ONE_HOT_DETERMINISTIC"]),
-            "embeddings": tune.sample_from(lambda spc:
-                str(np.random.choice({
-                    "ONE_HOT_DETERMINISTIC": [
-                        # "runnable/job/pretrained_embedder/embedder.pth",
-                        "job_models/curated/model0/embedder_11.pth",
-                    ],
-                }[(spc["config"]["vae_metadata"]["index_repr"])]))),
         },
 
         "weight_init": tune.choice(["xavier_normal", "xavier_uniform", "orthogonal"]),

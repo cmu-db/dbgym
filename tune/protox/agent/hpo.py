@@ -126,7 +126,6 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
     if "index_vae" in hpo_config:
         # Enable index_vae.
         protox_config["protox"]["index_vae_metadata"]["index_vae"] = hpo_config.index_vae
-        protox_config["protox"]["index_vae_metadata"]["embeddings"] = f"{protox_dir}/{hpo_config.embeddings}"
 
     if "lsc_enabled" in hpo_config:
         protox_config["protox"]["lsc_parameters"]["lsc_enabled"] = hpo_config.lsc_enabled

@@ -17,7 +17,7 @@ from ray.train import SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import restart_ray, conv_inputpath_to_abspath, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, default_hpoed_agent_params_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_snapshot_path, DEFAULT_WOLP_PARAMS_RELPATH
+from misc.utils import restart_ray, conv_inputpath_to_abspath, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, default_hpoed_agent_params_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_snapshot_path, DEFAULT_WOLP_PARAMS_RELPATH, default_embedding_path
 
 
 class AgentTrainArgs:
@@ -28,6 +28,7 @@ class AgentTrainArgs:
 @click.pass_obj
 @click.argument("benchmark-name")
 @click.argument("workload-name")
+@click.option("--embedding-path", default=None, help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}")
 @click.option(
     "--benchmark-config-path",
     default=None,
@@ -60,10 +61,12 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
+    if embedding_path == None:
+        embedding_path = default_embedding_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if benchbase_config_path == None:
@@ -76,6 +79,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
+    embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
     protox_config_path = conv_inputpath_to_abspath(dbgym_cfg, protox_config_path)
@@ -87,6 +91,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
     args = AgentTrainArgs()
     args.benchmark_name = benchmark_name
     args.workload_name = workload_name
+    args.embedding_path = embedding_path
     args.benchmark_config_path = benchmark_config_path
     args.benchbase_config_path = benchbase_config_path
     args.protox_config_path = protox_config_path

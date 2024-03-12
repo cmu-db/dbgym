@@ -50,7 +50,7 @@ class Spec(object):
         else:
             assert False
 
-    def __init__(self, dbgym_cfg, agent_type, seed, protox_config_path, benchbase_config_path, benchmark_config_path, horizon, workload_timeout, logger=None):
+    def __init__(self, dbgym_cfg, agent_type, seed, embedding_path, protox_config_path, benchbase_config_path, benchmark_config_path, horizon, workload_timeout, logger=None):
         with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
             print(f'protox_config_path={protox_config_path}')
             protox_config = yaml.safe_load(f)["protox"]
@@ -65,9 +65,9 @@ class Spec(object):
         index_output_func = torch.nn.Tanh()
         vae_config = {}
         if use_vae:
-            self.index_vae_metadata["embeddings_pth"] = self.index_vae_metadata["embeddings"]
-            self.index_vae_metadata["embeddings_cfg"] = str(Path(self.index_vae_metadata["embeddings"]).parent / "config")
-            with open(self.index_vae_metadata["embeddings_cfg"], "r") as f:
+            self.index_vae_metadata["embedding_pth_path"] = embedding_path / "embedding.pth"
+            self.index_vae_metadata["embedding_cfg_path"] = embedding_path / "config"
+            with open_and_save(dbgym_cfg, self.index_vae_metadata["embedding_cfg_path"], "r") as f:
                 vae_config = config = json.load(f)
                 index_latent_dim = config["latent_dim"]
                 index_output_func = gen_scale_output(config.get("mean_output_act", "sigmoid"), config["output_scale"])
@@ -92,7 +92,7 @@ class Spec(object):
         self.benchbase_config_path = self.benchbase_config_path.with_stem(new_benchbase_config_stem)
         shutil.copy(self.original_benchbase_config_path, self.benchbase_config_path)
 
-        with open(benchmark_config_path) as f:
+        with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
             benchmark_config = yaml.safe_load(f)["protox"]
         for k, v in benchmark_config.items():
             setattr(self, k, v)
@@ -162,7 +162,7 @@ class Spec(object):
                 latent_dim=index_latent_dim,
                 index_output_scale=index_output_scale,
                 index_output_func=index_output_func,
-                index_vae_config=(vae_config, self.index_vae_metadata.get("embeddings_pth", None)),
+                index_vae_config=(vae_config, self.index_vae_metadata.get("embedding_pth_path", None)),
                 attributes_overwrite=modified_attrs,
                 tbl_include_subsets=tbl_include_subsets,
                 lsc=lsc,

@@ -8,6 +8,7 @@ import torch
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
+    WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
     default_benchmark_config_relpath,
@@ -43,7 +44,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
     "--dataset-path",
     default=None,
     type=Path,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -168,7 +169,7 @@ def train(
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
-        dataset_path = default_dataset_path(dbgym_cfg.dbgym_workspace_path, benchmark_name)
+        dataset_path = default_dataset_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
