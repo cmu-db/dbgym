@@ -27,7 +27,7 @@ def gen_scale_output(mean_output_act, output_scale):
 
 class Spec(object):
     # Path specifications.
-    original_benchbase_config_path: str = None
+    original_benchbase_config_path: Path = None
 
     # Connection string to postgres.
     connection: str = None
@@ -74,7 +74,7 @@ class Spec(object):
                 index_output_scale = config["output_scale"]
 
         self.postgres_data_folder = self.postgres_data
-        self.postgres_data = str(Path(self.postgres_path) / self.postgres_data)
+        self.postgres_data = Path(self.postgres_path) / self.postgres_data
         self.postgres_port = int(self.postgres_port)
         self.connection = "host={host} port={port} dbname={dbname} user={user} password={password}".format(
             host=self.postgres_host,
@@ -87,7 +87,7 @@ class Spec(object):
 
         self.benchbase_config_path = benchbase_config_path
         self.original_benchbase_config_path = self.benchbase_config_path
-        new_benchbase_config_stem = self.benchbase_config_path.stem()
+        new_benchbase_config_stem = self.benchbase_config_path.stem
         new_benchbase_config_stem += f"_{self.postgres_port}"
         self.benchbase_config_path = self.benchbase_config_path.with_stem(new_benchbase_config_stem)
         shutil.copy(self.original_benchbase_config_path, self.benchbase_config_path)
