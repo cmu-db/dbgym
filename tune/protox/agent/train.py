@@ -132,6 +132,11 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
                     tmp_hpoed_agent_params.append(config)
         hpoed_agent_params = tmp_hpoed_agent_params
 
+    
+    # Pass cfg into config as well
+    config["dbgym_cfg"] = cfg
+
+
     # Search.
     # if hpoed_agent_params == None, hyperparameter optimization will be performend
     # if hpoed_agent_params != None, we will just run a single tuning job with the params hpoed_agent_params
@@ -220,7 +225,7 @@ class TuneOpt(Trainable):
         print("HPO Configuration: ", hpo_config)
         assert "protox_args" in hpo_config
         protox_args = hpo_config["protox_args"]
-        protox_dir = os.path.expanduser(protox_args["protox_dir"])
+        protox_dir = hpo_config["dbgym_cfg"].dbgym_repo_path
         sys.path.append(protox_dir)
 
         from tune import TuneTrial, TimeoutChecker
