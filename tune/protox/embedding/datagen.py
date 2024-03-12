@@ -15,7 +15,9 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
+    WORKSPACE_PATH_PLACEHOLDER,
     BENCHMARK_NAME_PLACEHOLDER,
+    WORKLOAD_NAME_PLACEHOLDER,
     default_benchmark_config_relpath,
     link_result,
     open_and_save,
@@ -47,6 +49,12 @@ from tune.protox.env.workload_utils import QueryType
     default=None,
     type=Path,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--workload-path",
+    default=None,
+    type=Path,
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -110,6 +118,7 @@ def datagen(
     benchmark_name,
     workload_name,
     benchmark_config_path,
+    workload_path,
     seed,
     leading_col_tbls,
     default_sample_limit,
@@ -136,12 +145,15 @@ def datagen(
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+    if workload_path == None:
+        workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
+    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
 
     # process the "data structure" args
@@ -161,8 +173,6 @@ def datagen(
             tbl = override_sample_limits_str_split[i]
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
-
-    workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
 
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function

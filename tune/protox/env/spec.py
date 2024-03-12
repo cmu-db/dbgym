@@ -50,7 +50,7 @@ class Spec(object):
         else:
             assert False
 
-    def __init__(self, dbgym_cfg, agent_type, seed, embedding_path, protox_config_path, benchbase_config_path, benchmark_config_path, horizon, workload_timeout, logger=None):
+    def __init__(self, dbgym_cfg, agent_type, seed, embedding_path, protox_config_path, benchbase_config_path, benchmark_config_path, workload_path, horizon, workload_timeout, logger=None):
         with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
             print(f'protox_config_path={protox_config_path}')
             protox_config = yaml.safe_load(f)["protox"]
@@ -104,9 +104,11 @@ class Spec(object):
             self.logger = logger
 
         self.workload = Workload(
+            dbgym_cfg=dbgym_cfg,
             tables=self.tables,
             attributes=self.attributes,
             query_spec=self.query_spec,
+            workload_path=workload_path,
             pid=None,
             workload_eval_mode=self.workload_eval_mode,
             workload_eval_inverse=self.workload_eval_inverse if hasattr(self, "workload_eval_inverse") else False,

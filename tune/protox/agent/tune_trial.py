@@ -65,7 +65,7 @@ class TuneTrial(object):
         torch.manual_seed(seed)
 
         # Load spec and create environment.
-        self.spec = Spec(dbgym_cfg, self.args.agent, seed, embedding_path=self.args.embedding_path, protox_config_path=self.args.protox_config_path, benchbase_config_path=self.args.benchbase_config_path, benchmark_config_path=self.args.benchmark_config_path, horizon=self.args.horizon, workload_timeout=self.args.workload_timeout)
+        self.spec = Spec(dbgym_cfg, self.args.agent, seed, embedding_path=self.args.embedding_path, protox_config_path=self.args.protox_config_path, benchbase_config_path=self.args.benchbase_config_path, benchmark_config_path=self.args.benchmark_config_path, workload_path=self.args.workload_path, horizon=self.args.horizon, workload_timeout=self.args.workload_timeout)
         self.logger = self.spec.logger
         logging.info("%s", args)
         logging.info(f"Seed: {seed}")
