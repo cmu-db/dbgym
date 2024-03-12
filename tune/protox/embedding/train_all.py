@@ -109,7 +109,7 @@ def train_all_embeddings(cfg, generic_args, train_args):
         f.write(f"{duration}")
 
 
-def _hpo_train(config, cfg, generic_args, train_args):
+def _hpo_train(cfg, config, generic_args, train_args):
     sys.path.append(os.fspath(cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.

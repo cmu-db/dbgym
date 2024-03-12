@@ -37,7 +37,7 @@ from tune.protox.env.workload_utils import QueryType
 
 # click steup
 @click.command()
-@click.pass_context
+@click.pass_obj
 
 # generic args
 @click.argument("benchmark-name")
@@ -106,7 +106,7 @@ from tune.protox.env.workload_utils import QueryType
 @click.option("--pad-min", default=None, type=int, help="TODO(wz2)")
 @click.option("--rebias", default=0, type=float, help="TODO(wz2)")
 def datagen(
-    ctx,
+    cfg,
     benchmark_name,
     workload_name,
     benchmark_config_path,
@@ -132,7 +132,6 @@ def datagen(
     # TODO(phw2): do stuff to automatically manage postgres
 
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg: DBGymConfig = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:

@@ -5,5 +5,5 @@ from misc.utils import DBGymConfig
 
 @click.group("agent")
 @click.pass_obj
-def agent_group(config: DBGymConfig):
-    config.append_group("agent")
+def agent_group(cfg: DBGymConfig):
+    cfg.append_group("agent")

@@ -28,7 +28,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 
 # click setup
 @click.command()
-@click.pass_context
+@click.pass_obj
 
 # generic args
 @click.argument("benchmark-name")
@@ -136,7 +136,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 )
 @click.option("--flatten-idx", default=0, help="TODO(wz2)")
 def train(
-    ctx,
+    cfg,
     benchmark_name,
     workload_name,
     benchmark_config_path,
@@ -167,7 +167,6 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg: DBGymConfig = ctx.obj
     if dataset_path == None:
         dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark_name)
     # TODO(phw2): figure out whether different scale factors use the same config

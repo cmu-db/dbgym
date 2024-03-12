@@ -14,16 +14,16 @@ benchmark_tpch_logger.setLevel(logging.INFO)
 
 @click.group(name="tpch")
 @click.pass_obj
-def tpch_group(config: DBGymConfig):
-    config.append_group("tpch")
+def tpch_group(cfg: DBGymConfig):
+    cfg.append_group("tpch")
 
 
 @tpch_group.command(name="generate-sf")
 @click.argument("sf", type=int)
 @click.pass_obj
-def tpch_generate_sf(config: DBGymConfig, sf: int):
-    clone(config)
-    generate_tables(config, sf)
+def tpch_generate_sf(cfg: DBGymConfig, sf: int):
+    clone(cfg)
+    generate_tables(cfg, sf)
 
 
 @tpch_group.command(name="generate-workload")
@@ -37,15 +37,15 @@ def tpch_generate_sf(config: DBGymConfig, sf: int):
 )
 @click.pass_obj
 def tpch_generate_workload(
-    config: DBGymConfig,
+    cfg: DBGymConfig,
     workload_name: str,
     seed_start: int,
     seed_end: int,
     generate_type: str,
 ):
-    clone(config)
-    generate_queries(config, seed_start, seed_end)
-    generate_workload(config, workload_name, seed_start, seed_end, generate_type)
+    clone(cfg)
+    generate_queries(cfg, seed_start, seed_end)
+    generate_workload(cfg, workload_name, seed_start, seed_end, generate_type)
 
 
 @tpch_group.command(name="load-sf")
@@ -53,32 +53,32 @@ def tpch_generate_workload(
 @click.argument("dbms", type=str)
 @click.argument("dbname", type=str)
 @click.pass_obj
-def tpch_load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
-    clone(config)
-    generate_tables(config, sf)
-    load_tables(config, sf, dbms, dbname)
+def tpch_load_tables(cfg: DBGymConfig, sf: int, dbms: str, dbname: str):
+    clone(cfg)
+    generate_tables(cfg, sf)
+    load_tables(cfg, sf, dbms, dbname)
 
 
-def clone(config: DBGymConfig):
-    symlink_dir = config.cur_symlinks_build_path("tpch-kit")
+def clone(cfg: DBGymConfig):
+    symlink_dir = cfg.cur_symlinks_build_path("tpch-kit")
     if symlink_dir.exists():
         benchmark_tpch_logger.info(f"Skipping clone: {symlink_dir}")
         return
 
     benchmark_tpch_logger.info(f"Cloning: {symlink_dir}")
-    real_build_path = config.cur_task_runs_build_path()
-    subprocess_run(f"./tpch_setup.sh {real_build_path}", cwd=config.cur_source_path())
+    real_build_path = cfg.cur_task_runs_build_path()
+    subprocess_run(f"./tpch_setup.sh {real_build_path}", cwd=cfg.cur_source_path())
     subprocess_run(
-        f"ln -s {real_build_path / 'tpch-kit'} {config.cur_symlinks_build_path(mkdir=True)}"
+        f"ln -s {real_build_path / 'tpch-kit'} {cfg.cur_symlinks_build_path(mkdir=True)}"
     )
     benchmark_tpch_logger.info(f"Cloned: {symlink_dir}")
 
 
-def generate_queries(config, seed_start, seed_end):
-    build_path = config.cur_symlinks_build_path()
+def generate_queries(cfg, seed_start, seed_end):
+    build_path = cfg.cur_symlinks_build_path()
     assert build_path.exists()
 
-    data_path = config.cur_symlinks_data_path(mkdir=True)
+    data_path = cfg.cur_symlinks_data_path(mkdir=True)
     benchmark_tpch_logger.info(
         f"Generating queries: {data_path} [{seed_start}, {seed_end}]"
     )
@@ -87,7 +87,7 @@ def generate_queries(config, seed_start, seed_end):
         if symlinked_seed.exists():
             continue
 
-        real_dir = config.cur_task_runs_data_path(f"queries_{seed}", mkdir=True)
+        real_dir = cfg.cur_task_runs_data_path(f"queries_{seed}", mkdir=True)
         for i in range(1, 22 + 1):
             target_sql = (real_dir / f"{i}.sql").resolve()
             subprocess_run(
@@ -101,11 +101,11 @@ def generate_queries(config, seed_start, seed_end):
     )
 
 
-def generate_tables(config: DBGymConfig, sf: int):
-    build_path = config.cur_symlinks_build_path()
+def generate_tables(cfg: DBGymConfig, sf: int):
+    build_path = cfg.cur_symlinks_build_path()
     assert build_path.exists()
 
-    data_path = config.cur_symlinks_data_path(mkdir=True)
+    data_path = cfg.cur_symlinks_data_path(mkdir=True)
     symlink_dir = data_path / f"tables_sf{sf}"
     if symlink_dir.exists():
         benchmark_tpch_logger.info(f"Skipping generation: {symlink_dir}")
@@ -113,7 +113,7 @@ def generate_tables(config: DBGymConfig, sf: int):
 
     benchmark_tpch_logger.info(f"Generating: {symlink_dir}")
     subprocess_run(f"./dbgen -vf -s {sf}", cwd=build_path / "tpch-kit" / "dbgen")
-    real_dir = config.cur_task_runs_data_path(f"tables_sf{sf}", mkdir=True)
+    real_dir = cfg.cur_task_runs_data_path(f"tables_sf{sf}", mkdir=True)
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=build_path / "tpch-kit" / "dbgen")
 
     subprocess_run(f"ln -s {real_dir} {data_path}")
@@ -121,20 +121,20 @@ def generate_tables(config: DBGymConfig, sf: int):
 
 
 def generate_workload(
-    config: DBGymConfig,
+    cfg: DBGymConfig,
     workload_name: str,
     seed_start: int,
     seed_end: int,
     generate_type: str,
 ):
-    data_path = config.cur_symlinks_data_path(mkdir=True)
+    data_path = cfg.cur_symlinks_data_path(mkdir=True)
     workload_path = data_path / f"workload_{workload_name}"
     if workload_path.exists():
         benchmark_tpch_logger.error(f"Workload directory exists: {workload_path}")
         raise RuntimeError(f"Workload directory exists: {workload_path}")
 
     benchmark_tpch_logger.info(f"Generating: {workload_path}")
-    real_dir = config.cur_task_runs_data_path(f"workload_{workload_name}", mkdir=True)
+    real_dir = cfg.cur_task_runs_data_path(f"workload_{workload_name}", mkdir=True)
 
     queries = None
     if generate_type == "sequential":
@@ -163,9 +163,9 @@ def _loaded(conn: Connection):
     return len(res) > 0
 
 
-def _load(config: DBGymConfig, conn: Connection, sf: int):
-    schema_root = config.cur_source_path()
-    data_root = config.cur_symlinks_data_path()
+def _load(cfg: DBGymConfig, conn: Connection, sf: int):
+    schema_root = cfg.cur_source_path()
+    data_root = cfg.cur_symlinks_data_path()
 
     tables = [
         "region",
@@ -192,9 +192,9 @@ def _load(config: DBGymConfig, conn: Connection, sf: int):
     sql_file_execute(conn, schema_root / "tpch_constraints.sql")
 
 
-def load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
+def load_tables(cfg: DBGymConfig, sf: int, dbms: str, dbname: str):
     # TODO(WAN): repetition and slight break of abstraction here.
-    dbms_yaml = config.root_yaml["dbms"][dbms]
+    dbms_yaml = cfg.root_yaml["dbms"][dbms]
     dbms_user = dbms_yaml["user"]
     dbms_pass = dbms_yaml["pass"]
     dbms_port = dbms_yaml["port"]
@@ -213,5 +213,5 @@ def load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
             benchmark_tpch_logger.info(f"Skipping load: TPC-H SF {sf}")
         else:
             benchmark_tpch_logger.info(f"Loading: TPC-H SF {sf}")
-            _load(config, conn, sf)
+            _load(cfg, conn, sf)
     benchmark_tpch_logger.info(f"Loaded: TPC-H SF {sf}")
