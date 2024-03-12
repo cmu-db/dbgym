@@ -58,10 +58,6 @@ def _mutate_common_config(cfg, logdir, protox_dir, hpo_config, protox_args):
     benchmark_config["protox"]["index_space_aux_include"] = hpo_config["protox_index_space_aux_include"]
     benchmark_config["protox"]["query_spec"] = hpo_config["protox_query_spec"]
 
-    if benchmark_config["protox"]["query_spec"]["query_directory"][0] != "/":
-        benchmark_config["protox"]["query_spec"]["query_directory"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_directory"]
-    if benchmark_config["protox"]["query_spec"]["query_order"][0] != "/":
-        benchmark_config["protox"]["query_spec"]["query_order"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_order"]
     with open(f"{benchmark_name}.yaml", "w") as f:
         yaml.dump(benchmark_config, stream=f, default_flow_style=False)
 
