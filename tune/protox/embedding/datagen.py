@@ -41,7 +41,7 @@ from tune.protox.env.workload_utils import QueryType
 
 # generic args
 @click.argument("benchmark")
-@click.argument("workload")
+@click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
     default=None,
@@ -108,7 +108,7 @@ from tune.protox.env.workload_utils import QueryType
 def datagen(
     ctx,
     benchmark,
-    workload,
+    workload_name,
     benchmark_config_path,
     seed,
     leading_col_tbls,
@@ -160,7 +160,7 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload)
+    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload_name)
 
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function

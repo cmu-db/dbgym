@@ -31,7 +31,7 @@ default_benchmark_config_relpath = lambda benchmark: PROTOX_RELPATH / f"default_
 # Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
 default_dataset_path = lambda symlinks_path, benchmark: symlinks_path / f"{benchmark}_embedding_traindata.parquet"
 default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
-default_workload_path = lambda symlinks_path, benchmark, workload: symlinks_path / f"dbgym_benchmark_{benchmark}" / "data" / f"workload_{workload}"
+default_workload_path = lambda symlinks_path, benchmark, workload_name: symlinks_path / f"dbgym_benchmark_{benchmark}" / "data" / f"workload_{workload_name}"
 
 
 class DBGymConfig:

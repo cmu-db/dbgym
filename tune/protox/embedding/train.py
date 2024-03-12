@@ -138,7 +138,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 def train(
     ctx,
     benchmark,
-    workload,
+    workload_name,
     benchmark_config_path,
     dataset_path,
     seed,
@@ -183,7 +183,7 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload)
+    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload_name)
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
         benchmark, benchmark_config_path, dataset_path, seed, workload_path
