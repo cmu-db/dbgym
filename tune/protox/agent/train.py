@@ -33,16 +33,19 @@ class AgentTrainArgs:
     type=Path,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
 )
-@click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, type=Path, help=f"The path to the file configuring the ranges and quantization of system knobs.")
+@click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, help=f"The path to the file configuring the ranges and quantization of system knobs.")
 @click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
-@click.option("--agent", default="wolp", type=str, help=f"The RL algorithm to use for the tuning agent.")
-@click.option("--max-hpo-concurrent", default=1, type=int, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
+@click.option("--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent.")
+@click.option("--max-hpo-concurrent", default=1, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
 @click.option(
     "--num-samples",
     default=40,
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
-def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples):
+@click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
+@click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
+@click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
+def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     cfg = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
@@ -62,6 +65,9 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
     args.agent = agent
     args.max_hpo_concurrent = max_hpo_concurrent
     args.num_samples = num_samples
+    args.early_kill = early_kill
+    args.duration = duration
+    args.workload_timeout = workload_timeout
     args = DotDict(args.__dict__)
 
     # Get the system knobs.
@@ -225,7 +231,8 @@ class TuneOpt(Trainable):
         print("HPO Configuration: ", hpo_config)
         assert "protox_args" in hpo_config
         protox_args = hpo_config["protox_args"]
-        protox_dir = hpo_config["dbgym_cfg"].dbgym_repo_path
+        cfg = hpo_config["dbgym_cfg"]
+        protox_dir = cfg.dbgym_repo_path
         # sys.path.append() must take in strings as input, not Path objects
         sys.path.append(str(protox_dir))
 
@@ -247,7 +254,7 @@ class TuneOpt(Trainable):
         self.workload_timeout = protox_args["workload_timeout"]
         self.timeout = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
-            benchmark, pg_path, port = mutate_wolp_config(self.logdir, protox_dir, hpo_config, protox_args)
+            benchmark, pg_path, port = mutate_wolp_config(cfg, self.logdir, protox_dir, hpo_config, protox_args)
         else:
             assert False, f"Unspecified agent {protox_args.agent}"
 
@@ -257,7 +264,7 @@ class TuneOpt(Trainable):
         # We will now overwrite the config files.
         protox_args["config"] = str(Path(self.logdir) / "config.yaml")
         protox_args["model_config"] = str(Path(self.logdir) / "model_params.yaml")
-        protox_args["benchmark_config"] = str(Path(self.logdir) / f"{benchmark}.yaml")
+        protox_args["benchmark_config_path"] = str(Path(self.logdir) / f"{benchmark}.yaml")
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()
