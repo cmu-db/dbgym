@@ -13,6 +13,7 @@ from tune.protox.env.space.action_space import ActionSpace
 from tune.protox.env.workload import Workload
 from tune.protox.env.lsc import LSC
 from tune.protox.utils.logger import Logger
+from misc.utils import open_and_save
 
 
 def gen_scale_output(mean_output_act, output_scale):
@@ -49,10 +50,11 @@ class Spec(object):
         else:
             assert False
 
-    def __init__(self, agent_type, seed, config_path, benchmark_config_path, horizon, workload_timeout, logger=None):
-        with open(config_path) as f:
-            config = yaml.safe_load(f)["mythril"]
-        for k, v in config.items():
+    def __init__(self, dbgym_cfg, agent_type, seed, protox_config_path, benchbase_config_path, benchmark_config_path, horizon, workload_timeout, logger=None):
+        with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
+            print(f'protox_config_path={protox_config_path}')
+            protox_config = yaml.safe_load(f)["protox"]
+        for k, v in protox_config.items():
             setattr(self, k, v)
 
         # Acquire the latent index dimension.
@@ -83,13 +85,16 @@ class Spec(object):
         )
         logging.debug("%s", self.connection)
 
+        self.benchbase_config_path = benchbase_config_path
         self.original_benchbase_config_path = self.benchbase_config_path
-        shutil.copy(self.benchbase_config_path, self.benchbase_config_path + f"_{self.postgres_port}")
-        self.benchbase_config_path = self.benchbase_config_path + f"_{self.postgres_port}"
+        new_benchbase_config_stem = self.benchbase_config_path.stem()
+        new_benchbase_config_stem += f"_{self.postgres_port}"
+        self.benchbase_config_path = self.benchbase_config_path.with_stem(new_benchbase_config_stem)
+        shutil.copy(self.original_benchbase_config_path, self.benchbase_config_path)
 
         with open(benchmark_config_path) as f:
-            config = yaml.safe_load(f)["mythril"]
-        for k, v in config.items():
+            benchmark_config = yaml.safe_load(f)["protox"]
+        for k, v in benchmark_config.items():
             setattr(self, k, v)
 
         # Construct logger.

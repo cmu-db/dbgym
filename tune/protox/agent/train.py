@@ -295,9 +295,9 @@ class TuneOpt(Trainable):
         self.port = port
 
         # We will now overwrite the config files.
-        protox_args["config"] = str(Path(self.logdir) / "config.yaml")
-        protox_args["model_config"] = str(Path(self.logdir) / "model_params.yaml")
-        protox_args["benchmark_config_path"] = str(Path(self.logdir) / f"{benchmark_name}.yaml")
+        protox_args["protox_config_path"] = Path(self.logdir) / "config.yaml"
+        protox_args["agent_params_path"] = Path(self.logdir) / "model_params.yaml"
+        protox_args["benchmark_config_path"] = Path(self.logdir) / f"{benchmark_name}.yaml"
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()

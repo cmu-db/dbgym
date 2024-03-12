@@ -93,7 +93,7 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
             if works.find("warmup") is not None:
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(protox_args.oltp_warmup)
     conf_etree.write("benchmark.xml")
-    protox_config["protox"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
+    protox_config["protox"]["benchbase_config_path"] = Path(logdir) / "benchmark.xml"
 
     protox_config["protox"]["postgres_data"] = f"pgdata{port}"
     protox_config["protox"]["postgres_port"] = port
