@@ -7,7 +7,7 @@ import socket
 from pathlib import Path
 from tune.protox.agent.wolp.config import _construct_wolp_config, _mutate_wolp_config
 from ray import tune
-from misc.utils import open_and_save
+from misc.utils import open_and_save, conv_inputpath_to_abspath
 
 
 def get_free_port(signal_folder):
@@ -62,17 +62,17 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
         yaml.dump(benchmark_config, stream=f, default_flow_style=False)
 
     # Mutate the config file.
-    config = protox_args.config
-    with open(f"{protox_dir}/{config}", "r") as f:
-        config = yaml.safe_load(f)
-    pg_path = os.path.expanduser(config["protox"]["postgres_path"])
+    protox_config_path = conv_inputpath_to_abspath(dbgym_cfg, protox_args.protox_config_path)
+    with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
+        protox_config = yaml.safe_load(f)
+    pg_path = os.path.expanduser(protox_config["protox"]["postgres_path"])
     port = get_free_port(pg_path)
 
     # Update all the paths and metadata needed.
-    config["protox"]["postgres_path"] = pg_path
-    config["protox"]["benchbase_path"] = os.path.expanduser(config["protox"]["benchbase_path"])
+    protox_config["protox"]["postgres_path"] = pg_path
+    protox_config["protox"]["benchbase_path"] = os.path.expanduser(protox_config["protox"]["benchbase_path"])
 
-    benchbase_config_path = protox_args.benchbase_config_path
+    benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, protox_args.benchbase_config_path)
     conf_etree = ET.parse(benchbase_config_path)
     jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
     conf_etree.getroot().find("url").text = jdbc
@@ -89,51 +89,51 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
             if works.find("warmup") is not None:
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(protox_args.oltp_warmup)
     conf_etree.write("benchmark.xml")
-    config["protox"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
+    protox_config["protox"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
 
-    config["protox"]["postgres_data"] = f"pgdata{port}"
-    config["protox"]["postgres_port"] = port
-    config["protox"]["data_snapshot_path"] = "{protox_dir}/{snapshot}".format(protox_dir=protox_dir, snapshot=protox_args.data_snapshot_path)
-    config["protox"]["tensorboard_path"] = "tboard/"
-    config["protox"]["output_log_path"] = "."
-    config["protox"]["repository_path"] = "repository/"
-    config["protox"]["dump_path"] = "dump.pickle"
+    protox_config["protox"]["postgres_data"] = f"pgdata{port}"
+    protox_config["protox"]["postgres_port"] = port
+    protox_config["protox"]["data_snapshot_path"] = "{protox_dir}/{snapshot}".format(protox_dir=protox_dir, snapshot=protox_args.data_snapshot_path)
+    protox_config["protox"]["tensorboard_path"] = "tboard/"
+    protox_config["protox"]["output_log_path"] = "."
+    protox_config["protox"]["repository_path"] = "repository/"
+    protox_config["protox"]["dump_path"] = "dump.pickle"
 
-    config["protox"]["default_quantization_factor"] = hpo_config.default_quantization_factor
-    config["protox"]["metric_state"] = hpo_config.metric_state
-    config["protox"]["index_repr"] = hpo_config.index_repr
-    config["protox"]["normalize_state"] = hpo_config.normalize_state
-    config["protox"]["normalize_reward"] = hpo_config.normalize_reward
-    config["protox"]["maximize_state"] = hpo_config.maximize_state
-    config["protox"]["maximize_knobs_only"] = hpo_config.maximize_knobs_only
-    config["protox"]["start_reset"] = hpo_config.start_reset
-    config["protox"]["gamma"] = hpo_config.gamma
-    config["protox"]["grad_clip"] = hpo_config.grad_clip
-    config["protox"]["reward_scaler"] = hpo_config.reward_scaler
-    config["protox"]["workload_timeout_penalty"] = hpo_config.workload_timeout_penalty
-    config["protox"]["workload_eval_mode"] = hpo_config.workload_eval_mode
-    config["protox"]["workload_eval_inverse"] = hpo_config.workload_eval_inverse
-    config["protox"]["workload_eval_reset"] = hpo_config.workload_eval_reset
-    config["protox"]["scale_noise_perturb"] = hpo_config.scale_noise_perturb
+    protox_config["protox"]["default_quantization_factor"] = hpo_config.default_quantization_factor
+    protox_config["protox"]["metric_state"] = hpo_config.metric_state
+    protox_config["protox"]["index_repr"] = hpo_config.index_repr
+    protox_config["protox"]["normalize_state"] = hpo_config.normalize_state
+    protox_config["protox"]["normalize_reward"] = hpo_config.normalize_reward
+    protox_config["protox"]["maximize_state"] = hpo_config.maximize_state
+    protox_config["protox"]["maximize_knobs_only"] = hpo_config.maximize_knobs_only
+    protox_config["protox"]["start_reset"] = hpo_config.start_reset
+    protox_config["protox"]["gamma"] = hpo_config.gamma
+    protox_config["protox"]["grad_clip"] = hpo_config.grad_clip
+    protox_config["protox"]["reward_scaler"] = hpo_config.reward_scaler
+    protox_config["protox"]["workload_timeout_penalty"] = hpo_config.workload_timeout_penalty
+    protox_config["protox"]["workload_eval_mode"] = hpo_config.workload_eval_mode
+    protox_config["protox"]["workload_eval_inverse"] = hpo_config.workload_eval_inverse
+    protox_config["protox"]["workload_eval_reset"] = hpo_config.workload_eval_reset
+    protox_config["protox"]["scale_noise_perturb"] = hpo_config.scale_noise_perturb
 
     if "index_vae" in hpo_config:
         # Enable index_vae.
-        config["protox"]["index_vae_metadata"]["index_vae"] = hpo_config.index_vae
-        config["protox"]["index_vae_metadata"]["embeddings"] = f"{protox_dir}/{hpo_config.embeddings}"
+        protox_config["protox"]["index_vae_metadata"]["index_vae"] = hpo_config.index_vae
+        protox_config["protox"]["index_vae_metadata"]["embeddings"] = f"{protox_dir}/{hpo_config.embeddings}"
 
     if "lsc_enabled" in hpo_config:
-        config["protox"]["lsc_parameters"]["lsc_enabled"] = hpo_config.lsc_enabled
-        config["protox"]["lsc_parameters"]["lsc_embed"] = hpo_config.lsc_embed
-        config["protox"]["lsc_parameters"]["lsc_shift_initial"] = hpo_config.lsc_shift_initial
-        config["protox"]["lsc_parameters"]["lsc_shift_increment"] = hpo_config.lsc_shift_increment
-        config["protox"]["lsc_parameters"]["lsc_shift_max"] = hpo_config.lsc_shift_max
-        config["protox"]["lsc_parameters"]["lsc_shift_after"] = hpo_config.lsc_shift_after
-        config["protox"]["lsc_parameters"]["lsc_shift_schedule_eps_freq"] = hpo_config.lsc_shift_schedule_eps_freq
+        protox_config["protox"]["lsc_parameters"]["lsc_enabled"] = hpo_config.lsc_enabled
+        protox_config["protox"]["lsc_parameters"]["lsc_embed"] = hpo_config.lsc_embed
+        protox_config["protox"]["lsc_parameters"]["lsc_shift_initial"] = hpo_config.lsc_shift_initial
+        protox_config["protox"]["lsc_parameters"]["lsc_shift_increment"] = hpo_config.lsc_shift_increment
+        protox_config["protox"]["lsc_parameters"]["lsc_shift_max"] = hpo_config.lsc_shift_max
+        protox_config["protox"]["lsc_parameters"]["lsc_shift_after"] = hpo_config.lsc_shift_after
+        protox_config["protox"]["lsc_parameters"]["lsc_shift_schedule_eps_freq"] = hpo_config.lsc_shift_schedule_eps_freq
 
-    config["protox"]["system_knobs"] = hpo_config["protox_system_knobs"]
+    protox_config["protox"]["system_knobs"] = hpo_config["protox_system_knobs"]
 
     with open("config.yaml", "w") as f:
-        yaml.dump(config, stream=f, default_flow_style=False)
+        yaml.dump(protox_config, stream=f, default_flow_style=False)
     return benchmark_config, pg_path, port
 
 

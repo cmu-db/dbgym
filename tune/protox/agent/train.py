@@ -16,7 +16,7 @@ from ray.train import SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import restart_ray, open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, default_benchmark_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
+from misc.utils import restart_ray, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
 
 
 class AgentTrainArgs:
@@ -33,7 +33,13 @@ class AgentTrainArgs:
     type=Path,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
 )
-@click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, help=f"The path to the file configuring the ranges and quantization of system knobs.")
+@click.option(
+    "--benchbase-config-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+)
+@click.option("--protox-config-path", default=DEFAULT_PROTOX_CONFIG_RELPATH, help=f"The path to the file configuring lots of things about Proto-X.")
 @click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
 @click.option("--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent.")
 @click.option("--max-hpo-concurrent", default=1, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
@@ -45,12 +51,14 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+    if benchbase_config_path == None:
+        benchbase_config_path = default_benchbase_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_symlinks_path)
 
@@ -59,7 +67,8 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, syste
     args.benchmark_name = benchmark_name
     args.workload_name = workload_name
     args.benchmark_config_path = benchmark_config_path
-    args.system_knob_config_path = system_knob_config_path
+    args.benchbase_config_path = benchbase_config_path
+    args.protox_config_path = protox_config_path
     args.hpoed_agent_params_path = hpoed_agent_params_path
     args.agent = agent
     args.max_hpo_concurrent = max_hpo_concurrent
@@ -70,8 +79,9 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, syste
     args = DotDict(args.__dict__)
 
     # Get the system knobs.
-    with open_and_save(dbgym_cfg, system_knob_config_path, "r") as f:
-        system_knobs = yaml.safe_load(f)["system_knobs"]
+    with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
+        protox_config = yaml.safe_load(f)["protox"]
+        system_knobs = protox_config["system_knobs"]
 
     # Per query knobs.
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:

@@ -25,8 +25,9 @@ BENCHMARK_PLACEHOLDER = "[benchmark]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
-DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_system_knob_config.yaml"
-default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_config.yaml"
+DEFAULT_PROTOX_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_protox_config.yaml"
+default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchmark_config.yaml"
+default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchbase_config.xml"
 
 # Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
 default_dataset_path = lambda symlinks_path, benchmark_name: symlinks_path / f"{benchmark_name}_embedding_traindata.parquet"
