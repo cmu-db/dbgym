@@ -136,7 +136,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 )
 @click.option("--flatten-idx", default=0, help="TODO(wz2)")
 def train(
-    cfg,
+    dbgym_cfg,
     benchmark_name,
     workload_name,
     benchmark_config_path,
@@ -168,7 +168,7 @@ def train(
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
-        dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark_name)
+        dataset_path = default_dataset_path(dbgym_cfg.cur_symlinks_data_path(), benchmark_name)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -182,7 +182,7 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark_name, workload_name)
+    workload_path = default_workload_path(dbgym_cfg.dbgym_symlinks_path, benchmark_name, workload_name)
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
         benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
@@ -207,11 +207,11 @@ def train(
     )
 
     # run all steps
-    train_all_embeddings(cfg, generic_args, train_args)
+    train_all_embeddings(dbgym_cfg, generic_args, train_args)
     num_parts = compute_num_parts(num_samples)
-    redist_trained_models(cfg, num_parts)
-    analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args)
-    select_best_embeddings(cfg, generic_args, select_args)
+    redist_trained_models(dbgym_cfg, num_parts)
+    analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_args)
+    select_best_embeddings(dbgym_cfg, generic_args, select_args)
 
 
 class EmbeddingTrainGenericArgs:

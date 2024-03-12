@@ -45,14 +45,14 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(cfg, benchmark_name, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
-        hpoed_agent_params_path = default_hpoed_agent_params_path(cfg.dbgym_symlinks_path)
+        hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_symlinks_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
     args = AgentTrainArgs()
@@ -70,11 +70,11 @@ def train(cfg, benchmark_name, workload_name, benchmark_config_path, system_knob
     args = DotDict(args.__dict__)
 
     # Get the system knobs.
-    with open_and_save(cfg, system_knob_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, system_knob_config_path, "r") as f:
         system_knobs = yaml.safe_load(f)["system_knobs"]
 
     # Per query knobs.
-    with open_and_save(cfg, benchmark_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
         bb_config = yaml.safe_load(f)["protox"]
         per_query_scan_method = bb_config["per_query_scan_method"]
         per_query_select_parallel = bb_config["per_query_select_parallel"]
@@ -138,8 +138,8 @@ def train(cfg, benchmark_name, workload_name, benchmark_config_path, system_knob
         hpoed_agent_params = tmp_hpoed_agent_params
 
     
-    # Pass cfg into config as well
-    config["dbgym_cfg"] = cfg
+    # Pass dbgym_cfg into config as well
+    config["dbgym_cfg"] = dbgym_cfg
 
 
     # Search.
@@ -230,8 +230,8 @@ class TuneOpt(Trainable):
         print("HPO Configuration: ", hpo_config)
         assert "protox_args" in hpo_config
         protox_args = hpo_config["protox_args"]
-        cfg = hpo_config["dbgym_cfg"]
-        protox_dir = cfg.dbgym_repo_path
+        dbgym_cfg = hpo_config["dbgym_cfg"]
+        protox_dir = dbgym_cfg.dbgym_repo_path
         # sys.path.append() must take in strings as input, not Path objects
         sys.path.append(str(protox_dir))
 
@@ -253,7 +253,7 @@ class TuneOpt(Trainable):
         self.workload_timeout = protox_args["workload_timeout"]
         self.timeout = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
-            benchmark_name, pg_path, port = mutate_wolp_config(cfg, self.logdir, protox_dir, hpo_config, protox_args)
+            benchmark_name, pg_path, port = mutate_wolp_config(dbgym_cfg, self.logdir, protox_dir, hpo_config, protox_args)
         else:
             assert False, f"Unspecified agent {protox_args.agent}"
 

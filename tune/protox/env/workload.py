@@ -9,7 +9,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pglast
 import pglast.ast
-from click.core import Context
 from plumbum import local
 
 from misc.utils import open_and_save
@@ -71,7 +70,7 @@ class Workload(object):
             self.queries_mix[stem] = ratio
             sql_mapping[stem] = sql_file
 
-            with open_and_save(self.cfg, sql_file, "r") as q:
+            with open_and_save(self.dbgym_cfg, sql_file, "r") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -185,7 +184,7 @@ class Workload(object):
 
     def __init__(
         self,
-        cfg: Context,
+        dbgym_cfg,
         tables: list[str],
         attributes: dict[str, list[str]],
         query_spec: dict,
@@ -198,7 +197,7 @@ class Workload(object):
         logger=None,
     ):
 
-        self.cfg = cfg
+        self.dbgym_cfg = dbgym_cfg
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
         # Whether we should use benchbase or not.
@@ -233,7 +232,7 @@ class Workload(object):
         # Get the order in which we should execute in.
         sqls = []
         workload_order_file = workload_path / "order.txt"
-        with open_and_save(self.cfg, workload_order_file, "r") as f:
+        with open_and_save(self.dbgym_cfg, workload_order_file, "r") as f:
             lines = f.read().splitlines()
             for line in lines:
                 contents = line.split(",")
@@ -254,7 +253,7 @@ class Workload(object):
 
         if "execute_query_order" in query_spec:
             # TODO(WAN): can this be folded into workload_path?
-            with open_and_save(self.cfg, query_spec["execute_query_order"], "r") as f:
+            with open_and_save(self.dbgym_cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
@@ -390,7 +389,7 @@ class Workload(object):
 
         if workload_qdir is not None and workload_qdir[0] is not None:
             workload_qdir, workload_qlist = workload_qdir
-            with open_and_save(self.cfg, workload_qlist, "r") as f:
+            with open_and_save(self.dbgym_cfg, workload_qlist, "r") as f:
                 psql_order = [
                     (f"Q{i+1}", workload_qdir / l.strip())
                     for i, l in enumerate(f.readlines())
@@ -400,7 +399,7 @@ class Workload(object):
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with open_and_save(self.cfg, qpat, "r") as f:
+                with open_and_save(self.dbgym_cfg, qpat, "r") as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:

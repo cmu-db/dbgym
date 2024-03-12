@@ -35,9 +35,9 @@ def config_group():
 @config_group.command(name="show")
 @click.argument("keys", nargs=-1)
 @click.pass_obj
-def config_show(cfg, keys):
-    config_path = cfg.path
-    config_yaml = cfg.yaml
+def config_show(dbgym_cfg, keys):
+    config_path = dbgym_cfg.path
+    config_yaml = dbgym_cfg.yaml
 
     # Traverse the YAML.
     for key in keys:
@@ -62,9 +62,9 @@ def config_show(cfg, keys):
 @click.argument("value_type")
 @click.argument("value")
 @click.pass_obj
-def config_write(cfg, keys, value_type, value):
-    config_path = cfg.path
-    config_yaml = cfg.yaml
+def config_write(dbgym_cfg, keys, value_type, value):
+    config_path = dbgym_cfg.path
+    config_yaml = dbgym_cfg.yaml
 
     # Traverse the YAML.
     root_yaml = config_yaml
@@ -82,9 +82,9 @@ def config_write(cfg, keys, value_type, value):
 
 @config_group.command(name="standardize")
 @click.pass_obj
-def config_standardize(cfg):
-    config_path = cfg.path
-    config_yaml = cfg.yaml
+def config_standardize(dbgym_cfg):
+    config_path = dbgym_cfg.path
+    config_yaml = dbgym_cfg.yaml
 
     # Write the YAML file.
     new_yaml = yaml.dump(config_yaml, default_flow_style=False).rstrip()

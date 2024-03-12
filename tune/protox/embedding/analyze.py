@@ -31,54 +31,54 @@ def compute_num_parts(num_samples):
     return 1
 
 
-def redist_trained_models(cfg, num_parts):
+def redist_trained_models(dbgym_cfg, num_parts):
     """
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     """
     inputs = [
-        f for f in cfg.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)
+        f for f in dbgym_cfg.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)
     ]
 
     for part_i in range(num_parts):
-        Path(_get_part_i_dpath(cfg, part_i)).mkdir(parents=True, exist_ok=True)
+        Path(_get_part_i_dpath(dbgym_cfg, part_i)).mkdir(parents=True, exist_ok=True)
 
     for model_i, emb in enumerate(inputs):
         part_i = model_i % num_parts
-        shutil.move(emb, _get_part_i_dpath(cfg, part_i))
+        shutil.move(emb, _get_part_i_dpath(dbgym_cfg, part_i))
 
 
-def analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args):
+def analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_args):
     """
     Analyze all part*/ dirs _in parallel_
     """
     start_time = time.time()
     for part_i in range(num_parts):
-        _analyze_embeddings_part(cfg, part_i, generic_args, analyze_args)
+        _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args)
     duration = time.time() - start_time
-    with open(os.path.join(cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
+    with open(os.path.join(dbgym_cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def _analyze_embeddings_part(cfg, part_i, generic_args, analyze_args):
+def _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args):
     """
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     """
-    part_dpath = _get_part_i_dpath(cfg, part_i)
+    part_dpath = _get_part_i_dpath(dbgym_cfg, part_i)
 
     start_time = time.time()
-    _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args)
+    _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "stats_time.txt"), "w") as f:
         f.write(f"{duration}")
 
     start_time = time.time()
-    _create_ranges_for_part(cfg, part_dpath, generic_args, analyze_args)
+    _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(os.path.join(part_dpath, "ranges_time.txt"), "w") as f:
         f.write(f"{duration}")
 
 
-def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
+def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
     """
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -87,10 +87,10 @@ def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     # Load the benchmark configuration.
-    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, _ = fetch_index_parameters(
-            cfg, generic_args.benchmark_name, data, generic_args.workload_path
+            dbgym_cfg, generic_args.benchmark_name, data, generic_args.workload_path
         )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -101,7 +101,7 @@ def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
             print("Detected failure in: ", model_config)
             continue
 
-        with open_and_save(cfg, model_config, "r") as f:
+        with open_and_save(dbgym_cfg, model_config, "r") as f:
             config = json.load(f)
 
         # Create them here since these are constant for a given "model" configuration.
@@ -142,7 +142,7 @@ def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
             if dataset is None:
                 # Get the dataset if we need to.
                 dataset, _, idx_class, _, num_classes = load_input_data(
-                    cfg, generic_args.dataset_path, 1.0, max_attrs, require_cost, seed=0
+                    dbgym_cfg, generic_args.dataset_path, 1.0, max_attrs, require_cost, seed=0
                 )
 
                 class_mapping = []
@@ -278,7 +278,7 @@ def _create_stats_for_part(cfg, part_dpath, generic_args, analyze_args):
                 gc.collect()
 
 
-def _create_ranges_for_part(cfg, part_dpath, generic_args, analyze_args):
+def _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
     """
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -293,10 +293,10 @@ def _create_ranges_for_part(cfg, part_dpath, generic_args, analyze_args):
         ]
     )
     for embedder_fpath in tqdm.tqdm(paths):
-        _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args)
+        _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze_args)
 
 
-def _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args):
+def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze_args):
     """
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     """
@@ -306,11 +306,11 @@ def _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args)
         return
 
     # Load the benchmark configuration.
-    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         tables = data["protox"]["tables"]
         max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(
-            cfg, generic_args.benchmark_name, data, generic_args.workload_path
+            dbgym_cfg, generic_args.benchmark_name, data, generic_args.workload_path
         )
 
     # don't use open_and_save() because we generated embeddings_config_fpath in this run
@@ -389,5 +389,5 @@ def _create_ranges_for_embedder(cfg, embedder_fpath, generic_args, analyze_args)
             base += output_scale
 
 
-def _get_part_i_dpath(cfg, part_i) -> str:
-    return os.path.join(cfg.dbgym_this_run_path, f"part{part_i}")
+def _get_part_i_dpath(dbgym_cfg, part_i) -> str:
+    return os.path.join(dbgym_cfg.dbgym_this_run_path, f"part{part_i}")
