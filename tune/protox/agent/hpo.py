@@ -47,7 +47,7 @@ def get_free_port(signal_folder):
 def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args):
     # Copy the benchmark file.
     benchmark_config_path = protox_args.benchmark_config_path
-    with open_and_save(dbgym_cfg, f"{protox_dir}/{benchmark_config_path}") as f:
+    with open_and_save(dbgym_cfg, benchmark_config_path) as f:
         benchmark_config = yaml.safe_load(f)
     benchmark_name = benchmark_config["protox"]["benchmark_name"]
     benchmark_config["protox"]["per_query_knobs"] = hpo_config["protox_per_query_knobs"]

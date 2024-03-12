@@ -146,22 +146,25 @@ class DBGymConfig:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
 
-def conv_inputpath_to_abspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> str:
+def conv_inputpath_to_abspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
     """
     Convert any user inputted path to an absolute path
+    For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
     Relative paths are relative to the base repo dir
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     """
     # expanduser() is always "safe" to call
+    inputpath = os.path.expanduser(inputpath)
     # the reason we don't call os.path.abspath() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
     #   which is not necessary where cwd() points at the time of calling this function
-    inputpath = os.path.expanduser(inputpath)
     if os.path.isabs(inputpath):
-        return os.path.normpath(inputpath)
+        inputpath = os.path.normpath(inputpath)
     else:
-        return os.path.normpath(os.path.join(dbgym_cfg.dbgym_repo_path, inputpath))
+        inputpath = os.path.normpath(os.path.join(dbgym_cfg.dbgym_repo_path, inputpath))
+    # as mentioned in the function doc, we always return a Path object
+    return Path(inputpath)
 
 
 def is_base_git_dir(cwd) -> bool:
