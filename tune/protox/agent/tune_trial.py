@@ -48,7 +48,7 @@ class TimeoutChecker(object):
 
 
 class TuneTrial(object):
-    def setup(self, dbgym_cfg, args, timeout_checker):
+    def setup(self, dbgym_cfg, is_oltp, args, timeout_checker):
         torch.set_default_dtype(torch.float32)
         self.args = DotDict(args)
 
@@ -65,13 +65,13 @@ class TuneTrial(object):
         torch.manual_seed(seed)
 
         # Load spec and create environment.
-        self.spec = Spec(dbgym_cfg, self.args.agent, seed, embedding_path=self.args.embedding_path, protox_config_path=self.args.protox_config_path, benchbase_config_path=self.args.benchbase_config_path, benchmark_config_path=self.args.benchmark_config_path, workload_path=self.args.workload_path, horizon=self.args.horizon, workload_timeout=self.args.workload_timeout)
+        self.spec = Spec(dbgym_cfg, is_oltp, self.args.agent, seed, embedding_path=self.args.embedding_path, protox_config_path=self.args.protox_config_path, benchbase_config_path=self.args.benchbase_config_path, benchmark_config_path=self.args.benchmark_config_path, workload_path=self.args.workload_path, horizon=self.args.horizon, workload_timeout=self.args.workload_timeout)
         self.logger = self.spec.logger
         logging.info("%s", args)
         logging.info(f"Seed: {seed}")
 
         # Create the reward utility.
-        self.reward_utility = RewardUtility(self.args.target, self.args.reward, self.spec.reward_scaler)
+        self.reward_utility = RewardUtility(is_oltp, self.args.reward, self.spec.reward_scaler)
 
         # Create the environment.
         self.base_env = self.env = gym.make("Postgres-v0",

@@ -187,8 +187,9 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
         hpoed_agent_params = tmp_hpoed_agent_params
 
     
-    # Pass dbgym_cfg into config as well
+    # Pass some extra needed stuff into config as well since there's no other way to get data to TuneOpt.setup()
     config["dbgym_cfg"] = dbgym_cfg
+    config["is_oltp"] = is_oltp
 
 
     # Search.
@@ -316,7 +317,7 @@ class TuneOpt(Trainable):
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()
-        self.trial.setup(dbgym_cfg, protox_args, self.timeout)
+        self.trial.setup(dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout)
         self.start_time = time.time()
 
     def step(self):

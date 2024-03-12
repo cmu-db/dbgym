@@ -8,11 +8,10 @@ INITIAL_PENALTY_MULTIPLIER = 4.
 
 
 class RewardUtility(object):
-    def __init__(self, target, metric, reward_scaler):
+    def __init__(self, is_oltp, metric, reward_scaler):
         self.reward_scaler = reward_scaler
-        self.target = target
         self.metric = metric
-        self.maximize = target == "tps"
+        self.maximize = is_oltp
         self.worst_perf = None
         self.relative_baseline = None
         self.previous_result = None
