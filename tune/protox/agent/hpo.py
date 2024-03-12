@@ -43,104 +43,111 @@ def get_free_port(signal_folder):
     raise IOError("No free ports to bind postgres to.")
 
 
-def _mutate_common_config(logdir, mythril_dir, hpo_config, mythril_args):
+def _mutate_common_config(logdir, protox_dir, hpo_config, protox_args):
     # Copy the benchmark file.
-    benchmark_config = mythril_args.benchmark_config
-    with open(f"{mythril_dir}/{benchmark_config}") as f:
+    benchmark_config = protox_args.benchmark_config
+    with open(f"{protox_dir}/{benchmark_config}") as f:
         benchmark_config = yaml.safe_load(f)
-    benchmark = benchmark_config["mythril"]["benchmark"]
-    benchmark_config["mythril"]["per_query_knobs"] = hpo_config["mythril_per_query_knobs"]
-    benchmark_config["mythril"]["per_query_knob_gen"] = hpo_config["mythril_per_query_knob_gen"]
-    benchmark_config["mythril"]["per_query_scan_method"] = hpo_config["mythril_per_query_scan_method"]
-    benchmark_config["mythril"]["per_query_select_parallel"] = hpo_config["mythril_per_query_select_parallel"]
-    benchmark_config["mythril"]["index_space_aux_type"] = hpo_config["mythril_index_space_aux_type"]
-    benchmark_config["mythril"]["index_space_aux_include"] = hpo_config["mythril_index_space_aux_include"]
-    benchmark_config["mythril"]["query_spec"] = hpo_config["mythril_query_spec"]
+    benchmark = benchmark_config["protox"]["benchmark"]
+    benchmark_config["protox"]["per_query_knobs"] = hpo_config["protox_per_query_knobs"]
+    benchmark_config["protox"]["per_query_knob_gen"] = hpo_config["protox_per_query_knob_gen"]
+    benchmark_config["protox"]["per_query_scan_method"] = hpo_config["protox_per_query_scan_method"]
+    benchmark_config["protox"]["per_query_select_parallel"] = hpo_config["protox_per_query_select_parallel"]
+    benchmark_config["protox"]["index_space_aux_type"] = hpo_config["protox_index_space_aux_type"]
+    benchmark_config["protox"]["index_space_aux_include"] = hpo_config["protox_index_space_aux_include"]
+    benchmark_config["protox"]["query_spec"] = hpo_config["protox_query_spec"]
 
-    if benchmark_config["mythril"]["query_spec"]["query_directory"][0] != "/":
-        benchmark_config["mythril"]["query_spec"]["query_directory"] = mythril_dir + "/" + benchmark_config["mythril"]["query_spec"]["query_directory"]
-    if benchmark_config["mythril"]["query_spec"]["query_order"][0] != "/":
-        benchmark_config["mythril"]["query_spec"]["query_order"] = mythril_dir + "/" + benchmark_config["mythril"]["query_spec"]["query_order"]
+    if benchmark_config["protox"]["query_spec"]["query_directory"][0] != "/":
+        benchmark_config["protox"]["query_spec"]["query_directory"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_directory"]
+    if benchmark_config["protox"]["query_spec"]["query_order"][0] != "/":
+        benchmark_config["protox"]["query_spec"]["query_order"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_order"]
     with open(f"{benchmark}.yaml", "w") as f:
         yaml.dump(benchmark_config, stream=f, default_flow_style=False)
 
     # Mutate the config file.
-    config = mythril_args.config
-    with open(f"{mythril_dir}/{config}", "r") as f:
+    config = protox_args.config
+    with open(f"{protox_dir}/{config}", "r") as f:
         config = yaml.safe_load(f)
-    pg_path = os.path.expanduser(config["mythril"]["postgres_path"])
+    pg_path = os.path.expanduser(config["protox"]["postgres_path"])
     port = get_free_port(pg_path)
 
     # Update all the paths and metadata needed.
-    config["mythril"]["postgres_path"] = pg_path
-    config["mythril"]["benchbase_path"] = os.path.expanduser(config["mythril"]["benchbase_path"])
+    config["protox"]["postgres_path"] = pg_path
+    config["protox"]["benchbase_path"] = os.path.expanduser(config["protox"]["benchbase_path"])
 
-    benchbase_config_path = mythril_args.benchbase_config_path
+    benchbase_config_path = protox_args.benchbase_config_path
     conf_etree = ET.parse(benchbase_config_path)
     jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
     conf_etree.getroot().find("url").text = jdbc
 
-    if "oltpr_sf" in mythril_args:
+    if "oltpr_sf" in protox_args:
         if conf_etree.getroot().find("scalefactor") is not None:
-            conf_etree.getroot().find("scalefactor").text = str(mythril_args.oltp_sf)
+            conf_etree.getroot().find("scalefactor").text = str(protox_args.oltp_sf)
         if conf_etree.getroot().find("terminals") is not None:
-            conf_etree.getroot().find("terminals").text = str(mythril_args.oltp_num_terminals)
+            conf_etree.getroot().find("terminals").text = str(protox_args.oltp_num_terminals)
         if conf_etree.getroot().find("works") is not None:
             works = conf_etree.getroot().find("works").find("work")
             if works.find("time") is not None:
-                conf_etree.getroot().find("works").find("work").find("time").text = str(mythril_args.oltp_duration)
+                conf_etree.getroot().find("works").find("work").find("time").text = str(protox_args.oltp_duration)
             if works.find("warmup") is not None:
-                conf_etree.getroot().find("works").find("work").find("warmup").text = str(mythril_args.oltp_warmup)
+                conf_etree.getroot().find("works").find("work").find("warmup").text = str(protox_args.oltp_warmup)
     conf_etree.write("benchmark.xml")
-    config["mythril"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
+    config["protox"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
 
-    config["mythril"]["postgres_data"] = f"pgdata{port}"
-    config["mythril"]["postgres_port"] = port
-    config["mythril"]["data_snapshot_path"] = "{mythril_dir}/{snapshot}".format(mythril_dir=mythril_dir, snapshot=mythril_args.data_snapshot_path)
-    config["mythril"]["tensorboard_path"] = "tboard/"
-    config["mythril"]["output_log_path"] = "."
-    config["mythril"]["repository_path"] = "repository/"
-    config["mythril"]["dump_path"] = "dump.pickle"
+    config["protox"]["postgres_data"] = f"pgdata{port}"
+    config["protox"]["postgres_port"] = port
+    config["protox"]["data_snapshot_path"] = "{protox_dir}/{snapshot}".format(protox_dir=protox_dir, snapshot=protox_args.data_snapshot_path)
+    config["protox"]["tensorboard_path"] = "tboard/"
+    config["protox"]["output_log_path"] = "."
+    config["protox"]["repository_path"] = "repository/"
+    config["protox"]["dump_path"] = "dump.pickle"
 
-    config["mythril"]["default_quantization_factor"] = hpo_config.default_quantization_factor
-    config["mythril"]["metric_state"] = hpo_config.metric_state
-    config["mythril"]["index_repr"] = hpo_config.index_repr
-    config["mythril"]["normalize_state"] = hpo_config.normalize_state
-    config["mythril"]["normalize_reward"] = hpo_config.normalize_reward
-    config["mythril"]["maximize_state"] = hpo_config.maximize_state
-    config["mythril"]["maximize_knobs_only"] = hpo_config.maximize_knobs_only
-    config["mythril"]["start_reset"] = hpo_config.start_reset
-    config["mythril"]["gamma"] = hpo_config.gamma
-    config["mythril"]["grad_clip"] = hpo_config.grad_clip
-    config["mythril"]["reward_scaler"] = hpo_config.reward_scaler
-    config["mythril"]["workload_timeout_penalty"] = hpo_config.workload_timeout_penalty
-    config["mythril"]["workload_eval_mode"] = hpo_config.workload_eval_mode
-    config["mythril"]["workload_eval_inverse"] = hpo_config.workload_eval_inverse
-    config["mythril"]["workload_eval_reset"] = hpo_config.workload_eval_reset
-    config["mythril"]["scale_noise_perturb"] = hpo_config.scale_noise_perturb
+    config["protox"]["default_quantization_factor"] = hpo_config.default_quantization_factor
+    config["protox"]["metric_state"] = hpo_config.metric_state
+    config["protox"]["index_repr"] = hpo_config.index_repr
+    config["protox"]["normalize_state"] = hpo_config.normalize_state
+    config["protox"]["normalize_reward"] = hpo_config.normalize_reward
+    config["protox"]["maximize_state"] = hpo_config.maximize_state
+    config["protox"]["maximize_knobs_only"] = hpo_config.maximize_knobs_only
+    config["protox"]["start_reset"] = hpo_config.start_reset
+    config["protox"]["gamma"] = hpo_config.gamma
+    config["protox"]["grad_clip"] = hpo_config.grad_clip
+    config["protox"]["reward_scaler"] = hpo_config.reward_scaler
+    config["protox"]["workload_timeout_penalty"] = hpo_config.workload_timeout_penalty
+    config["protox"]["workload_eval_mode"] = hpo_config.workload_eval_mode
+    config["protox"]["workload_eval_inverse"] = hpo_config.workload_eval_inverse
+    config["protox"]["workload_eval_reset"] = hpo_config.workload_eval_reset
+    config["protox"]["scale_noise_perturb"] = hpo_config.scale_noise_perturb
 
     if "index_vae" in hpo_config:
         # Enable index_vae.
-        config["mythril"]["index_vae_metadata"]["index_vae"] = hpo_config.index_vae
-        config["mythril"]["index_vae_metadata"]["embeddings"] = f"{mythril_dir}/{hpo_config.embeddings}"
+        config["protox"]["index_vae_metadata"]["index_vae"] = hpo_config.index_vae
+        config["protox"]["index_vae_metadata"]["embeddings"] = f"{protox_dir}/{hpo_config.embeddings}"
 
     if "lsc_enabled" in hpo_config:
-        config["mythril"]["lsc_parameters"]["lsc_enabled"] = hpo_config.lsc_enabled
-        config["mythril"]["lsc_parameters"]["lsc_embed"] = hpo_config.lsc_embed
-        config["mythril"]["lsc_parameters"]["lsc_shift_initial"] = hpo_config.lsc_shift_initial
-        config["mythril"]["lsc_parameters"]["lsc_shift_increment"] = hpo_config.lsc_shift_increment
-        config["mythril"]["lsc_parameters"]["lsc_shift_max"] = hpo_config.lsc_shift_max
-        config["mythril"]["lsc_parameters"]["lsc_shift_after"] = hpo_config.lsc_shift_after
-        config["mythril"]["lsc_parameters"]["lsc_shift_schedule_eps_freq"] = hpo_config.lsc_shift_schedule_eps_freq
+        config["protox"]["lsc_parameters"]["lsc_enabled"] = hpo_config.lsc_enabled
+        config["protox"]["lsc_parameters"]["lsc_embed"] = hpo_config.lsc_embed
+        config["protox"]["lsc_parameters"]["lsc_shift_initial"] = hpo_config.lsc_shift_initial
+        config["protox"]["lsc_parameters"]["lsc_shift_increment"] = hpo_config.lsc_shift_increment
+        config["protox"]["lsc_parameters"]["lsc_shift_max"] = hpo_config.lsc_shift_max
+        config["protox"]["lsc_parameters"]["lsc_shift_after"] = hpo_config.lsc_shift_after
+        config["protox"]["lsc_parameters"]["lsc_shift_schedule_eps_freq"] = hpo_config.lsc_shift_schedule_eps_freq
 
-    config["mythril"]["system_knobs"] = hpo_config["mythril_system_knobs"]
+    config["protox"]["system_knobs"] = hpo_config["protox_system_knobs"]
 
     with open("config.yaml", "w") as f:
         yaml.dump(config, stream=f, default_flow_style=False)
     return benchmark_config, pg_path, port
 
 
-def _construct_common_config():
+def _construct_common_config(args):
+    args.pop("horizon", None)
+    args.pop("reward", None)
+    args.pop("max_concurrent", None)
+    args.pop("num_trials", None)
+    args.pop("initial_configs", None)
+    args.pop("initial_repeats", None)
+
     return {
         # These are command line parameters.
         # Horizon before resetting.
@@ -173,16 +180,19 @@ def _construct_common_config():
         "gamma": tune.choice([0, 0.9, 0.95, 0.995, 1.0]),
         # Gradient Clipping.
         "grad_clip": tune.choice([1.0, 5.0, 10.0]),
+
+        # Stash the protox arguments here.
+        "protox_args": args,
     }
 
 
-def construct_wolp_config():
-    config = _construct_common_config()
+def construct_wolp_config(args):
+    config = _construct_common_config(args)
     config.update(_construct_wolp_config())
     return config
 
 
-def mutate_wolp_config(logdir, mythril_dir, hpo_config, mythril_args):
-    benchmark, pg_path, port = _mutate_common_config(logdir, mythril_dir, hpo_config, mythril_args)
-    _mutate_wolp_config(mythril_dir, hpo_config, mythril_args)
-    return benchmark["mythril"]["benchmark"], pg_path, port
+def mutate_wolp_config(logdir, protox_dir, hpo_config, protox_args):
+    benchmark, pg_path, port = _mutate_common_config(logdir, protox_dir, hpo_config, protox_args)
+    _mutate_wolp_config(protox_dir, hpo_config, protox_args)
+    return benchmark["protox"]["benchmark"], pg_path, port

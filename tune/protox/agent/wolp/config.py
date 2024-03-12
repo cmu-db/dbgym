@@ -74,9 +74,9 @@ def setup_wolp_agent(env, spec, seed, agent_config):
     return agent
 
 
-def _mutate_wolp_config(mythril_dir, hpo_config, mythril_args):
-    model_config = mythril_args.model_config
-    with open(f"{mythril_dir}/{model_config}", "r") as f:
+def _mutate_wolp_config(protox_dir, hpo_config, protox_args):
+    model_config = protox_args.model_config
+    with open(f"{protox_dir}/{model_config}", "r") as f:
         model_config = yaml.safe_load(f)
 
     wolp = model_config["wolp_params"]

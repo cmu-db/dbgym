@@ -11,11 +11,16 @@ import ray
 from ray.tune import TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
-from ray.tune import Trainable, SyncConfig
+from ray.tune import Trainable
+from ray.train import SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, default_benchmark_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
+from misc.utils import restart_ray, open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, default_benchmark_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
+
+
+class AgentTrainArgs:
+    pass
 
 
 @click.command()
@@ -30,14 +35,15 @@ from misc.utils import open_and_save, DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, defaul
 )
 @click.option("--system-knob-config-path", default=DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH, type=Path, help=f"The path to the file configuring the ranges and quantization of system knobs.")
 @click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
+@click.option("--agent", default="wolp", type=str, help=f"The RL algorithm to use for the tuning agent.")
 @click.option("--max-hpo-concurrent", default=1, type=int, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
 @click.option(
     "--num-samples",
     default=40,
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
-def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, max_hpo_concurrent, num_samples):
-    # set args to defaults programmatically (do this before doing anything else in the function)
+def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples):
+    # Set args to defaults programmatically (do this before doing anything else in the function)
     cfg = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -45,6 +51,18 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
         benchmark_config_path = default_benchmark_config_relpath(benchmark)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(cfg.dbgym_symlinks_path)
+
+    # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
+    args = AgentTrainArgs()
+    args.benchmark = benchmark
+    args.workload_name = workload_name
+    args.benchmark_config_path = benchmark_config_path
+    args.system_knob_config_path = system_knob_config_path
+    args.hpoed_agent_params_path = hpoed_agent_params_path
+    args.agent = agent
+    args.max_hpo_concurrent = max_hpo_concurrent
+    args.num_samples = num_samples
+    args = DotDict(args.__dict__)
 
     # Get the system knobs.
     with open_and_save(cfg, system_knob_config_path, "r") as f:
@@ -63,10 +81,14 @@ def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_conf
         is_oltp = bb_config["oltp_workload"]
 
     # Connect to cluster or die.
+    restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
 
     # Config.
-    config = construct_wolp_config()
+    if agent == "wolp":
+        config = construct_wolp_config(dict(args))
+    else:
+        assert False, f"Unspecified agent {agent}"
 
     # Pass the knobs through.
     config["protox_system_knobs"] = system_knobs
