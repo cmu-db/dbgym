@@ -228,8 +228,8 @@ class TuneOpt(Trainable):
         protox_dir = hpo_config["dbgym_cfg"].dbgym_repo_path
         sys.path.append(protox_dir)
 
-        from tune import TuneTrial, TimeoutChecker
-        from tune.protox.tune.hpo import mutate_wolp_config
+        from tune.protox.agent.tune_trial import TuneTrial, TimeoutChecker
+        from tune.protox.agent.hpo import mutate_wolp_config
         hpo_config = DotDict(self.f_unpack_dict(hpo_config))
         protox_args = DotDict(self.f_unpack_dict(protox_args))
 
