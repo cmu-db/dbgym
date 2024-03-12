@@ -24,12 +24,14 @@ SYMLINKS_PATH_PLACEHOLDER = WORKSPACE_PATH_PLACEHOLDER / "symlinks"
 BENCHMARK_PLACEHOLDER = "[benchmark]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
+# The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
 DEFAULT_PROTOX_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_protox_config.yaml"
 default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchmark_config.yaml"
 default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchbase_config.xml"
 
-# Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
+# Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
+# The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 default_dataset_path = lambda symlinks_path, benchmark_name: symlinks_path / f"{benchmark_name}_embedding_traindata.parquet"
 default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
 default_workload_path = lambda symlinks_path, benchmark_name, workload_name: symlinks_path / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
@@ -211,28 +213,30 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
 
 def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     """
-    Open a file or symlink and "save" it to [workspace]/task_runs/run_*/
-    It takes in a str | Path to match the interface of open()
+    Open a file, directory, or symlink and "save" it to [workspace]/task_runs/run_*/.
+        If you open a symlink, it'll save the real file/directory the link points to rather than the link itself.
+    It takes in a str | Path to match the interface of open().
     Note that open() only opens files, not symlinks, so the interface is not exactly the same. Opening symlinks is
-        crucial because it means we can change symlink files in [workspace]/data/ instead of changing config files
-    "Saving" can mean either copying the file or creating a symlink to it
-    We copy the file if it is a "config", meaning it just exists without having been generated
-    We create a symlink if it is a "dependency", meaning a task.py command was run to generate it
-        In these cases we create a symlink so we have full provenance for how the dependency was created
+        crucial because it means we can change symlink files in [workspace]/data/ instead of changing config files.
+    "Saving" can mean either copying the file or creating a symlink to it.
+    We copy the file if it is a "config", meaning it just exists without having been generated.
+    We create a symlink if it is a "dependency", meaning a task.py command was run to generate it.
+        In these cases we create a symlink so we have full provenance for how the dependency was created.
     If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
         This shouldn't be too hard to remember because this function crashes if open_fpath doesn't exist,
-        and when you write results you're usually opening open_fpaths which do not exist
+        and when you write results you're usually opening open_fpaths which do not exist.
 
     **Notable Behavior**
-     - If you open the same "config" file twice in the same run, it'll only be saved the first time (even if the file has changed in between)
-        - "Dependency" files should be immutable so there's no problem here
-     - If you open two "config" files of the same name but different paths, only the first open will be saved
-        - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked
+     - If you open the same "config" file twice in the same run, it'll only be saved the first time (even if the file has changed in between).
+        - "Dependency" files should be immutable so there's no problem here.
+     - If you open two "config" files of the same name but different paths, only the first open will be saved.
+        - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked.
     """
-    # process open_fpath and ensure that it's a file at the end
-    open_fpath = conv_inputpath_to_abspath(dbgym_cfg, open_fpath)
-    open_fpath = os.path.realpath(open_fpath)  # traverse symlinks
-    assert os.path.isfile(open_fpath), f"Error: {open_fpath}"
+    # process open_fpath
+    assert os.path.isabs(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
+    assert os.path.exists(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should exist before os.path.realpath()"
+    open_fpath = os.path.realpath(open_fpath) # traverse symlinks
+    assert os.path.exists(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should exist after os.path.realpath()"
 
     # save _something_ to dbgym_this_run_path
     # save a symlink if the opened file was generated by a run. this is for two reasons:

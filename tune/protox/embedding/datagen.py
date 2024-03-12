@@ -16,10 +16,10 @@ from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
     BENCHMARK_PLACEHOLDER,
-    DBGymConfig,
     default_benchmark_config_relpath,
     link_result,
     open_and_save,
+    conv_inputpath_to_abspath,
     default_workload_path,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
@@ -140,6 +140,9 @@ def datagen(
         max_concurrent = os.cpu_count()
     if seed == None:
         seed = random.randint(0, 1e8)
+
+    # Convert all input paths to absolute paths
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
 
     # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")

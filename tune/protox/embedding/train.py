@@ -10,10 +10,10 @@ from misc.utils import (
     BENCHMARK_PLACEHOLDER,
     SYMLINKS_PATH_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
-    DBGymConfig,
     default_benchmark_config_relpath,
     default_dataset_path,
     default_workload_path,
+    conv_inputpath_to_abspath,
 )
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
@@ -168,13 +168,18 @@ def train(
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
-        dataset_path = default_dataset_path(dbgym_cfg.cur_symlinks_data_path(), benchmark_name)
+        dataset_path = default_dataset_path(dbgym_cfg.dbgym_symlinks_path, benchmark_name)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if seed == None:
         seed = random.randint(0, 1e8)
+
+    # Convert all input paths to absolute paths
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
+    dataset_path = conv_inputpath_to_abspath(dbgym_cfg, dataset_path)
+    hpo_space_path = conv_inputpath_to_abspath(dbgym_cfg, hpo_space_path)
 
     # setup
     random.seed(seed)

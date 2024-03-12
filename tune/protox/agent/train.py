@@ -16,7 +16,7 @@ from ray.train import SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import restart_ray, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
+from misc.utils import restart_ray, conv_inputpath_to_abspath, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
 
 
 class AgentTrainArgs:
@@ -56,11 +56,17 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+        benchmark_config_path = dbgym_cfg, default_benchmark_config_relpath(benchmark_name)
     if benchbase_config_path == None:
-        benchbase_config_path = default_benchbase_config_relpath(benchmark_name)
+        benchbase_config_path = dbgym_cfg, default_benchbase_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_symlinks_path)
+
+    # Convert all input paths to absolute paths
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
+    benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
+    protox_config_path = conv_inputpath_to_abspath(dbgym_cfg, protox_config_path)
+    hpoed_agent_params_path = conv_inputpath_to_abspath(dbgym_cfg, hpoed_agent_params_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
     args = AgentTrainArgs()
