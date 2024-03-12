@@ -12,7 +12,6 @@ from tune.protox.env.space.knob_space import KnobSpace
 from tune.protox.env.space.action_space import ActionSpace
 from tune.protox.env.workload import Workload
 from tune.protox.env.lsc import LSC
-from tune.protox.utils.logger import Logger
 from misc.utils import open_and_save
 
 
@@ -97,12 +96,7 @@ class Spec(object):
         for k, v in benchmark_config.items():
             setattr(self, k, v)
 
-        # Construct logger.
-        if logger is None:
-            self.logger = Logger(self)
-        else:
-            self.logger = logger
-
+        self.logger = logger
         self.workload = Workload(
             dbgym_cfg=dbgym_cfg,
             tables=self.tables,

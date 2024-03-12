@@ -84,7 +84,7 @@ class BaseAlgorithm(ABC):
         # For logging (and TD3 delayed updates)
         self._n_updates = 0  # type: int
         # The logger object
-        self._logger = None  # type: Logger
+        self._logger = None
 
         assert env is not None
         assert isinstance(env, VecEnv)
