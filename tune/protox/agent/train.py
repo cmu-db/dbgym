@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 import time
 import click
+import random
 
 import ray
 from ray.tune import TuneConfig
@@ -43,6 +44,12 @@ class AgentTrainArgs:
 @click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER)}.")
 @click.option("--pgdata-snapshot-path", default=None, type=Path, help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.")
 @click.option("--agent-params-path", default=DEFAULT_WOLP_PARAMS_RELPATH, type=Path, help=f"The path to the parameters of the agent.")
+@click.option(
+    "--seed",
+    default=None,
+    type=int,
+    help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
+)
 @click.option("--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent.")
 @click.option("--max-hpo-concurrent", default=1, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
 @click.option(
@@ -53,7 +60,7 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -65,6 +72,8 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
         hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_workspace_path)
     if pgdata_snapshot_path == None:
         pgdata_snapshot_path = default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+    if seed == None:
+        seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
@@ -84,6 +93,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
     args.hpoed_agent_params_path = hpoed_agent_params_path
     args.pgdata_snapshot_path = pgdata_snapshot_path
     args.agent_params_path = agent_params_path
+    args.seed = seed
     args.agent = agent
     args.max_hpo_concurrent = max_hpo_concurrent
     args.num_samples = num_samples
