@@ -67,7 +67,8 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, workload_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+@click.option("--query-timeout", default=30, type=int, help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.")
+def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, workload_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -115,6 +116,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
     args.early_kill = early_kill
     args.duration = duration
     args.workload_timeout = workload_timeout
+    args.query_timeout = query_timeout
     args = DotDict(args.__dict__)
 
     # Get the system knobs.
@@ -301,7 +303,7 @@ class TuneOpt(Trainable):
 
         self.duration = protox_args["duration"] * 3600
         self.workload_timeout = protox_args["workload_timeout"]
-        self.timeout = TimeoutChecker(protox_args["duration"])
+        self.timeout_checker = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
             benchmark_name, pg_path, port = mutate_wolp_config(dbgym_cfg, self.logdir, protox_dir, hpo_config, protox_args)
         else:
@@ -317,16 +319,16 @@ class TuneOpt(Trainable):
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()
-        self.trial.setup(dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout)
+        self.trial.setup(dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
         self.start_time = time.time()
 
     def step(self):
-        self.timeout.resume()
+        self.timeout_checker.resume()
         data = self.trial.step()
 
         # Decrement remaining time.
-        self.timeout.pause()
-        if self.timeout():
+        self.timeout_checker.pause()
+        if self.timeout_checker():
             self.cleanup()
             data[ray.tune.result.DONE] = True
 

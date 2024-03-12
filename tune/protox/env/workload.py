@@ -278,7 +278,7 @@ class Workload(object):
         env_spec=None,
         connection=None,
         reward_utility=None,
-        timeout=None,
+        query_timeout=None,
         accum_metric=None,
     ):
         if connection is not None and accum_metric is not None and self.allow_per_query:
@@ -303,7 +303,7 @@ class Workload(object):
                 results,
                 connection,
                 action,
-                timeout,
+                query_timeout,
                 reset_eval=True,
                 reset_accum_metric=accum_metric,
             )
@@ -462,7 +462,7 @@ class Workload(object):
                     if output_file is not None:
                         query = "EXPLAIN (ANALYZE, TIMING OFF) " + query
 
-                    _, qid_runtime, timeout, explain = acquire_metrics_around_query(
+                    _, qid_runtime, query_timeout, explain = acquire_metrics_around_query(
                         "", None, connection, qid, query, time_left, metrics=False
                     )
 
@@ -488,7 +488,7 @@ class Workload(object):
         results,
         connection,
         action,
-        timeout,
+        query_timeout,
         reset_eval=False,
         reset_accum_metric=None,
         baseline=False,
@@ -640,7 +640,7 @@ class Workload(object):
                 ):
                     # Case where the per-query and global match each other.
                     assert qid in reset_accum_metric
-                    best_metric, best_time, best_timeout = reset_accum_metric[qid]
+                    best_metric, best_time, best_query_timeout = reset_accum_metric[qid]
                     runs_idx = ("PrevDual", qid_global, False)
 
                     # Note that we skipped.
@@ -649,13 +649,13 @@ class Workload(object):
                     (
                         best_metric,
                         best_time,
-                        best_timeout,
+                        best_query_timeout,
                         best_explain_data,
                         runs_idx,
                     ) = execute_serial_variations(
                         env_spec=env_spec,
                         connection=connection,
-                        timeout=min(timeout, self.workload_timeout - running_time + 1),
+                        query_timeout=min(query_timeout, self.workload_timeout - running_time + 1),
                         logger=self.logger,
                         qid=qid,
                         query=query,
@@ -685,8 +685,8 @@ class Workload(object):
 
                     # If the "new" timed out or if "old" is better, use the old metric.
                     _, old_best_time, _ = reset_accum_metric[qid]
-                    if best_timeout or old_best_time < best_time:
-                        best_metric, best_time, best_timeout = reset_accum_metric[qid]
+                    if best_query_timeout or old_best_time < best_time:
+                        best_metric, best_time, best_query_timeout = reset_accum_metric[qid]
                         runs_idx = ("PrevDual", qid_global)
 
                 assert qid not in qid_runtime_data
@@ -706,11 +706,11 @@ class Workload(object):
                     "start": start_time,
                     "runtime": best_time,
                     "metric": best_metric,
-                    "timeout": best_timeout,
+                    "query_timeout": best_query_timeout,
                     "prefix": runs_idx[0],
                 }
 
-                if runs_idx[0] == "PrevDual" and not best_timeout:
+                if runs_idx[0] == "PrevDual" and not best_query_timeout:
                     # Overwrite the action decision with the prior decision.
                     for knob, val in qid_global:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
@@ -718,17 +718,17 @@ class Workload(object):
 
                     if reset_eval:
                         logging.debug(f"best_observe action deemed not valuable.")
-                elif runs_idx[0] == "GlobalDual" and not best_timeout:
+                elif runs_idx[0] == "GlobalDual" and not best_query_timeout:
                     assert not reset_eval
                     for knob, val in qid_default:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
-                elif runs_idx[0] == "PerQueryInverse" and not best_timeout:
+                elif runs_idx[0] == "PerQueryInverse" and not best_query_timeout:
                     assert not reset_eval
                     for knob, val in inverse_knobs:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
-                elif runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_timeout:
+                elif runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_query_timeout:
                     assert not reset_eval
                     enum_knobs = runs_idx[1]
 
@@ -755,7 +755,7 @@ class Workload(object):
 
                 if (
                     qid not in self.best_observed
-                    or (best_time < self.best_observed[qid][1] and not best_timeout)
+                    or (best_time < self.best_observed[qid][1] and not best_query_timeout)
                     or reset_eval
                 ):
                     # Knobs that are actually set.
@@ -793,10 +793,10 @@ class Workload(object):
                     break
 
         # Get the timeouts flag.
-        timeouts = [v["timeout"] for _, v in qid_runtime_data.items()]
+        query_timeouts = [v["query_timeout"] for _, v in qid_runtime_data.items()]
         # Get the accumulated metrics.
         accum_metric = {
-            q: (v["metric"], v["runtime"], v["timeout"])
+            q: (v["metric"], v["runtime"], v["query_timeout"])
             for q, v in qid_runtime_data.items()
         }
 
@@ -873,14 +873,14 @@ class Workload(object):
             if penalty > 0:
                 f.write(f"{len(self.order)},P,{time.time()},{penalty},0,PENALTY\n")
 
-        return True, mutilated, (any(timeouts) or stop_running), accum_metric
+        return True, mutilated, (any(query_timeouts) or stop_running), accum_metric
 
     def execute(
         self,
         connection,
         reward_utility,
         env_spec,
-        timeout=None,
+        query_timeout=None,
         action=None,
         current_state=None,
         update=True,
@@ -890,9 +890,9 @@ class Workload(object):
 
         if self.benchbase:
             # Attach a timeout if necessary to prevent really bad OLAP configs from running.
-            if timeout is not None and timeout > 0:
+            if query_timeout is not None and query_timeout > 0:
                 connection.execute(
-                    f"ALTER SYSTEM SET statement_timeout = {timeout * 1000}"
+                    f"ALTER SYSTEM SET statement_timeout = {query_timeout * 1000}"
                 )
                 connection.execute("SELECT pg_reload_conf()")
 
@@ -926,7 +926,7 @@ class Workload(object):
                     result_dir=results, update=update, did_error=not success
                 )
 
-            if timeout is not None and timeout > 0:
+            if query_timeout is not None and query_timeout > 0:
                 connection.execute("ALTER SYSTEM SET statement_timeout = 0")
                 connection.execute("SELECT pg_reload_conf()")
 
@@ -941,7 +941,7 @@ class Workload(object):
             baseline = current_state is None
 
             success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
-                env_spec, results, connection, action, timeout, baseline=baseline
+                env_spec, results, connection, action, query_timeout, baseline=baseline
             )
             assert success
 

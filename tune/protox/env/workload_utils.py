@@ -47,7 +47,7 @@ def force_statement_timeout(connection, timeout_ms):
             retry = True
 
 
-def time_query(prefix, connection, qid, query, timeout):
+def time_query(prefix, connection, qid, query, query_timeout):
     has_timeout = False
     has_explain = "EXPLAIN" in query
     explain_data = None
@@ -66,8 +66,8 @@ def time_query(prefix, connection, qid, query, timeout):
         logging.debug(f"{prefix} {qid} evaluated in {qid_runtime/1e6}")
 
     except QueryCanceled:
-        logging.debug(f"{prefix} {qid} exceeded evaluation timeout {timeout}")
-        qid_runtime = timeout * 1e6
+        logging.debug(f"{prefix} {qid} exceeded evaluation query timeout {query_timeout}")
+        qid_runtime = query_timeout * 1e6
         has_timeout = True
     except Exception as e:
         assert False, print(e)
@@ -76,18 +76,18 @@ def time_query(prefix, connection, qid, query, timeout):
 
 
 def acquire_metrics_around_query(
-    prefix, env_spec, connection, qid, query, qtimeout, metrics=False
+    prefix, env_spec, connection, qid, query, query_timeout, metrics=False
 ):
     args = {"connection": connection}
     force_statement_timeout(connection, 0)
     if metrics:
         initial_metrics = env_spec.observation_space.construct_online(**args)
 
-    if qtimeout is not None and qtimeout > 0:
-        force_statement_timeout(connection, qtimeout * 1000)
+    if query_timeout is not None and query_timeout > 0:
+        force_statement_timeout(connection, query_timeout * 1000)
 
     qid_runtime, main_timeout, explain_data = time_query(
-        prefix, connection, qid, query, qtimeout
+        prefix, connection, qid, query, query_timeout
     )
 
     # Wipe the statement timeout.
@@ -104,12 +104,12 @@ def acquire_metrics_around_query(
 
 
 def execute_serial_variations(
-    env_spec, connection, timeout, logger, qid, query, runs, real_knobs
+    env_spec, connection, query_timeout, logger, qid, query, runs, real_knobs
 ):
     # Whether need metric.
     need_metric = env_spec.observation_space.metrics()
     # Initial timeout.
-    timeout_limit = timeout
+    query_timeout_limit = query_timeout
     # Best run invocation.
     best_metric, best_time, best_timeout, best_explain_data, runs_idx = (
         None,
@@ -145,14 +145,14 @@ def execute_serial_variations(
             connection=connection,
             qid=qid,
             query=pqk_query,
-            qtimeout=timeout_limit,
+            query_timeout=query_timeout_limit,
             metrics=need_metric,
         )
 
         if not did_timeout:
-            new_timeout_limit = math.ceil(runtime / 1e3) / 1.0e3
-            if new_timeout_limit < timeout_limit:
-                timeout_limit = new_timeout_limit
+            new_query_timeout_limit = math.ceil(runtime / 1e3) / 1.0e3
+            if new_query_timeout_limit < query_timeout_limit:
+                query_timeout_limit = new_query_timeout_limit
 
         if best_time is None or runtime < best_time:
             best_metric = metric
