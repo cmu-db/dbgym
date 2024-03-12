@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from misc.utils import (
-    BENCHMARK_PLACEHOLDER,
+    BENCHMARK_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
     default_benchmark_config_relpath,
@@ -37,13 +37,13 @@ from tune.protox.embedding.train_all import train_all_embeddings
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--dataset-path",
     default=None,
     type=Path,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",

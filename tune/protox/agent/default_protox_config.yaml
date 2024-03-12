@@ -1,7 +1,6 @@
 protox:
   # Path to where benchbase.jar can be found.
   benchbase_path: /home/phw2/noisepage-pilot/artifacts/benchbase
-  benchbase_config_path: "/home/phw2/noisepage-pilot/config/behavior/benchbase/tpch_config.xml"
   # Directory where we can find postgres, psql, and pgdata.
   postgres_path: /mnt/nvme1n1/phw2/noisepage
   postgres_data: pgdata
@@ -10,9 +9,6 @@ protox:
   postgres_db: benchbase
   postgres_user: admin
   postgres_password: password
-
-  # Path to a snapshot of the data archive.
-  data_snapshot_path: "../mythrun_artifacts/job.tgz"
 
   # Path to emit log file.
   output_log_path: ../mythrun_artifacts/

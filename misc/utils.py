@@ -23,7 +23,8 @@ def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
 
 # Other parameters
-BENCHMARK_PLACEHOLDER = "[benchmark]"
+BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
+WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
@@ -37,6 +38,7 @@ default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"def
 default_dataset_path = lambda workspace_path, benchmark_name: get_symlinks_path_from_workspace_path(workspace_path) / f"{benchmark_name}_embedding_traindata.parquet"
 default_hpoed_agent_params_path = lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path) / f"hpoed_agent_params.yaml"
 default_workload_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
+default_pgdata_snapshot_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"dbgym_dbms_postgres" / "data" / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
 
 
 class DBGymConfig:

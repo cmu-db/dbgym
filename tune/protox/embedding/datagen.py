@@ -15,7 +15,7 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
-    BENCHMARK_PLACEHOLDER,
+    BENCHMARK_NAME_PLACEHOLDER,
     default_benchmark_config_relpath,
     link_result,
     open_and_save,
@@ -46,7 +46,7 @@ from tune.protox.env.workload_utils import QueryType
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",

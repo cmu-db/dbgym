@@ -97,7 +97,7 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
 
     protox_config["protox"]["postgres_data"] = f"pgdata{port}"
     protox_config["protox"]["postgres_port"] = port
-    protox_config["protox"]["data_snapshot_path"] = "{protox_dir}/{snapshot}".format(protox_dir=protox_dir, snapshot=protox_args.data_snapshot_path)
+    protox_config["protox"]["pgdata_snapshot_path"] = protox_args.pgdata_snapshot_path
     protox_config["protox"]["tensorboard_path"] = "tboard/"
     protox_config["protox"]["output_log_path"] = "."
     protox_config["protox"]["repository_path"] = "repository/"
