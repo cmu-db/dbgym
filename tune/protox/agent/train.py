@@ -226,7 +226,8 @@ class TuneOpt(Trainable):
         assert "protox_args" in hpo_config
         protox_args = hpo_config["protox_args"]
         protox_dir = hpo_config["dbgym_cfg"].dbgym_repo_path
-        sys.path.append(protox_dir)
+        # sys.path.append() must take in strings as input, not Path objects
+        sys.path.append(str(protox_dir))
 
         from tune.protox.agent.tune_trial import TuneTrial, TimeoutChecker
         from tune.protox.agent.hpo import mutate_wolp_config
