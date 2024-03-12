@@ -69,8 +69,9 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
     port = get_free_port(pg_path)
 
     # Update all the paths and metadata needed.
-    protox_config["protox"]["postgres_path"] = pg_path
-    protox_config["protox"]["benchbase_path"] = os.path.expanduser(protox_config["protox"]["benchbase_path"])
+    # protox_config will be dumped to a .yaml file, so all Path objects have to be converted to strings
+    protox_config["protox"]["postgres_path"] = str(pg_path)
+    protox_config["protox"]["benchbase_path"] = str(os.path.expanduser(protox_config["protox"]["benchbase_path"]))
 
     benchbase_config_path = protox_args.benchbase_config_path
     # usually, we open file with open_and_save. however, this is a special case where we need to call external code (ET.parse) that takes in a file path
@@ -93,11 +94,13 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
             if works.find("warmup") is not None:
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(protox_args.oltp_warmup)
     conf_etree.write("benchmark.xml")
-    protox_config["protox"]["benchbase_config_path"] = Path(logdir) / "benchmark.xml"
+    # protox_config will be dumped to a .yaml file, so all Path objects have to be converted to strings
+    protox_config["protox"]["benchbase_config_path"] = str(Path(logdir) / "benchmark.xml")
 
     protox_config["protox"]["postgres_data"] = f"pgdata{port}"
     protox_config["protox"]["postgres_port"] = port
-    protox_config["protox"]["pgdata_snapshot_path"] = protox_args.pgdata_snapshot_path
+    # protox_config will be dumped to a .yaml file, so all Path objects have to be converted to strings
+    protox_config["protox"]["pgdata_snapshot_path"] = str(protox_args.pgdata_snapshot_path)
     protox_config["protox"]["tensorboard_path"] = "tboard/"
     protox_config["protox"]["output_log_path"] = "."
     protox_config["protox"]["repository_path"] = "repository/"
