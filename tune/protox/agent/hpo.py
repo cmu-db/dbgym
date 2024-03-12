@@ -62,7 +62,7 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
         yaml.dump(benchmark_config, stream=f, default_flow_style=False)
 
     # Mutate the config file.
-    protox_config_path = dbgym_cfg, protox_args.protox_config_path
+    protox_config_path = protox_args.protox_config_path
     with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
         protox_config = yaml.safe_load(f)
     pg_path = os.path.expanduser(protox_config["protox"]["postgres_path"])
@@ -72,7 +72,7 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
     protox_config["protox"]["postgres_path"] = pg_path
     protox_config["protox"]["benchbase_path"] = os.path.expanduser(protox_config["protox"]["benchbase_path"])
 
-    benchbase_config_path = dbgym_cfg, protox_args.benchbase_config_path
+    benchbase_config_path = protox_args.benchbase_config_path
     # usually, we open file with open_and_save. however, this is a special case where we need to call external code (ET.parse) that takes in a file path
     # this means we need to (1) call open_and_save just to save the file and (2) convert the path to an absolute path before sending it to
     #   ET.parse (a conversion normally done by open_and_save)

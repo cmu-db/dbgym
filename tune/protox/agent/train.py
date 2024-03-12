@@ -56,9 +56,9 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = dbgym_cfg, default_benchmark_config_relpath(benchmark_name)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if benchbase_config_path == None:
-        benchbase_config_path = dbgym_cfg, default_benchbase_config_relpath(benchmark_name)
+        benchbase_config_path = default_benchbase_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_symlinks_path)
 
