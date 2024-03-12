@@ -18,7 +18,9 @@ PROTOX_AGENT_RELPATH = PROTOX_RELPATH / "agent"
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
-SYMLINKS_PATH_PLACEHOLDER = WORKSPACE_PATH_PLACEHOLDER / "symlinks"
+# This is a function because both DBGymConfig and the default path globalvars use it
+def get_symlinks_path_from_workspace_path(workspace_path):
+    return workspace_path / "symlinks"
 
 # Other parameters
 BENCHMARK_PLACEHOLDER = "[benchmark]"
@@ -32,9 +34,9 @@ default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"def
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
-default_dataset_path = lambda symlinks_path, benchmark_name: symlinks_path / f"{benchmark_name}_embedding_traindata.parquet"
-default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
-default_workload_path = lambda symlinks_path, benchmark_name, workload_name: symlinks_path / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
+default_dataset_path = lambda workspace_path, benchmark_name: get_symlinks_path_from_workspace_path(workspace_path) / f"{benchmark_name}_embedding_traindata.parquet"
+default_hpoed_agent_params_path = lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path) / f"hpoed_agent_params.yaml"
+default_workload_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
 
 
 class DBGymConfig:
@@ -87,7 +89,7 @@ class DBGymConfig:
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_symlinks_path = self.dbgym_workspace_path / "symlinks"
+        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(self.dbgym_workspace_path)
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.

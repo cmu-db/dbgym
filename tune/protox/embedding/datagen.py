@@ -162,7 +162,7 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    workload_path = default_workload_path(dbgym_cfg.dbgym_symlinks_path, benchmark_name, workload_name)
+    workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
 
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function

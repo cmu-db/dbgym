@@ -16,7 +16,7 @@ from ray.train import SyncConfig
 from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.hpo import construct_wolp_config
-from misc.utils import restart_ray, conv_inputpath_to_abspath, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, SYMLINKS_PATH_PLACEHOLDER
+from misc.utils import restart_ray, conv_inputpath_to_abspath, open_and_save, DEFAULT_PROTOX_CONFIG_RELPATH, default_benchmark_config_relpath, default_benchbase_config_relpath, BENCHMARK_PLACEHOLDER, default_hpoed_agent_params_path, WORKSPACE_PATH_PLACEHOLDER
 
 
 class AgentTrainArgs:
@@ -40,7 +40,7 @@ class AgentTrainArgs:
     help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_PLACEHOLDER)}.",
 )
 @click.option("--protox-config-path", default=DEFAULT_PROTOX_CONFIG_RELPATH, help=f"The path to the file configuring lots of things about Proto-X.")
-@click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(SYMLINKS_PATH_PLACEHOLDER)}.")
+@click.option("--hpoed-agent-params-path", default=None, type=Path, help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER)}.")
 @click.option("--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent.")
 @click.option("--max-hpo-concurrent", default=1, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
 @click.option(
@@ -60,7 +60,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, benchmark_config_path, bench
     if benchbase_config_path == None:
         benchbase_config_path = default_benchbase_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
-        hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_symlinks_path)
+        hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_workspace_path)
 
     # Convert all input paths to absolute paths
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
