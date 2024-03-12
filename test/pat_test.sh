@@ -5,5 +5,4 @@
 
 # python task.py --no-startup-check tune protox embedding datagen tpch queries_15721_15723 --connection-str "host=localhost port=5432 dbname=benchbase user=admin" --override-sample-limits "lineitem,32768"
 # python task.py --no-startup-check tune protox embedding train tpch queries_15721_15723 --iterations-per-epoch 1 --num-samples 4 --train-max-concurrent 4 --num-points-to-sample 32 --max-segments 3
-
 python task.py --no-startup-check tune protox agent train tpch queries_15721_15723

@@ -242,7 +242,7 @@ def get_traindata_dir(cfg):
 
 def get_traindata_path(cfg, generic_args):
     return os.path.join(
-        cfg.dbgym_this_run_path, f"{generic_args.benchmark}_embedding_traindata.parquet"
+        cfg.dbgym_this_run_path, f"{generic_args.benchmark_name}_embedding_traindata.parquet"
     )
 
 
