@@ -14,6 +14,7 @@ TUNE_RELPATH = Path("tune")
 PROTOX_RELPATH = TUNE_RELPATH / "protox"
 PROTOX_EMBEDDING_RELPATH = PROTOX_RELPATH / "embedding"
 PROTOX_AGENT_RELPATH = PROTOX_RELPATH / "agent"
+PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
 
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
@@ -30,6 +31,7 @@ WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
 DEFAULT_PROTOX_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_protox_config.yaml"
+DEFAULT_WOLP_PARAMS_RELPATH = PROTOX_WOLP_RELPATH / "default_wolp_params.yaml"
 default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchmark_config.yaml"
 default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchbase_config.xml"
 

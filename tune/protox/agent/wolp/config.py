@@ -1,18 +1,19 @@
 import yaml
 import numpy as np
 from ray import tune
-
 import torch
+
 from tune.protox.agent.config_utils import parse_activation_fn, parse_noise_type
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.utils import get_schedule_fn
 from tune.protox.agent.torch_layers import FlattenExtractor
 from tune.protox.agent.wolp.wolp import Wolp
 from tune.protox.agent.wolp.policies import WolpPolicy
+from misc.utils import open_and_save
 
 
-def setup_wolp_agent(env, spec, seed, agent_config):
-    with open(agent_config, "r") as f:
+def setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config):
+    with open_and_save(dbgym_cfg, agent_config, "r") as f:
         config = yaml.safe_load(f)["wolp_params"]
 
     action_dim = noise_action_dim = env.action_space.get_latent_dim()
@@ -74,12 +75,12 @@ def setup_wolp_agent(env, spec, seed, agent_config):
     return agent
 
 
-def _mutate_wolp_config(protox_dir, hpo_config, protox_args):
-    model_config = protox_args.model_config
-    with open(f"{protox_dir}/{model_config}", "r") as f:
-        model_config = yaml.safe_load(f)
+def _mutate_wolp_config(dbgym_cfg, protox_dir, hpo_config, protox_args):
+    agent_params_path = protox_args.agent_params_path
+    with open_and_save(dbgym_cfg, agent_params_path, "r") as f:
+        agent_params = yaml.safe_load(f)
 
-    wolp = model_config["wolp_params"]
+    wolp = agent_params["wolp_params"]
     wolp["learning_rate"] = hpo_config.learning_rate
     wolp["critic_lr_scale"] = hpo_config.critic_lr_scale
     wolp["policy_l2_reg"] = hpo_config.policy_l2_reg
@@ -112,7 +113,7 @@ def _mutate_wolp_config(protox_dir, hpo_config, protox_args):
     wolp["qf_arch"] = hpo_config.qf_arch
 
     with open("model_params.yaml", "w") as f:
-        yaml.dump(model_config, stream=f, default_flow_style=False)
+        yaml.dump(agent_params, stream=f, default_flow_style=False)
 
 
 def _construct_wolp_config():

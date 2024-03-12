@@ -195,5 +195,5 @@ def construct_wolp_config(args):
 
 def mutate_wolp_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args):
     benchmark_config, pg_path, port = _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args)
-    _mutate_wolp_config(protox_dir, hpo_config, protox_args)
+    _mutate_wolp_config(dbgym_cfg, protox_dir, hpo_config, protox_args)
     return benchmark_config["protox"]["benchmark_name"], pg_path, port

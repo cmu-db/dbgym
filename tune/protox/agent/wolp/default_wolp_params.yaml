@@ -1,0 +1,35 @@
+wolp_params:
+  learning_rate: 0.001
+  critic_lr_scale: 1.0
+  learning_starts: 0
+  tau: 0.005
+  buffer_size: 1000000
+  batch_size: 32
+  policy_l2_reg: 0.01
+  epsilon_greedy: 0.0
+
+  gradient_steps: 1
+  target_noise_clip: 0.0
+  target_policy_noise: 0.1
+
+  train_freq_frequency: 1
+  train_freq_unit: "step"
+
+  noise_parameters:
+    noise_type: "normal"
+    noise_sigma: 0.1
+
+  neighbor_parameters:
+    knob_num_nearest: 10            # Number of nearest neighbors for knobs.
+    knob_span: 1                    # Quantization span that should be applied to knobs.
+    index_num_samples: 100          # Number of samples to try and obtain.
+    index_subset: True
+
+  weight_init: "orthogonal"         # xavier_[uniform/normal] or orthogonal
+  bias_zero: True
+  policy_weight_adjustment: 100
+  activation_fn: "relu"
+
+  pi_arch: "256,256"
+  qf_arch: "256,256"
+

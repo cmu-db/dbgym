@@ -48,7 +48,7 @@ class TimeoutChecker(object):
 
 
 class TuneTrial(object):
-    def setup(self, args, timeout_checker):
+    def setup(self, dbgym_cfg, args, timeout_checker):
         torch.set_default_dtype(torch.float32)
         self.args = DotDict(args)
 
@@ -100,7 +100,7 @@ class TuneTrial(object):
         self.env = VecCheckNan(self.env, raise_exception=True, warn_once=False)
 
         # Setup the agent.
-        self.agent = setup_agent(self.env, self.spec, seed, self.args.agent, self.args.model_config)
+        self.agent = setup_agent(dbgym_cfg, self.env, self.spec, seed, self.args.agent, self.args.agent_params_path)
         self.agent.set_logger(self.logger)
         self.agent.set_timeout_checker(timeout_checker)
         self.env_init = False
@@ -193,26 +193,8 @@ class TuneTrial(object):
             pickle.dump(pickle_data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def tune(args):
-    timeout = TimeoutChecker(0)
-    trial = TuneTrial()
-    trial.setup(args, timeout)
-
-    limit_secs = args["duration"] * 3600
-    start_time = time.time()
-    for _ in range(args["max_iterations"]):
-        trial.step()
-
-        # Kill the training if we've exceed the time budget.
-        if limit_secs > 0 and ((time.time() - start_time) > limit_secs):
-            logging.info("Kiling since we've exhausted the time budget.")
-            break
-
-    trial.cleanup()
-
-
-def setup_agent(env, spec, seed, agent_type, agent_config):
+def setup_agent(dbgym_cfg, env, spec, seed, agent_type, agent_config):
     if agent_type == "wolp":
-        return setup_wolp_agent(env, spec, seed, agent_config)
+        return setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config)
     else:
         assert False, f"Unsupported agent {agent_type}"
