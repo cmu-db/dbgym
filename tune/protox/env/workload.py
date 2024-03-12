@@ -189,7 +189,7 @@ class Workload(object):
         tables: list[str],
         attributes: dict[str, list[str]],
         query_spec: dict,
-        workload_folder_path: Path,
+        workload_path: Path,
         pid=None,
         workload_eval_mode="all",
         workload_eval_inverse=False,
@@ -232,7 +232,7 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        workload_order_file = workload_folder_path / "order.txt"
+        workload_order_file = workload_path / "order.txt"
         with open_and_save(self.cfg, workload_order_file, "r") as f:
             lines = f.read().splitlines()
             for line in lines:
@@ -253,7 +253,7 @@ class Workload(object):
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
         if "execute_query_order" in query_spec:
-            # TODO(WAN): can this be folded into workload_folder_path?
+            # TODO(WAN): can this be folded into workload_path?
             with open_and_save(self.cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [

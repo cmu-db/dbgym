@@ -134,7 +134,7 @@ def generate_workload(
         raise RuntimeError(f"Workload directory exists: {workload_path}")
 
     benchmark_tpch_logger.info(f"Generating: {workload_path}")
-    real_dir = config.cur_task_runs_data_path(f"workload_{workload_path}", mkdir=True)
+    real_dir = config.cur_task_runs_data_path(f"workload_{workload_name}", mkdir=True)
 
     queries = None
     if generate_type == "sequential":

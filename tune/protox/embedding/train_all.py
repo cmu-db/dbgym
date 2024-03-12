@@ -157,7 +157,7 @@ def _hpo_train(config, cfg, generic_args, train_args):
         trial_dir,
         generic_args.benchmark_config_path,
         train_args.train_size,
-        generic_args.workload_folder_path,
+        generic_args.workload_path,
         dataloader_num_workers=0,
         disable_tqdm=True,
     )
@@ -189,7 +189,7 @@ def _build_trainer(
     trial_dir,
     benchmark_config_path,
     train_size,
-    workload_folder_path,
+    workload_path,
     dataloader_num_workers=0,
     disable_tqdm=False,
 ):
@@ -200,7 +200,7 @@ def _build_trainer(
     with open_and_save(cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
-            cfg, benchmark, data, workload_folder_path
+            cfg, benchmark, data, workload_path
         )
 
     config["class_mapping"] = {}

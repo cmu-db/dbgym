@@ -63,13 +63,13 @@ def parse_hyperopt_config(config):
     return parsed_config
 
 
-def fetch_index_parameters(cfg, benchmark, data, workload_folder_path):
+def fetch_index_parameters(cfg, benchmark, data, workload_path):
     tables = data["protox"]["tables"]
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
 
     workload = Workload(
-        cfg, tables, attributes, query_spec, workload_folder_path, pid=None
+        cfg, tables, attributes, query_spec, workload_path, pid=None
     )
     att_usage = workload.process_column_usage()
 

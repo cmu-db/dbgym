@@ -31,6 +31,7 @@ default_benchmark_config_relpath = lambda benchmark: PROTOX_RELPATH / f"default_
 # Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
 default_dataset_path = lambda symlinks_path, benchmark: symlinks_path / f"{benchmark}_embedding_traindata.parquet"
 default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
+default_workload_path = lambda symlinks_path, benchmark, workload: symlinks_path / f"dbgym_benchmark_{benchmark}" / "data" / f"workload_{workload}"
 
 
 class DBGymConfig:
@@ -93,6 +94,8 @@ class DBGymConfig:
         # exist_ok is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
+    # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
+    #   explained further in the documentation.
     def append_group(self, name) -> None:
         self.cur_path_list.append(name)
         self.cur_yaml = self.cur_yaml.get(name, {})

@@ -46,8 +46,9 @@ class AgentTrainArgs:
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
 def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
-    # Set args to defaults programmatically (do this before doing anything else in the function)
     cfg = ctx.obj
+    
+    # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
