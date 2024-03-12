@@ -25,7 +25,7 @@ class AgentTrainArgs:
 
 @click.command()
 @click.pass_context
-@click.argument("benchmark")
+@click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
@@ -45,20 +45,20 @@ class AgentTrainArgs:
 @click.option("--early-kill", is_flag=True, help="Whether the tuner times out its steps.")
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
-def train(ctx, benchmark, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
+def train(ctx, benchmark_name, workload_name, benchmark_config_path, system_knob_config_path, hpoed_agent_params_path, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout):
     cfg = ctx.obj
     
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(cfg.dbgym_symlinks_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
     args = AgentTrainArgs()
-    args.benchmark = benchmark
+    args.benchmark_name = benchmark_name
     args.workload_name = workload_name
     args.benchmark_config_path = benchmark_config_path
     args.system_knob_config_path = system_knob_config_path
@@ -255,7 +255,7 @@ class TuneOpt(Trainable):
         self.workload_timeout = protox_args["workload_timeout"]
         self.timeout = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
-            benchmark, pg_path, port = mutate_wolp_config(cfg, self.logdir, protox_dir, hpo_config, protox_args)
+            benchmark_name, pg_path, port = mutate_wolp_config(cfg, self.logdir, protox_dir, hpo_config, protox_args)
         else:
             assert False, f"Unspecified agent {protox_args.agent}"
 
@@ -265,7 +265,7 @@ class TuneOpt(Trainable):
         # We will now overwrite the config files.
         protox_args["config"] = str(Path(self.logdir) / "config.yaml")
         protox_args["model_config"] = str(Path(self.logdir) / "model_params.yaml")
-        protox_args["benchmark_config_path"] = str(Path(self.logdir) / f"{benchmark}.yaml")
+        protox_args["benchmark_config_path"] = str(Path(self.logdir) / f"{benchmark_name}.yaml")
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()

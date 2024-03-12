@@ -49,7 +49,7 @@ def _mutate_common_config(cfg, logdir, protox_dir, hpo_config, protox_args):
     benchmark_config_path = protox_args.benchmark_config_path
     with open_and_save(cfg, f"{protox_dir}/{benchmark_config_path}") as f:
         benchmark_config = yaml.safe_load(f)
-    benchmark = benchmark_config["protox"]["benchmark"]
+    benchmark_name = benchmark_config["protox"]["benchmark_name"]
     benchmark_config["protox"]["per_query_knobs"] = hpo_config["protox_per_query_knobs"]
     benchmark_config["protox"]["per_query_knob_gen"] = hpo_config["protox_per_query_knob_gen"]
     benchmark_config["protox"]["per_query_scan_method"] = hpo_config["protox_per_query_scan_method"]
@@ -62,7 +62,7 @@ def _mutate_common_config(cfg, logdir, protox_dir, hpo_config, protox_args):
         benchmark_config["protox"]["query_spec"]["query_directory"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_directory"]
     if benchmark_config["protox"]["query_spec"]["query_order"][0] != "/":
         benchmark_config["protox"]["query_spec"]["query_order"] = protox_dir + "/" + benchmark_config["protox"]["query_spec"]["query_order"]
-    with open(f"{benchmark}.yaml", "w") as f:
+    with open(f"{benchmark_name}.yaml", "w") as f:
         yaml.dump(benchmark_config, stream=f, default_flow_style=False)
 
     # Mutate the config file.
@@ -194,6 +194,6 @@ def construct_wolp_config(args):
 
 
 def mutate_wolp_config(cfg, logdir, protox_dir, hpo_config, protox_args):
-    benchmark, pg_path, port = _mutate_common_config(cfg, logdir, protox_dir, hpo_config, protox_args)
+    benchmark_config, pg_path, port = _mutate_common_config(cfg, logdir, protox_dir, hpo_config, protox_args)
     _mutate_wolp_config(protox_dir, hpo_config, protox_args)
-    return benchmark["protox"]["benchmark"], pg_path, port
+    return benchmark_config["protox"]["benchmark_name"], pg_path, port

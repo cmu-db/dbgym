@@ -40,7 +40,7 @@ from tune.protox.env.workload_utils import QueryType
 @click.pass_context
 
 # generic args
-@click.argument("benchmark")
+@click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
@@ -107,7 +107,7 @@ from tune.protox.env.workload_utils import QueryType
 @click.option("--rebias", default=0, type=float, help="TODO(wz2)")
 def datagen(
     ctx,
-    benchmark,
+    benchmark_name,
     workload_name,
     benchmark_config_path,
     seed,
@@ -136,7 +136,7 @@ def datagen(
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
@@ -160,12 +160,12 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload_name)
+    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark_name, workload_name)
 
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark, benchmark_config_path, seed, workload_path
+        benchmark_name, benchmark_config_path, seed, workload_path
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -195,8 +195,8 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark, benchmark_config_path, seed, workload_path):
-        self.benchmark = benchmark
+    def __init__(self, benchmark_name, benchmark_config_path, seed, workload_path):
+        self.benchmark_name = benchmark_name
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
         self.workload_path = workload_path

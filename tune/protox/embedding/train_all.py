@@ -151,7 +151,7 @@ def _hpo_train(config, cfg, generic_args, train_args):
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(
         cfg,
-        generic_args.benchmark,
+        generic_args.benchmark_name,
         config,
         generic_args.dataset_path,
         trial_dir,
@@ -183,7 +183,7 @@ def _hpo_train(config, cfg, generic_args, train_args):
 
 def _build_trainer(
     cfg,
-    benchmark,
+    benchmark_name,
     config,
     input_path,
     trial_dir,
@@ -200,7 +200,7 @@ def _build_trainer(
     with open_and_save(cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
-            cfg, benchmark, data, workload_path
+            cfg, benchmark_name, data, workload_path
         )
 
     config["class_mapping"] = {}

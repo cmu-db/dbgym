@@ -353,7 +353,7 @@ class Workload(object):
                 "-jar",
                 "benchbase.jar",
                 "-b",
-                env_spec.benchmark,
+                env_spec.benchmark_name,
                 "-c",
                 env_spec.benchbase_config_path,
                 "-d",

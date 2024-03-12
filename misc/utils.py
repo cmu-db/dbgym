@@ -26,12 +26,12 @@ BENCHMARK_PLACEHOLDER = "[benchmark]"
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
 DEFAULT_SYSTEM_KNOB_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_system_knob_config.yaml"
-default_benchmark_config_relpath = lambda benchmark: PROTOX_RELPATH / f"default_{benchmark}_config.yaml"
+default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_config.yaml"
 
 # Paths of dependencies in the workspace. These are named "*_path" because they could be either a relpath or abspath depending on the symlinks_path arg
-default_dataset_path = lambda symlinks_path, benchmark: symlinks_path / f"{benchmark}_embedding_traindata.parquet"
+default_dataset_path = lambda symlinks_path, benchmark_name: symlinks_path / f"{benchmark_name}_embedding_traindata.parquet"
 default_hpoed_agent_params_path = lambda symlinks_path: symlinks_path / f"hpoed_agent_params.yaml"
-default_workload_path = lambda symlinks_path, benchmark, workload_name: symlinks_path / f"dbgym_benchmark_{benchmark}" / "data" / f"workload_{workload_name}"
+default_workload_path = lambda symlinks_path, benchmark_name, workload_name: symlinks_path / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
 
 
 class DBGymConfig:

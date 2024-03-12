@@ -31,7 +31,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 @click.pass_context
 
 # generic args
-@click.argument("benchmark")
+@click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
@@ -137,7 +137,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
 @click.option("--flatten-idx", default=0, help="TODO(wz2)")
 def train(
     ctx,
-    benchmark,
+    benchmark_name,
     workload_name,
     benchmark_config_path,
     dataset_path,
@@ -169,11 +169,11 @@ def train(
     # set args to defaults programmatically (do this before doing anything else in the function)
     cfg: DBGymConfig = ctx.obj
     if dataset_path == None:
-        dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark)
+        dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark_name)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if seed == None:
         seed = random.randint(0, 1e8)
 
@@ -183,10 +183,10 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark, workload_name)
+    workload_path = default_workload_path(cfg.dbgym_symlinks_path, benchmark_name, workload_name)
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark, benchmark_config_path, dataset_path, seed, workload_path
+        benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,
@@ -219,9 +219,9 @@ class EmbeddingTrainGenericArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
     def __init__(
-        self, benchmark, benchmark_config_path, dataset_path, seed, workload_path
+        self, benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
     ):
-        self.benchmark = benchmark
+        self.benchmark_name = benchmark_name
         self.benchmark_config_path = benchmark_config_path
         self.dataset_path = dataset_path
         self.seed = seed
