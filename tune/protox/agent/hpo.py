@@ -9,10 +9,13 @@ from ray import tune
 
 from tune.protox.agent.wolp.config import _construct_wolp_config, _mutate_wolp_config
 from misc.utils import open_and_save, conv_inputpath_to_abspath
-from dbms.postgres.cli import get_pgbin_path
 
 
-def get_free_port(signal_folder):
+def get_free_port(signal_dpath):
+    assert signal_dpath.exists(), f"get_free_port() called with a non-existent signal_dpath ({signal_dpath})"
+    assert signal_dpath.is_dir(), f"get_free_port() called with a non-directory signal_dpath ({signal_dpath})"
+    assert not signal_dpath.is_symlink(), f"get_free_port() called with a symlink signal_dpath ({signal_dpath})"
+    print(f"get_free_port() called with signal_dpath={signal_dpath}")
     MIN_PORT = 5434
     MAX_PORT = 5500
 
@@ -23,7 +26,7 @@ def get_free_port(signal_folder):
             s.bind(('', port))
 
             drop = False
-            for f in glob.glob(f"{signal_folder}/*.signal"):
+            for f in glob.glob(f"{signal_dpath}/*.signal"):
                 if port == int(Path(f).stem):
                     drop = True
                     break
@@ -35,7 +38,7 @@ def get_free_port(signal_folder):
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 continue
 
-            with open(f"{signal_folder}/{port}.signal", "w") as f:
+            with open(f"{signal_dpath}/{port}.signal", "w") as f:
                 f.write(str(port))
                 f.close()
 
@@ -67,7 +70,7 @@ def _mutate_common_config(dbgym_cfg, logdir, hpo_config, protox_args):
     protox_config_path = protox_args.protox_config_path
     with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
         protox_config = yaml.safe_load(f)
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = dbgym_cfg.dbgym_symlinks_path / "dbgym_dbms_postgres" / "build" / "repo" / "boot" / "build" / "postgres" / "bin"
     port = get_free_port(pgbin_path)
 
     # Update all the paths and metadata needed.
@@ -142,7 +145,7 @@ def _mutate_common_config(dbgym_cfg, logdir, hpo_config, protox_args):
 
     with open("config.yaml", "w") as f:
         yaml.dump(protox_config, stream=f, default_flow_style=False)
-    return benchmark_config, pg_path, port
+    return benchmark_config, pgbin_path, port
 
 
 def _construct_common_config(args):

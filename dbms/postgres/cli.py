@@ -94,7 +94,7 @@ def postgres_print_connstr(dbgym_cfg: DBGymConfig, dbname: str):
     )
 
 
-def get_pgbin_path(dbgym_cfg: DBGymConfig) -> Path:
+def _pgbin_path(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
 
 
@@ -112,7 +112,7 @@ def clone(dbgym_cfg: DBGymConfig):
 
 
 def init_pgdata(dbgym_cfg: DBGymConfig, remove_existing: bool):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     if not remove_existing and (pgbin_path / "pgdata").exists():
         raise RuntimeError("pgdata already exists. Specify --remove-existing to force.")
@@ -121,7 +121,7 @@ def init_pgdata(dbgym_cfg: DBGymConfig, remove_existing: bool):
 
 
 def init_auth(dbgym_cfg: DBGymConfig):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     pguser = dbgym_cfg.cur_yaml["user"]
     pgpass = dbgym_cfg.cur_yaml["pass"]
@@ -137,7 +137,7 @@ def init_auth(dbgym_cfg: DBGymConfig):
 
 
 def init_db(dbgym_cfg: DBGymConfig, dbname: str):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     pguser = dbgym_cfg.cur_yaml["user"]
     pgport = dbgym_cfg.cur_yaml["port"]
@@ -148,7 +148,7 @@ def init_db(dbgym_cfg: DBGymConfig, dbname: str):
 
 
 def run_sql_file(dbgym_cfg: DBGymConfig, sql_path: str):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     sql_path = Path(sql_path).resolve().absolute()
 
@@ -160,7 +160,7 @@ def run_sql_file(dbgym_cfg: DBGymConfig, sql_path: str):
 
 
 def start(dbgym_cfg: DBGymConfig, restart_if_running: bool = True):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     port = dbgym_cfg.cur_yaml["port"]
 
@@ -187,12 +187,12 @@ def start(dbgym_cfg: DBGymConfig, restart_if_running: bool = True):
 
 
 def stop(dbgym_cfg: DBGymConfig):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     subprocess_run("./pg_ctl -D ./pgdata stop", cwd=pgbin_path)
 
 
 def pgctl(dbgym_cfg: DBGymConfig, pgctl_str: str):
-    pgbin_path = get_pgbin_path(dbgym_cfg)
+    pgbin_path = _pgbin_path(dbgym_cfg)
     assert pgbin_path.exists()
     subprocess_run(f"./pg_ctl -D ./pgdata {pgctl_str}", cwd=pgbin_path)
