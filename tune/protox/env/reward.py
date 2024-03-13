@@ -11,7 +11,8 @@ class RewardUtility(object):
     def __init__(self, is_oltp, metric, reward_scaler):
         self.reward_scaler = reward_scaler
         self.metric = metric
-        self.maximize = is_oltp
+        self.is_oltp = is_oltp
+        self.maximize = is_oltp # oltp means tps which we want to maximize. olap means runtime which we want to minimize
         self.worst_perf = None
         self.relative_baseline = None
         self.previous_result = None
@@ -93,7 +94,7 @@ class RewardUtility(object):
 
         if metric is None:
             # Extract the metric if we're running it manually.
-            metric_fn = self.__parse_tps_for_metric if self.target == "tps" else self.__parse_runtime_for_metric
+            metric_fn = self.__parse_tps_for_metric if self.is_oltp else self.__parse_runtime_for_metric
             metric = self.worst_perf if did_error else metric_fn(result_dir)
         actual_r = None
 

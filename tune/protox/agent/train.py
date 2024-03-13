@@ -7,6 +7,7 @@ from datetime import datetime
 import time
 import click
 import random
+import logging
 
 import ray
 from ray.tune import TuneConfig
@@ -69,6 +70,8 @@ class AgentTrainArgs:
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
 @click.option("--query-timeout", default=30, type=int, help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.")
 def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, workload_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+    logging.info("agent.train(): called")
+    
     # Set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)

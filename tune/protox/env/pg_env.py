@@ -73,6 +73,8 @@ class PostgresEnv(gym.Env):
         reward_utility: RewardUtility,
         logger,
         replay=False):
+        logging.info("PostgresEnv.__init__(): called")
+
         self.replay = replay
 
         self.logger = logger
@@ -127,6 +129,7 @@ class PostgresEnv(gym.Env):
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
+            logging.info(f"self.env_spec.output_log_path={self.env_spec.output_log_path}")
             retcode, stdout, stderr = local[f"{self.env_spec.pgbin_path}/pg_ctl"][
                 "-D", self.env_spec.postgres_data,
                 "--wait",
@@ -139,9 +142,11 @@ class PostgresEnv(gym.Env):
 
             logging.warn("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
-            if attempts >= 5:
+            if attempts >= 1: # PAT DEBUG
                 logging.error("Number of attempts to start postgres has exceeded limit.")
                 assert False, "Number of attempts to start postgres has exceeded limit."
+
+        logging.info(f"PAT DEBUG: started postgres with conf_changes={conf_changes}")
 
         # Wait until postgres is ready to accept connections.
         num_cycles = 0
