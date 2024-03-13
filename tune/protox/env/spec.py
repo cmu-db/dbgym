@@ -13,6 +13,7 @@ from tune.protox.env.space.action_space import ActionSpace
 from tune.protox.env.workload import Workload
 from tune.protox.env.lsc import LSC
 from misc.utils import open_and_save
+from tune.protox.utils.logger import Logger
 
 
 def gen_scale_output(mean_output_act, output_scale):
@@ -94,7 +95,12 @@ class Spec(object):
         for k, v in benchmark_config.items():
             setattr(self, k, v)
 
-        self.logger = logger
+        # Construct logger.
+        if logger is None:
+            self.logger = Logger(self)
+        else:
+            self.logger = logger
+
         self.workload = Workload(
             dbgym_cfg=dbgym_cfg,
             tables=self.tables,

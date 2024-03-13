@@ -213,10 +213,7 @@ class Workload(object):
         self.tbl_fold_subsets = query_spec.get("tbl_fold_subsets", False)
         self.tbl_fold_delta = query_spec.get("tbl_fold_delta", False)
         self.tbl_fold_iterations = query_spec.get("tbl_fold_iterations", False)
-
-        self.logger = logger
-        if self.logger is not None:
-            self.logger.info(f"Initialized with workload timeout {workload_timeout}")
+        logging.info(f"Initialized with workload timeout {workload_timeout}")
 
         self.tables = tables
         self.attributes = attributes

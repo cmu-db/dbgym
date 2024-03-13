@@ -142,11 +142,9 @@ class PostgresEnv(gym.Env):
 
             logging.warn("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
-            if attempts >= 1: # PAT DEBUG
+            if attempts >= 5:
                 logging.error("Number of attempts to start postgres has exceeded limit.")
                 assert False, "Number of attempts to start postgres has exceeded limit."
-
-        logging.info(f"PAT DEBUG: started postgres with conf_changes={conf_changes}")
 
         # Wait until postgres is ready to accept connections.
         num_cycles = 0
