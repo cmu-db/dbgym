@@ -73,7 +73,7 @@ class Spec(object):
                 index_output_scale = config["output_scale"]
 
         self.postgres_data_folder = self.postgres_data
-        self.postgres_data = Path(self.postgres_path) / self.postgres_data
+        self.postgres_data = Path(self.pgbin_path) / self.postgres_data
         self.postgres_port = int(self.postgres_port)
         self.connection = "host={host} port={port} dbname={dbname} user={user} password={password}".format(
             host=self.postgres_host,

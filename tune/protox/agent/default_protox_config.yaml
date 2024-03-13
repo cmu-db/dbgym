@@ -1,8 +1,6 @@
 protox:
   # Path to where benchbase.jar can be found.
   benchbase_path: /home/phw2/noisepage-pilot/artifacts/benchbase
-  # Directory where we can find postgres, psql, and pgdata.
-  postgres_path: /mnt/nvme1n1/phw2/noisepage
   postgres_data: pgdata
   postgres_port: 5432
   postgres_host: localhost

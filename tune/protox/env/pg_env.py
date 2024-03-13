@@ -113,7 +113,7 @@ class PostgresEnv(gym.Env):
 
         if self.oltp_workload and save_snapshot and not self.replay and self.horizon > 1:
             # Create an archive of pgdata as a snapshot.
-            local["tar"]["cf", f"{self.env_spec.postgres_data}.tgz.tmp", "-C", self.env_spec.postgres_path, self.env_spec.postgres_data_folder].run()
+            local["tar"]["cf", f"{self.env_spec.postgres_data}.tgz.tmp", "-C", self.env_spec.pgbin_path, self.env_spec.postgres_data_folder].run()
 
         # Make sure the PID lock file doesn't exist.
         pid_lock = Path(f"{self.env_spec.postgres_data}/postmaster.pid")
@@ -124,10 +124,11 @@ class PostgresEnv(gym.Env):
             # Dump the OS page cache.
             os.system('sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"')
 
+        print(f"self.env_spec.pgbin_path={self.env_spec.pgbin_path}")
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
-            retcode, stdout, stderr = local[f"{self.env_spec.postgres_path}/pg_ctl"][
+            retcode, stdout, stderr = local[f"{self.env_spec.pgbin_path}/pg_ctl"][
                 "-D", self.env_spec.postgres_data,
                 "--wait",
                 "-t", "180",
@@ -139,7 +140,7 @@ class PostgresEnv(gym.Env):
 
             logging.warn("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
-            if attempts >= 5:
+            if attempts >= 1: # PAT DEBUG: MAKE IT 5
                 logging.error("Number of attempts to start postgres has exceeded limit.")
                 assert False
 
@@ -151,7 +152,7 @@ class PostgresEnv(gym.Env):
                 logging.error("Failed to start postgres before connect_timeout...")
                 return False
 
-            retcode, _, _ = local[f"{self.env_spec.postgres_path}/pg_isready"][
+            retcode, _, _ = local[f"{self.env_spec.pgbin_path}/pg_isready"][
                 "--host", self.env_spec.postgres_host,
                 "--port", str(self.env_spec.postgres_port),
                 "--dbname", self.env_spec.postgres_db].run(retcode=None)
@@ -226,7 +227,7 @@ class PostgresEnv(gym.Env):
                     raise
             return 0, "", ""
         else:
-            ret, stdout, stderr = local[f"{self.env_spec.postgres_path}/psql"][psql_conn, "--command", sql].run()
+            ret, stdout, stderr = local[f"{self.env_spec.pgbin_path}/psql"][psql_conn, "--command", sql].run()
         return ret, stdout, stderr
 
     def _shutdown_postgres(self):
@@ -236,7 +237,7 @@ class PostgresEnv(gym.Env):
 
         while True:
             logging.debug("Shutting down postgres...")
-            _, stdout, stderr = local[f"{self.env_spec.postgres_path}/pg_ctl"][
+            _, stdout, stderr = local[f"{self.env_spec.pgbin_path}/pg_ctl"][
                 "stop",
                 "--wait",
                 "-t", "180",
@@ -245,7 +246,7 @@ class PostgresEnv(gym.Env):
             logging.debug("Stop message: (%s, %s)", stdout, stderr)
 
             # Wait until pg_isready fails.
-            retcode, _, _ = local[f"{self.env_spec.postgres_path}/pg_isready"][
+            retcode, _, _ = local[f"{self.env_spec.pgbin_path}/pg_isready"][
                 "--host", self.env_spec.postgres_host,
                 "--port", str(self.env_spec.postgres_port),
                 "--dbname", self.env_spec.postgres_db].run(retcode=None)

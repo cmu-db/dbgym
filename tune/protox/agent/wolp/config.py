@@ -75,7 +75,7 @@ def setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config):
     return agent
 
 
-def _mutate_wolp_config(dbgym_cfg, protox_dir, hpo_config, protox_args):
+def _mutate_wolp_config(dbgym_cfg, hpo_config, protox_args):
     agent_params_path = protox_args.agent_params_path
     with open_and_save(dbgym_cfg, agent_params_path, "r") as f:
         agent_params = yaml.safe_load(f)

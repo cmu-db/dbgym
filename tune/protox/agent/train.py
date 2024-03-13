@@ -305,7 +305,7 @@ class TuneOpt(Trainable):
         self.workload_timeout = protox_args["workload_timeout"]
         self.timeout_checker = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
-            benchmark_name, pg_path, port = mutate_wolp_config(dbgym_cfg, self.logdir, protox_dir, hpo_config, protox_args)
+            benchmark_name, pg_path, port = mutate_wolp_config(dbgym_cfg, self.logdir, hpo_config, protox_args)
         else:
             assert False, f"Unspecified agent {protox_args.agent}"
 

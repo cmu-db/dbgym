@@ -5,9 +5,11 @@ import yaml
 import xml.etree.ElementTree as ET
 import socket
 from pathlib import Path
-from tune.protox.agent.wolp.config import _construct_wolp_config, _mutate_wolp_config
 from ray import tune
+
+from tune.protox.agent.wolp.config import _construct_wolp_config, _mutate_wolp_config
 from misc.utils import open_and_save, conv_inputpath_to_abspath
+from dbms.postgres.cli import get_pgbin_path
 
 
 def get_free_port(signal_folder):
@@ -44,7 +46,7 @@ def get_free_port(signal_folder):
     raise IOError("No free ports to bind postgres to.")
 
 
-def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args):
+def _mutate_common_config(dbgym_cfg, logdir, hpo_config, protox_args):
     # Copy the benchmark file.
     benchmark_config_path = protox_args.benchmark_config_path
     with open_and_save(dbgym_cfg, benchmark_config_path) as f:
@@ -65,12 +67,12 @@ def _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args
     protox_config_path = protox_args.protox_config_path
     with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
         protox_config = yaml.safe_load(f)
-    pg_path = os.path.expanduser(protox_config["protox"]["postgres_path"])
-    port = get_free_port(pg_path)
+    pgbin_path = get_pgbin_path(dbgym_cfg)
+    port = get_free_port(pgbin_path)
 
     # Update all the paths and metadata needed.
     # protox_config will be dumped to a .yaml file, so all Path objects have to be converted to strings
-    protox_config["protox"]["postgres_path"] = str(pg_path)
+    protox_config["protox"]["pgbin_path"] = str(pgbin_path)
     protox_config["protox"]["benchbase_path"] = str(os.path.expanduser(protox_config["protox"]["benchbase_path"]))
 
     benchbase_config_path = protox_args.benchbase_config_path
@@ -195,7 +197,7 @@ def construct_wolp_config(args):
     return config
 
 
-def mutate_wolp_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args):
-    benchmark_config, pg_path, port = _mutate_common_config(dbgym_cfg, logdir, protox_dir, hpo_config, protox_args)
-    _mutate_wolp_config(dbgym_cfg, protox_dir, hpo_config, protox_args)
+def mutate_wolp_config(dbgym_cfg, logdir, hpo_config, protox_args):
+    benchmark_config, pg_path, port = _mutate_common_config(dbgym_cfg, logdir, hpo_config, protox_args)
+    _mutate_wolp_config(dbgym_cfg, hpo_config, protox_args)
     return benchmark_config["protox"]["benchmark_name"], pg_path, port
