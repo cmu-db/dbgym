@@ -5,7 +5,7 @@ from gymnasium.envs.registration import register
 
 register(
     id="Postgres-v0",
-    entry_point="envs.pg_env:PostgresEnv",
+    entry_point="tune.protox.env.pg_env:PostgresEnv",
 )
 
 
