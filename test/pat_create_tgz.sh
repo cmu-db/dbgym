@@ -24,4 +24,6 @@ set -euxo pipefail
 # Make it a .tgz file
 # TODO(phw2): do this programmatically instead
 pgdata_path=$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/build/repo/boot/build/postgres/bin/pgdata
-tar -czf $HOME/tpch_sf1.tgz $pgdata_path
+# -C "$pgdata_path" changes the current directory to $pgdata_path before creating the tar archive
+# this way, the .tgz file archives the files in pgdata5435 "directly" without all the preceding directories
+tar -czf $HOME/tpch_sf1.tgz -C $pgdata_path .

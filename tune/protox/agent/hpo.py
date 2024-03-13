@@ -15,7 +15,6 @@ def get_free_port(signal_dpath):
     assert signal_dpath.exists(), f"get_free_port() called with a non-existent signal_dpath ({signal_dpath})"
     assert signal_dpath.is_dir(), f"get_free_port() called with a non-directory signal_dpath ({signal_dpath})"
     assert not signal_dpath.is_symlink(), f"get_free_port() called with a symlink signal_dpath ({signal_dpath})"
-    print(f"get_free_port() called with signal_dpath={signal_dpath}")
     MIN_PORT = 5434
     MAX_PORT = 5500
 
