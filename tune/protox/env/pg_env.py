@@ -260,7 +260,7 @@ class PostgresEnv(gym.Env):
         local["rm"]["-rf", self.env_spec.postgres_data].run()
         local["mkdir"]["-m", "0700", "-p", self.env_spec.postgres_data].run()
         # Strip the "pgdata" so we can implant directly into the target postgres_data.
-        local["tar"]["xf", self.env_spec.data_snapshot_path, "-C", self.env_spec.postgres_data, "--strip-components", "1"].run()
+        local["tar"]["xf", self.env_spec.pgdata_snapshot_path, "-C", self.env_spec.postgres_data, "--strip-components", "1"].run()
         # Imprint the required port.
         ((local["echo"][f"port={self.env_spec.postgres_port}"]) >> f"{self.env_spec.postgres_data}/postgresql.conf")()
         # Load and start the database.
