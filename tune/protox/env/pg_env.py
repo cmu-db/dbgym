@@ -42,7 +42,7 @@ class PostgresEnv(gym.Env):
     # Horizon for episode.
     horizon: int = None
     # Per-query Timeout.
-    timeout: int = None
+    query_timeout: int = None
     # Baseline.
     baseline_state = None
     baseline_metric = None
@@ -69,7 +69,7 @@ class PostgresEnv(gym.Env):
     def __init__(self,
         spec: Spec,
         horizon: int,
-        timeout: int,
+        query_timeout: int,
         reward_utility: RewardUtility,
         logger,
         replay=False):
@@ -81,7 +81,7 @@ class PostgresEnv(gym.Env):
         self.observation_space = spec.observation_space
         self.workload = spec.workload
         self.horizon = horizon
-        self.timeout = timeout
+        self.query_timeout = query_timeout
         self.reward_utility = reward_utility
 
         # Construct repository.
@@ -90,7 +90,7 @@ class PostgresEnv(gym.Env):
         self.log_step = 0
         self.oltp_workload = spec.oltp_workload
 
-    def _start_with_config_changes(self, conf_changes=None, timeout=None, dump_page_cache=False, save_snapshot=False):
+    def _start_with_config_changes(self, conf_changes=None, connect_timeout=None, dump_page_cache=False, save_snapshot=False):
         start_time = time.time()
         if self.connection is not None:
             self.connection.close()
@@ -146,9 +146,9 @@ class PostgresEnv(gym.Env):
         # Wait until postgres is ready to accept connections.
         num_cycles = 0
         while True:
-            if timeout is not None and num_cycles >= timeout:
+            if connect_timeout is not None and num_cycles >= connect_timeout:
                 # In this case, we've failed to start postgres.
-                logging.error("Failed to start postgres before timeout...")
+                logging.error("Failed to start postgres before connect_timeout...")
                 return False
 
             retcode, _, _ = local[f"{self.env_spec.postgres_path}/pg_isready"][
@@ -254,7 +254,7 @@ class PostgresEnv(gym.Env):
             if not exists and retcode != 0:
                 break
 
-    def restore_pristine_snapshot(self, conf_changes=None, timeout=None):
+    def restore_pristine_snapshot(self, conf_changes=None, connect_timeout=None):
         self._shutdown_postgres()
         # Remove the data directory and re-make it.
         local["rm"]["-rf", self.env_spec.postgres_data].run()
@@ -264,7 +264,7 @@ class PostgresEnv(gym.Env):
         # Imprint the required port.
         ((local["echo"][f"port={self.env_spec.postgres_port}"]) >> f"{self.env_spec.postgres_data}/postgresql.conf")()
         # Load and start the database.
-        return self._start_with_config_changes(conf_changes=conf_changes, timeout=timeout)
+        return self._start_with_config_changes(conf_changes=conf_changes, connect_timeout=connect_timeout)
 
     def _restore_last_snapshot(self):
         assert self.horizon > 1
@@ -278,7 +278,7 @@ class PostgresEnv(gym.Env):
         # Imprint the required port.
         ((local["echo"][f"port={self.env_spec.postgres_port}"]) >> f"{self.env_spec.postgres_data}/postgresql.conf")()
 
-        success = self._start_with_config_changes(conf_changes=None, timeout=self.env_spec.connect_timeout)
+        success = self._start_with_config_changes(conf_changes=None, connect_timeout=self.env_spec.connect_timeout)
         if success:
             knobs = fetch_server_knobs(
                 self.connection,
@@ -312,7 +312,7 @@ class PostgresEnv(gym.Env):
             else:
                 # Instead of restoring a pristine snapshot, just reset the knobs.
                 # This in effect "resets" the baseline knob settings.
-                self._start_with_config_changes(conf_changes=[], timeout=self.env_spec.connect_timeout, dump_page_cache=False)
+                self._start_with_config_changes(conf_changes=[], connect_timeout=self.env_spec.connect_timeout, dump_page_cache=False)
 
             # Note that we do not actually update the baseline metric/reward used by the reward
             # utility. This is so the reward is not stochastic with respect to the starting state.
@@ -353,7 +353,7 @@ class PostgresEnv(gym.Env):
                 connection=self.connection,
                 reward_utility=self.reward_utility,
                 env_spec=self.env_spec,
-                timeout=self.timeout,
+                query_timeout=self.query_timeout,
                 current_state=None,
                 update=False)
 
@@ -394,7 +394,7 @@ class PostgresEnv(gym.Env):
                 env_spec=self.env_spec,
                 connection=self.connection,
                 reward_utility=self.reward_utility,
-                timeout=self.timeout,
+                query_timeout=self.query_timeout,
                 accum_metric=accum_metric)
         else:
             target_state, target_metric = self.workload.reset()
@@ -460,7 +460,7 @@ class PostgresEnv(gym.Env):
                 connection=self.connection,
                 reward_utility=self.reward_utility,
                 env_spec=self.env_spec,
-                timeout=self.timeout,
+                query_timeout=self.query_timeout,
                 current_state=self.current_state.copy(),
                 action=action,
                 update=True,
@@ -548,7 +548,7 @@ class PostgresEnv(gym.Env):
         # Now try and perform the configuration changes.
         ret = self._start_with_config_changes(
             conf_changes=config_changes,
-            timeout=self.env_spec.connect_timeout,
+            connect_timeout=self.env_spec.connect_timeout,
             dump_page_cache=dump_page_cache,
             save_snapshot=True)
 
