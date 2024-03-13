@@ -39,7 +39,7 @@ class Spec(object):
 
     def __build_observation_space(self, seed):
         if self.metric_state == "metric":
-            return MetricStateSpace(self.tables, seed)
+            return MetricStateSpace(self.tables, self.postgres_db, seed)
         elif self.metric_state == "structure":
             return StructureStateSpace(self.action_space, False, seed)
         elif self.metric_state == "structure_normalize":
@@ -80,7 +80,6 @@ class Spec(object):
             dbname=self.postgres_db,
             user=self.postgres_user,
         )
-        print(f"self.connection_str={self.connection_str}")
         logging.debug("self.connection_str=%s", self.connection_str)
 
         self.benchbase_config_path = benchbase_config_path

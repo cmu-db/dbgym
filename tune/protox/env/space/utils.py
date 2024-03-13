@@ -13,6 +13,9 @@ def check_subspace(space, action):
     if not space.contains(action):
         for i, subspace in enumerate(space.spaces):
             if isinstance(subspace, str):
+                print(f"subspace={subspace}")
+                print(f"subspace in space.spaces={subspace in space.spaces}, subspace in action={subspace in action}")
+                print(f"space.spaces.keys()={space.spaces.keys()}, action.keys()={action.keys()}")
                 if not space.spaces[subspace].contains(action[subspace]):
                     logging.error("Subspace %s rejects %s", subspace, action[subspace])
                     return False

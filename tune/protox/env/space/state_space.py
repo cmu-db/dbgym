@@ -42,8 +42,9 @@ class MetricStateSpace(spaces.Dict):
     def metrics(self):
         return True
 
-    def __init__(self, tables: list[str], seed):
+    def __init__(self, tables: list[str], postgres_db, seed):
         self.tables = tables
+        self.postgres_db = postgres_db
         self.internal_spaces = {}
         for key, spec in METRICS_SPECIFICATION.items():
             for key_metric in spec["valid_keys"]:
@@ -87,8 +88,8 @@ class MetricStateSpace(spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == "benchbase"]
-                final_data = [d for d in final_data if d["datname"] == "benchbase"]
+                initial_data = [d for d in initial_data if d["datname"] == self.postgres_db]
+                final_data = [d for d in final_data if d["datname"] == self.postgres_db]
             elif spec["per_table"]:
                 initial_data = sorted([d for d in initial_data if d["relname"] in self.tables], key=lambda x: x["relname"])
                 final_data = sorted([d for d in final_data if d["relname"] in self.tables], key=lambda x: x["relname"])
@@ -148,8 +149,8 @@ class MetricStateSpace(spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == "benchbase"]
-                final_data = [d for d in final_data if d["datname"] == "benchbase"]
+                initial_data = [d for d in initial_data if d["datname"] == self.postgres_db]
+                final_data = [d for d in final_data if d["datname"] == self.postgres_db]
             elif spec["per_table"]:
                 initial_data = sorted([d for d in initial_data if d["relname"] in self.tables], key=lambda x: x["relname"])
                 final_data = sorted([d for d in final_data if d["relname"] in self.tables], key=lambda x: x["relname"])
