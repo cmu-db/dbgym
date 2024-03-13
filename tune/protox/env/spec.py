@@ -51,7 +51,6 @@ class Spec(object):
 
     def __init__(self, dbgym_cfg, agent_type, seed, embedding_path, protox_config_path, benchbase_config_path, benchmark_config_path, workload_path, horizon, workload_timeout, logger=None):
         with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
-            print(f'protox_config_path={protox_config_path}')
             protox_config = yaml.safe_load(f)["protox"]
         for k, v in protox_config.items():
             setattr(self, k, v)
@@ -75,14 +74,14 @@ class Spec(object):
         self.postgres_data_folder = self.postgres_data
         self.postgres_data = Path(self.pgbin_path) / self.postgres_data
         self.postgres_port = int(self.postgres_port)
-        self.connection = "host={host} port={port} dbname={dbname} user={user} password={password}".format(
+        self.connection_str = "host={host} port={port} dbname={dbname} user={user}".format(
             host=self.postgres_host,
             port=self.postgres_port,
             dbname=self.postgres_db,
             user=self.postgres_user,
-            password=self.postgres_password,
         )
-        logging.debug("%s", self.connection)
+        print(f"self.connection_str={self.connection_str}")
+        logging.debug("self.connection_str=%s", self.connection_str)
 
         self.benchbase_config_path = benchbase_config_path
         self.original_benchbase_config_path = self.benchbase_config_path
@@ -178,7 +177,7 @@ class Spec(object):
         # Save what can't be reconstructed correctly.
         return {
             "original_benchbase_config_path": self.original_benchbase_config_path,
-            "connection": self.connection,
+            "connection": self.connection_str,
             "workload": self.workload.save_state(),
             "action_space": self.action_space.save_state(),
             #"observation_space": self.observation_space.save_state(),

@@ -124,7 +124,6 @@ class PostgresEnv(gym.Env):
             # Dump the OS page cache.
             os.system('sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"')
 
-        print(f"self.env_spec.pgbin_path={self.env_spec.pgbin_path}")
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
@@ -140,7 +139,7 @@ class PostgresEnv(gym.Env):
 
             logging.warn("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
-            if attempts >= 1: # PAT DEBUG: MAKE IT 5
+            if attempts >= 5:
                 logging.error("Number of attempts to start postgres has exceeded limit.")
                 assert False, "Number of attempts to start postgres has exceeded limit."
 
@@ -164,7 +163,7 @@ class PostgresEnv(gym.Env):
             logging.debug("Waiting for postgres to bootup but it is not...")
 
         # Re-establish the connection.
-        self.connection = psycopg.connect(self.env_spec.connection, autocommit=True, prepare_threshold=None)
+        self.connection = psycopg.connect(self.env_spec.connection_str, autocommit=True, prepare_threshold=None)
 
         # Copy the temporary over since we know the temporary can load.
         if self.oltp_workload and save_snapshot and not self.replay and self.horizon > 1:
@@ -181,9 +180,8 @@ class PostgresEnv(gym.Env):
         else:
             set_work_mem = False
 
-        psql_conn = "postgresql://{user}:{password}@{host}:{port}/{dbname}".format(
+        psql_conn_str = "postgresql://{user}@{host}:{port}/{dbname}".format(
             user=self.env_spec.postgres_user,
-            password=self.env_spec.postgres_password,
             host=self.env_spec.postgres_host,
             port=self.env_spec.postgres_port,
             dbname=self.env_spec.postgres_db)
@@ -191,7 +189,7 @@ class PostgresEnv(gym.Env):
         if set_work_mem:
             def cancel_fn(conn_str, conn):
                 logging.info("CANCEL Function invoked!")
-                with psycopg.connect(self.env_spec.connection, autocommit=True, prepare_threshold=None) as tconn:
+                with psycopg.connect(self.env_spec.connection_str, autocommit=True, prepare_threshold=None) as tconn:
                     r = [r for r in tconn.execute("SELECT pid FROM pg_stat_progress_create_index")]
                 for row in r:
                     logging.info(f"Killing process {row[0]}")
@@ -201,11 +199,11 @@ class PostgresEnv(gym.Env):
                         pass
                 logging.info("CANCEL Function finished!")
 
-            with psycopg.connect(self.env_spec.connection, autocommit=True, prepare_threshold=None) as conn:
+            with psycopg.connect(self.env_spec.connection_str, autocommit=True, prepare_threshold=None) as conn:
                 conn.execute("SET maintenance_work_mem = '4GB'")
                 conn.execute("SET statement_timeout = 300000")
                 try:
-                    timer = threading.Timer(300.0, cancel_fn, args=(self.env_spec.connection, conn))
+                    timer = threading.Timer(300.0, cancel_fn, args=(self.env_spec.connection_str, conn))
                     timer.start()
 
                     conn.execute(sql)
@@ -227,7 +225,7 @@ class PostgresEnv(gym.Env):
                     raise
             return 0, "", ""
         else:
-            ret, stdout, stderr = local[f"{self.env_spec.pgbin_path}/psql"][psql_conn, "--command", sql].run()
+            ret, stdout, stderr = local[f"{self.env_spec.pgbin_path}/psql"][psql_conn_str, "--command", sql].run()
         return ret, stdout, stderr
 
     def _shutdown_postgres(self):
@@ -532,7 +530,7 @@ class PostgresEnv(gym.Env):
                 if ret == -1:
                     print(stdout, stderr, flush=True)
                     assert "index row requires" in stderr or "canceling statement" in stderr
-                    attempt_checkpoint(self.env_spec.connection)
+                    attempt_checkpoint(self.env_spec.connection_str)
                     return False
 
                 assert ret == 0, print(stdout, stderr)
@@ -541,7 +539,7 @@ class PostgresEnv(gym.Env):
                     message = str(e)
                     print(message, flush=True)
                     assert "index row requires" in message or "canceling statement" in message
-                    attempt_checkpoint(self.env_spec.connection)
+                    attempt_checkpoint(self.env_spec.connection_str)
                     return False
             except psycopg.errors.UndefinedTable as e:
                 assert ignore_error
