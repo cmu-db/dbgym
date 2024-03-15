@@ -8,6 +8,7 @@ import time
 import click
 import random
 import logging
+import copy
 
 import ray
 from ray.tune import TuneConfig
@@ -159,6 +160,9 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
     config["protox_per_query_knob_gen"] = per_query_knob_gen
     config["protox_query_spec"] = query_spec
 
+    # Pass other configs through
+    config["is_oltp"] = is_oltp
+
     # Scheduler.
     scheduler = FIFOScheduler()
 
@@ -187,12 +191,6 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
                 assert "protox_args" in config
                 config["protox_args"]["early_kill"] = early_kill
 
-    
-    # Pass some extra needed stuff into config as well since there's no other way to get data to TuneOpt.setup()
-    config["dbgym_cfg"] = dbgym_cfg
-    config["is_oltp"] = is_oltp
-
-
     # Search.
     # if hpoed_agent_params == None, hyperparameter optimization will be performend
     # if hpoed_agent_params != None, we will just run a single tuning job with the params hpoed_agent_params
@@ -218,6 +216,8 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
         verbose=2,
         log_to_file=True,
     )
+
+    TuneOpt.dbgym_cfg = dbgym_cfg
 
     tuner = ray.tune.Tuner(
         TuneOpt,
@@ -281,8 +281,7 @@ class TuneOpt(Trainable):
         print("HPO Configuration: ", hpo_config)
         assert "protox_args" in hpo_config
         protox_args = hpo_config["protox_args"]
-        dbgym_cfg = hpo_config["dbgym_cfg"]
-        protox_dir = dbgym_cfg.dbgym_repo_path
+        protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
         # sys.path.append() must take in strings as input, not Path objects
         sys.path.append(str(protox_dir))
 
@@ -304,7 +303,7 @@ class TuneOpt(Trainable):
         self.workload_timeout = protox_args["workload_timeout"]
         self.timeout_checker = TimeoutChecker(protox_args["duration"])
         if protox_args.agent == "wolp":
-            benchmark_name, pg_path, port = mutate_wolp_config(dbgym_cfg, self.logdir, hpo_config, protox_args)
+            benchmark_name, pg_path, port = mutate_wolp_config(TuneOpt.dbgym_cfg, self.logdir, hpo_config, protox_args)
         else:
             assert False, f"Unspecified agent {protox_args.agent}"
 
@@ -318,7 +317,7 @@ class TuneOpt(Trainable):
         protox_args["reward"] = hpo_config.reward
         protox_args["horizon"] = hpo_config.horizon
         self.trial = TuneTrial()
-        self.trial.setup(dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
+        self.trial.setup(TuneOpt.dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
         self.start_time = time.time()
 
     def step(self):
