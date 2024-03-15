@@ -217,10 +217,8 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
         log_to_file=True,
     )
 
-    TuneOpt.dbgym_cfg = dbgym_cfg
-
     tuner = ray.tune.Tuner(
-        TuneOpt,
+        create_tune_opt_class(dbgym_cfg),
         tune_config=tune_config,
         run_config=run_config,
         param_space=config,
@@ -249,118 +247,130 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-class TuneOpt(Trainable):
-    def f_unpack_dict(self, dct):
-        """
-        Unpacks all sub-dictionaries in given dictionary recursively.
-        There should be no duplicated keys across all nested
-        subdictionaries, or some instances will be lost without warning
+# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_config`. This is because it's a pain to turn DBGymConfig
+#   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
+# Using a function to create a class is Ray's recommended way of doing this (see
+#   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
+# If you don't create the class with a function, it doesn't work due to how Ray serializes classes
+def create_tune_opt_class(dbgym_cfg_param):
+    global global_dbgym_cfg
+    global_dbgym_cfg = dbgym_cfg_param
 
-        Source: https://www.kaggle.com/fanvacoolt/tutorial-on-hyperopt
+    class TuneOpt(Trainable):
+        dbgym_cfg = global_dbgym_cfg
 
-        Parameters:
-        ----------------
-        dct : dictionary to unpack
+        def f_unpack_dict(self, dct):
+            """
+            Unpacks all sub-dictionaries in given dictionary recursively.
+            There should be no duplicated keys across all nested
+            subdictionaries, or some instances will be lost without warning
 
-        Returns:
-        ----------------
-        : unpacked dictionary
-        """
-        res = {}
-        for (k, v) in dct.items():
-            if "protox_" in k:
-                res[k] = v
-            elif isinstance(v, dict):
-                res = {**res, **self.f_unpack_dict(v)}
+            Source: https://www.kaggle.com/fanvacoolt/tutorial-on-hyperopt
+
+            Parameters:
+            ----------------
+            dct : dictionary to unpack
+
+            Returns:
+            ----------------
+            : unpacked dictionary
+            """
+            res = {}
+            for (k, v) in dct.items():
+                if "protox_" in k:
+                    res[k] = v
+                elif isinstance(v, dict):
+                    res = {**res, **self.f_unpack_dict(v)}
+                else:
+                    res[k] = v
+            return res
+
+
+        def setup(self, hpo_config):
+            print("HPO Configuration: ", hpo_config)
+            assert "protox_args" in hpo_config
+            protox_args = hpo_config["protox_args"]
+            protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
+            # sys.path.append() must take in strings as input, not Path objects
+            sys.path.append(str(protox_dir))
+
+            from tune.protox.agent.tune_trial import TuneTrial, TimeoutChecker
+            from tune.protox.agent.hpo import mutate_wolp_config
+            hpo_config = DotDict(self.f_unpack_dict(hpo_config))
+            protox_args = DotDict(self.f_unpack_dict(protox_args))
+
+            # Compute the limit.
+            self.early_kill = protox_args["early_kill"]
+            self.stabilize_kill = 0
+            if "stabilize_kill" in protox_args:
+                self.stabilize_kill = protox_args["stabilize_kill"]
+
+            self.last_best_time = None
+            self.last_best_metric = None
+
+            self.duration = protox_args["duration"] * 3600
+            self.workload_timeout = protox_args["workload_timeout"]
+            self.timeout_checker = TimeoutChecker(protox_args["duration"])
+            if protox_args.agent == "wolp":
+                benchmark_name, pg_path, port = mutate_wolp_config(TuneOpt.dbgym_cfg, self.logdir, hpo_config, protox_args)
             else:
-                res[k] = v
-        return res
+                assert False, f"Unspecified agent {protox_args.agent}"
 
+            self.pg_path = pg_path
+            self.port = port
 
-    def setup(self, hpo_config):
-        print("HPO Configuration: ", hpo_config)
-        assert "protox_args" in hpo_config
-        protox_args = hpo_config["protox_args"]
-        protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
-        # sys.path.append() must take in strings as input, not Path objects
-        sys.path.append(str(protox_dir))
+            # We will now overwrite the config files.
+            protox_args["protox_config_path"] = Path(self.logdir) / "config.yaml"
+            protox_args["agent_params_path"] = Path(self.logdir) / "model_params.yaml"
+            protox_args["benchmark_config_path"] = Path(self.logdir) / f"{benchmark_name}.yaml"
+            protox_args["reward"] = hpo_config.reward
+            protox_args["horizon"] = hpo_config.horizon
+            self.trial = TuneTrial()
+            self.trial.setup(TuneOpt.dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
+            self.start_time = time.time()
 
-        from tune.protox.agent.tune_trial import TuneTrial, TimeoutChecker
-        from tune.protox.agent.hpo import mutate_wolp_config
-        hpo_config = DotDict(self.f_unpack_dict(hpo_config))
-        protox_args = DotDict(self.f_unpack_dict(protox_args))
+        def step(self):
+            self.timeout_checker.resume()
+            data = self.trial.step()
 
-        # Compute the limit.
-        self.early_kill = protox_args["early_kill"]
-        self.stabilize_kill = 0
-        if "stabilize_kill" in protox_args:
-            self.stabilize_kill = protox_args["stabilize_kill"]
-
-        self.last_best_time = None
-        self.last_best_metric = None
-
-        self.duration = protox_args["duration"] * 3600
-        self.workload_timeout = protox_args["workload_timeout"]
-        self.timeout_checker = TimeoutChecker(protox_args["duration"])
-        if protox_args.agent == "wolp":
-            benchmark_name, pg_path, port = mutate_wolp_config(TuneOpt.dbgym_cfg, self.logdir, hpo_config, protox_args)
-        else:
-            assert False, f"Unspecified agent {protox_args.agent}"
-
-        self.pg_path = pg_path
-        self.port = port
-
-        # We will now overwrite the config files.
-        protox_args["protox_config_path"] = Path(self.logdir) / "config.yaml"
-        protox_args["agent_params_path"] = Path(self.logdir) / "model_params.yaml"
-        protox_args["benchmark_config_path"] = Path(self.logdir) / f"{benchmark_name}.yaml"
-        protox_args["reward"] = hpo_config.reward
-        protox_args["horizon"] = hpo_config.horizon
-        self.trial = TuneTrial()
-        self.trial.setup(TuneOpt.dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
-        self.start_time = time.time()
-
-    def step(self):
-        self.timeout_checker.resume()
-        data = self.trial.step()
-
-        # Decrement remaining time.
-        self.timeout_checker.pause()
-        if self.timeout_checker():
-            self.cleanup()
-            data[ray.tune.result.DONE] = True
-
-        if self.early_kill:
-            if (time.time() - self.start_time) >= 10800:
-                if "Best Metric" in data and data["Best Metric"] >= 190:
-                    self.cleanup()
-                    data[ray.tune.result.DONE] = True
-            elif (time.time() - self.start_time) >= 7200:
-                if "Best Metric" in data and data["Best Metric"] >= 250:
-                    self.cleanup()
-                    data[ray.tune.result.DONE] = True
-
-        if self.stabilize_kill > 0 and "Best Metric" in data:
-            if self.last_best_metric is None or data["Best Metric"] < self.last_best_metric:
-                self.last_best_metric = data["Best Metric"]
-                self.last_best_time = time.time()
-
-            if self.last_best_time is not None and (time.time() - self.last_best_time) > self.stabilize_kill * 3600:
-                self.trial.logger.info("Killing due to run stabilizing.")
+            # Decrement remaining time.
+            self.timeout_checker.pause()
+            if self.timeout_checker():
                 self.cleanup()
                 data[ray.tune.result.DONE] = True
 
-        return data
+            if self.early_kill:
+                if (time.time() - self.start_time) >= 10800:
+                    if "Best Metric" in data and data["Best Metric"] >= 190:
+                        self.cleanup()
+                        data[ray.tune.result.DONE] = True
+                elif (time.time() - self.start_time) >= 7200:
+                    if "Best Metric" in data and data["Best Metric"] >= 250:
+                        self.cleanup()
+                        data[ray.tune.result.DONE] = True
 
-    def cleanup(self):
-        self.trial.cleanup()
-        if Path(f"{self.pg_path}/{self.port}.signal").exists():
-            os.remove(f"{self.pg_path}/{self.port}.signal")
+            if self.stabilize_kill > 0 and "Best Metric" in data:
+                if self.last_best_metric is None or data["Best Metric"] < self.last_best_metric:
+                    self.last_best_metric = data["Best Metric"]
+                    self.last_best_time = time.time()
 
-    def save_checkpoint(self, checkpoint_dir):
-        # We can't actually do anything about this right now.
-        pass
+                if self.last_best_time is not None and (time.time() - self.last_best_time) > self.stabilize_kill * 3600:
+                    self.trial.logger.info("Killing due to run stabilizing.")
+                    self.cleanup()
+                    data[ray.tune.result.DONE] = True
 
-    def load_checkpoint(self, checkpoint_dir):
-        # We can't actually do anything about this right now.
-        pass
+            return data
+
+        def cleanup(self):
+            self.trial.cleanup()
+            if Path(f"{self.pg_path}/{self.port}.signal").exists():
+                os.remove(f"{self.pg_path}/{self.port}.signal")
+
+        def save_checkpoint(self, checkpoint_dir):
+            # We can't actually do anything about this right now.
+            pass
+
+        def load_checkpoint(self, checkpoint_dir):
+            # We can't actually do anything about this right now.
+            pass
+    return TuneOpt
