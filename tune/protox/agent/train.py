@@ -163,9 +163,9 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
     scheduler = FIFOScheduler()
 
     hpoed_agent_params = None
-    if hpoed_agent_params_path is not None and hpoed_agent_params_path.exists():
-        tmp_hpoed_agent_params = []
-        with open_and_save(hpoed_agent_params_path, "r") as f:
+    print(f"hpoed_agent_params_path={hpoed_agent_params_path}")
+    if hpoed_agent_params_path is not None:
+        with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
             hpoed_agent_params = json.load(f)
 
             for config in hpoed_agent_params:
@@ -186,10 +186,6 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
 
                 assert "protox_args" in config
                 config["protox_args"]["early_kill"] = early_kill
-
-                for _ in range(initial_repeats):
-                    tmp_hpoed_agent_params.append(config)
-        hpoed_agent_params = tmp_hpoed_agent_params
 
     
     # Pass some extra needed stuff into config as well since there's no other way to get data to TuneOpt.setup()
