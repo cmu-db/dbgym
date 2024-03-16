@@ -141,7 +141,7 @@ def conv_inputpath_to_abspath(cfg: DBGymConfig, inputpath: os.PathLike) -> str:
     """
     Convert any user inputted path to an absolute path
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
-    Relative paths are relative to the base repo dir
+    Relative paths are relative to the base dbgym repo dir
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     """

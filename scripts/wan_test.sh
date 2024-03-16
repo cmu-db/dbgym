@@ -3,20 +3,14 @@
 set -euxo pipefail
 
 # Setup Postgres.
-python3 task.py --no-startup-check dbms postgres setup
+python3 task.py --no-startup-check dbms postgres base
 
 # Generate TPC-H.
 python3 task.py --no-startup-check benchmark tpch generate-sf 1
 python3 task.py --no-startup-check benchmark tpch generate-workload queries_15721_15723 15721 15723
 
-# Setup pgdata.tgz.
+# Setup tpch.tgz.
 # TODO(phw2)
-
-# Load TPC-H.
-python3 task.py --no-startup-check dbms postgres start
-python3 task.py --no-startup-check dbms postgres init-db tpch_sf1
-python3 task.py --no-startup-check benchmark tpch load-sf 1 postgres tpch_sf1
-python3 task.py --no-startup-check dbms postgres stop
 
 # Proto-X.
 python3 task.py --no-startup-check dbms postgres start

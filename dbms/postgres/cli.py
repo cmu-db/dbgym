@@ -16,13 +16,14 @@ def postgres_group(config: DBGymConfig):
     config.append_group("postgres")
 
 
-@postgres_group.command(name="setup", help="Set up all aspects of Postgres unrelated to any specific pgdata directory (repository, binaries, extensions, shared libraries, etc.).")
+@postgres_group.command(name="base", help="Set up all aspects of Postgres unrelated to any specific benchmark.")
 @click.pass_obj
-def postgres_setup(config: DBGymConfig):
-    setup(config)
+def postgres_base(config: DBGymConfig):
+    setup_repo(config)
+    setup_base_pgdata(config)
 
 
-@postgres_group.command(name="init-pgdata")
+@postgres_group.command(name="init-pgdata", help="Set up a ")
 @click.option("--remove-existing", is_flag=True)
 @click.pass_obj
 def postgres_init_pgdata(config: DBGymConfig, remove_existing: bool):
@@ -94,25 +95,50 @@ def postgres_print_connstr(config: DBGymConfig, dbname: str):
     )
 
 
-def _pgbin_path(config: DBGymConfig) -> Path:
+def _get_pgbin_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
 
 
-def setup(config: DBGymConfig):
-    symlink_dir = config.cur_symlinks_build_path("repo")
-    if symlink_dir.exists():
-        dbms_postgres_logger.info(f"Skipping clone: {symlink_dir}")
+def _get_repo_symlink_path(config: DBGymConfig) -> Path:
+    return config.cur_symlinks_build_path("repo")
+
+
+def _get_base_pgdata_symlink_path(config: DBGymConfig) -> Path:
+    return config.cur_symlinks_build_path("base_pgdata")
+
+
+def setup_repo(config: DBGymConfig):
+    repo_symlink_dpath = _get_repo_symlink_path(config)
+    if repo_symlink_dpath.exists():
+        dbms_postgres_logger.info(f"Skipping setup_repo: {repo_symlink_dpath}")
         return
 
-    dbms_postgres_logger.info(f"Setting up: {symlink_dir}")
-    real_dir = config.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(f"./postgres_setup.sh {real_dir}", cwd=config.cur_source_path())
-    subprocess_run(f"ln -s {real_dir} {config.cur_symlinks_build_path(mkdir=True)}")
-    dbms_postgres_logger.info(f"Set up: {symlink_dir}")
+    dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
+    repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
+    subprocess_run(f"./setup_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+    subprocess_run(f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
+    dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
+
+
+def setup_base_pgdata(config: DBGymConfig):
+    pgbin_symlink_dpath = _get_repo_symlink_path(config)
+    pgdata_symlink_dpath = _get_base_pgdata_symlink_path(config)
+    if pgdata_symlink_dpath.exists():
+        dbms_postgres_logger.info(f"Skipping setup_base_pgdata: {pgdata_symlink_dpath}")
+        return
+
+    dbms_postgres_logger.info(f"Setting up base pgdata in {pgdata_symlink_dpath}")
+    pgdata_real_dpath = config.cur_task_runs_build_path("base_pgdata", mkdir=True)
+    pgbin_real_dpath = pgbin_symlink_dpath.resolve()
+    assert pgbin_real_dpath.exists(), f"setup_base_pgdata(): pgbin_real_dpath ({pgbin_real_dpath}) should exist but doesn't"
+    print(f"config.cur_source_path()={config.cur_source_path()}")
+    subprocess_run(f"./setup_base_pgdata.sh {pgdata_real_dpath} {pgbin_real_dpath}", cwd=config.cur_source_path())
+    subprocess_run(f"ln -s {pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
+    dbms_postgres_logger.info(f"Set up base pgdata in {pgdata_symlink_dpath}")
 
 
 def init_pgdata(config: DBGymConfig, remove_existing: bool):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     if not remove_existing and (pgbin_path / "pgdata").exists():
         raise RuntimeError("pgdata already exists. Specify --remove-existing to force.")
@@ -121,7 +147,7 @@ def init_pgdata(config: DBGymConfig, remove_existing: bool):
 
 
 def init_auth(config: DBGymConfig):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     pguser = config.cur_yaml["user"]
     pgpass = config.cur_yaml["pass"]
@@ -137,7 +163,7 @@ def init_auth(config: DBGymConfig):
 
 
 def init_db(config: DBGymConfig, dbname: str):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     pguser = config.cur_yaml["user"]
     pgport = config.cur_yaml["port"]
@@ -148,7 +174,7 @@ def init_db(config: DBGymConfig, dbname: str):
 
 
 def run_sql_file(config: DBGymConfig, sql_path: str):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     sql_path = Path(sql_path).resolve().absolute()
 
@@ -160,7 +186,7 @@ def run_sql_file(config: DBGymConfig, sql_path: str):
 
 
 def start(config: DBGymConfig, restart_if_running: bool = True):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     port = config.cur_yaml["port"]
 
@@ -187,12 +213,12 @@ def start(config: DBGymConfig, restart_if_running: bool = True):
 
 
 def stop(config: DBGymConfig):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     subprocess_run("./pg_ctl -D ./pgdata stop", cwd=pgbin_path)
 
 
 def pgctl(config: DBGymConfig, pgctl_str: str):
-    pgbin_path = _pgbin_path(config)
+    pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     subprocess_run(f"./pg_ctl -D ./pgdata {pgctl_str}", cwd=pgbin_path)
