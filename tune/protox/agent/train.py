@@ -70,7 +70,7 @@ class AgentTrainArgs:
 @click.option("--duration", default=0.01, type=float, help="The total number of hours to run for.")
 @click.option("--workload-timeout", default=600, type=int, help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.")
 @click.option("--query-timeout", default=30, type=int, help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.")
-def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, workload_path, seed, agent, max_hpo_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, protox_config_path, hpoed_agent_params_path, pgdata_snapshot_path, agent_params_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
     logging.info("agent.train(): called")
     
     # Set args to defaults programmatically (do this before doing anything else in the function)
@@ -115,7 +115,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
     args.workload_path = workload_path
     args.seed = seed
     args.agent = agent
-    args.max_hpo_concurrent = max_hpo_concurrent
+    args.max_concurrent = max_concurrent
     args.num_samples = num_samples
     args.early_kill = early_kill
     args.duration = duration
@@ -194,7 +194,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
     # Search.
     # if hpoed_agent_params == None, hyperparameter optimization will be performend
     # if hpoed_agent_params != None, we will just run a single tuning job with the params hpoed_agent_params
-    search = BasicVariantGenerator(points_to_evaluate=hpoed_agent_params, max_concurrent=max_hpo_concurrent)
+    search = BasicVariantGenerator(points_to_evaluate=hpoed_agent_params, max_concurrent=max_concurrent)
 
     # for OLTP, we're trying to *maximize* txn / sec. for OLAP, we're trying to *minimize* total runtime
     mode = "max" if is_oltp else "min"
@@ -202,7 +202,7 @@ def train(dbgym_cfg, benchmark_name, workload_name, embedding_path, benchmark_co
         scheduler=scheduler,
         search_alg=search,
         num_samples=num_samples,
-        max_concurrent_trials=max_hpo_concurrent,
+        max_concurrent_trials=max_concurrent,
         chdir_to_trial_dir=True,
         metric=METRIC,
         mode=mode,
