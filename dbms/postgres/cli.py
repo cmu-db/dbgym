@@ -5,7 +5,7 @@ import os
 
 import click
 
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, save_file
 from util.shell import subprocess_run
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
@@ -90,8 +90,6 @@ def setup_repo(config: DBGymConfig):
 
 
 def setup_pgdata(config: DBGymConfig):
-    # TODO(phw2): write "save" which saves a dir (to save the repo dir in setup_pgdata)
-
     # create a new dir for this pgdata
     pgdata_real_dpath = config.cur_task_runs_build_path("pgdata", mkdir=True)
     subprocess_run(f"mkdir -p \"{pgdata_real_dpath}\"")
@@ -99,11 +97,14 @@ def setup_pgdata(config: DBGymConfig):
     # initdb
     pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
+    # save any script we call from pgbin_path because they are dependencies generated from another task run
+    save_file(config, pgbin_path / "initdb")
     subprocess_run(f"./initdb -D \"{pgdata_real_dpath}\"", cwd=pgbin_path)
 
     # start postgres (all other pgdata setup requires postgres to be started)
     pgport = config.cur_yaml["port"]
     # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
+    save_file(config, pgbin_path / "pg_ctl")
     subprocess.run(
         f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path, shell=True
     )
@@ -111,6 +112,7 @@ def setup_pgdata(config: DBGymConfig):
     # create user
     pguser = config.cur_yaml["user"]
     pgpass = config.cur_yaml["pass"]
+    save_file(config, pgbin_path / "psql")
     subprocess_run(
         f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
         cwd=pgbin_path,
