@@ -16,7 +16,7 @@ def postgres_group(config: DBGymConfig):
     config.append_group("postgres")
 
 
-@postgres_group.command(name="setup", help="Set up all aspects of Postgres unrelated to any specific pgdata directory (repository, binaries, extensions, etc.).")
+@postgres_group.command(name="setup", help="Set up all aspects of Postgres unrelated to any specific pgdata directory (repository, binaries, extensions, shared libraries, etc.).")
 @click.pass_obj
 def postgres_setup(config: DBGymConfig):
     setup(config)

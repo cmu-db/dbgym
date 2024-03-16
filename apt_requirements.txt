@@ -3,3 +3,4 @@ bison
 flex
 libreadline-dev
 zlib1g-dev
+rpm
