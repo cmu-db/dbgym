@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import subprocess
 
 import click
 
@@ -140,8 +141,9 @@ def setup_base_pgdata(config: DBGymConfig):
 
     # start postgres (all other pgdata setup requires postgres to be started)
     pgport = config.cur_yaml["port"]
-    subprocess_run(
-        f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path
+    # note that subprocess_run() never returns when running pg_ctl start, so I'm using subprocess.run() instead
+    subprocess.run(
+        f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path, shell=True
     )
 
     # create user
@@ -228,8 +230,8 @@ def start(config: DBGymConfig, restart_if_running: bool = True):
             subprocess_run(f"./pg_ctl -D \"{pgdata_real_path}\" stop", cwd=pgbin_path)
             dbms_postgres_logger.info(f"PostgreSQL stopped.")
 
-    subprocess_run(
-        f"./pg_ctl -D \"{pgdata_real_path}\" -o '-p {port}' start", cwd=pgbin_path
+    subprocess.run(
+        f"./pg_ctl -D \"{pgdata_real_path}\" -o '-p {port}' start", cwd=pgbin_path, shell=True
     )
 
 
