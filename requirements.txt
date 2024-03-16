@@ -2,6 +2,7 @@ absl-py==2.1.0
 aiosignal==1.3.1
 astunparse==1.6.3
 attrs==23.2.0
+black==24.2.0
 cachetools==5.3.2
 certifi==2023.11.17
 charset-normalizer==3.3.2
@@ -22,12 +23,14 @@ gast==0.5.4
 google-auth==2.27.0
 google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
+greenlet==3.0.3
 grpcio==1.60.0
 gymnasium==0.28.1
 h5py==3.10.0
 hyperopt==0.2.7
 idna==3.6
 importlib-metadata==7.0.1
+isort==5.13.2
 jax-jumpy==1.0.0
 Jinja2==3.1.3
 joblib==1.3.2
@@ -41,6 +44,7 @@ MarkupSafe==2.1.4
 ml-dtypes==0.2.0
 mpmath==1.3.0
 msgpack==1.0.7
+mypy-extensions==1.0.0
 networkx==3.2.1
 numpy==1.26.3
 nvidia-cublas-cu11==11.10.3.66
@@ -70,10 +74,12 @@ oauthlib==3.2.2
 opt-einsum==3.3.0
 packaging==23.2
 pandas==2.2.0
-pglast==3.8
+pathspec==0.12.1
+pglast==6.2
 platformdirs==4.2.0
 plumbum==1.8.1
 protobuf==3.20.3
+psutil==5.9.8
 psycopg==3.1.9
 py4j==0.10.9.7
 pyaml==23.5.9
@@ -94,6 +100,7 @@ rsa==4.9
 scikit-learn==1.4.0
 scipy==1.12.0
 six==1.16.0
+SQLAlchemy==2.0.28
 sympy==1.12
 tabulate==0.9.0
 tensorboard==2.15.2
@@ -104,6 +111,7 @@ tensorflow-estimator==2.15.0
 tensorflow-io-gcs-filesystem==0.36.0
 termcolor==2.4.0
 threadpoolctl==3.2.0
+tomli==2.0.1
 torch==2.0.0
 tqdm==4.66.1
 triton==2.0.0
