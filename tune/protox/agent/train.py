@@ -290,6 +290,11 @@ def create_tune_opt_class(dbgym_cfg_param):
             print("HPO Configuration: ", hpo_config)
             assert "protox_args" in hpo_config
             protox_args = hpo_config["protox_args"]
+
+            # Convert paths to Path objects because that's what's expected by all functions
+            # this is the earliest place we can do it. the hpo_config passed *into* setup cannot contain Path objects
+            protox_args["embedding_path"] = Path(protox_args["embedding_path"])
+
             protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
             # sys.path.append() must take in strings as input, not Path objects
             sys.path.append(str(protox_dir))
@@ -325,6 +330,7 @@ def create_tune_opt_class(dbgym_cfg_param):
             protox_args["benchmark_config_path"] = Path(self.logdir) / f"{benchmark_name}.yaml"
             protox_args["reward"] = hpo_config.reward
             protox_args["horizon"] = hpo_config.horizon
+            
             self.trial = TuneTrial()
             self.trial.setup(TuneOpt.dbgym_cfg, hpo_config.is_oltp, protox_args, self.timeout_checker)
             self.start_time = time.time()
