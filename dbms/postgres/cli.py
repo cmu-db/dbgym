@@ -126,19 +126,43 @@ def setup_repo(config: DBGymConfig):
 
 
 def setup_base_pgdata(config: DBGymConfig):
-    pgbin_path = _get_pgbin_symlink_path(config)
-    assert pgbin_path.exists()
     pgdata_symlink_dpath = _get_base_pgdata_symlink_path(config)
     if pgdata_symlink_dpath.exists():
         dbms_postgres_logger.info(f"Skipping setup_repo: {pgdata_symlink_dpath}")
         return
 
-    new_pgdata_real_dpath = config.cur_task_runs_build_path(BASE_PGDATA_DNAME, mkdir=True)
-    subprocess_run(f"mkdir -p \"${new_pgdata_real_dpath}\"")
-    subprocess_run(f"./initdb -D \"${new_pgdata_real_dpath}\"", cwd=pgbin_path)
+    # initdb
+    pgbin_path = _get_pgbin_symlink_path(config)
+    assert pgbin_path.exists()
+    pgdata_real_dpath = config.cur_task_runs_build_path(BASE_PGDATA_DNAME, mkdir=True)
+    subprocess_run(f"mkdir -p \"{pgdata_real_dpath}\"")
+    subprocess_run(f"./initdb -D \"{pgdata_real_dpath}\"", cwd=pgbin_path)
+
+    # start postgres (all other pgdata setup requires postgres to be started)
+    pgport = config.cur_yaml["port"]
+    subprocess_run(
+        f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path
+    )
+
+    # create user
+    pguser = config.cur_yaml["user"]
+    pgpass = config.cur_yaml["pass"]
+    subprocess_run(
+        f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
+        cwd=pgbin_path,
+    )
+    subprocess_run(
+        f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
+        cwd=pgbin_path,
+    )
+
+    # stop postgres so that we don't "leak" anything
+    subprocess_run(
+        f"./pg_ctl -D \"{pgdata_real_dpath}\" stop", cwd=pgbin_path
+    )
 
     # only link at the end so that the link only ever points to a complete pgdata
-    subprocess_run(f"ln -s {new_pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
+    subprocess_run(f"ln -s {pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
 
 
 def init_auth(config: DBGymConfig):
@@ -183,6 +207,8 @@ def run_sql_file(config: DBGymConfig, sql_path: str):
 def start(config: DBGymConfig, restart_if_running: bool = True):
     pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
+    pgdata_symlink_path = _get_base_pgdata_symlink_path(config)
+    pgdata_real_path = pgdata_symlink_path.resolve()
     port = config.cur_yaml["port"]
 
     if restart_if_running:
@@ -199,11 +225,11 @@ def start(config: DBGymConfig, restart_if_running: bool = True):
         dbms_postgres_logger.info(f"pg_isready status: {pg_isready.returncode}")
         if pg_isready.returncode != 2:
             dbms_postgres_logger.info(f"PostgreSQL is alive, stopping it.")
-            subprocess_run("./pg_ctl -D ./pgdata stop", cwd=pgbin_path)
+            subprocess_run(f"./pg_ctl -D \"{pgdata_real_path}\" stop", cwd=pgbin_path)
             dbms_postgres_logger.info(f"PostgreSQL stopped.")
 
     subprocess_run(
-        f"./pg_ctl -D ./pgdata -l logfile -o '-p {port}' start", cwd=pgbin_path
+        f"./pg_ctl -D \"{pgdata_real_path}\" -o '-p {port}' start", cwd=pgbin_path
     )
 
 
