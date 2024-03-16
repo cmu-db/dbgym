@@ -27,13 +27,6 @@ def postgres_base(config: DBGymConfig):
     setup_base_pgdata(config)
 
 
-@postgres_group.command(name="init-pgdata", help="Set up a ")
-@click.option("--remove-existing", is_flag=True)
-@click.pass_obj
-def postgres_init_pgdata(config: DBGymConfig, remove_existing: bool):
-    init_pgdata(config, remove_existing)
-
-
 @postgres_group.command(name="init-auth")
 @click.pass_obj
 def postgres_init_auth(config: DBGymConfig):
@@ -45,34 +38,7 @@ def postgres_init_auth(config: DBGymConfig):
 @click.pass_obj
 def postgres_init_db(config: DBGymConfig, dbname: str):
     init_db(config, dbname)
-
-
-@postgres_group.command(name="start")
-@click.option("--restart-if-running/--no-restart-if-running", default=True)
-@click.pass_obj
-def postgres_start(config: DBGymConfig, restart_if_running: bool):
-    start(config, restart_if_running)
-
-
-@postgres_group.command(name="stop")
-@click.pass_obj
-def postgres_stop(config: DBGymConfig):
-    stop(config)
-
-
-@postgres_group.command(name="pgctl")
-@click.argument("pgctl-str", type=str)
-@click.pass_obj
-def postgres_pgctl(config: DBGymConfig, pgctl_str: str):
-    pgctl(config, pgctl_str)
-
-
-@postgres_group.command(name="run-sql-file")
-@click.argument("sql-path", type=str)
-@click.pass_obj
-def postgres_run_sql(config: DBGymConfig, sql_path: str):
-    run_sql_file(config, sql_path)
-
+    
 
 @postgres_group.command(name="print-psql")
 @click.argument("dbname", type=str)
