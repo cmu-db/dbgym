@@ -2,18 +2,15 @@
 
 set -euxo pipefail
 
-# Setup DBMS.
-python3 task.py --no-startup-check dbms postgres clone
-python3 task.py --no-startup-check dbms postgres init-pgdata --remove-existing
-python3 task.py --no-startup-check dbms postgres start
-python3 task.py --no-startup-check dbms postgres init-auth
-python3 task.py --no-startup-check dbms postgres run-sql-file ./config/pgtune.sql
-python3 task.py --no-startup-check dbms postgres run-sql-file ./config/setup.sql
-python3 task.py --no-startup-check dbms postgres stop
+# Setup Postgres.
+python3 task.py --no-startup-check dbms postgres setup
 
 # Generate TPC-H.
 python3 task.py --no-startup-check benchmark tpch generate-sf 1
 python3 task.py --no-startup-check benchmark tpch generate-workload queries_15721_15723 15721 15723
+
+# Setup pgdata.tgz.
+# TODO(phw2)
 
 # Load TPC-H.
 python3 task.py --no-startup-check dbms postgres start

@@ -16,10 +16,10 @@ def postgres_group(config: DBGymConfig):
     config.append_group("postgres")
 
 
-@postgres_group.command(name="clone")
+@postgres_group.command(name="setup", help="Set up all aspects of Postgres unrelated to any specific pgdata directory (repository, binaries, extensions, etc.).")
 @click.pass_obj
-def postgres_clone(config: DBGymConfig):
-    clone(config)
+def postgres_setup(config: DBGymConfig):
+    setup(config)
 
 
 @postgres_group.command(name="init-pgdata")
@@ -98,17 +98,17 @@ def _pgbin_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
 
 
-def clone(config: DBGymConfig):
+def setup(config: DBGymConfig):
     symlink_dir = config.cur_symlinks_build_path("repo")
     if symlink_dir.exists():
         dbms_postgres_logger.info(f"Skipping clone: {symlink_dir}")
         return
 
-    dbms_postgres_logger.info(f"Cloning: {symlink_dir}")
+    dbms_postgres_logger.info(f"Setting up: {symlink_dir}")
     real_dir = config.cur_task_runs_build_path("repo", mkdir=True)
     subprocess_run(f"./postgres_setup.sh {real_dir}", cwd=config.cur_source_path())
     subprocess_run(f"ln -s {real_dir} {config.cur_symlinks_build_path(mkdir=True)}")
-    dbms_postgres_logger.info(f"Cloned: {symlink_dir}")
+    dbms_postgres_logger.info(f"Set up: {symlink_dir}")
 
 
 def init_pgdata(config: DBGymConfig, remove_existing: bool):
