@@ -70,8 +70,8 @@ def _get_repo_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo")
 
 
-def _get_pgdata_symlink_path(config: DBGymConfig) -> Path:
-    return config.cur_symlinks_build_path("pgdata")
+def _get_pgdata_tgz_symlink_path(config: DBGymConfig) -> Path:
+    return config.cur_symlinks_build_path("pgdata.tgz")
 
 
 def setup_repo(config: DBGymConfig):
@@ -125,13 +125,20 @@ def setup_pgdata(config: DBGymConfig):
         f"./pg_ctl -D \"{pgdata_real_dpath}\" stop", cwd=pgbin_path
     )
 
-    # TODO(phw2): create .tgz file
+    # create .tgz file
+    # you can't pass "pgdata.tgz" as an arg to cur_task_runs_build_path() because that would create "pgdata.tgz" as a dir
+    pgdata_tgz_real_fpath = config.cur_task_runs_build_path(".", mkdir=True) / "pgdata.tgz"
+    # we need to cd into pgdata_real_dpath so that the tar file does not contain folders for the whole path of pgdata_real_dpath
+    subprocess_run(
+        f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_real_dpath
+    )
 
+    # create symlink
     # only link at the end so that the link only ever points to a complete pgdata
-    pgdata_symlink_path = _get_pgdata_symlink_path(config)
-    if pgdata_symlink_path.exists():
-        os.remove(pgdata_symlink_path)
-    subprocess_run(f"ln -s {pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
+    pgdata_tgz_symlink_path = _get_pgdata_tgz_symlink_path(config)
+    if pgdata_tgz_symlink_path.exists():
+        os.remove(pgdata_tgz_symlink_path)
+    subprocess_run(f"ln -s {pgdata_tgz_real_fpath} {config.cur_symlinks_build_path(mkdir=True)}")
 
 
 def init_db(config: DBGymConfig, dbname: str):
