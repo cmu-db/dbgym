@@ -60,7 +60,7 @@ class AgentTrainArgs:
     help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option("--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent.")
-@click.option("--max-hpo-concurrent", default=1, help=f"The max # of concurrent agent models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.")
+@click.option("--max-concurrent", default=1, help=f"The max # of concurrent agent models to train. Note that unlike in HPO, all will use the same hyperparameters. This just helps control for other sources of randomness.")
 @click.option(
     "--num-samples",
     default=40,
@@ -293,7 +293,15 @@ def create_tune_opt_class(dbgym_cfg_param):
 
             # Convert paths to Path objects because that's what's expected by all functions
             # this is the earliest place we can do it. the hpo_config passed *into* setup cannot contain Path objects
+            # I just manually convert more paths to Path objects if a crash happens
             protox_args["embedding_path"] = Path(protox_args["embedding_path"])
+            protox_args["benchmark_config_path"] = Path(protox_args["benchmark_config_path"])
+            protox_args["benchbase_config_path"] = Path(protox_args["benchbase_config_path"])
+            protox_args["protox_config_path"] = Path(protox_args["protox_config_path"])
+            protox_args["hpoed_agent_params_path"] = Path(protox_args["hpoed_agent_params_path"])
+            protox_args["pgdata_snapshot_path"] = Path(protox_args["pgdata_snapshot_path"])
+            protox_args["agent_params_path"] = Path(protox_args["agent_params_path"])
+            protox_args["workload_path"] = Path(protox_args["workload_path"])
 
             protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
             # sys.path.append() must take in strings as input, not Path objects
