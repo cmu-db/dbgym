@@ -10,6 +10,9 @@ dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
 
 
+BASE_PGDATA_DNAME = "base_pgdata"
+
+
 @click.group(name="postgres")
 @click.pass_obj
 def postgres_group(config: DBGymConfig):
@@ -104,7 +107,7 @@ def _get_repo_symlink_path(config: DBGymConfig) -> Path:
 
 
 def _get_base_pgdata_symlink_path(config: DBGymConfig) -> Path:
-    return config.cur_symlinks_build_path("base_pgdata")
+    return config.cur_symlinks_build_path(BASE_PGDATA_DNAME)
 
 
 def setup_repo(config: DBGymConfig):
@@ -116,34 +119,26 @@ def setup_repo(config: DBGymConfig):
     dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
     repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
     subprocess_run(f"./setup_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+
+    # only link at the end so that the link only ever points to a complete repo
     subprocess_run(f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
 def setup_base_pgdata(config: DBGymConfig):
-    pgbin_symlink_dpath = _get_repo_symlink_path(config)
-    pgdata_symlink_dpath = _get_base_pgdata_symlink_path(config)
-    if pgdata_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping setup_base_pgdata: {pgdata_symlink_dpath}")
-        return
-
-    dbms_postgres_logger.info(f"Setting up base pgdata in {pgdata_symlink_dpath}")
-    pgdata_real_dpath = config.cur_task_runs_build_path("base_pgdata", mkdir=True)
-    pgbin_real_dpath = pgbin_symlink_dpath.resolve()
-    assert pgbin_real_dpath.exists(), f"setup_base_pgdata(): pgbin_real_dpath ({pgbin_real_dpath}) should exist but doesn't"
-    print(f"config.cur_source_path()={config.cur_source_path()}")
-    subprocess_run(f"./setup_base_pgdata.sh {pgdata_real_dpath} {pgbin_real_dpath}", cwd=config.cur_source_path())
-    subprocess_run(f"ln -s {pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
-    dbms_postgres_logger.info(f"Set up base pgdata in {pgdata_symlink_dpath}")
-
-
-def init_pgdata(config: DBGymConfig, remove_existing: bool):
     pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
-    if not remove_existing and (pgbin_path / "pgdata").exists():
-        raise RuntimeError("pgdata already exists. Specify --remove-existing to force.")
-    subprocess_run(f"rm -rf ./pgdata", cwd=pgbin_path)
-    subprocess_run(f"./initdb -D ./pgdata", cwd=pgbin_path)
+    pgdata_symlink_dpath = _get_base_pgdata_symlink_path(config)
+    if pgdata_symlink_dpath.exists():
+        dbms_postgres_logger.info(f"Skipping setup_repo: {pgdata_symlink_dpath}")
+        return
+
+    new_pgdata_real_dpath = config.cur_task_runs_build_path(BASE_PGDATA_DNAME, mkdir=True)
+    subprocess_run(f"mkdir -p \"${new_pgdata_real_dpath}\"")
+    subprocess_run(f"./initdb -D \"${new_pgdata_real_dpath}\"", cwd=pgbin_path)
+
+    # only link at the end so that the link only ever points to a complete pgdata
+    subprocess_run(f"ln -s {new_pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
 
 
 def init_auth(config: DBGymConfig):
