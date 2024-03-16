@@ -34,7 +34,9 @@ class NormalActionNoise(ActionNoise):
     :param dtype: Type of the output noise
     """
 
-    def __init__(self, mean: np.ndarray, sigma: np.ndarray, dtype: DTypeLike = np.float32) -> None:
+    def __init__(
+        self, mean: np.ndarray, sigma: np.ndarray, dtype: DTypeLike = np.float32
+    ) -> None:
         self._mu = mean
         self._sigma = sigma
         self._dtype = dtype
@@ -93,7 +95,11 @@ class OrnsteinUhlenbeckActionNoise(ActionNoise):
         """
         reset the Ornstein Uhlenbeck noise, to the initial position
         """
-        self.noise_prev = self.initial_noise if self.initial_noise is not None else np.zeros_like(self._mu)
+        self.noise_prev = (
+            self.initial_noise
+            if self.initial_noise is not None
+            else np.zeros_like(self._mu)
+        )
 
     def __repr__(self) -> str:
         return f"OrnsteinUhlenbeckActionNoise(mu={self._mu}, sigma={self._sigma})"
@@ -112,7 +118,9 @@ class VectorizedActionNoise(ActionNoise):
             self.n_envs = int(n_envs)
             assert self.n_envs > 0
         except (TypeError, AssertionError) as e:
-            raise ValueError(f"Expected n_envs={n_envs} to be positive integer greater than 0") from e
+            raise ValueError(
+                f"Expected n_envs={n_envs} to be positive integer greater than 0"
+            ) from e
 
         self.base_noise = base_noise
         self.noises = [copy.deepcopy(self.base_noise) for _ in range(n_envs)]
@@ -131,7 +139,9 @@ class VectorizedActionNoise(ActionNoise):
             self.noises[index].reset()
 
     def __repr__(self) -> str:
-        return f"VecNoise(BaseNoise={repr(self.base_noise)}), n_envs={len(self.noises)})"
+        return (
+            f"VecNoise(BaseNoise={repr(self.base_noise)}), n_envs={len(self.noises)})"
+        )
 
     def __call__(self) -> np.ndarray:
         """
@@ -147,9 +157,14 @@ class VectorizedActionNoise(ActionNoise):
     @base_noise.setter
     def base_noise(self, base_noise: ActionNoise) -> None:
         if base_noise is None:
-            raise ValueError("Expected base_noise to be an instance of ActionNoise, not None", ActionNoise)
+            raise ValueError(
+                "Expected base_noise to be an instance of ActionNoise, not None",
+                ActionNoise,
+            )
         if not isinstance(base_noise, ActionNoise):
-            raise TypeError("Expected base_noise to be an instance of type ActionNoise", ActionNoise)
+            raise TypeError(
+                "Expected base_noise to be an instance of type ActionNoise", ActionNoise
+            )
         self._base_noise = base_noise
 
     @property
@@ -159,13 +174,20 @@ class VectorizedActionNoise(ActionNoise):
     @noises.setter
     def noises(self, noises: List[ActionNoise]) -> None:
         noises = list(noises)  # raises TypeError if not iterable
-        assert len(noises) == self.n_envs, f"Expected a list of {self.n_envs} ActionNoises, found {len(noises)}."
+        assert (
+            len(noises) == self.n_envs
+        ), f"Expected a list of {self.n_envs} ActionNoises, found {len(noises)}."
 
-        different_types = [i for i, noise in enumerate(noises) if not isinstance(noise, type(self.base_noise))]
+        different_types = [
+            i
+            for i, noise in enumerate(noises)
+            if not isinstance(noise, type(self.base_noise))
+        ]
 
         if len(different_types):
             raise ValueError(
-                f"Noise instances at indices {different_types} don't match the type of base_noise", type(self.base_noise)
+                f"Noise instances at indices {different_types} don't match the type of base_noise",
+                type(self.base_noise),
             )
 
         self._noises = noises

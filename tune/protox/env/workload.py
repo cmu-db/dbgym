@@ -250,7 +250,9 @@ class Workload(object):
 
         if "execute_query_order" in query_spec:
             # TODO(WAN): can this be folded into workload_path?
-            with open_and_save(self.dbgym_cfg, query_spec["execute_query_order"], "r") as f:
+            with open_and_save(
+                self.dbgym_cfg, query_spec["execute_query_order"], "r"
+            ) as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
@@ -459,8 +461,10 @@ class Workload(object):
                     if output_file is not None:
                         query = "EXPLAIN (ANALYZE, TIMING OFF) " + query
 
-                    _, qid_runtime, query_timeout, explain = acquire_metrics_around_query(
-                        "", None, connection, qid, query, time_left, metrics=False
+                    _, qid_runtime, query_timeout, explain = (
+                        acquire_metrics_around_query(
+                            "", None, connection, qid, query, time_left, metrics=False
+                        )
                     )
 
                     if disable_pg_hint:
@@ -652,7 +656,9 @@ class Workload(object):
                     ) = execute_serial_variations(
                         env_spec=env_spec,
                         connection=connection,
-                        query_timeout=min(query_timeout, self.workload_timeout - running_time + 1),
+                        query_timeout=min(
+                            query_timeout, self.workload_timeout - running_time + 1
+                        ),
                         logger=self.logger,
                         qid=qid,
                         query=query,
@@ -683,7 +689,9 @@ class Workload(object):
                     # If the "new" timed out or if "old" is better, use the old metric.
                     _, old_best_time, _ = reset_accum_metric[qid]
                     if best_query_timeout or old_best_time < best_time:
-                        best_metric, best_time, best_query_timeout = reset_accum_metric[qid]
+                        best_metric, best_time, best_query_timeout = reset_accum_metric[
+                            qid
+                        ]
                         runs_idx = ("PrevDual", qid_global)
 
                 assert qid not in qid_runtime_data
@@ -725,7 +733,9 @@ class Workload(object):
                     for knob, val in inverse_knobs:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
-                elif runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_query_timeout:
+                elif (
+                    runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_query_timeout
+                ):
                     assert not reset_eval
                     enum_knobs = runs_idx[1]
 
@@ -752,7 +762,10 @@ class Workload(object):
 
                 if (
                     qid not in self.best_observed
-                    or (best_time < self.best_observed[qid][1] and not best_query_timeout)
+                    or (
+                        best_time < self.best_observed[qid][1]
+                        and not best_query_timeout
+                    )
                     or reset_eval
                 ):
                     # Knobs that are actually set.

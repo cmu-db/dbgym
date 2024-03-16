@@ -8,7 +8,6 @@ from pathlib import Path
 import click
 import yaml
 
-
 # Relpaths of different folders in the codebase
 TUNE_RELPATH = Path("tune")
 PROTOX_RELPATH = TUNE_RELPATH / "protox"
@@ -19,9 +18,12 @@ PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
+
+
 # This is a function because both DBGymConfig and the default path globalvars use it
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
+
 
 # Other parameters
 BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
@@ -32,16 +34,49 @@ WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
 DEFAULT_PROTOX_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_protox_config.yaml"
 DEFAULT_WOLP_PARAMS_RELPATH = PROTOX_WOLP_RELPATH / "default_wolp_params.yaml"
-default_benchmark_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchmark_config.yaml"
-default_benchbase_config_relpath = lambda benchmark_name: PROTOX_RELPATH / f"default_{benchmark_name}_benchbase_config.xml"
+default_benchmark_config_relpath = (
+    lambda benchmark_name: PROTOX_RELPATH
+    / f"default_{benchmark_name}_benchmark_config.yaml"
+)
+default_benchbase_config_relpath = (
+    lambda benchmark_name: PROTOX_RELPATH
+    / f"default_{benchmark_name}_benchbase_config.xml"
+)
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
-default_dataset_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding_traindata.parquet"
-default_embedding_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding"
-default_hpoed_agent_params_path = lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path) / f"hpoed_agent_params.yaml"
-default_workload_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"dbgym_benchmark_{benchmark_name}" / "data" / f"workload_{workload_name}"
-default_pgdata_snapshot_path = lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path) / f"dbgym_dbms_postgres" / "data" / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
+default_dataset_path = (
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding_traindata.parquet"
+)
+default_embedding_path = (
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding"
+)
+default_hpoed_agent_params_path = (
+    lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
+    / f"hpoed_agent_params.yaml"
+)
+default_workload_path = (
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_benchmark_{benchmark_name}"
+    / "data"
+    / f"workload_{workload_name}"
+)
+default_pgdata_snapshot_path = (
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_dbms_postgres"
+    / "data"
+    / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
+)
 
 
 class DBGymConfig:
@@ -94,7 +129,9 @@ class DBGymConfig:
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(self.dbgym_workspace_path)
+        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.
@@ -243,12 +280,18 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
         - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked.
     """
     # process/validate open_fpath
-    assert os.path.isabs(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
-    open_fpath = os.path.realpath(open_fpath) # traverse symlinks
-    assert os.path.exists(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should exist"
+    assert os.path.isabs(
+        open_fpath
+    ), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
+    open_fpath = os.path.realpath(open_fpath)  # traverse symlinks
+    assert os.path.exists(
+        open_fpath
+    ), f"open_and_save(): open_fpath ({open_fpath}) should exist"
     # open_and_save *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
     #   a file though. we sometimes save a directory. see the comments below for the reasoning
-    assert os.path.isfile(open_fpath), f"open_and_save(): open_fpath ({open_fpath}) should be a file."
+    assert os.path.isfile(
+        open_fpath
+    ), f"open_and_save(): open_fpath ({open_fpath}) should be a file."
 
     # save _something_ to dbgym_this_run_path
     # save a symlink if the opened file was generated by a run. this is for two reasons:
@@ -261,7 +304,9 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
             open_dpath, dbgym_cfg.dbgym_runs_path
         ), f"open_fpath ({open_fpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
         open_run_dpath = open_dpath
-        while not os.path.samefile(parent_dir(open_run_dpath), dbgym_cfg.dbgym_runs_path):
+        while not os.path.samefile(
+            parent_dir(open_run_dpath), dbgym_cfg.dbgym_runs_path
+        ):
             open_run_dpath = parent_dir(open_run_dpath)
 
         # if the open_fpath file is directly in the run_*/ dir, we symlink the file directly

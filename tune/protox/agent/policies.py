@@ -1,7 +1,9 @@
 """Policies: abstract base class and concrete implementations."""
+
 import copy
 from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
 import numpy as np
 import torch as th
 from gymnasium import spaces
@@ -85,14 +87,23 @@ class BaseModel(nn.Module):
         if features_extractor is None:
             # The features extractor is not shared, create a new one
             features_extractor = self.make_features_extractor()
-        net_kwargs.update(dict(features_extractor=features_extractor, features_dim=features_extractor.features_dim))
+        net_kwargs.update(
+            dict(
+                features_extractor=features_extractor,
+                features_dim=features_extractor.features_dim,
+            )
+        )
         return net_kwargs
 
     def make_features_extractor(self) -> BaseFeaturesExtractor:
         """Helper method to create a features extractor."""
-        return self.features_extractor_class(self.observation_space, **self.features_extractor_kwargs)
+        return self.features_extractor_class(
+            self.observation_space, **self.features_extractor_kwargs
+        )
 
-    def extract_features(self, obs: th.Tensor, features_extractor: BaseFeaturesExtractor) -> th.Tensor:
+    def extract_features(
+        self, obs: th.Tensor, features_extractor: BaseFeaturesExtractor
+    ) -> th.Tensor:
         """
         Preprocess the observation if needed and extract features.
 
@@ -123,7 +134,9 @@ class BaseModel(nn.Module):
         """
         self.train(mode)
 
-    def is_vectorized_observation(self, observation: Union[np.ndarray, Dict[str, np.ndarray]]) -> bool:
+    def is_vectorized_observation(
+        self, observation: Union[np.ndarray, Dict[str, np.ndarray]]
+    ) -> bool:
         """
         Check whether or not the observation is vectorized,
         This is used in DQN when sampling random action (epsilon-greedy policy)
@@ -135,12 +148,18 @@ class BaseModel(nn.Module):
         if isinstance(observation, dict):
             for key, obs in observation.items():
                 obs_space = self.observation_space.spaces[key]
-                vectorized_env = vectorized_env or is_vectorized_observation(obs, obs_space)
+                vectorized_env = vectorized_env or is_vectorized_observation(
+                    obs, obs_space
+                )
         else:
-            vectorized_env = is_vectorized_observation(observation, self.observation_space)
+            vectorized_env = is_vectorized_observation(
+                observation, self.observation_space
+            )
         return vectorized_env
 
-    def obs_to_tensor(self, observation: Union[np.ndarray, Dict[str, np.ndarray]]) -> Tuple[th.Tensor, bool]:
+    def obs_to_tensor(
+        self, observation: Union[np.ndarray, Dict[str, np.ndarray]]
+    ) -> Tuple[th.Tensor, bool]:
         """
         Convert an input observation to a PyTorch tensor that can be fed to a model.
         Includes sugar-coating to handle different observations.
@@ -156,16 +175,22 @@ class BaseModel(nn.Module):
             for key, obs in observation.items():
                 obs_space = self.observation_space.spaces[key]
                 obs_ = np.array(obs)
-                vectorized_env = vectorized_env or is_vectorized_observation(obs_, obs_space)
+                vectorized_env = vectorized_env or is_vectorized_observation(
+                    obs_, obs_space
+                )
                 # Add batch dimension if needed
-                observation[key] = obs_.reshape((-1, *self.observation_space[key].shape))
+                observation[key] = obs_.reshape(
+                    (-1, *self.observation_space[key].shape)
+                )
 
         else:
             observation = np.array(observation)
 
         if not isinstance(observation, dict):
             # Dict obs need to be handled separately
-            vectorized_env = is_vectorized_observation(observation, self.observation_space)
+            vectorized_env = is_vectorized_observation(
+                observation, self.observation_space
+            )
             # Add batch dimension if needed
             observation = observation.reshape((-1, *self.observation_space.shape))
 
@@ -188,11 +213,17 @@ class BasePolicy(BaseModel, ABC):
         super().__init__(*args, **kwargs)
         self._squash_output = squash_output
 
-    def discriminate(self, use_target, states, embed_actions, actions_dim, env_actions=None):
+    def discriminate(
+        self, use_target, states, embed_actions, actions_dim, env_actions=None
+    ):
         th_embed_actions = th.as_tensor(embed_actions, device=self.device).float()
-        states_tile = states.repeat_interleave(th.tensor(actions_dim, device=self.device), dim=0)
+        states_tile = states.repeat_interleave(
+            th.tensor(actions_dim, device=self.device), dim=0
+        )
         if use_target:
-            next_q_values = th.cat(self.critic_target(states_tile, th_embed_actions), dim=1)
+            next_q_values = th.cat(
+                self.critic_target(states_tile, th_embed_actions), dim=1
+            )
             assert not th.isnan(next_q_values).any()
             next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
         else:
@@ -202,7 +233,10 @@ class BasePolicy(BaseModel, ABC):
 
         env_splitter = [0] + list(actions_dim.cumsum())
         if env_actions is not None:
-            split_env_actions = [env_actions[start:end] for start, end in zip(env_splitter[:-1], env_splitter[1:])]
+            split_env_actions = [
+                env_actions[start:end]
+                for start, end in zip(env_splitter[:-1], env_splitter[1:])
+            ]
         # Split the actions.
         splitter = actions_dim.cumsum()[:-1]
         split_embed_actions = np.split(embed_actions, splitter)
@@ -211,9 +245,15 @@ class BasePolicy(BaseModel, ABC):
         max_indices = [np.argmax(split) for split in actions_eval_split]
         # Find the maximal action.
         if env_actions is not None:
-            env_actions = [split_env_actions[i][max_indices[i]] for i in range(len(max_indices))]
-        embed_actions = np.array([split_embed_actions[i][max_indices[i]] for i in range(len(max_indices))])
-        associated_qs = np.array([actions_eval_split[i][max_indices[i]] for i in range(len(max_indices))])
+            env_actions = [
+                split_env_actions[i][max_indices[i]] for i in range(len(max_indices))
+            ]
+        embed_actions = np.array(
+            [split_embed_actions[i][max_indices[i]] for i in range(len(max_indices))]
+        )
+        associated_qs = np.array(
+            [actions_eval_split[i][max_indices[i]] for i in range(len(max_indices))]
+        )
         assert states.shape[0] == embed_actions.shape[0]
         return env_actions, embed_actions, associated_qs, next_q_values
 
@@ -271,8 +311,8 @@ class ContinuousCritic(BaseModel):
         features_extractor: nn.Module,
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
-        weight_init = None,
-        bias_zero = False,
+        weight_init=None,
+        bias_zero=False,
         n_critics: int = 2,
         share_features_extractor: bool = True,
         action_dim: int = 0,
@@ -289,7 +329,14 @@ class ContinuousCritic(BaseModel):
         self.n_critics = n_critics
         self.q_networks = []
         for idx in range(n_critics):
-            q_net = create_mlp(features_dim + action_dim, 1, net_arch, activation_fn, weight_init=weight_init, bias_zero=bias_zero)
+            q_net = create_mlp(
+                features_dim + action_dim,
+                1,
+                net_arch,
+                activation_fn,
+                weight_init=weight_init,
+                bias_zero=bias_zero,
+            )
             q_net = nn.Sequential(*q_net)
             self.add_module(f"qf{idx}", q_net)
             self.q_networks.append(q_net)
@@ -313,7 +360,9 @@ class ContinuousCritic(BaseModel):
         return self.q_networks[0](th.cat([features, actions], dim=1))
 
     def save_state(self):
-        return { "q_networks": self.q_networks, }
+        return {
+            "q_networks": self.q_networks,
+        }
 
     def load_state(self, d):
         self.q_networks = []

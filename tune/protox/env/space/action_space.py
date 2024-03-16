@@ -1,8 +1,9 @@
-import time
-import torch
-import numpy as np
 import itertools
+import time
+
 import gymnasium as gym
+import numpy as np
+import torch
 from gymnasium import spaces
 
 
@@ -47,8 +48,11 @@ class ActionSpace(spaces.Tuple):
                 self.contains_latent = True
 
         raw_dims = [
-            gym.spaces.utils.flatdim(space) if space.get_latent_dim() == 0
-            else space.get_latent_dim()
+            (
+                gym.spaces.utils.flatdim(space)
+                if space.get_latent_dim() == 0
+                else space.get_latent_dim()
+            )
             for space in self.spaces
         ]
         self.raw_dims = np.cumsum(raw_dims)
@@ -57,7 +61,7 @@ class ActionSpace(spaces.Tuple):
     def get_current_lsc(self):
         idxs = self.get_index_space()
         if idxs is None or idxs.lsc is None or (not self.lsc_embed):
-            return np.array([-1.], dtype=np.float32)
+            return np.array([-1.0], dtype=np.float32)
         return idxs.lsc.current_scale()
 
     def adjust_action_lsc(self, act, lsc):
@@ -67,8 +71,8 @@ class ActionSpace(spaces.Tuple):
 
         assert len(self.raw_dims) <= 2
         if len(self.raw_dims) == 2:
-            a0 = act[:, :self.raw_dims[0]]
-            a1 = act[:, self.raw_dims[0]:] + idxs.lsc.inverse_scale(lsc)
+            a0 = act[:, : self.raw_dims[0]]
+            a1 = act[:, self.raw_dims[0] :] + idxs.lsc.inverse_scale(lsc)
             return torch.concat([a0, a1], dim=1)
         else:
             return act + idxs.lsc.inverse_scale(lsc)
@@ -96,7 +100,9 @@ class ActionSpace(spaces.Tuple):
         if self.knob_space_ind is None:
             return {}
 
-        return self.spaces[self.knob_space_ind].get_query_level_knobs(action[self.knob_space_ind])
+        return self.spaces[self.knob_space_ind].get_query_level_knobs(
+            action[self.knob_space_ind]
+        )
 
     def reset(self, **kwargs):
         # Reset our understanding of the space.
@@ -109,7 +115,7 @@ class ActionSpace(spaces.Tuple):
     def decode(self, protos):
         components = []
         for i, s in enumerate(self.spaces):
-            start = self.raw_dims[i-1] if i > 0 else 0
+            start = self.raw_dims[i - 1] if i > 0 else 0
             end = self.raw_dims[i]
             if len(protos.shape) == 2:
                 components.append(s._decode(protos[:, start:end]))
@@ -119,7 +125,7 @@ class ActionSpace(spaces.Tuple):
 
     def process_network_output(self, proto):
         for i, s in enumerate(self.spaces):
-            start = self.raw_dims[i-1] if i > 0 else 0
+            start = self.raw_dims[i - 1] if i > 0 else 0
             end = self.raw_dims[i]
             if len(proto.shape) == 2:
                 proto[:, start:end] = s._process_network_output(proto[:, start:end])
@@ -129,7 +135,7 @@ class ActionSpace(spaces.Tuple):
 
     def perturb_noise(self, proto, noise):
         for i, s in enumerate(self.spaces):
-            start = self.raw_dims[i-1] if i > 0 else 0
+            start = self.raw_dims[i - 1] if i > 0 else 0
             end = self.raw_dims[i]
 
             # Extract the noise component.
@@ -174,7 +180,9 @@ class ActionSpace(spaces.Tuple):
             for i, s in enumerate(self.spaces):
                 # Note that subproto is the "action embedding" from the context of
                 # the embedded actor-critic like architecutre.
-                subproto = proto[(self.space_dims[i-1] if i > 0 else 0):self.space_dims[i]]
+                subproto = proto[
+                    (self.space_dims[i - 1] if i > 0 else 0) : self.space_dims[i]
+                ]
                 envs = s.search_embedding_neighborhood(subproto, neighbor_parameters)
 
                 if random:
@@ -204,7 +212,10 @@ class ActionSpace(spaces.Tuple):
         # the environment action to the action embedding space.
         if not isinstance(env_act, list):
             env_act = [env_act]
-        embed_cmps = [np.array(s._env_to_embedding([a[i] for a in env_act])) for i, s in enumerate(self.spaces)]
+        embed_cmps = [
+            np.array(s._env_to_embedding([a[i] for a in env_act]))
+            for i, s in enumerate(self.spaces)
+        ]
         return np.concatenate(embed_cmps, axis=1)
 
     def random_embed_action(self, num_action=1):
@@ -215,14 +226,20 @@ class ActionSpace(spaces.Tuple):
         assert False
 
     def generate_action_plan(self, action, **kwargs):
-        outputs = [space.generate_action_plan(action[i], **kwargs) for i, space in enumerate(self.spaces)]
+        outputs = [
+            space.generate_action_plan(action[i], **kwargs)
+            for i, space in enumerate(self.spaces)
+        ]
         cc = list(itertools.chain(*[o[0] for o in outputs]))
         sql_commands = list(itertools.chain(*[o[1] for o in outputs]))
         return cc, sql_commands
 
     def generate_plan_from_config(self, config, **kwargs):
         kwargs["reset"] = True
-        outputs = [space.generate_delta_action_plan(config[i], **kwargs) for i, space in enumerate(self.spaces)]
+        outputs = [
+            space.generate_delta_action_plan(config[i], **kwargs)
+            for i, space in enumerate(self.spaces)
+        ]
         config_changes = list(itertools.chain(*[o[0] for o in outputs]))
         sql_commands = list(itertools.chain(*[o[1] for o in outputs]))
         return config_changes, sql_commands

@@ -1,15 +1,15 @@
-import yaml
 import numpy as np
-from ray import tune
 import torch
+import yaml
+from ray import tune
 
-from tune.protox.agent.config_utils import parse_activation_fn, parse_noise_type
-from tune.protox.agent.buffers import ReplayBuffer
-from tune.protox.agent.utils import get_schedule_fn
-from tune.protox.agent.torch_layers import FlattenExtractor
-from tune.protox.agent.wolp.wolp import Wolp
-from tune.protox.agent.wolp.policies import WolpPolicy
 from misc.utils import open_and_save
+from tune.protox.agent.buffers import ReplayBuffer
+from tune.protox.agent.config_utils import parse_activation_fn, parse_noise_type
+from tune.protox.agent.torch_layers import FlattenExtractor
+from tune.protox.agent.utils import get_schedule_fn
+from tune.protox.agent.wolp.policies import WolpPolicy
+from tune.protox.agent.wolp.wolp import Wolp
 
 
 def setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config):
@@ -24,11 +24,16 @@ def setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config):
     # Setup the noise policy.
     noise_params = config["noise_parameters"]
     means = np.zeros((noise_action_dim,), dtype=np.float32)
-    stddevs = np.full((noise_action_dim,), noise_params["noise_sigma"], dtype=np.float32)
+    stddevs = np.full(
+        (noise_action_dim,), noise_params["noise_sigma"], dtype=np.float32
+    )
     noise = parse_noise_type(noise_params["noise_type"])(means, stddevs)
 
     policy_kwargs = {
-        "net_arch": {"pi": [int(a) for a in config["pi_arch"].split(",")], "qf": [int(a) for a in config["qf_arch"].split(",")]},
+        "net_arch": {
+            "pi": [int(a) for a in config["pi_arch"].split(",")],
+            "qf": [int(a) for a in config["qf_arch"].split(",")],
+        },
         "activation_fn": parse_activation_fn(config["activation_fn"]),
         "features_extractor_class": FlattenExtractor,
         "features_extractor_kwargs": None,
@@ -39,7 +44,6 @@ def setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config):
         "squash_output": False,
         "action_dim": action_dim,
         "critic_action_dim": critic_action_dim,
-
         "weight_init": config["weight_init"],
         "bias_zero": config["bias_zero"],
         "policy_weight_adjustment": config["policy_weight_adjustment"],
@@ -127,32 +131,38 @@ def _construct_wolp_config():
         # Polyak averaging rate.
         "tau": tune.choice([1.0, 0.99, 0.995]),
         "epsilon_greedy": 0.0,
-
         # Replay Buffer Size.
         "buffer_size": 1_000_000,
         # Batch size.
         "batch_size": tune.choice([8, 16, 32, 64]),
-
         # Gradient steps per sample.
         "gradient_steps": tune.choice([1, 2, 4]),
-
         # Target noise.
         "target_noise": {
             "target_noise_clip": tune.choice([0, 0.05, 0.1, 0.15]),
-            "target_policy_noise": tune.sample_from(lambda spc: 0.1 if spc["config"]["target_noise"]["target_noise_clip"] == 0 else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))),
+            "target_policy_noise": tune.sample_from(
+                lambda spc: (
+                    0.1
+                    if spc["config"]["target_noise"]["target_noise_clip"] == 0
+                    else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
+                )
+            ),
         },
-
         # Training steps.
         "train_freq_unit": tune.choice(["step", "step", "episode"]),
-        "train_freq_frequency": tune.sample_from(lambda spc: 1 if spc["config"]["train_freq_unit"] == "episode" else int(np.random.choice([1, 2]))),
-
+        "train_freq_frequency": tune.sample_from(
+            lambda spc: (
+                1
+                if spc["config"]["train_freq_unit"] == "episode"
+                else int(np.random.choice([1, 2]))
+            )
+        ),
         # Noise parameters.
         "noise_parameters": {
             "noise_type": tune.choice(["normal", "ou"]),
             "noise_sigma": tune.choice([0.01, 0.05, 0.1, 0.15, 0.2]),
         },
         "scale_noise_perturb": False,
-
         # Neighbor parameters.
         "neighbor_parameters": {
             "knob_num_nearest": tune.choice([100, 200]),
@@ -160,7 +170,6 @@ def _construct_wolp_config():
             "index_num_samples": 1,
             "index_subset": tune.choice([False, True]),
         },
-
         # LSC Parameters.
         "lsc_parameters": {
             "lsc_enabled": True,
@@ -171,20 +180,28 @@ def _construct_wolp_config():
             "lsc_shift_schedule_eps_freq": tune.choice([1, 2]),
             "lsc_shift_after": tune.choice([4, 5]),
         },
-
         # VAE metadata.
         "vae_metadata": {
             "index_vae": True,
             "index_repr": tune.choice(["ONE_HOT_DETERMINISTIC"]),
         },
-
         "weight_init": tune.choice(["xavier_normal", "xavier_uniform", "orthogonal"]),
         "bias_zero": tune.choice([False, True]),
         "policy_weight_adjustment": tune.choice([1, 100]),
         # Activation
         "activation_fn": tune.choice(["gelu", "mish"]),
-
         # Architecture.
         "pi_arch": tune.choice(["128", "256", "128,128", "256,256", "512", "256,512"]),
-        "qf_arch": tune.choice(["256,64", "256,256", "256,128,128", "256,64,64", "512", "512,256", "1024", "1024,256"]),
+        "qf_arch": tune.choice(
+            [
+                "256,64",
+                "256,256",
+                "256,128,128",
+                "256,64,64",
+                "512",
+                "512,256",
+                "1024",
+                "1024,256",
+            ]
+        ),
     }

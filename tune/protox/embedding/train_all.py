@@ -79,7 +79,10 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
     resources = {"cpu": 1}
     trainable = with_resources(
         with_parameters(
-            _hpo_train, dbgym_cfg=dbgym_cfg, generic_args=generic_args, train_args=train_args
+            _hpo_train,
+            dbgym_cfg=dbgym_cfg,
+            generic_args=generic_args,
+            train_args=train_args,
         ),
         resources,
     )

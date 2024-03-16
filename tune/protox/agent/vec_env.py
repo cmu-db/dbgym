@@ -1,15 +1,14 @@
 import inspect
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 from collections import OrderedDict
-from typing import Any, Dict, List, Tuple
-from gymnasium import spaces
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
+
 import gymnasium as gym
 import numpy as np
+from gymnasium import spaces
 
 from tune.protox.agent.preprocessing import check_for_nested_spaces
-
 
 # Define type aliases here to avoid circular import
 # Used when we want to access one or more VecEnv
@@ -33,7 +32,9 @@ class VecEnv(ABC):
 
     metadata = {"render.modes": ["human", "rgb_array"]}
 
-    def __init__(self, num_envs: int, observation_space: spaces.Space, action_space: spaces.Space):
+    def __init__(
+        self, num_envs: int, observation_space: spaces.Space, action_space: spaces.Space
+    ):
         self.num_envs = num_envs
         self.observation_space = observation_space
         self.action_space = action_space
@@ -92,7 +93,9 @@ class VecEnv(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def set_attr(self, attr_name: str, value: Any, indices: VecEnvIndices = None) -> None:
+    def set_attr(
+        self, attr_name: str, value: Any, indices: VecEnvIndices = None
+    ) -> None:
         """
         Set attribute inside vectorized environments.
 
@@ -104,7 +107,9 @@ class VecEnv(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def env_is_wrapped(self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None) -> List[bool]:
+    def env_is_wrapped(
+        self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
+    ) -> List[bool]:
         """
         Check if environments are wrapped with a given wrapper.
 
@@ -218,10 +223,14 @@ class VecEnvWrapper(VecEnv):
     def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
         return self.venv.get_attr(attr_name, indices)
 
-    def set_attr(self, attr_name: str, value: Any, indices: VecEnvIndices = None) -> None:
+    def set_attr(
+        self, attr_name: str, value: Any, indices: VecEnvIndices = None
+    ) -> None:
         return self.venv.set_attr(attr_name, value, indices)
 
-    def env_is_wrapped(self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None) -> List[bool]:
+    def env_is_wrapped(
+        self, wrapper_class: Type[gym.Wrapper], indices: VecEnvIndices = None
+    ) -> List[bool]:
         return self.venv.env_is_wrapped(wrapper_class, indices=indices)
 
     def __getattr__(self, name: str) -> Any:
@@ -297,7 +306,13 @@ class VecCheckNan(VecEnvWrapper):
     :param check_inf: Whether to check for +inf or -inf as well
     """
 
-    def __init__(self, venv: VecEnv, raise_exception: bool = False, warn_once: bool = True, check_inf: bool = True) -> None:
+    def __init__(
+        self,
+        venv: VecEnv,
+        raise_exception: bool = False,
+        warn_once: bool = True,
+        check_inf: bool = True,
+    ) -> None:
         super().__init__(venv)
         self.raise_exception = raise_exception
         self.warn_once = warn_once
@@ -311,13 +326,23 @@ class VecCheckNan(VecEnvWrapper):
             raise NotImplementedError("VecCheckNan doesn't support dict action spaces")
 
     def step_async(self, actions: np.ndarray) -> None:
-        self._check_val(event="step_async", actions=np.array([gym.spaces.utils.flatten(self.venv.action_space, act) for act in actions]))
+        self._check_val(
+            event="step_async",
+            actions=np.array(
+                [
+                    gym.spaces.utils.flatten(self.venv.action_space, act)
+                    for act in actions
+                ]
+            ),
+        )
         self._actions = actions
         self.venv.step_async(actions)
 
     def step_wait(self) -> VecEnvStepReturn:
         observations, rewards, dones, infos = self.venv.step_wait()
-        self._check_val(event="step_wait", observations=observations, rewards=rewards, dones=dones)
+        self._check_val(
+            event="step_wait", observations=observations, rewards=rewards, dones=dones
+        )
         self._observations = observations
         return observations, rewards, dones, infos
 
@@ -375,7 +400,9 @@ class VecCheckNan(VecEnvWrapper):
             if event == "reset":
                 msg += "environment observation (at reset)"
             elif event == "step_wait":
-                msg += f"environment, Last given value was: \r\n\taction={self._actions}"
+                msg += (
+                    f"environment, Last given value was: \r\n\taction={self._actions}"
+                )
             elif event == "step_async":
                 msg += f"RL model, Last given value was: \r\n\tobservations={self._observations}"
             else:
@@ -394,7 +421,9 @@ def copy_obs_dict(obs: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
     :param obs: a dict of numpy arrays.
     :return: a dict of copied numpy arrays.
     """
-    assert isinstance(obs, OrderedDict), f"unexpected type for observations '{type(obs)}'"
+    assert isinstance(
+        obs, OrderedDict
+    ), f"unexpected type for observations '{type(obs)}'"
     return OrderedDict([(k, np.copy(v)) for k, v in obs.items()])
 
 
@@ -412,14 +441,20 @@ def dict_to_obs(obs_space: spaces.Space, obs_dict: Dict[Any, np.ndarray]) -> Vec
     if isinstance(obs_space, spaces.Dict):
         return obs_dict
     elif isinstance(obs_space, spaces.Tuple):
-        assert len(obs_dict) == len(obs_space.spaces), "size of observation does not match size of observation space"
+        assert len(obs_dict) == len(
+            obs_space.spaces
+        ), "size of observation does not match size of observation space"
         return tuple(obs_dict[i] for i in range(len(obs_space.spaces)))
     else:
-        assert set(obs_dict.keys()) == {None}, "multiple observation keys for unstructured observation space"
+        assert set(obs_dict.keys()) == {
+            None
+        }, "multiple observation keys for unstructured observation space"
         return obs_dict[None]
 
 
-def obs_space_info(obs_space: spaces.Space) -> Tuple[List[str], Dict[Any, Tuple[int, ...]], Dict[Any, np.dtype]]:
+def obs_space_info(
+    obs_space: spaces.Space,
+) -> Tuple[List[str], Dict[Any, Tuple[int, ...]], Dict[Any, np.dtype]]:
     """
     Get dict-structured information about a gym.Space.
 
@@ -435,12 +470,16 @@ def obs_space_info(obs_space: spaces.Space) -> Tuple[List[str], Dict[Any, Tuple[
     """
     check_for_nested_spaces(obs_space)
     if isinstance(obs_space, spaces.Dict):
-        assert isinstance(obs_space.spaces, OrderedDict), "Dict space must have ordered subspaces"
+        assert isinstance(
+            obs_space.spaces, OrderedDict
+        ), "Dict space must have ordered subspaces"
         subspaces = obs_space.spaces
     elif isinstance(obs_space, spaces.Tuple):
         subspaces = {i: space for i, space in enumerate(obs_space.spaces)}
     else:
-        assert not hasattr(obs_space, "spaces"), f"Unsupported structured space '{type(obs_space)}'"
+        assert not hasattr(
+            obs_space, "spaces"
+        ), f"Unsupported structured space '{type(obs_space)}'"
         subspaces = {None: obs_space}
     keys = []
     shapes = {}

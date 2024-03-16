@@ -1,7 +1,8 @@
 import json
-from plumbum import local
 from datetime import datetime
+
 import numpy as np
+from plumbum import local
 
 
 class Encoder(json.JSONEncoder):
@@ -35,13 +36,21 @@ class Repository(object):
             idx_space = self.action_space.get_index_space()
             sql = ""
             if idx_space is not None:
-                sql = idx_space.construct_indexaction(action[self.action_space.index_space_ind]).sql(add=True)
+                sql = idx_space.construct_indexaction(
+                    action[self.action_space.index_space_ind]
+                ).sql(add=True)
             f.write(sql + "\n\n")
 
             knobs = []
             if self.action_space.knob_space_ind is not None:
-                knobs = sorted([(act, val) for act, val in action[self.action_space.knob_space_ind].items()], key=lambda x: x[0])
-            for (knob, val) in knobs:
+                knobs = sorted(
+                    [
+                        (act, val)
+                        for act, val in action[self.action_space.knob_space_ind].items()
+                    ],
+                    key=lambda x: x[0],
+                )
+            for knob, val in knobs:
                 f.write(f"{knob} = {val}\n")
 
         return reward

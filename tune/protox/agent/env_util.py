@@ -1,8 +1,11 @@
 from typing import Optional, Type
+
 import gymnasium as gym
 
 
-def unwrap_wrapper(env: gym.Env, wrapper_class: Type[gym.Wrapper]) -> Optional[gym.Wrapper]:
+def unwrap_wrapper(
+    env: gym.Env, wrapper_class: Type[gym.Wrapper]
+) -> Optional[gym.Wrapper]:
     """
     Retrieve a ``VecEnvWrapper`` object by recursively searching.
 

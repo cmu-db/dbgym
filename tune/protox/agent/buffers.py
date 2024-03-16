@@ -152,7 +152,14 @@ class ReplayBuffer(BaseBuffer):
         handle_timeout_termination: bool = True,
         action_dim: int = 0,
     ):
-        super().__init__(buffer_size, observation_space, action_space, device, n_envs=n_envs, action_dim=action_dim)
+        super().__init__(
+            buffer_size,
+            observation_space,
+            action_space,
+            device,
+            n_envs=n_envs,
+            action_dim=action_dim,
+        )
 
         # Adjust buffer size
         self.buffer_size = max(buffer_size // n_envs, 1)
@@ -161,10 +168,18 @@ class ReplayBuffer(BaseBuffer):
         if psutil is not None:
             mem_available = psutil.virtual_memory().available
 
-        self.observations = np.zeros((self.buffer_size, self.n_envs, *self.obs_shape), dtype=observation_space.dtype)
+        self.observations = np.zeros(
+            (self.buffer_size, self.n_envs, *self.obs_shape),
+            dtype=observation_space.dtype,
+        )
 
-        self.next_observations = np.zeros((self.buffer_size, self.n_envs, *self.obs_shape), dtype=observation_space.dtype)
-        self.actions = np.zeros((self.buffer_size, self.n_envs, self.action_dim), dtype=action_space.dtype)
+        self.next_observations = np.zeros(
+            (self.buffer_size, self.n_envs, *self.obs_shape),
+            dtype=observation_space.dtype,
+        )
+        self.actions = np.zeros(
+            (self.buffer_size, self.n_envs, self.action_dim), dtype=action_space.dtype
+        )
 
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.dones = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
@@ -175,7 +190,12 @@ class ReplayBuffer(BaseBuffer):
         self.lscs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
         if psutil is not None:
-            total_memory_usage = self.observations.nbytes + self.actions.nbytes + self.rewards.nbytes + self.dones.nbytes
+            total_memory_usage = (
+                self.observations.nbytes
+                + self.actions.nbytes
+                + self.rewards.nbytes
+                + self.dones.nbytes
+            )
 
             if self.next_observations is not None:
                 total_memory_usage += self.next_observations.nbytes
@@ -228,7 +248,9 @@ class ReplayBuffer(BaseBuffer):
         self.dones[self.pos] = np.array(done).copy()
 
         if self.handle_timeout_termination:
-            self.timeouts[self.pos] = np.array([info.get("TimeLimit.truncated", False) for info in infos])
+            self.timeouts[self.pos] = np.array(
+                [info.get("TimeLimit.truncated", False) for info in infos]
+            )
 
         self.lscs[self.pos] = np.array([info.get("lsc") for info in infos])
 
@@ -260,7 +282,10 @@ class ReplayBuffer(BaseBuffer):
             next_obs,
             # Only use dones that are not due to timeouts
             # deactivated by default (timeouts is initialized as an array of False)
-            (self.dones[batch_inds, env_indices] * (1 - self.timeouts[batch_inds, env_indices])).reshape(-1, 1),
+            (
+                self.dones[batch_inds, env_indices]
+                * (1 - self.timeouts[batch_inds, env_indices])
+            ).reshape(-1, 1),
             self.rewards[batch_inds, env_indices].reshape(-1, 1),
             self.lscs[batch_inds, env_indices].reshape(-1, 1),
         )

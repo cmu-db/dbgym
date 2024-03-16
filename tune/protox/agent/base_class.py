@@ -1,7 +1,9 @@
 """Abstract base classes for RL algorithms."""
+
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
 import numpy as np
 import torch as th
 from gymnasium import spaces
@@ -75,7 +77,9 @@ class BaseAlgorithm(ABC):
         self.start_time = None
         self.learning_rate = learning_rate
         self.lr_schedule = None  # type: Optional[Schedule]
-        self._last_obs = None  # type: Optional[Union[np.ndarray, Dict[str, np.ndarray]]]
+        self._last_obs = (
+            None
+        )  # type: Optional[Union[np.ndarray, Dict[str, np.ndarray]]]
         self._last_episode_starts = None  # type: Optional[np.ndarray]
         self._episode_num = 0
         # Track the training progress remaining (from 1 to 0)
@@ -102,12 +106,15 @@ class BaseAlgorithm(ABC):
 
         if not support_multi_env and self.n_envs > 1:
             raise ValueError(
-                "Error: the model does not support multiple envs; it requires " "a single vectorized environment."
+                "Error: the model does not support multiple envs; it requires "
+                "a single vectorized environment."
             )
 
         # Catch common mistake: using MlpPolicy
         if policy in ["MlpPolicy"] and isinstance(self.observation_space, spaces.Dict):
-            raise ValueError(f"You must use `MultiInputPolicy` when working with dict observation space, not {policy}")
+            raise ValueError(
+                f"You must use `MultiInputPolicy` when working with dict observation space, not {policy}"
+            )
 
         if isinstance(self.action_space, spaces.Box):
             assert np.all(
@@ -136,16 +143,22 @@ class BaseAlgorithm(ABC):
         """Transform to callable if needed."""
         self.lr_schedule = get_schedule_fn(self.learning_rate)
 
-    def _update_current_progress_remaining(self, num_timesteps: int, total_timesteps: int) -> None:
+    def _update_current_progress_remaining(
+        self, num_timesteps: int, total_timesteps: int
+    ) -> None:
         """
         Compute current progress remaining (starts from 1 and ends to 0)
 
         :param num_timesteps: current number of timesteps
         :param total_timesteps:
         """
-        self._current_progress_remaining = 1.0 - float(num_timesteps) / float(total_timesteps)
+        self._current_progress_remaining = 1.0 - float(num_timesteps) / float(
+            total_timesteps
+        )
 
-    def _update_learning_rate(self, optimizers: Union[List[th.optim.Optimizer], th.optim.Optimizer]) -> None:
+    def _update_learning_rate(
+        self, optimizers: Union[List[th.optim.Optimizer], th.optim.Optimizer]
+    ) -> None:
         """
         Update the optimizers learning rate using the current learning rate schedule
         and the current progress remaining (from 1 to 0).
@@ -157,7 +170,9 @@ class BaseAlgorithm(ABC):
         if not isinstance(optimizers, list):
             optimizers = [optimizers]
         for optimizer in optimizers:
-            update_learning_rate(optimizer, self.lr_schedule(self._current_progress_remaining))
+            update_learning_rate(
+                optimizer, self.lr_schedule(self._current_progress_remaining)
+            )
 
     def _get_policy_from_name(self, policy_name: str) -> Type[BasePolicy]:
         """
@@ -206,7 +221,9 @@ class BaseAlgorithm(ABC):
 
         # Avoid resetting the environment when calling ``.learn()`` consecutive times
         if reset_num_timesteps or self._last_obs is None:
-            self._last_obs, _ = self.env.reset()  # pytype: disable=annotation-type-mismatch
+            self._last_obs, _ = (
+                self.env.reset()
+            )  # pytype: disable=annotation-type-mismatch
             self._last_episode_starts = np.ones((self.env.num_envs,), dtype=bool)
 
         return total_timesteps

@@ -1,14 +1,27 @@
-import torch
-from pprint import pformat
 import xml.etree.ElementTree as ET
+from pprint import pformat
 
-import numpy as np
 import gymnasium as gym
-from tune.protox.env.space.knob import KnobClass, SettingType, is_knob_enum, resolve_enum_value, Knob, CategoricalKnob, _create_knob
+import numpy as np
+import torch
 from gymnasium import spaces
 from gymnasium.spaces import Dict
 from gymnasium.spaces.utils import flatdim
-from tune.protox.env.space.utils import check_subspace, fetch_server_knobs, overwrite_benchbase_hintset
+
+from tune.protox.env.space.knob import (
+    CategoricalKnob,
+    Knob,
+    KnobClass,
+    SettingType,
+    _create_knob,
+    is_knob_enum,
+    resolve_enum_value,
+)
+from tune.protox.env.space.utils import (
+    check_subspace,
+    fetch_server_knobs,
+    overwrite_benchbase_hintset,
+)
 
 
 class KnobSpace(spaces.Dict):
@@ -50,7 +63,7 @@ class KnobSpace(spaces.Dict):
 
         cont, cats = proto.split([cont_dim, cat_dim], dim=-1)
         cont_noise, _ = noise.split([cont_dim, cat_dim], dim=-1)
-        cont = torch.clamp(cont + cont_noise, -1., 1.)
+        cont = torch.clamp(cont + cont_noise, -1.0, 1.0)
         output = torch.concat([cont, cats], dim=-1)
         return output
 
@@ -75,18 +88,20 @@ class KnobSpace(spaces.Dict):
     def _decode(self, act):
         return act
 
-    def __init__(self,
-            tables,
-            knobs,
-            table_level_knobs,
-            per_query_knobs,
-            per_query_knobs_gen,
-            quantize,
-            quantize_factor,
-            seed,
-            per_query_parallel={},
-            per_query_scans={},
-            query_names=[]):
+    def __init__(
+        self,
+        tables,
+        knobs,
+        table_level_knobs,
+        per_query_knobs,
+        per_query_knobs_gen,
+        quantize,
+        quantize_factor,
+        seed,
+        per_query_parallel={},
+        per_query_scans={},
+        query_names=[],
+    ):
         self.knobs = {}
         self.tables = tables
         spaces = []
@@ -132,7 +147,8 @@ class KnobSpace(spaces.Dict):
                         metadata=md,
                         do_quantize=False,
                         default_quantize_factor=quantize_factor,
-                        seed=seed)
+                        seed=seed,
+                    )
                     self.knobs[knob.name()] = knob
                     spaces.append((knob.name(), knob))
 
@@ -156,7 +172,8 @@ class KnobSpace(spaces.Dict):
                 query_name=q,
                 knob_name=q + "_parallel_rel",
                 metadata=md,
-                seed=seed)
+                seed=seed,
+            )
             self.knobs[knob.name()] = knob
 
             cat_spaces.append((knob.name(), knob))
@@ -176,10 +193,10 @@ class KnobSpace(spaces.Dict):
         for act in env_act:
             assert check_subspace(self, act)
 
-            flattened = gym.spaces.utils.flatten(self, {
-                k: self.knobs[k].project_env_to_embedding(v)
-                for k, v in act.items()
-            })
+            flattened = gym.spaces.utils.flatten(
+                self,
+                {k: self.knobs[k].project_env_to_embedding(v) for k, v in act.items()},
+            )
 
             embeds.append(flattened)
         return embeds
@@ -201,8 +218,8 @@ class KnobSpace(spaces.Dict):
         cat_dim = self.final_dim - cont_dim
 
         # Sample according to strategy within the latent dimension.
-        cont_action = np.random.uniform(low=-1., high=1., size=(num_action, cont_dim))
-        cat_action = np.random.uniform(low=0., high=1., size=(num_action, cat_dim))
+        cont_action = np.random.uniform(low=-1.0, high=1.0, size=(num_action, cont_dim))
+        cat_action = np.random.uniform(low=0.0, high=1.0, size=(num_action, cat_dim))
         action = np.concatenate([cont_action, cat_action], axis=1)
         return action
 
@@ -210,7 +227,9 @@ class KnobSpace(spaces.Dict):
         # Reset the information from postgres.
         assert "connection" in kwargs
         connection = kwargs["connection"]
-        self.state_container = fetch_server_knobs(connection, self.tables, self.knobs, workload=kwargs["workload"])
+        self.state_container = fetch_server_knobs(
+            connection, self.tables, self.knobs, workload=kwargs["workload"]
+        )
         if "config" in kwargs and kwargs["config"] is not None:
             for key, knob in self.knobs.items():
                 if knob.knob_class == KnobClass.QUERY:
@@ -223,7 +242,9 @@ class KnobSpace(spaces.Dict):
         connection = kwargs["connection"]
         workload = kwargs["workload"]
         # Fetch main.
-        self.state_container = fetch_server_knobs(connection, self.tables, self.knobs, workload=workload)
+        self.state_container = fetch_server_knobs(
+            connection, self.tables, self.knobs, workload=workload
+        )
         # Set the per-query accordingly.
         for key, knob in self.knobs.items():
             if knob.knob_class == KnobClass.QUERY:
@@ -253,14 +274,18 @@ class KnobSpace(spaces.Dict):
             for knobname, knob in self.spaces.items():
                 # We assume that this order is the way in which the action is laid out.
                 if isinstance(knob, CategoricalKnob):
-                    new_value = knob._sample_weights(act[cat_start:cat_start + knob.num_elems])
+                    new_value = knob._sample_weights(
+                        act[cat_start : cat_start + knob.num_elems]
+                    )
                     new_action[knobname] = new_value
                     cat_start += knob.num_elems
 
                 else:
                     # Iterate through every knob and adjust based on the sampled mask.
                     if adjust_mask[cont_it] != 0:
-                        new_value = knob.adjust_quantize_bin(new_action[knobname], adjust_mask[cont_it])
+                        new_value = knob.adjust_quantize_bin(
+                            new_action[knobname], adjust_mask[cont_it]
+                        )
                         if new_value is not None:
                             # The adjustment has produced a new quantized value.
                             new_action[knobname] = new_value
@@ -303,7 +328,9 @@ class KnobSpace(spaces.Dict):
         for act, val in action.items():
             assert act in self.knobs, print(self.knobs, act)
             if self.knobs[act].knob_class == KnobClass.TABLE:
-                if (act not in self.state_container or self.state_container[act] != val) or force:
+                if (
+                    act not in self.state_container or self.state_container[act] != val
+                ) or force:
                     # Need to perform a VACUUM ANALYZE.
                     require_cleanup = True
 
@@ -334,8 +361,17 @@ class KnobSpace(spaces.Dict):
                 # Integer or float knob.
                 assert self.knobs[act].knob_class == KnobClass.KNOB
                 kt = self.knobs[act].knob_type
-                param = "{act} = {val:.2f}" if kt == SettingType.FLOAT else "{act} = {val:d}"
-                assert kt == SettingType.FLOAT or kt == SettingType.INTEGER or kt == SettingType.BYTES or kt == SettingType.INTEGER_TIME
+                param = (
+                    "{act} = {val:.2f}"
+                    if kt == SettingType.FLOAT
+                    else "{act} = {val:d}"
+                )
+                assert (
+                    kt == SettingType.FLOAT
+                    or kt == SettingType.INTEGER
+                    or kt == SettingType.BYTES
+                    or kt == SettingType.INTEGER_TIME
+                )
                 config_changes.append(param.format(act=act, val=val))
 
         if require_cleanup:

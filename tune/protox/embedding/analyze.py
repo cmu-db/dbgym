@@ -55,7 +55,9 @@ def analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_arg
     for part_i in range(num_parts):
         _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args)
     duration = time.time() - start_time
-    with open(os.path.join(dbgym_cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w") as f:
+    with open(
+        os.path.join(dbgym_cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w"
+    ) as f:
         f.write(f"{duration}")
 
 
@@ -142,7 +144,12 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
             if dataset is None:
                 # Get the dataset if we need to.
                 dataset, _, idx_class, _, num_classes = load_input_data(
-                    dbgym_cfg, generic_args.dataset_path, 1.0, max_attrs, require_cost, seed=0
+                    dbgym_cfg,
+                    generic_args.dataset_path,
+                    1.0,
+                    max_attrs,
+                    require_cost,
+                    seed=0,
                 )
 
                 class_mapping = []
@@ -293,7 +300,9 @@ def _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
         ]
     )
     for embedder_fpath in tqdm.tqdm(paths):
-        _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze_args)
+        _create_ranges_for_embedder(
+            dbgym_cfg, embedder_fpath, generic_args, analyze_args
+        )
 
 
 def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze_args):

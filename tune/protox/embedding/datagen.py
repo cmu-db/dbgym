@@ -15,14 +15,14 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
-    WORKSPACE_PATH_PLACEHOLDER,
     BENCHMARK_NAME_PLACEHOLDER,
     WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
+    default_workload_path,
     link_result,
     open_and_save,
-    conv_inputpath_to_abspath,
-    default_workload_path,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.index_space import IndexRepr, IndexSpace
@@ -146,7 +146,9 @@ def datagen(
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if workload_path == None:
-        workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+        workload_path = default_workload_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
@@ -254,7 +256,8 @@ def get_traindata_dir(dbgym_cfg):
 
 def get_traindata_path(dbgym_cfg, generic_args):
     return os.path.join(
-        dbgym_cfg.dbgym_this_run_path, f"{generic_args.benchmark_name}_embedding_traindata.parquet"
+        dbgym_cfg.dbgym_this_run_path,
+        f"{generic_args.benchmark_name}_embedding_traindata.parquet",
     )
 
 

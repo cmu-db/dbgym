@@ -8,7 +8,9 @@ from tune.protox.agent.preprocessing import get_flattened_obs_dim
 from tune.protox.agent.utils import get_device
 
 
-def init_layer(layer, weight_init = None, bias_zero=False, final_layer=False, final_layer_adjust=1):
+def init_layer(
+    layer, weight_init=None, bias_zero=False, final_layer=False, final_layer_adjust=1
+):
     if isinstance(layer, nn.Linear):
         if weight_init is not None:
             if weight_init == "orthogonal":
@@ -70,9 +72,9 @@ def create_mlp(
     activation_fn: Type[nn.Module] = nn.ReLU,
     squash_output: bool = False,
     with_bias: bool = True,
-    weight_init = None,
-    bias_zero = False,
-    final_layer_adjust = 1.,
+    weight_init=None,
+    bias_zero=False,
+    final_layer_adjust=1.0,
 ) -> List[nn.Module]:
     """
     Create a multi layer perceptron (MLP), which is
@@ -106,7 +108,13 @@ def create_mlp(
 
         # Initialize the linear layer weights.
         for layer in modules:
-            init_layer(layer, weight_init, bias_zero, (layer == modules[-1]), final_layer_adjust)
+            init_layer(
+                layer,
+                weight_init,
+                bias_zero,
+                (layer == modules[-1]),
+                final_layer_adjust,
+            )
 
     if squash_output:
         modules.append(nn.Tanh())
@@ -193,7 +201,9 @@ class MlpExtractor(nn.Module):
         return self.value_net(features)
 
 
-def get_actor_critic_arch(net_arch: Union[List[int], Dict[str, List[int]]]) -> Tuple[List[int], List[int]]:
+def get_actor_critic_arch(
+    net_arch: Union[List[int], Dict[str, List[int]]]
+) -> Tuple[List[int], List[int]]:
     """
     Get the actor and critic network architectures for off-policy actor-critic algorithms (SAC, TD3, DDPG).
 
@@ -226,8 +236,14 @@ def get_actor_critic_arch(net_arch: Union[List[int], Dict[str, List[int]]]) -> T
     if isinstance(net_arch, list):
         actor_arch, critic_arch = net_arch, net_arch
     else:
-        assert isinstance(net_arch, dict), "Error: the net_arch can only contain be a list of ints or a dict"
-        assert "pi" in net_arch, "Error: no key 'pi' was provided in net_arch for the actor network"
-        assert "qf" in net_arch, "Error: no key 'qf' was provided in net_arch for the critic network"
+        assert isinstance(
+            net_arch, dict
+        ), "Error: the net_arch can only contain be a list of ints or a dict"
+        assert (
+            "pi" in net_arch
+        ), "Error: no key 'pi' was provided in net_arch for the actor network"
+        assert (
+            "qf" in net_arch
+        ), "Error: no key 'qf' was provided in net_arch for the critic network"
         actor_arch, critic_arch = net_arch["pi"], net_arch["qf"]
     return actor_arch, critic_arch

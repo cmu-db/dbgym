@@ -1,6 +1,6 @@
 import logging
-from pathlib import Path
 import random
+from pathlib import Path
 
 import click
 import numpy as np
@@ -8,13 +8,13 @@ import torch
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
+    DEFAULT_HPO_SPACE_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
-    DEFAULT_HPO_SPACE_RELPATH,
+    conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
     default_dataset_path,
     default_workload_path,
-    conv_inputpath_to_abspath,
 )
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
@@ -169,7 +169,9 @@ def train(
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
-        dataset_path = default_dataset_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+        dataset_path = default_dataset_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
@@ -188,7 +190,9 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+    workload_path = default_workload_path(
+        dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+    )
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
         benchmark_name, benchmark_config_path, dataset_path, seed, workload_path

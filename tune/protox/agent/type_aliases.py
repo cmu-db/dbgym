@@ -1,6 +1,8 @@
 """Common aliases for type hints"""
+
 from enum import Enum
 from typing import Any, Callable, Dict, NamedTuple, Tuple, Union
+
 import gymnasium as gym
 import numpy as np
 import torch as th

@@ -66,7 +66,9 @@ def time_query(prefix, connection, qid, query, query_timeout):
         logging.debug(f"{prefix} {qid} evaluated in {qid_runtime/1e6}")
 
     except QueryCanceled:
-        logging.debug(f"{prefix} {qid} exceeded evaluation query timeout {query_timeout}")
+        logging.debug(
+            f"{prefix} {qid} exceeded evaluation query timeout {query_timeout}"
+        )
         qid_runtime = query_timeout * 1e6
         has_timeout = True
     except Exception as e:

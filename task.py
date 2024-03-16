@@ -94,7 +94,9 @@ def config_standardize(dbgym_cfg):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format="%(asctime)s:%(name)s:%(levelname)s - %(message)s", level=logging.INFO)
+    logging.basicConfig(
+        format="%(asctime)s:%(name)s:%(levelname)s - %(message)s", level=logging.INFO
+    )
 
     task.add_command(benchmark_group)
     task.add_command(config_group)

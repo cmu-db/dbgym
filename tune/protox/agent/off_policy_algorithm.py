@@ -11,7 +11,13 @@ from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ActionNoise, VectorizedActionNoise
 from tune.protox.agent.policies import BasePolicy
-from tune.protox.agent.type_aliases import GymEnv, RolloutReturn, Schedule, TrainFreq, TrainFrequencyUnit
+from tune.protox.agent.type_aliases import (
+    GymEnv,
+    RolloutReturn,
+    Schedule,
+    TrainFreq,
+    TrainFrequencyUnit,
+)
 from tune.protox.agent.utils import should_collect_more_steps
 from tune.protox.agent.vec_env import VecEnv
 
@@ -120,7 +126,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 ) from e
 
             if not isinstance(train_freq[0], int):
-                raise ValueError(f"The frequency of `train_freq` must be an integer and not {train_freq[0]}")
+                raise ValueError(
+                    f"The frequency of `train_freq` must be an integer and not {train_freq[0]}"
+                )
 
             self.train_freq = TrainFreq(*train_freq)
 
@@ -205,10 +213,16 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             if self.num_timesteps > 0 and self.num_timesteps > self.learning_starts:
                 # If no `gradient_steps` is specified,
                 # do as many gradients steps as steps performed during the rollout
-                gradient_steps = self.gradient_steps if self.gradient_steps >= 0 else rollout.episode_timesteps
+                gradient_steps = (
+                    self.gradient_steps
+                    if self.gradient_steps >= 0
+                    else rollout.episode_timesteps
+                )
                 # Special case when the user passes `gradient_steps=0`
                 if gradient_steps > 0:
-                    self.train(batch_size=self.batch_size, gradient_steps=gradient_steps)
+                    self.train(
+                        batch_size=self.batch_size, gradient_steps=gradient_steps
+                    )
         return self
 
     def train(self, gradient_steps: int, batch_size: int) -> None:
@@ -222,7 +236,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         """
         Write log.
         """
-        time_elapsed = max((time.time_ns() - self.start_time) / 1e9, sys.float_info.epsilon)
+        time_elapsed = max(
+            (time.time_ns() - self.start_time) / 1e9, sys.float_info.epsilon
+        )
         fps = int((self.num_timesteps - self._num_timesteps_at_start) / time_elapsed)
         self.logger.record("time/episodes", self._episode_num)
         self.logger.record("time/fps", fps)
@@ -329,21 +345,31 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         assert train_freq.frequency > 0, "Should at least collect one step or episode."
 
         if env.num_envs > 1:
-            assert train_freq.unit == TrainFrequencyUnit.STEP, "You must use only one env when doing episodic training."
+            assert (
+                train_freq.unit == TrainFrequencyUnit.STEP
+            ), "You must use only one env when doing episodic training."
 
         # Vectorize action noise if needed
-        if action_noise is not None and env.num_envs > 1 and not isinstance(action_noise, VectorizedActionNoise):
+        if (
+            action_noise is not None
+            and env.num_envs > 1
+            and not isinstance(action_noise, VectorizedActionNoise)
+        ):
             action_noise = VectorizedActionNoise(action_noise, env.num_envs)
 
         continue_training = True
-        while should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
+        while should_collect_more_steps(
+            train_freq, num_collected_steps, num_collected_episodes
+        ):
             if self.timeout_checker is not None and self.timeout_checker():
                 # Timeout has been hit.
                 continue_training = False
                 break
 
             # Select action randomly or according to policy
-            actions, buffer_actions = self._sample_action(learning_starts, action_noise, env.num_envs)
+            actions, buffer_actions = self._sample_action(
+                learning_starts, action_noise, env.num_envs
+            )
             self.logger.record("instr_time/n_samples", 1)
 
             # Rescale and perform action
@@ -353,9 +379,13 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             num_collected_steps += 1
 
             # Store data in replay buffer (normalized action and unnormalized observation)
-            self._store_transition(replay_buffer, buffer_actions, new_obs, rewards, dones, infos)
+            self._store_transition(
+                replay_buffer, buffer_actions, new_obs, rewards, dones, infos
+            )
 
-            self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
+            self._update_current_progress_remaining(
+                self.num_timesteps, self._total_timesteps
+            )
 
             # For DQN, check if the target network should be updated
             # and update the exploration schedule
@@ -374,6 +404,13 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                         action_noise.reset(**kwargs)
 
                     # Log training infos
-                    if log_interval is not None and self._episode_num % log_interval == 0:
+                    if (
+                        log_interval is not None
+                        and self._episode_num % log_interval == 0
+                    ):
                         self._dump_logs()
-        return RolloutReturn(num_collected_steps * env.num_envs, num_collected_episodes, continue_training)
+        return RolloutReturn(
+            num_collected_steps * env.num_envs,
+            num_collected_episodes,
+            continue_training,
+        )

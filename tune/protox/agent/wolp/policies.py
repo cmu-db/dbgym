@@ -1,6 +1,7 @@
-import time
 import logging
+import time
 from typing import Any, Dict, List, Optional, Type, Union
+
 import numpy as np
 import torch as th
 from gymnasium import spaces
@@ -36,11 +37,11 @@ class Actor(BasePolicy):
         features_extractor: nn.Module,
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
-        weight_init = None,
-        bias_zero = False,
+        weight_init=None,
+        bias_zero=False,
         squash_output: bool = False,
         action_dim: int = 0,
-        policy_weight_adjustment = 1,
+        policy_weight_adjustment=1,
     ):
         super().__init__(
             observation_space,
@@ -55,7 +56,16 @@ class Actor(BasePolicy):
         self.action_dim = action_dim
         assert action_dim > 0
 
-        actor_net = create_mlp(features_dim, action_dim, net_arch, activation_fn, squash_output=squash_output, weight_init=weight_init, bias_zero=bias_zero, final_layer_adjust=policy_weight_adjustment)
+        actor_net = create_mlp(
+            features_dim,
+            action_dim,
+            net_arch,
+            activation_fn,
+            squash_output=squash_output,
+            weight_init=weight_init,
+            bias_zero=bias_zero,
+            final_layer_adjust=policy_weight_adjustment,
+        )
         # Deterministic action
         self.mu = nn.Sequential(*actor_net)
 
@@ -64,13 +74,17 @@ class Actor(BasePolicy):
         features = self.extract_features(obs, self.features_extractor)
         return self.action_space.process_network_output(self.mu(features))
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False
+    ) -> th.Tensor:
         # Note: the deterministic deterministic parameter is ignored in the case of TD3.
         #   Predictions are always deterministic.
         return self(observation)
 
     def save_state(self):
-        return { "mu": self.mu, }
+        return {
+            "mu": self.mu,
+        }
 
     def load_state(self, d):
         self.mu = d["mu"]
@@ -113,9 +127,9 @@ class WolpPolicy(BasePolicy):
         squash_output: bool = False,
         action_dim: int = 0,
         critic_action_dim: int = 0,
-        weight_init = None,
-        bias_zero = False,
-        policy_weight_adjustment = 1,
+        weight_init=None,
+        bias_zero=False,
+        policy_weight_adjustment=1,
     ):
         super().__init__(
             observation_space,
@@ -192,23 +206,31 @@ class WolpPolicy(BasePolicy):
         # Initialize the target to have the same weights as the actor
         self.actor_target.load_state_dict(self.actor.state_dict())
 
-        self.actor.optimizer = self.optimizer_class(self.actor.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.actor.optimizer = self.optimizer_class(
+            self.actor.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs
+        )
 
         if self.share_features_extractor:
-            self.critic = self.make_critic(features_extractor=self.actor.features_extractor)
+            self.critic = self.make_critic(
+                features_extractor=self.actor.features_extractor
+            )
             # Critic target should not share the features extractor with critic
             # but it can share it with the actor target as actor and critic are sharing
             # the same features_extractor too
             # NOTE: as a result the effective poliak (soft-copy) coefficient for the features extractor
             # will be 2 * tau instead of tau (updated one time with the actor, a second time with the critic)
-            self.critic_target = self.make_critic(features_extractor=self.actor_target.features_extractor)
+            self.critic_target = self.make_critic(
+                features_extractor=self.actor_target.features_extractor
+            )
         else:
             # Create new features extractor for each network
             self.critic = self.make_critic(features_extractor=None)
             self.critic_target = self.make_critic(features_extractor=None)
 
         self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic.optimizer = self.optimizer_class(self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.critic.optimizer = self.optimizer_class(
+            self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs
+        )
 
         # Target networks should always be in eval mode
         self.actor_target.set_training_mode(False)
@@ -218,23 +240,32 @@ class WolpPolicy(BasePolicy):
         logging.info("Actor: %s", self.actor)
         logging.info("Critic: %s", self.critic)
 
-    def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Actor:
-        actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
+    def make_actor(
+        self, features_extractor: Optional[BaseFeaturesExtractor] = None
+    ) -> Actor:
+        actor_kwargs = self._update_features_extractor(
+            self.actor_kwargs, features_extractor
+        )
         return Actor(**actor_kwargs).to(self.device)
 
-    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> ContinuousCritic:
-        critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
+    def make_critic(
+        self, features_extractor: Optional[BaseFeaturesExtractor] = None
+    ) -> ContinuousCritic:
+        critic_kwargs = self._update_features_extractor(
+            self.critic_kwargs, features_extractor
+        )
         return ContinuousCritic(**critic_kwargs).to(self.device)
 
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         assert False
 
-    def wolp_act(self,
+    def wolp_act(
+        self,
         states,
         use_target: bool = False,
-        action_noise = None,
-        neighbor_parameters = None,
-        instr_logger = None,
+        action_noise=None,
+        neighbor_parameters=None,
+        instr_logger=None,
         random_act=False,
         epsilon_greedy=0.0,
     ):
@@ -263,7 +294,9 @@ class WolpPolicy(BasePolicy):
 
         # Smear the action.
         random = (epsilon_greedy > 0.0) and (np.random.rand() < epsilon_greedy)
-        env_actions, sample_actions, actions_dim = self.action_space.actor_smear_action(raw_action, neighbor_parameters, random=random)
+        env_actions, sample_actions, actions_dim = self.action_space.actor_smear_action(
+            raw_action, neighbor_parameters, random=random
+        )
 
         if random_act:
             # If we want a random action, don't use Q-value estimate.
@@ -271,11 +304,13 @@ class WolpPolicy(BasePolicy):
             if instr_logger is not None:
                 instr_logger.record("instr_time/next_act", time.time() - start_time)
 
-            return [env_actions[rand_act]], sample_actions[rand_act:rand_act+1]
+            return [env_actions[rand_act]], sample_actions[rand_act : rand_act + 1]
 
         assert states.shape[0] == actions_dim.shape[0]
         assert len(states.shape) == 2
-        env_actions, embed_actions, _, raw_qs = self.discriminate(use_target, states, sample_actions, actions_dim, env_actions)
+        env_actions, embed_actions, _, raw_qs = self.discriminate(
+            use_target, states, sample_actions, actions_dim, env_actions
+        )
 
         if instr_logger is not None:
             instr_logger.record("instr_time/next_act", time.time() - start_time)

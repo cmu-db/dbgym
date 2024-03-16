@@ -1,12 +1,17 @@
-import torch
 import json
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import torch
 from gymnasium import spaces
 from gymnasium.spaces import Box
 from psycopg.rows import dict_row
 
-from tune.protox.env.space.utils import fetch_server_knobs, check_subspace, METRICS_SPECIFICATION
+from tune.protox.env.space.utils import (
+    METRICS_SPECIFICATION,
+    check_subspace,
+    fetch_server_knobs,
+)
 
 
 # A metrics-based state returns the physical metrics (i.e., consequences) of running
@@ -50,14 +55,18 @@ class MetricStateSpace(spaces.Dict):
             for key_metric in spec["valid_keys"]:
                 if spec["per_table"]:
                     for tbl in tables:
-                        tbl_metric = MetricStateSpace.construct_key(key, key_metric, True, tbl)
+                        tbl_metric = MetricStateSpace.construct_key(
+                            key, key_metric, True, tbl
+                        )
                         assert tbl_metric not in self.internal_spaces
                         self.internal_spaces[tbl_metric] = Box(low=-np.inf, high=np.inf)
                 else:
-                    metric = MetricStateSpace.construct_key(key, key_metric, False, None)
+                    metric = MetricStateSpace.construct_key(
+                        key, key_metric, False, None
+                    )
                     assert metric not in self.internal_spaces
                     self.internal_spaces[metric] = Box(low=-np.inf, high=np.inf)
-        self.internal_spaces["lsc"] = Box(low=-1, high=1.)
+        self.internal_spaces["lsc"] = Box(low=-1, high=1.0)
         super().__init__(self.internal_spaces, seed)
 
     def check_benchbase(self, **kwargs):
@@ -67,7 +76,9 @@ class MetricStateSpace(spaces.Dict):
         if len(metric_files) != 2:
             return False
 
-        initial = metric_files[0] if "initial" in str(metric_files[0]) else metric_files[1]
+        initial = (
+            metric_files[0] if "initial" in str(metric_files[0]) else metric_files[1]
+        )
         final = metric_files[1] if initial == metric_files[0] else metric_files[0]
 
         try:
@@ -88,11 +99,19 @@ class MetricStateSpace(spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == self.postgres_db]
+                initial_data = [
+                    d for d in initial_data if d["datname"] == self.postgres_db
+                ]
                 final_data = [d for d in final_data if d["datname"] == self.postgres_db]
             elif spec["per_table"]:
-                initial_data = sorted([d for d in initial_data if d["relname"] in self.tables], key=lambda x: x["relname"])
-                final_data = sorted([d for d in final_data if d["relname"] in self.tables], key=lambda x: x["relname"])
+                initial_data = sorted(
+                    [d for d in initial_data if d["relname"] in self.tables],
+                    key=lambda x: x["relname"],
+                )
+                final_data = sorted(
+                    [d for d in final_data if d["relname"] in self.tables],
+                    key=lambda x: x["relname"],
+                )
 
             if len(initial_data) == 0 or len(final_data) == 0:
                 return False
@@ -127,11 +146,14 @@ class MetricStateSpace(spaces.Dict):
                     else:
                         data[k] = np.array([v], dtype=np.float32)
                 return data
+
             return npify(metrics)
 
         assert len(metric_files) == 2
 
-        initial = metric_files[0] if "initial" in str(metric_files[0]) else metric_files[1]
+        initial = (
+            metric_files[0] if "initial" in str(metric_files[0]) else metric_files[1]
+        )
         final = metric_files[1] if initial == metric_files[0] else metric_files[0]
 
         with open(initial) as f:
@@ -149,11 +171,19 @@ class MetricStateSpace(spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == self.postgres_db]
+                initial_data = [
+                    d for d in initial_data if d["datname"] == self.postgres_db
+                ]
                 final_data = [d for d in final_data if d["datname"] == self.postgres_db]
             elif spec["per_table"]:
-                initial_data = sorted([d for d in initial_data if d["relname"] in self.tables], key=lambda x: x["relname"])
-                final_data = sorted([d for d in final_data if d["relname"] in self.tables], key=lambda x: x["relname"])
+                initial_data = sorted(
+                    [d for d in initial_data if d["relname"] in self.tables],
+                    key=lambda x: x["relname"],
+                )
+                final_data = sorted(
+                    [d for d in final_data if d["relname"] in self.tables],
+                    key=lambda x: x["relname"],
+                )
 
             for pre, post in zip(initial_data, final_data):
                 for metric in spec["valid_keys"]:
@@ -162,7 +192,12 @@ class MetricStateSpace(spaces.Dict):
                     else:
                         diff = float(post[metric]) - float(pre[metric])
 
-                    metric_key = MetricStateSpace.construct_key(key, metric, spec["per_table"], pre["relname"] if spec["per_table"] else None)
+                    metric_key = MetricStateSpace.construct_key(
+                        key,
+                        metric,
+                        spec["per_table"],
+                        pre["relname"] if spec["per_table"] else None,
+                    )
                     metrics[metric_key] = np.array([diff], dtype=np.float32)
 
         assert check_subspace(self, metrics)
@@ -205,12 +240,20 @@ class StructureStateSpace(spaces.Dict):
         self.div = div
 
         if normalize:
-            self.internal_spaces["knobs"] = Box(low=-np.inf, high=np.inf, shape=[action_space.get_knob_space().final_dim])
+            self.internal_spaces["knobs"] = Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=[action_space.get_knob_space().final_dim],
+            )
         else:
             self.internal_spaces["knobs"] = self.action_space.get_knob_space()
 
-        self.internal_spaces["index"] = Box(low=-np.inf, high=np.inf, shape=[action_space.get_index_space().get_critic_dim()])
-        self.internal_spaces["lsc"] = Box(low=-1, high=1.)
+        self.internal_spaces["index"] = Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=[action_space.get_index_space().get_critic_dim()],
+        )
+        self.internal_spaces["lsc"] = Box(low=-1, high=1.0)
         super().__init__(self.internal_spaces, seed)
 
     def metrics(self):
@@ -224,18 +267,33 @@ class StructureStateSpace(spaces.Dict):
         connection = kwargs["connection"]
         action = kwargs["action"]
 
-        knob_state = fetch_server_knobs(connection, tables=self.action_space.get_knob_space().tables, knobs=self.action_space.get_knob_space().knobs)
+        knob_state = fetch_server_knobs(
+            connection,
+            tables=self.action_space.get_knob_space().tables,
+            knobs=self.action_space.get_knob_space().knobs,
+        )
         # Assimilate the query level knobs back.
-        ql_knobs = self.action_space.get_query_level_knobs(action) if action is not None else {}
+        ql_knobs = (
+            self.action_space.get_query_level_knobs(action)
+            if action is not None
+            else {}
+        )
         knob_state.update({k: v for k, (_, v) in ql_knobs.items()})
 
         if self.normalize:
             # Normalize.
-            knob_state = np.array(self.action_space.get_knob_space()._env_to_embedding(knob_state), dtype=np.float32)[0]
+            knob_state = np.array(
+                self.action_space.get_knob_space()._env_to_embedding(knob_state),
+                dtype=np.float32,
+            )[0]
         assert check_subspace(self.internal_spaces["knobs"], knob_state)
 
         # Handle indexes.
-        current_bias = 0 if self.action_space.get_index_space().lsc is None else self.action_space.get_index_space().lsc.current_bias()
+        current_bias = (
+            0
+            if self.action_space.get_index_space().lsc is None
+            else self.action_space.get_index_space().lsc.current_bias()
+        )
         indexes = self.action_space.get_index_space().get_state_with_bias(None)
         if action is not None:
             indexes.append((action[1], current_bias))
@@ -253,12 +311,22 @@ class StructureStateSpace(spaces.Dict):
                     # Boink the index type.
                     index_val = torch.tensor(env_acts[:, 0]).view(env_acts.shape[0], -1)
                     index_type = torch.zeros(index_val.shape[0], 2, dtype=torch.int64)
-                    aux_index_type = index_type.scatter_(1, index_val, 1).type(torch.float32)
+                    aux_index_type = index_type.scatter_(1, index_val, 1).type(
+                        torch.float32
+                    )
                     env_acts = env_acts[:, 1:]
 
                 if self.action_space.get_index_space().index_space_aux_include > 0:
-                    aux_include = torch.tensor(env_acts[:, -self.action_space.get_index_space().index_space_aux_include:]).float()
-                    env_acts = env_acts[:, :-self.action_space.get_index_space().index_space_aux_include]
+                    aux_include = torch.tensor(
+                        env_acts[
+                            :,
+                            -self.action_space.get_index_space().index_space_aux_include :,
+                        ]
+                    ).float()
+                    env_acts = env_acts[
+                        :,
+                        : -self.action_space.get_index_space().index_space_aux_include,
+                    ]
 
                 nets = vae.get_collate()(env_acts).to(device=device).float()
                 latents, error = vae.latents(nets)
@@ -277,7 +345,9 @@ class StructureStateSpace(spaces.Dict):
                     index_state = (latents.sum(dim=0)).numpy().flatten()
                 index_state = index_state.astype(np.float32)
         else:
-            index_state = np.zeros(self.action_space.get_index_space().get_critic_dim(), dtype=np.float32)
+            index_state = np.zeros(
+                self.action_space.get_index_space().get_critic_dim(), dtype=np.float32
+            )
 
         state = {
             "knobs": knob_state,

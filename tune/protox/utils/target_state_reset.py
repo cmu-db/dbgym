@@ -1,8 +1,9 @@
 import logging
+import random
 
 import gymnasium as gym
+
 from tune.protox.agent.env_util import unwrap_to_base_env
-import random
 
 
 class TargetStateResetWrapper(gym.core.Wrapper):
@@ -58,10 +59,15 @@ class TargetStateResetWrapper(gym.core.Wrapper):
                 assert self.tracked_states is not None
                 state = self._get_state()
                 if self.maximize_knobs_only:
-                    assert self.pg_env.env_spec.action_space.get_knob_space() is not None
-                    state = tuple([state[0]] + [[]]*int(len(state)-1))
+                    assert (
+                        self.pg_env.env_spec.action_space.get_knob_space() is not None
+                    )
+                    state = tuple([state[0]] + [[]] * int(len(state) - 1))
                 if self.start_reset:
-                    self.tracked_states = [self.tracked_states[0], (metric, obs, accum_metric, state)]
+                    self.tracked_states = [
+                        self.tracked_states[0],
+                        (metric, obs, accum_metric, state),
+                    ]
                 else:
                     self.tracked_states = [(metric, obs, accum_metric, state)]
         return obs, rews, terminateds, truncateds, infos
@@ -74,7 +80,12 @@ class TargetStateResetWrapper(gym.core.Wrapper):
             self.real_best_metric = self.best_metric
 
             self.tracked_states = [
-                (self.best_metric, state.copy(), info.get("accum_metric", None), self._get_state())
+                (
+                    self.best_metric,
+                    state.copy(),
+                    info.get("accum_metric", None),
+                    self._get_state(),
+                )
             ]
         else:
             metric, state, accum_metric, config = random.choice(self.tracked_states)

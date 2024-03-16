@@ -59,12 +59,16 @@ def select_best_embeddings(dbgym_cfg, generic_args, select_args):
             )
     else:
         idx = select_args.flatten_idx
-        Path(f"{dbgym_cfg.dbgym_this_run_path}/curated").mkdir(parents=True, exist_ok=True)
+        Path(f"{dbgym_cfg.dbgym_this_run_path}/curated").mkdir(
+            parents=True, exist_ok=True
+        )
         info_txt = open(f"{dbgym_cfg.dbgym_this_run_path}/curated/info.txt", "w")
 
         for tup in df.itertuples():
             epoch = int(str(tup.path).split("epoch")[-1])
-            shutil.copytree(tup.path, f"{dbgym_cfg.dbgym_this_run_path}/curated/model{idx}")
+            shutil.copytree(
+                tup.path, f"{dbgym_cfg.dbgym_this_run_path}/curated/model{idx}"
+            )
             shutil.copy(
                 Path(tup.root) / "config",
                 f"{dbgym_cfg.dbgym_this_run_path}/curated/model{idx}/config",

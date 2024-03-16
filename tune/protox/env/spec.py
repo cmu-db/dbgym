@@ -1,18 +1,19 @@
 import json
-import yaml
-import shutil
-from gymnasium.spaces import Space
-from pathlib import Path
 import logging
-import torch
+import shutil
+from pathlib import Path
 
-from tune.protox.env.space.index_space import IndexSpace
-from tune.protox.env.space.state_space import MetricStateSpace, StructureStateSpace
-from tune.protox.env.space.knob_space import KnobSpace
-from tune.protox.env.space.action_space import ActionSpace
-from tune.protox.env.workload import Workload
-from tune.protox.env.lsc import LSC
+import torch
+import yaml
+from gymnasium.spaces import Space
+
 from misc.utils import open_and_save
+from tune.protox.env.lsc import LSC
+from tune.protox.env.space.action_space import ActionSpace
+from tune.protox.env.space.index_space import IndexSpace
+from tune.protox.env.space.knob_space import KnobSpace
+from tune.protox.env.space.state_space import MetricStateSpace, StructureStateSpace
+from tune.protox.env.workload import Workload
 from tune.protox.utils.logger import Logger
 
 
@@ -22,6 +23,7 @@ def gen_scale_output(mean_output_act, output_scale):
             return torch.nn.Sigmoid()(x) * output_scale
         else:
             assert False, print(mean_output_act)
+
     return f
 
 
@@ -50,7 +52,20 @@ class Spec(object):
         else:
             assert False
 
-    def __init__(self, dbgym_cfg, agent_type, seed, embedding_path, protox_config_path, benchbase_config_path, benchmark_config_path, workload_path, horizon, workload_timeout, logger=None):
+    def __init__(
+        self,
+        dbgym_cfg,
+        agent_type,
+        seed,
+        embedding_path,
+        protox_config_path,
+        benchbase_config_path,
+        benchmark_config_path,
+        workload_path,
+        horizon,
+        workload_timeout,
+        logger=None,
+    ):
         with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
             protox_config = yaml.safe_load(f)["protox"]
         for k, v in protox_config.items():
@@ -60,26 +75,34 @@ class Spec(object):
         use_vae = self.index_vae_metadata["index_vae"]
 
         index_latent_dim = 0
-        index_output_scale = 1.
+        index_output_scale = 1.0
         index_output_func = torch.nn.Tanh()
         vae_config = {}
         if use_vae:
-            self.index_vae_metadata["embedding_pth_path"] = embedding_path / "embedding.pth"
+            self.index_vae_metadata["embedding_pth_path"] = (
+                embedding_path / "embedding.pth"
+            )
             self.index_vae_metadata["embedding_cfg_path"] = embedding_path / "config"
-            with open_and_save(dbgym_cfg, self.index_vae_metadata["embedding_cfg_path"], "r") as f:
+            with open_and_save(
+                dbgym_cfg, self.index_vae_metadata["embedding_cfg_path"], "r"
+            ) as f:
                 vae_config = config = json.load(f)
                 index_latent_dim = config["latent_dim"]
-                index_output_func = gen_scale_output(config.get("mean_output_act", "sigmoid"), config["output_scale"])
+                index_output_func = gen_scale_output(
+                    config.get("mean_output_act", "sigmoid"), config["output_scale"]
+                )
                 index_output_scale = config["output_scale"]
 
         self.postgres_data_folder = self.postgres_data
         self.postgres_data = Path(self.pgbin_path) / self.postgres_data
         self.postgres_port = int(self.postgres_port)
-        self.connection_str = "host={host} port={port} dbname={dbname} user={user}".format(
-            host=self.postgres_host,
-            port=self.postgres_port,
-            dbname=self.postgres_db,
-            user=self.postgres_user,
+        self.connection_str = (
+            "host={host} port={port} dbname={dbname} user={user}".format(
+                host=self.postgres_host,
+                port=self.postgres_port,
+                dbname=self.postgres_db,
+                user=self.postgres_user,
+            )
         )
         logging.debug("self.connection_str=%s", self.connection_str)
 
@@ -87,7 +110,9 @@ class Spec(object):
         self.original_benchbase_config_path = self.benchbase_config_path
         new_benchbase_config_stem = self.benchbase_config_path.stem
         new_benchbase_config_stem += f"_{self.postgres_port}"
-        self.benchbase_config_path = self.benchbase_config_path.with_stem(new_benchbase_config_stem)
+        self.benchbase_config_path = self.benchbase_config_path.with_stem(
+            new_benchbase_config_stem
+        )
         shutil.copy(self.original_benchbase_config_path, self.benchbase_config_path)
 
         with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
@@ -109,10 +134,19 @@ class Spec(object):
             workload_path=workload_path,
             pid=None,
             workload_eval_mode=self.workload_eval_mode,
-            workload_eval_inverse=self.workload_eval_inverse if hasattr(self, "workload_eval_inverse") else False,
+            workload_eval_inverse=(
+                self.workload_eval_inverse
+                if hasattr(self, "workload_eval_inverse")
+                else False
+            ),
             workload_timeout=workload_timeout,
-            workload_timeout_penalty=self.workload_timeout_penalty if hasattr(self, "workload_timeout_penalty") else 1.,
-            logger=self.logger)
+            workload_timeout_penalty=(
+                self.workload_timeout_penalty
+                if hasattr(self, "workload_timeout_penalty")
+                else 1.0
+            ),
+            logger=self.logger,
+        )
 
         # Get column usage.
         modified_attrs = self.workload.process_column_usage()
@@ -123,7 +157,10 @@ class Spec(object):
             per_query_scans = self.workload.query_aliases
 
         per_query_parallel = {}
-        if hasattr(self, "per_query_select_parallel") and self.per_query_select_parallel:
+        if (
+            hasattr(self, "per_query_select_parallel")
+            and self.per_query_select_parallel
+        ):
             per_query_parallel = self.workload.query_aliases
 
         # Build the knob space so we can actually get the knobs.
@@ -139,7 +176,8 @@ class Spec(object):
                 seed,
                 per_query_parallel=per_query_parallel,
                 per_query_scans=per_query_scans,
-                query_names=self.workload.order)
+                query_names=self.workload.order,
+            )
         else:
             ks = None
 
@@ -162,13 +200,17 @@ class Spec(object):
                 latent_dim=index_latent_dim,
                 index_output_scale=index_output_scale,
                 index_output_func=index_output_func,
-                index_vae_config=(vae_config, self.index_vae_metadata.get("embedding_pth_path", None)),
+                index_vae_config=(
+                    vae_config,
+                    self.index_vae_metadata.get("embedding_pth_path", None),
+                ),
                 attributes_overwrite=modified_attrs,
                 tbl_include_subsets=tbl_include_subsets,
                 lsc=lsc,
                 scale_noise_perturb=self.scale_noise_perturb,
                 index_space_aux_type=getattr(self, "index_space_aux_type", False),
-                index_space_aux_include=getattr(self, "index_space_aux_include", False))
+                index_space_aux_include=getattr(self, "index_space_aux_include", False),
+            )
             self.max_num_columns = idxs.max_num_columns
         else:
             idxs = None
@@ -185,7 +227,7 @@ class Spec(object):
             "connection": self.connection_str,
             "workload": self.workload.save_state(),
             "action_space": self.action_space.save_state(),
-            #"observation_space": self.observation_space.save_state(),
+            # "observation_space": self.observation_space.save_state(),
         }
 
     def load_state(self, data):

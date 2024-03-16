@@ -1,18 +1,19 @@
 import logging
+import pickle
 import time
+
+import gymnasium as gym
 import numpy as np
 import torch
-import gymnasium as gym
-from gymnasium.wrappers import NormalizeObservation, NormalizeReward, FlattenObservation
-import pickle
+from gymnasium.wrappers import FlattenObservation, NormalizeObservation, NormalizeReward
 
-from tune.protox.env.spec import Spec
-from tune.protox.env.reward import RewardUtility
-from tune.protox.utils.target_state_reset import TargetStateResetWrapper
-from tune.protox.utils.mythril_vec_env_wrapper import MythrilVecEnvWrapper
 from tune.protox.agent.vec_env import VecCheckNan
-from tune.protox.utils.dotdict import DotDict
 from tune.protox.agent.wolp.config import setup_wolp_agent
+from tune.protox.env.reward import RewardUtility
+from tune.protox.env.spec import Spec
+from tune.protox.utils.dotdict import DotDict
+from tune.protox.utils.mythril_vec_env_wrapper import MythrilVecEnvWrapper
+from tune.protox.utils.target_state_reset import TargetStateResetWrapper
 
 
 class TimeoutChecker(object):
@@ -60,31 +61,60 @@ class TuneTrial(object):
         self.it = 0
 
         # Setup the seed
-        seed = self.args.seed if self.args.seed != -1 else np.random.randint(np.iinfo(np.int32).max)
+        seed = (
+            self.args.seed
+            if self.args.seed != -1
+            else np.random.randint(np.iinfo(np.int32).max)
+        )
         np.random.seed(seed)
         torch.manual_seed(seed)
 
         # Load spec and create environment.
-        self.spec = Spec(dbgym_cfg, self.args.agent, seed, embedding_path=self.args.embedding_path, protox_config_path=self.args.protox_config_path, benchbase_config_path=self.args.benchbase_config_path, benchmark_config_path=self.args.benchmark_config_path, workload_path=self.args.workload_path, horizon=self.args.horizon, workload_timeout=self.args.workload_timeout)
+        self.spec = Spec(
+            dbgym_cfg,
+            self.args.agent,
+            seed,
+            embedding_path=self.args.embedding_path,
+            protox_config_path=self.args.protox_config_path,
+            benchbase_config_path=self.args.benchbase_config_path,
+            benchmark_config_path=self.args.benchmark_config_path,
+            workload_path=self.args.workload_path,
+            horizon=self.args.horizon,
+            workload_timeout=self.args.workload_timeout,
+        )
         self.logger = self.spec.logger
         logging.info("%s", args)
         logging.info(f"Seed: {seed}")
 
         # Create the reward utility.
-        self.reward_utility = RewardUtility(is_oltp, self.args.reward, self.spec.reward_scaler)
+        self.reward_utility = RewardUtility(
+            is_oltp, self.args.reward, self.spec.reward_scaler
+        )
 
         # Create the environment.
-        self.base_env = self.env = gym.make("Postgres-v0",
+        self.base_env = self.env = gym.make(
+            "Postgres-v0",
             spec=self.spec,
             horizon=self.args.horizon,
             query_timeout=self.args.query_timeout,
             reward_utility=self.reward_utility,
-            logger=self.logger)
+            logger=self.logger,
+        )
 
         # Attach a target state reset wrapper around it.
-        mko = self.spec.maximize_knobs_only if hasattr(self.spec, "maximize_knobs_only") else False
+        mko = (
+            self.spec.maximize_knobs_only
+            if hasattr(self.spec, "maximize_knobs_only")
+            else False
+        )
         sr = self.spec.start_reset if hasattr(self.spec, "start_reset") else False
-        self.target_state_wrapper = self.env = TargetStateResetWrapper(self.env, self.spec.maximize_state, self.reward_utility, maximize_knobs_only=mko, start_reset=sr)
+        self.target_state_wrapper = self.env = TargetStateResetWrapper(
+            self.env,
+            self.spec.maximize_state,
+            self.reward_utility,
+            maximize_knobs_only=mko,
+            start_reset=sr,
+        )
 
         # Now attach a flatten observation wrapper.
         self.env = FlattenObservation(self.env)
@@ -95,12 +125,21 @@ class TuneTrial(object):
             self.normalize_env = self.env = NormalizeObservation(self.env)
         if self.spec.normalize_reward:
             # Normalize reward if we are asked to.
-            self.normalize_reward = self.env = NormalizeReward(self.env, gamma=self.spec.gamma)
+            self.normalize_reward = self.env = NormalizeReward(
+                self.env, gamma=self.spec.gamma
+            )
         self.vec_env = self.env = MythrilVecEnvWrapper([lambda: self.env])
         self.env = VecCheckNan(self.env, raise_exception=True, warn_once=False)
 
         # Setup the agent.
-        self.agent = setup_agent(dbgym_cfg, self.env, self.spec, seed, self.args.agent, self.args.agent_params_path)
+        self.agent = setup_agent(
+            dbgym_cfg,
+            self.env,
+            self.spec,
+            seed,
+            self.args.agent,
+            self.args.agent_params_path,
+        )
         self.agent.set_logger(self.logger)
         self.agent.set_timeout_checker(timeout_checker)
         self.env_init = False
@@ -109,7 +148,6 @@ class TuneTrial(object):
             # Un-pickle.
             self.unpickle()
 
-
     def step(self):
         if not self.env_init:
             # Create the baseline repository data.
@@ -117,7 +155,9 @@ class TuneTrial(object):
             info = infos[0]
             baseline_reward = info["baseline_reward"]
             self.baseline_metric = info["baseline_metric"]
-            logging.info(f"Baseilne Metric: {self.baseline_metric}. Baseline Reward: {baseline_reward}")
+            logging.info(
+                f"Baseilne Metric: {self.baseline_metric}. Baseline Reward: {baseline_reward}"
+            )
             self.env_init = True
 
         episode = self.agent._episode_num
@@ -128,7 +168,8 @@ class TuneTrial(object):
             total_timesteps=1,
             log_interval=None,
             reset_num_timesteps=False,
-            progress_bar=False)
+            progress_bar=False,
+        )
 
         self.logger.advance()
 
@@ -157,7 +198,7 @@ class TuneTrial(object):
 
         if self.normalize_reward:
             # Load reward.
-            self.normalize_reward.return_rms  = data["normalize_reward"].return_rms
+            self.normalize_reward.return_rms = data["normalize_reward"].return_rms
             self.normalize_reward.returns = data["normalize_reward"].returns
             self.normalize_reward.gamma = data["normalize_reward"].gamma
             self.normalize_reward.epsilon = data["normalize_reward"].epsilon
@@ -182,7 +223,10 @@ class TuneTrial(object):
             "spec": self.spec.save_state(),
             "reward_utility": self.reward_utility,
             "normalize_reward": self.normalize_reward,
-            "normalize_env": { "obs_rms": self.normalize_env.obs_rms, "epsilon": self.normalize_env.epsilon },
+            "normalize_env": {
+                "obs_rms": self.normalize_env.obs_rms,
+                "epsilon": self.normalize_env.epsilon,
+            },
             "vec_env": self.vec_env.save_state(),
             "target_state": self.target_state_wrapper.save_state(),
             "base_env": self.base_env.save_state(),

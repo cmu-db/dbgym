@@ -67,7 +67,9 @@ def clone(dbgym_cfg: DBGymConfig):
 
     benchmark_tpch_logger.info(f"Cloning: {symlink_dir}")
     real_build_path = dbgym_cfg.cur_task_runs_build_path()
-    subprocess_run(f"./tpch_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path())
+    subprocess_run(
+        f"./tpch_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
+    )
     subprocess_run(
         f"ln -s {real_build_path / 'tpch-kit'} {dbgym_cfg.cur_symlinks_build_path(mkdir=True)}"
     )
@@ -134,7 +136,9 @@ def generate_workload(
         raise RuntimeError(f"Workload directory exists: {workload_path}")
 
     benchmark_tpch_logger.info(f"Generating: {workload_path}")
-    real_dir = dbgym_cfg.cur_task_runs_data_path(f"workload_{workload_name}", mkdir=True)
+    real_dir = dbgym_cfg.cur_task_runs_data_path(
+        f"workload_{workload_name}", mkdir=True
+    )
 
     queries = None
     if generate_type == "sequential":

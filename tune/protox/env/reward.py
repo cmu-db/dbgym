@@ -1,10 +1,11 @@
+import json
 import logging
 from pathlib import Path
-import json
+
 import pandas as pd
 
 # Initial penalty to apply to create the "worst" perf from the baseline.
-INITIAL_PENALTY_MULTIPLIER = 4.
+INITIAL_PENALTY_MULTIPLIER = 4.0
 
 
 class RewardUtility(object):
@@ -12,7 +13,7 @@ class RewardUtility(object):
         self.reward_scaler = reward_scaler
         self.metric = metric
         self.is_oltp = is_oltp
-        self.maximize = is_oltp # oltp means tps which we want to maximize. olap means runtime which we want to minimize
+        self.maximize = is_oltp  # oltp means tps which we want to maximize. olap means runtime which we want to minimize
         self.worst_perf = None
         self.relative_baseline = None
         self.previous_result = None
@@ -94,7 +95,11 @@ class RewardUtility(object):
 
         if metric is None:
             # Extract the metric if we're running it manually.
-            metric_fn = self.__parse_tps_for_metric if self.is_oltp else self.__parse_runtime_for_metric
+            metric_fn = (
+                self.__parse_tps_for_metric
+                if self.is_oltp
+                else self.__parse_runtime_for_metric
+            )
             metric = self.worst_perf if did_error else metric_fn(result_dir)
         actual_r = None
 
@@ -109,7 +114,11 @@ class RewardUtility(object):
             # Use the metric directly.
             actual_r = metric
         elif self.metric == "multiplier":
-            actual_r = metric / self.relative_baseline if self.maximize else self.relative_baseline / metric
+            actual_r = (
+                metric / self.relative_baseline
+                if self.maximize
+                else self.relative_baseline / metric
+            )
         elif self.metric == "relative":
             if self.maximize:
                 actual_r = (metric - self.relative_baseline) / self.relative_baseline
@@ -117,8 +126,16 @@ class RewardUtility(object):
                 actual_r = (self.relative_baseline - metric) / self.relative_baseline
         elif self.metric == "cdb_delta":
             # refer to https://dbgroup.cs.tsinghua.edu.cn/ligl/papers/sigmod19-cdbtune.pdf.
-            relative_baseline = (metric - self.relative_baseline) / self.relative_baseline if self.maximize else (self.relative_baseline - metric) / self.relative_baseline
-            relative_prev = (metric - self.previous_result) / self.previous_result if self.maximize else (self.previous_result - metric) / self.previous_result
+            relative_baseline = (
+                (metric - self.relative_baseline) / self.relative_baseline
+                if self.maximize
+                else (self.relative_baseline - metric) / self.relative_baseline
+            )
+            relative_prev = (
+                (metric - self.previous_result) / self.previous_result
+                if self.maximize
+                else (self.previous_result - metric) / self.previous_result
+            )
 
             if relative_baseline > 0:
                 actual_r = (pow(1 + relative_baseline, 2) - 1) * abs(1 + relative_prev)
@@ -131,7 +148,9 @@ class RewardUtility(object):
 
         if update:
             # Update worst seen metric.
-            if self.worst_perf is None or not self.is_perf_better(metric, self.worst_perf):
+            if self.worst_perf is None or not self.is_perf_better(
+                metric, self.worst_perf
+            ):
                 self.worst_perf = metric
 
             self.previous_result = metric

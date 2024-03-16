@@ -1,6 +1,7 @@
-import time
 import logging
+import time
 from typing import Any, Dict, Optional, Tuple, Type, TypeVar, Union
+
 import numpy as np
 import torch as th
 from gymnasium import spaces
@@ -11,8 +12,7 @@ from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.off_policy_algorithm import OffPolicyAlgorithm
 from tune.protox.agent.policies import BasePolicy
 from tune.protox.agent.type_aliases import GymEnv, Schedule
-from tune.protox.agent.utils import polyak_update
-from tune.protox.agent.utils import update_learning_rate
+from tune.protox.agent.utils import polyak_update, update_learning_rate
 from tune.protox.agent.wolp.policies import MlpPolicy, WolpPolicy
 
 SelfWolp = TypeVar("SelfWolp", bound="Wolp")
@@ -56,7 +56,9 @@ class Wolp(OffPolicyAlgorithm):
     :param _init_setup_model: Whether or not to build the network at the creation of the instance
     """
 
-    policy_aliases: Dict[str, Type[BasePolicy]] = { "MlpPolicy": MlpPolicy, }
+    policy_aliases: Dict[str, Type[BasePolicy]] = {
+        "MlpPolicy": MlpPolicy,
+    }
 
     accept = [
         "policy_kwargs",
@@ -104,7 +106,7 @@ class Wolp(OffPolicyAlgorithm):
         policy: Union[str, Type[WolpPolicy]],
         env: Union[GymEnv, str],
         learning_rate: Union[float, Schedule] = 1e-3,
-        critic_lr_scale = 1.0,
+        critic_lr_scale=1.0,
         buffer_size: int = 1_000_000,  # 1e6
         learning_starts: int = 100,
         batch_size: int = 100,
@@ -245,7 +247,10 @@ class Wolp(OffPolicyAlgorithm):
 
         # Update learning rate according to lr schedule
         self._update_learning_rate([self.actor.optimizer, self.critic.optimizer])
-        update_learning_rate(self.critic.optimizer, self.critic_lr_scale * self.lr_schedule(self._current_progress_remaining))
+        update_learning_rate(
+            self.critic.optimizer,
+            self.critic_lr_scale * self.lr_schedule(self._current_progress_remaining),
+        )
 
         actor_losses, critic_losses = [], []
         l2_losses, actor_grad_losses = [], []
@@ -258,8 +263,18 @@ class Wolp(OffPolicyAlgorithm):
             with th.no_grad():
                 # Select action according to policy and add clipped noise
                 def noise_fn():
-                    means = th.zeros((replay_data.actions.shape[0], self.noise_action_dim,), dtype=th.float32)
-                    return th.normal(means, self.target_policy_noise).clamp(-self.target_noise_clip, self.target_noise_clip).float()
+                    means = th.zeros(
+                        (
+                            replay_data.actions.shape[0],
+                            self.noise_action_dim,
+                        ),
+                        dtype=th.float32,
+                    )
+                    return (
+                        th.normal(means, self.target_policy_noise)
+                        .clamp(-self.target_noise_clip, self.target_noise_clip)
+                        .float()
+                    )
 
                 # wolp_act() actually gives both the env and the embedding actions.
                 # We evaluate the critic on the embedding action and not the environment action.
@@ -267,13 +282,22 @@ class Wolp(OffPolicyAlgorithm):
                     replay_data.next_observations,
                     use_target=True,
                     action_noise=noise_fn,
-                    neighbor_parameters=self.neighbor_parameters)
-                embed_actions = th.as_tensor(embed_actions, device=self.policy.device).float()
+                    neighbor_parameters=self.neighbor_parameters,
+                )
+                embed_actions = th.as_tensor(
+                    embed_actions, device=self.policy.device
+                ).float()
 
                 # Compute the next Q-values: min over all critics targets
-                next_q_values = th.cat(self.critic_target(replay_data.next_observations, embed_actions), dim=1)
+                next_q_values = th.cat(
+                    self.critic_target(replay_data.next_observations, embed_actions),
+                    dim=1,
+                )
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
-                target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
+                target_q_values = (
+                    replay_data.rewards
+                    + (1 - replay_data.dones) * self.gamma * next_q_values
+                )
 
             # Get the current action representation.
             wolp_start = time.time()
@@ -283,7 +307,9 @@ class Wolp(OffPolicyAlgorithm):
             current_q_values = self.critic(replay_data.observations, embeds)
 
             # Compute critic loss
-            critic_loss = sum(F.mse_loss(current_q, target_q_values) for current_q in current_q_values)
+            critic_loss = sum(
+                F.mse_loss(current_q, target_q_values) for current_q in current_q_values
+            )
             critic_losses.append(critic_loss.item())
 
             # Optimize the critics
@@ -300,18 +326,38 @@ class Wolp(OffPolicyAlgorithm):
                 raw_actions = self.env.action_space.adjust_action_lsc(raw_actions, lscs)
 
                 if self.env.action_space.get_index_space().index_space_aux_type_dim > 0:
-                    raw_actions = th.concat([embeds[:, :self.env.action_space.get_index_space().index_space_aux_type_dim], raw_actions], dim=1)
+                    raw_actions = th.concat(
+                        [
+                            embeds[
+                                :,
+                                : self.env.action_space.get_index_space().index_space_aux_type_dim,
+                            ],
+                            raw_actions,
+                        ],
+                        dim=1,
+                    )
                 if self.env.action_space.get_index_space().index_space_aux_include > 0:
-                    raw_actions = th.concat([raw_actions, embeds[:, -self.env.action_space.get_index_space().index_space_aux_include:]], dim=1)
+                    raw_actions = th.concat(
+                        [
+                            raw_actions,
+                            embeds[
+                                :,
+                                -self.env.action_space.get_index_space().index_space_aux_include :,
+                            ],
+                        ],
+                        dim=1,
+                    )
 
-            actor_loss = -self.critic.q1_forward(replay_data.observations, raw_actions).mean()
+            actor_loss = -self.critic.q1_forward(
+                replay_data.observations, raw_actions
+            ).mean()
             actor_grad_losses.append(actor_loss.item())
 
             # Attach l2.
             l2_loss = 0
             if self.policy_l2_reg > 0:
                 for param in self.actor.parameters():
-                    l2_loss += 0.5 * (param ** 2).sum()
+                    l2_loss += 0.5 * (param**2).sum()
                 l2_losses.append(l2_loss.item())
             actor_loss += l2_loss
             actor_losses.append(actor_loss.item())
@@ -324,15 +370,29 @@ class Wolp(OffPolicyAlgorithm):
             th.nn.utils.clip_grad_norm_(list(self.actor.parameters()), self.grad_clip)
             self.actor.optimizer.step()
 
-            polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
-            polyak_update(self.actor.parameters(), self.actor_target.parameters(), self.tau)
+            polyak_update(
+                self.critic.parameters(), self.critic_target.parameters(), self.tau
+            )
+            polyak_update(
+                self.actor.parameters(), self.actor_target.parameters(), self.tau
+            )
             policy_loss_steps += 1
 
         self.logger.record("train/n_updates", self._n_updates)
-        self.logger.record("train/actor_loss", 0 if len(actor_losses) == 0 else np.mean(actor_losses))
-        self.logger.record("train/actor_l2_loss", 0 if len(l2_losses) == 0 else np.mean(l2_losses))
-        self.logger.record("train/actor_grad_loss", 0 if len(actor_grad_losses) == 0 else np.mean(actor_grad_losses))
-        self.logger.record("train/critic_loss", 0 if len(critic_losses) == 0 else np.mean(critic_losses))
+        self.logger.record(
+            "train/actor_loss", 0 if len(actor_losses) == 0 else np.mean(actor_losses)
+        )
+        self.logger.record(
+            "train/actor_l2_loss", 0 if len(l2_losses) == 0 else np.mean(l2_losses)
+        )
+        self.logger.record(
+            "train/actor_grad_loss",
+            0 if len(actor_grad_losses) == 0 else np.mean(actor_grad_losses),
+        )
+        self.logger.record(
+            "train/critic_loss",
+            0 if len(critic_losses) == 0 else np.mean(critic_losses),
+        )
 
         # Log as munch time metrics as we can too.
         wolp_time = time.time() - start

@@ -1,7 +1,8 @@
-import torch
-import numpy as np
 import logging
 from pathlib import Path
+
+import numpy as np
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -43,14 +44,21 @@ class Logger(object):
                     self.writer.add_scalar(key, value, self.iteration)
             elif isinstance(value, list):
                 if len(value) > 0:
-                    assert isinstance(value[0], torch.Tensor) or isinstance(value[0], np.ndarray)
-                    write_value = torch.cat(value) if isinstance(value[0], torch.Tensor) else np.concatenate(value, axis=0)
+                    assert isinstance(value[0], torch.Tensor) or isinstance(
+                        value[0], np.ndarray
+                    )
+                    write_value = (
+                        torch.cat(value)
+                        if isinstance(value[0], torch.Tensor)
+                        else np.concatenate(value, axis=0)
+                    )
                     self.writer.add_embedding(
                         write_value,
                         metadata=self.iteration_label[key],
                         global_step=self.iteration,
                         tag=key,
-                        metadata_header=self.iteration_header[key])
+                        metadata_header=self.iteration_header[key],
+                    )
             else:
                 assert False, print("Unknown record: ", type(value), key, value)
 

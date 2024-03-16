@@ -1,9 +1,9 @@
 import warnings
 from typing import Dict, Tuple, Union
 
+import gymnasium as gym
 import numpy as np
 import torch as th
-import gymnasium as gym
 from gymnasium import spaces
 from torch.nn import functional as F
 
@@ -31,7 +31,9 @@ def preprocess_obs(
         # Tensor concatenation of one hot encodings of each Categorical sub-space
         return th.cat(
             [
-                F.one_hot(obs_.long(), num_classes=int(observation_space.nvec[idx])).float()
+                F.one_hot(
+                    obs_.long(), num_classes=int(observation_space.nvec[idx])
+                ).float()
                 for idx, obs_ in enumerate(th.split(obs.long(), 1, dim=1))
             ],
             dim=-1,
@@ -49,7 +51,9 @@ def preprocess_obs(
         return preprocessed_obs
 
     else:
-        raise NotImplementedError(f"Preprocessing not implemented for {observation_space}")
+        raise NotImplementedError(
+            f"Preprocessing not implemented for {observation_space}"
+        )
 
 
 def get_obs_shape(
@@ -79,7 +83,9 @@ def get_obs_shape(
         return {key: get_obs_shape(subspace) for (key, subspace) in observation_space.spaces.items()}  # type: ignore[misc]
 
     else:
-        raise NotImplementedError(f"{observation_space} observation space is not supported")
+        raise NotImplementedError(
+            f"{observation_space} observation space is not supported"
+        )
 
 
 def get_flattened_obs_dim(observation_space: spaces.Space) -> int:
@@ -109,7 +115,11 @@ def check_for_nested_spaces(obs_space: spaces.Space):
     :return:
     """
     if isinstance(obs_space, (spaces.Dict, spaces.Tuple)):
-        sub_spaces = obs_space.spaces.values() if isinstance(obs_space, spaces.Dict) else obs_space.spaces
+        sub_spaces = (
+            obs_space.spaces.values()
+            if isinstance(obs_space, spaces.Dict)
+            else obs_space.spaces
+        )
         for sub_space in sub_spaces:
             if isinstance(sub_space, (spaces.Dict, spaces.Tuple)):
                 raise NotImplementedError(
