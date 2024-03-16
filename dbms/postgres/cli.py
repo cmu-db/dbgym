@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import subprocess
+import os
 
 import click
 
@@ -11,26 +12,22 @@ dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
 
 
-BASE_PGDATA_DNAME = "base_pgdata"
-
-
 @click.group(name="postgres")
 @click.pass_obj
 def postgres_group(config: DBGymConfig):
     config.append_group("postgres")
 
 
-@postgres_group.command(name="base", help="Set up all aspects of Postgres unrelated to any specific benchmark.")
+@postgres_group.command(name="repo", help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.")
 @click.pass_obj
-def postgres_base(config: DBGymConfig):
+def postgres_repo(config: DBGymConfig):
     setup_repo(config)
-    setup_base_pgdata(config)
 
 
-@postgres_group.command(name="init-auth")
+@postgres_group.command(name="pgdata", help="Build a .tgz file of pgdata with various specifications for its contents.")
 @click.pass_obj
-def postgres_init_auth(config: DBGymConfig):
-    init_auth(config)
+def postgres_pgdata(dbgym_cfg: DBGymConfig):
+    setup_pgdata(dbgym_cfg)
 
 
 @postgres_group.command(name="init-db")
@@ -38,7 +35,7 @@ def postgres_init_auth(config: DBGymConfig):
 @click.pass_obj
 def postgres_init_db(config: DBGymConfig, dbname: str):
     init_db(config, dbname)
-    
+
 
 @postgres_group.command(name="print-psql")
 @click.argument("dbname", type=str)
@@ -73,8 +70,8 @@ def _get_repo_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo")
 
 
-def _get_base_pgdata_symlink_path(config: DBGymConfig) -> Path:
-    return config.cur_symlinks_build_path(BASE_PGDATA_DNAME)
+def _get_pgdata_symlink_path(config: DBGymConfig) -> Path:
+    return config.cur_symlinks_build_path("pgdata")
 
 
 def setup_repo(config: DBGymConfig):
@@ -92,22 +89,21 @@ def setup_repo(config: DBGymConfig):
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def setup_base_pgdata(config: DBGymConfig):
-    pgdata_symlink_dpath = _get_base_pgdata_symlink_path(config)
-    if pgdata_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping setup_repo: {pgdata_symlink_dpath}")
-        return
+def setup_pgdata(config: DBGymConfig):
+    # TODO(phw2): write "save" which saves a dir (to save the repo dir in setup_pgdata)
+
+    # create a new dir for this pgdata
+    pgdata_real_dpath = config.cur_task_runs_build_path("pgdata", mkdir=True)
+    subprocess_run(f"mkdir -p \"{pgdata_real_dpath}\"")
 
     # initdb
     pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
-    pgdata_real_dpath = config.cur_task_runs_build_path(BASE_PGDATA_DNAME, mkdir=True)
-    subprocess_run(f"mkdir -p \"{pgdata_real_dpath}\"")
     subprocess_run(f"./initdb -D \"{pgdata_real_dpath}\"", cwd=pgbin_path)
 
     # start postgres (all other pgdata setup requires postgres to be started)
     pgport = config.cur_yaml["port"]
-    # note that subprocess_run() never returns when running pg_ctl start, so I'm using subprocess.run() instead
+    # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
     subprocess.run(
         f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path, shell=True
     )
@@ -124,29 +120,18 @@ def setup_base_pgdata(config: DBGymConfig):
         cwd=pgbin_path,
     )
 
-    # stop postgres so that we don't "leak" anything
+    # stop postgres so that we don't "leak" processes
     subprocess_run(
         f"./pg_ctl -D \"{pgdata_real_dpath}\" stop", cwd=pgbin_path
     )
 
+    # TODO(phw2): create .tgz file
+
     # only link at the end so that the link only ever points to a complete pgdata
+    pgdata_symlink_path = _get_pgdata_symlink_path(config)
+    if pgdata_symlink_path.exists():
+        os.remove(pgdata_symlink_path)
     subprocess_run(f"ln -s {pgdata_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
-
-
-def init_auth(config: DBGymConfig):
-    pgbin_path = _get_pgbin_symlink_path(config)
-    assert pgbin_path.exists()
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    pgport = config.cur_yaml["port"]
-    subprocess_run(
-        f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
-    )
-    subprocess_run(
-        f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
-        cwd=pgbin_path,
-    )
 
 
 def init_db(config: DBGymConfig, dbname: str):
