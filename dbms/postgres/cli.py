@@ -151,6 +151,15 @@ def _load_benchmark_into_pgdata(config: DBGymConfig, benchmark_name: str, scale_
 
 
 def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
+    # *This is a break of abstraction, but that is inevitable*
+    # Another way to handle this is to generate the generic pgdata.tgz with a "task.py dbms postgres" invocation
+    #   and a pgdata.tgz loaded with the benchmark data with a second "task.py benchmark tpch" invocation.
+    # However, doing that would require the "task.py benchmark tpch" invocation to start and stop Postgres, which
+    #   is an equivalent break of abstraction, only in reverse.
+    # A break of abstraction is inevitable, but this way of breaking it is preferable because it results in only
+    #   a single CLI invocation instead of two, and the # of CLI invocations is something we really want to minimize
+    #   (see documentation for why we want to minimize it so much).
+
     # currently, hardcoding the path seems like the easiest solution. If the path ever changes, it'll
     # just break an integration test and we can fix it. I don't want to prematurely overengineer it
     codebase_path_components = ["dbgym", "benchmark", "tpch"]
