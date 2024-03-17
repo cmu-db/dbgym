@@ -1,6 +1,21 @@
 #!/bin/bash
-# /mnt/nvme1n1/phw2/noisepage/pg_ctl stop -D /mnt/nvme1n1/phw2/noisepage/pgdata &> /dev/null || true
-# tar xf /home/wz2/mythril/data/tpch_sf10.tgz -C /mnt/nvme1n1/phw2/noisepage/
-# /mnt/nvme1n1/phw2/noisepage/pg_ctl start -D /mnt/nvme1n1/phw2/noisepage/pgdata
-python task.py --no-startup-check protox embedding datagen tpch --connection-str "host=localhost port=5432 dbname=benchbase user=admin" --override-sample-limits "lineitem,32768"
-python task.py --no-startup-check protox embedding train tpch --iterations-per-epoch 1 --num-samples 4 --train-max-concurrent 4 --num-points-to-sample 32 --max-segments 3
+
+set -euxo pipefail
+
+# generate pgdata.tgz
+python3 task.py --no-startup-check dbms postgres repo
+python3 task.py --no-startup-check benchmark tpch generate-sf 0.01
+python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
+
+# start postgres with pgdata.tgz
+PGDATA_TGZ_SYMLINK_FPATH="$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/data/pgdata.tgz"
+PGDATA_REAL_DPATH="$HOME/pgdata"
+PGBIN_SYMLINK_DPATH="$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/build/repo/boot/build/postgres/bin"
+PGBIN_REAL_DPATH=`realpath $PGBIN_SYMLINK_DPATH`
+rm -rf "$PGDATA_REAL_DPATH"
+mkdir "$PGDATA_REAL_DPATH"
+cd "$PGDATA_REAL_DPATH"
+tar -xzf "$PGDATA_TGZ_SYMLINK_FPATH"
+cd -
+"$PGBIN_REAL_DPATH/pg_ctl" -D "$PGDATA_REAL_DPATH" start
+"$PGBIN_REAL_DPATH/psql" -d "dbgym"

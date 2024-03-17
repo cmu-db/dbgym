@@ -57,7 +57,7 @@ def _build_repo(config: DBGymConfig):
 
     dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
     repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(f"./_build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+    subprocess_run(f"./build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
 
     # only link at the end so that the link only ever points to a complete repo
     subprocess_run(f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
