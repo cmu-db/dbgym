@@ -44,9 +44,18 @@ def _get_repo_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo")
 
 
-def _get_pgdata_tgz_symlink_path(config: DBGymConfig) -> Path:
-    # you can't pass "pgdata.tgz" as an arg to cur_task_runs_data_path() because that would create "pgdata.tgz" as a dir
-    return config.cur_symlinks_data_path(".", mkdir=True) / "pgdata.tgz"
+def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
+    scale_factor_str = str(scale_factor).replace(".", "point")
+    return f"{benchmark_name}_sf{scale_factor_str}_pgdata"
+
+
+def _get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+    return _get_pgdata_name(benchmark_name, scale_factor) + ".tgz"
+
+
+def _get_pgdata_tgz_symlink_path(config: DBGymConfig, benchmark_name: str, scale_factor: float) -> Path:
+    # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
+    return config.cur_symlinks_data_path(".", mkdir=True) / _get_pgdata_tgz_name(benchmark_name, scale_factor)
 
 
 def _build_repo(config: DBGymConfig):
@@ -66,7 +75,7 @@ def _build_repo(config: DBGymConfig):
 
 def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float):
     # create a new dir for this pgdata
-    pgdata_real_dpath = config.cur_task_runs_data_path("pgdata", mkdir=True)
+    pgdata_real_dpath = config.cur_task_runs_data_path(_get_pgdata_name(benchmark_name, scale_factor), mkdir=True)
 
     # initdb
     pgbin_path = _get_pgbin_symlink_path(config)
@@ -93,8 +102,8 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
     )
 
     # create .tgz file
-    # you can't pass "pgdata.tgz" as an arg to cur_task_runs_data_path() because that would create "pgdata.tgz" as a dir
-    pgdata_tgz_real_fpath = config.cur_task_runs_data_path(".", mkdir=True) / "pgdata.tgz"
+    # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
+    pgdata_tgz_real_fpath = config.cur_task_runs_data_path(".", mkdir=True) / _get_pgdata_tgz_name(benchmark_name, scale_factor)
     # we need to cd into pgdata_real_dpath so that the tar file does not contain folders for the whole path of pgdata_real_dpath
     subprocess_run(
         f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_real_dpath
@@ -102,11 +111,11 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
 
     # create symlink
     # only link at the end so that the link only ever points to a complete pgdata
-    pgdata_tgz_symlink_path = _get_pgdata_tgz_symlink_path(config)
+    pgdata_tgz_symlink_path = _get_pgdata_tgz_symlink_path(config, benchmark_name, scale_factor)
     if pgdata_tgz_symlink_path.exists():
         os.remove(pgdata_tgz_symlink_path)
     subprocess_run(f"ln -s {pgdata_tgz_real_fpath} {config.cur_symlinks_data_path(mkdir=True)}")
-    assert pgdata_tgz_symlink_path.exists() # basically asserts that pgdata_tgz_symlink_path matches config.cur_symlinks_data_path(mkdir=True) / "pgdata.tgz"
+    assert pgdata_tgz_symlink_path.exists() # basically asserts that pgdata_tgz_symlink_path matches config.cur_symlinks_data_path(mkdir=True) / "[pgdata].tgz"
     
     dbms_postgres_logger.info(f"Created pgdata in {pgdata_tgz_symlink_path}")
 
@@ -156,7 +165,7 @@ def _load_benchmark_into_pgdata(config: DBGymConfig, benchmark_name: str, scale_
 def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
     # *This is a break of abstraction, but that is inevitable*
     # Another way to handle this is to generate the generic pgdata.tgz with a "task.py dbms postgres" invocation
-    #   and a pgdata.tgz loaded with the benchmark data with a second "task.py benchmark tpch" invocation.
+    #   and a [pgdata].tgz loaded with the benchmark data with a second "task.py benchmark tpch" invocation.
     # However, doing that would require the "task.py benchmark tpch" invocation to start and stop Postgres, which
     #   is an equivalent break of abstraction, only in reverse.
     # A break of abstraction is inevitable, but this way of breaking it is preferable because it results in only

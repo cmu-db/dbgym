@@ -3,13 +3,13 @@
 set -euxo pipefail
 
 # generate pgdata.tgz
-python3 task.py --no-startup-check dbms postgres repo
-python3 task.py --no-startup-check benchmark tpch generate-data 0.01
-python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
+# python3 task.py --no-startup-check dbms postgres repo
+# python3 task.py --no-startup-check benchmark tpch generate-data 0.01
+# python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
 
 # start postgres with pgdata.tgz
-PGDATA_TGZ_SYMLINK_FPATH="$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/data/pgdata.tgz"
-PGDATA_REAL_DPATH="$HOME/pgdata"
+PGDATA_TGZ_SYMLINK_FPATH="$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/data/tpch_sf0point01_pgdata.tgz"
+PGDATA_REAL_DPATH="$HOME/tpch_sf0point01_pgdata"
 PGBIN_SYMLINK_DPATH="$HOME/dbgym_workspace/symlinks/dbgym_dbms_postgres/build/repo/boot/build/postgres/bin"
 PGBIN_REAL_DPATH=`realpath $PGBIN_SYMLINK_DPATH`
 rm -rf "$PGDATA_REAL_DPATH"
