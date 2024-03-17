@@ -122,6 +122,13 @@ def create_pgdata(config: DBGymConfig):
         cwd=pgbin_path,
     )
 
+    # load shared preload libraries
+    shared_preload_libraries_fpath = config.cur_source_path() / "shared_preload_libraries.sql"
+    subprocess_run(
+        f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
+        cwd=pgbin_path,
+    )
+
     # stop postgres so that we don't "leak" processes
     subprocess_run(
         f"./pg_ctl -D \"{pgdata_real_dpath}\" stop", cwd=pgbin_path
