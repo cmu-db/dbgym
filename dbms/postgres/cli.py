@@ -106,6 +106,9 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
     if pgdata_tgz_symlink_path.exists():
         os.remove(pgdata_tgz_symlink_path)
     subprocess_run(f"ln -s {pgdata_tgz_real_fpath} {config.cur_symlinks_data_path(mkdir=True)}")
+    assert pgdata_tgz_symlink_path.exists() # basically asserts that pgdata_tgz_symlink_path matches config.cur_symlinks_data_path(mkdir=True) / "pgdata.tgz"
+    
+    dbms_postgres_logger.info(f"Created pgdata in {pgdata_tgz_symlink_path}")
 
 
 def _generic_pgdata_setup(config: DBGymConfig):
