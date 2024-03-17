@@ -21,12 +21,12 @@ def tpch_group(config: DBGymConfig):
     config.append_group("tpch")
 
 
-@tpch_group.command(name="generate-sf")
+@tpch_group.command(name="generate-data")
 @click.argument("scale-factor", type=float)
 @click.pass_obj
-def tpch_generate_sf(config: DBGymConfig, scale_factor: float):
+def tpch_generate_data(config: DBGymConfig, scale_factor: float):
     _clone(config)
-    _generate_tables(config, scale_factor)
+    _generate_data(config, scale_factor)
 
 
 @tpch_group.command(name="generate-workload")
@@ -93,7 +93,7 @@ def _generate_queries(config, seed_start, seed_end):
     )
 
 
-def _generate_tables(config: DBGymConfig, scale_factor: float):
+def _generate_data(config: DBGymConfig, scale_factor: float):
     build_path = config.cur_symlinks_build_path()
     assert build_path.exists()
 

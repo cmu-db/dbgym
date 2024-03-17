@@ -4,7 +4,7 @@ set -euxo pipefail
 
 # generate pgdata.tgz
 python3 task.py --no-startup-check dbms postgres repo
-python3 task.py --no-startup-check benchmark tpch generate-sf 0.01
+python3 task.py --no-startup-check benchmark tpch generate-data 0.01
 python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
 
 # start postgres with pgdata.tgz

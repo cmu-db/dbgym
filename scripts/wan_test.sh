@@ -6,7 +6,7 @@ set -euxo pipefail
 python3 task.py --no-startup-check dbms postgres repo
 
 # Generate TPC-H
-python3 task.py --no-startup-check benchmark tpch generate-sf 1
+python3 task.py --no-startup-check benchmark tpch generate-data 1
 python3 task.py --no-startup-check benchmark tpch generate-workload queries_15721_15723 15721 15723
 
 # Create tpch_sf1.tgz
