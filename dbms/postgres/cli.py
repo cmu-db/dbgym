@@ -33,38 +33,6 @@ def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: i
     create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
 
-@postgres_group.command(name="init-db")
-@click.argument("dbname", type=str)
-@click.pass_obj
-def postgres_init_db(config: DBGymConfig, dbname: str):
-    init_db(config, dbname)
-
-
-@postgres_group.command(name="print-psql")
-@click.argument("dbname", type=str)
-@click.pass_obj
-def postgres_print_psql(config: DBGymConfig, dbname: str):
-    psql_path = config.cur_symlinks_bin_path() / "psql"
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    pgport = config.cur_yaml["port"]
-    dbms_postgres_logger.info(
-        f"print-psql: PGPASSWORD={pgpass} {psql_path} -U {pguser} -h localhost -p {pgport} -d {dbname}"
-    )
-
-
-@postgres_group.command(name="print-connstr")
-@click.argument("dbname", type=str)
-@click.pass_obj
-def postgres_print_connstr(config: DBGymConfig, dbname: str):
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    pgport = config.cur_yaml["port"]
-    dbms_postgres_logger.info(
-        f"print-connstr: postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{dbname}"
-    )
-
-
 def _get_pgbin_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
 
