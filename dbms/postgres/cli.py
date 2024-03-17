@@ -74,6 +74,14 @@ def _build_repo(config: DBGymConfig):
 
 
 def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float):
+    '''
+    I chose *not* for this function to skip by default if pgdata_tgz_symlink_path already exists. This
+      is because, while the generated data is deterministic given benchmark_name and scale_factor, any
+      change in the _create_pgdata() function would result in a different pgdata. Since _create_pgdata()
+      may change somewhat frequently, I decided to get rid of the footgun of having changes to
+      _create_pgdata() not propagate to [pgdata].tgz by default.
+    '''
+
     # create a new dir for this pgdata
     pgdata_real_dpath = config.cur_task_runs_data_path(_get_pgdata_name(benchmark_name, scale_factor), mkdir=True)
 
