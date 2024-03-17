@@ -19,11 +19,11 @@ def tpch_group(config: DBGymConfig):
 
 
 @tpch_group.command(name="generate-sf")
-@click.argument("sf", type=int)
+@click.argument("scale-factor", type=int)
 @click.pass_obj
-def tpch_generate_sf(config: DBGymConfig, sf: int):
+def tpch_generate_sf(config: DBGymConfig, scale_factor: int):
     clone(config)
-    generate_tables(config, sf)
+    generate_tables(config, scale_factor)
 
 
 @tpch_group.command(name="generate-workload")
@@ -49,14 +49,18 @@ def tpch_generate_workload(
 
 
 @tpch_group.command(name="load-sf")
-@click.argument("sf", type=int)
+@click.argument("scale-factor", type=int)
 @click.argument("dbms", type=str)
 @click.argument("dbname", type=str)
 @click.pass_obj
-def tpch_load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
+def tpch_load_tables(config: DBGymConfig, scale_factor: int, dbms: str, dbname: str):
     clone(config)
-    generate_tables(config, sf)
-    load_tables(config, sf, dbms, dbname)
+    generate_tables(config, scale_factor)
+    load_tables(config, scale_factor, dbms, dbname)
+
+
+def get_tables_symlink_path(dbgym_cfg: DBGymConfig, scale_factor: int):
+    pass
 
 
 def clone(config: DBGymConfig):
@@ -101,19 +105,19 @@ def generate_queries(config, seed_start, seed_end):
     )
 
 
-def generate_tables(config: DBGymConfig, sf: int):
+def generate_tables(config: DBGymConfig, scale_factor: int):
     build_path = config.cur_symlinks_build_path()
     assert build_path.exists()
 
     data_path = config.cur_symlinks_data_path(mkdir=True)
-    symlink_dir = data_path / f"tables_sf{sf}"
+    symlink_dir = data_path / f"tables_sf{scale_factor}"
     if symlink_dir.exists():
         benchmark_tpch_logger.info(f"Skipping generation: {symlink_dir}")
         return
 
     benchmark_tpch_logger.info(f"Generating: {symlink_dir}")
-    subprocess_run(f"./dbgen -vf -s {sf}", cwd=build_path / "tpch-kit" / "dbgen")
-    real_dir = config.cur_task_runs_data_path(f"tables_sf{sf}", mkdir=True)
+    subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=build_path / "tpch-kit" / "dbgen")
+    real_dir = config.cur_task_runs_data_path(f"tables_sf{scale_factor}", mkdir=True)
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=build_path / "tpch-kit" / "dbgen")
 
     subprocess_run(f"ln -s {real_dir} {data_path}")
@@ -163,7 +167,7 @@ def _loaded(conn: Connection):
     return len(res) > 0
 
 
-def _load(config: DBGymConfig, conn: Connection, sf: int):
+def _load(config: DBGymConfig, conn: Connection, scale_factor: int):
     schema_root = config.cur_source_path()
     data_root = config.cur_symlinks_data_path()
 
@@ -182,7 +186,7 @@ def _load(config: DBGymConfig, conn: Connection, sf: int):
     for table in tables:
         conn_execute(conn, f"TRUNCATE {table} CASCADE")
     for table in tables:
-        table_path = data_root / f"tables_sf{sf}" / f"{table}.tbl"
+        table_path = data_root / f"tables_sf{scale_factor}" / f"{table}.tbl"
 
         with open(table_path, "r") as table_csv:
             with conn.connection.dbapi_connection.cursor() as cur:
@@ -192,7 +196,7 @@ def _load(config: DBGymConfig, conn: Connection, sf: int):
     sql_file_execute(conn, schema_root / "tpch_constraints.sql")
 
 
-def load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
+def load_tables(config: DBGymConfig, scale_factor: int, dbms: str, dbname: str):
     # TODO(WAN): repetition and slight break of abstraction here.
     dbms_yaml = config.root_yaml["dbms"][dbms]
     dbms_user = dbms_yaml["user"]
@@ -210,8 +214,8 @@ def load_tables(config: DBGymConfig, sf: int, dbms: str, dbname: str):
     )
     with engine.connect() as conn:
         if _loaded(conn):
-            benchmark_tpch_logger.info(f"Skipping load: TPC-H SF {sf}")
+            benchmark_tpch_logger.info(f"Skipping load: TPC-H SF {scale_factor}")
         else:
-            benchmark_tpch_logger.info(f"Loading: TPC-H SF {sf}")
-            _load(config, conn, sf)
-    benchmark_tpch_logger.info(f"Loaded: TPC-H SF {sf}")
+            benchmark_tpch_logger.info(f"Loading: TPC-H SF {scale_factor}")
+            _load(config, conn, scale_factor)
+    benchmark_tpch_logger.info(f"Loaded: TPC-H SF {scale_factor}")

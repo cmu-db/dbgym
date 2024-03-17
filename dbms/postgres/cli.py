@@ -7,6 +7,7 @@ import click
 
 from misc.utils import DBGymConfig, save_file
 from util.shell import subprocess_run
+from benchmark.tpch.cli import test
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
@@ -26,8 +27,10 @@ def postgres_repo(config: DBGymConfig):
 
 @postgres_group.command(name="pgdata", help="Build a .tgz file of pgdata with various specifications for its contents.")
 @click.pass_obj
-def postgres_pgdata(dbgym_cfg: DBGymConfig):
-    create_pgdata(dbgym_cfg)
+@click.argument("benchmark_name", type=str)
+@click.option("--scale-factor", type=int, default=1)
+def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: int):
+    create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
 
 @postgres_group.command(name="init-db")
@@ -90,7 +93,7 @@ def build_repo(config: DBGymConfig):
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def create_pgdata(config: DBGymConfig):
+def create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: int):
     # create a new dir for this pgdata
     pgdata_real_dpath = config.cur_task_runs_data_path("pgdata", mkdir=True)
 
