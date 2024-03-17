@@ -104,7 +104,9 @@ def _generate_data(config: DBGymConfig, scale_factor: float):
         return
 
     benchmark_tpch_logger.info(f"Generating: {symlink_dir}")
-    subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=build_path / "tpch-kit" / "dbgen")
+    subprocess_run(
+        f"./dbgen -vf -s {scale_factor}", cwd=build_path / "tpch-kit" / "dbgen"
+    )
     real_dir = config.cur_task_runs_data_path(f"tables_sf{scale_factor}", mkdir=True)
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=build_path / "tpch-kit" / "dbgen")
 

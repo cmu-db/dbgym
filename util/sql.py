@@ -1,5 +1,5 @@
-from typing import List
 from pathlib import Path
+from typing import List
 
 import pglast
 from sqlalchemy import Connection, Engine, Inspector, inspect, text
