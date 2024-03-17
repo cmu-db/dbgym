@@ -21,13 +21,13 @@ def postgres_group(config: DBGymConfig):
 @postgres_group.command(name="repo", help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.")
 @click.pass_obj
 def postgres_repo(config: DBGymConfig):
-    setup_repo(config)
+    build_repo(config)
 
 
 @postgres_group.command(name="pgdata", help="Build a .tgz file of pgdata with various specifications for its contents.")
 @click.pass_obj
 def postgres_pgdata(dbgym_cfg: DBGymConfig):
-    setup_pgdata(dbgym_cfg)
+    create_pgdata(dbgym_cfg)
 
 
 @postgres_group.command(name="init-db")
@@ -75,22 +75,22 @@ def _get_pgdata_tgz_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_data_path(".", mkdir=True) / "pgdata.tgz"
 
 
-def setup_repo(config: DBGymConfig):
+def build_repo(config: DBGymConfig):
     repo_symlink_dpath = _get_repo_symlink_path(config)
     if repo_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping setup_repo: {repo_symlink_dpath}")
+        dbms_postgres_logger.info(f"Skipping build_repo: {repo_symlink_dpath}")
         return
 
     dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
     repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(f"./setup_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+    subprocess_run(f"./build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
 
     # only link at the end so that the link only ever points to a complete repo
     subprocess_run(f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def setup_pgdata(config: DBGymConfig):
+def create_pgdata(config: DBGymConfig):
     # create a new dir for this pgdata
     pgdata_real_dpath = config.cur_task_runs_data_path("pgdata", mkdir=True)
 
