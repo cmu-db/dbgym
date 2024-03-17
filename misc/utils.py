@@ -45,6 +45,10 @@ default_benchbase_config_relpath = (
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
+# Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
+#   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
+#   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
+#   ok to have to hardcode them when reading.
 default_dataset_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
