@@ -2,15 +2,18 @@ import logging
 from pathlib import Path
 import subprocess
 import os
-
 import click
+from sqlalchemy import create_engine
 
 from misc.utils import DBGymConfig, save_file
 from util.shell import subprocess_run
-from benchmark.tpch.cli import test
+from benchmark.tpch.cli import TPCH_SCHEMA_FNAME, TPCH_CONSTRAINTS_FNAME
+from util.sql import Connection, Engine, sql_file_execute, conn_execute
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
+
+DBGYM_DBNAME = "dbgym"
 
 
 @click.group(name="postgres")
@@ -22,15 +25,15 @@ def postgres_group(config: DBGymConfig):
 @postgres_group.command(name="repo", help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.")
 @click.pass_obj
 def postgres_repo(config: DBGymConfig):
-    build_repo(config)
+    _build_repo(config)
 
 
 @postgres_group.command(name="pgdata", help="Build a .tgz file of pgdata with various specifications for its contents.")
 @click.pass_obj
 @click.argument("benchmark_name", type=str)
-@click.option("--scale-factor", type=int, default=1)
-def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: int):
-    create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
+@click.option("--scale-factor", type=float, default=1)
+def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float):
+    _create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
 
 def _get_pgbin_symlink_path(config: DBGymConfig) -> Path:
@@ -46,22 +49,22 @@ def _get_pgdata_tgz_symlink_path(config: DBGymConfig) -> Path:
     return config.cur_symlinks_data_path(".", mkdir=True) / "pgdata.tgz"
 
 
-def build_repo(config: DBGymConfig):
+def _build_repo(config: DBGymConfig):
     repo_symlink_dpath = _get_repo_symlink_path(config)
     if repo_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping build_repo: {repo_symlink_dpath}")
+        dbms_postgres_logger.info(f"Skipping _build_repo: {repo_symlink_dpath}")
         return
 
     dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
     repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(f"./build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+    subprocess_run(f"./_build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
 
     # only link at the end so that the link only ever points to a complete repo
     subprocess_run(f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}")
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: int):
+def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float):
     # create a new dir for this pgdata
     pgdata_real_dpath = config.cur_task_runs_data_path("pgdata", mkdir=True)
 
@@ -80,25 +83,9 @@ def create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: int):
         f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_path, shell=True
     )
 
-    # create user
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    save_file(config, pgbin_path / "psql")
-    subprocess_run(
-        f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
-    )
-    subprocess_run(
-        f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
-        cwd=pgbin_path,
-    )
-
-    # load shared preload libraries
-    shared_preload_libraries_fpath = config.cur_source_path() / "shared_preload_libraries.sql"
-    subprocess_run(
-        f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
-    )
+    # setup
+    _generic_pgdata_setup(config)
+    _load_benchmark_into_pgdata(config, benchmark_name, scale_factor)
 
     # stop postgres so that we don't "leak" processes
     subprocess_run(
@@ -121,12 +108,94 @@ def create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: int):
     subprocess_run(f"ln -s {pgdata_tgz_real_fpath} {config.cur_symlinks_data_path(mkdir=True)}")
 
 
-def init_db(config: DBGymConfig, dbname: str):
+def _generic_pgdata_setup(config: DBGymConfig):
+    # get necessary vars
     pgbin_path = _get_pgbin_symlink_path(config)
     assert pgbin_path.exists()
     pguser = config.cur_yaml["user"]
+    pgpass = config.cur_yaml["pass"]
     pgport = config.cur_yaml["port"]
+
+    # create user
+    save_file(config, pgbin_path / "psql")
     subprocess_run(
-        f"./psql -c \"create database {dbname} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
+        f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
         cwd=pgbin_path,
     )
+    subprocess_run(
+        f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
+        cwd=pgbin_path,
+    )
+
+    # load shared preload libraries
+    shared_preload_libraries_fpath = config.cur_source_path() / "shared_preload_libraries.sql"
+    subprocess_run(
+        f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
+        cwd=pgbin_path,
+    )
+
+    # create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
+    # as opposed to using databases named after the benchmark
+    subprocess_run(
+        f"./psql -c \"create database {DBGYM_DBNAME} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
+        cwd=pgbin_path,
+    )
+
+
+def _load_benchmark_into_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float):
+    if benchmark_name == "tpch":
+        with _create_conn(config) as conn:
+            _load_tpch(config, conn, scale_factor)
+    else:
+        raise AssertionError(f"_load_benchmark_into_pgdata(): the benchmark of name {benchmark_name} is not implemented")
+
+
+def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
+    # currently, hardcoding the path seems like the easiest solution. If the path ever changes, it'll
+    # just break an integration test and we can fix it. I don't want to prematurely overengineer it
+    codebase_path_components = ["dbgym", "benchmark", "tpch"]
+    codebase_dname = "_".join(codebase_path_components)
+    schema_root_dpath = config.dbgym_repo_path
+    for component in codebase_path_components[1:]: # [1:] to skip "dbgym"
+        schema_root_dpath /= component
+    data_root_dpath = config.dbgym_symlinks_path / codebase_dname / "data"
+
+    tables = [
+        "region",
+        "nation",
+        "part",
+        "supplier",
+        "partsupp",
+        "customer",
+        "orders",
+        "lineitem",
+    ]
+
+    schema_fpath = schema_root_dpath / TPCH_SCHEMA_FNAME
+    assert schema_fpath.exists(), f"schema_fpath ({schema_fpath}) does not exist"
+    sql_file_execute(conn, schema_fpath)
+    for table in tables:
+        conn_execute(conn, f"TRUNCATE {table} CASCADE")
+    tables_dpath = data_root_dpath / f"tables_sf{scale_factor}"
+    assert tables_dpath.exists(), f"tables_dpath ({tables_dpath}) does not exist. Make sure you have generated the TPC-H data"
+    for table in tables:
+        table_path = tables_dpath / f"{table}.tbl"
+
+        with open(table_path, "r") as table_csv:
+            with conn.connection.dbapi_connection.cursor() as cur:
+                with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
+                    while data := table_csv.read(8192):
+                        copy.write(data)
+    sql_file_execute(conn, schema_root_dpath / TPCH_CONSTRAINTS_FNAME)
+
+
+def _create_conn(config: DBGymConfig) -> Connection:
+    pguser = config.cur_yaml["user"]
+    pgpass = config.cur_yaml["pass"]
+    pgport = config.cur_yaml["port"]
+    connstr = f"postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
+    engine: Engine = create_engine(
+        connstr,
+        execution_options={"isolation_level": "AUTOCOMMIT"},
+    )
+    return engine.connect()
