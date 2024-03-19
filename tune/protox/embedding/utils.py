@@ -63,13 +63,13 @@ def parse_hyperopt_config(config):
     return parsed_config
 
 
-def fetch_index_parameters(cfg, benchmark, data, workload_folder_path):
+def fetch_index_parameters(dbgym_cfg, benchmark_name, data, workload_path):
     tables = data["protox"]["tables"]
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
 
     workload = Workload(
-        cfg, tables, attributes, query_spec, workload_folder_path, pid=None
+        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None
     )
     att_usage = workload.process_column_usage()
 
@@ -90,7 +90,7 @@ def fetch_index_parameters(cfg, benchmark, data, workload_folder_path):
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def load_input_data(cfg, input_path, train_size, max_attrs, require_cost, seed):
+def load_input_data(dbgym_cfg, input_path, train_size, max_attrs, require_cost, seed):
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -98,7 +98,7 @@ def load_input_data(cfg, input_path, train_size, max_attrs, require_cost, seed):
     if require_cost:
         columns += COST_COLUMNS
 
-    with open_and_save(cfg, input_path, mode="rb") as input_file:
+    with open_and_save(dbgym_cfg, input_path, mode="rb") as input_file:
         df = pd.read_parquet(input_file, columns=columns)
     num_classes = df.idx_class.max() + 1
 

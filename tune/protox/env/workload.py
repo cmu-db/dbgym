@@ -9,7 +9,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pglast
 import pglast.ast
-from click.core import Context
 from plumbum import local
 
 from misc.utils import open_and_save
@@ -71,7 +70,7 @@ class Workload(object):
             self.queries_mix[stem] = ratio
             sql_mapping[stem] = sql_file
 
-            with open_and_save(self.cfg, sql_file, "r") as q:
+            with open_and_save(self.dbgym_cfg, sql_file, "r") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -185,11 +184,11 @@ class Workload(object):
 
     def __init__(
         self,
-        cfg: Context,
+        dbgym_cfg,
         tables: list[str],
         attributes: dict[str, list[str]],
         query_spec: dict,
-        workload_folder_path: Path,
+        workload_path: Path,
         pid=None,
         workload_eval_mode="all",
         workload_eval_inverse=False,
@@ -198,7 +197,7 @@ class Workload(object):
         logger=None,
     ):
 
-        self.cfg = cfg
+        self.dbgym_cfg = dbgym_cfg
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
         # Whether we should use benchbase or not.
@@ -214,10 +213,7 @@ class Workload(object):
         self.tbl_fold_subsets = query_spec.get("tbl_fold_subsets", False)
         self.tbl_fold_delta = query_spec.get("tbl_fold_delta", False)
         self.tbl_fold_iterations = query_spec.get("tbl_fold_iterations", False)
-
-        self.logger = logger
-        if self.logger is not None:
-            self.logger.info(f"Initialized with workload timeout {workload_timeout}")
+        logging.info(f"Initialized with workload timeout {workload_timeout}")
 
         self.tables = tables
         self.attributes = attributes
@@ -232,8 +228,8 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        workload_order_file = workload_folder_path / "order.txt"
-        with open_and_save(self.cfg, workload_order_file, "r") as f:
+        workload_order_file = workload_path / "order.txt"
+        with open_and_save(self.dbgym_cfg, workload_order_file, "r") as f:
             lines = f.read().splitlines()
             for line in lines:
                 contents = line.split(",")
@@ -253,8 +249,10 @@ class Workload(object):
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
         if "execute_query_order" in query_spec:
-            # TODO(WAN): can this be folded into workload_folder_path?
-            with open_and_save(self.cfg, query_spec["execute_query_order"], "r") as f:
+            # TODO(WAN): can this be folded into workload_path?
+            with open_and_save(
+                self.dbgym_cfg, query_spec["execute_query_order"], "r"
+            ) as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
@@ -279,7 +277,7 @@ class Workload(object):
         env_spec=None,
         connection=None,
         reward_utility=None,
-        timeout=None,
+        query_timeout=None,
         accum_metric=None,
     ):
         if connection is not None and accum_metric is not None and self.allow_per_query:
@@ -304,7 +302,7 @@ class Workload(object):
                 results,
                 connection,
                 action,
-                timeout,
+                query_timeout,
                 reset_eval=True,
                 reset_accum_metric=accum_metric,
             )
@@ -353,7 +351,7 @@ class Workload(object):
                 "-jar",
                 "benchbase.jar",
                 "-b",
-                env_spec.benchmark,
+                env_spec.benchmark_name,
                 "-c",
                 env_spec.benchbase_config_path,
                 "-d",
@@ -390,7 +388,7 @@ class Workload(object):
 
         if workload_qdir is not None and workload_qdir[0] is not None:
             workload_qdir, workload_qlist = workload_qdir
-            with open_and_save(self.cfg, workload_qlist, "r") as f:
+            with open_and_save(self.dbgym_cfg, workload_qlist, "r") as f:
                 psql_order = [
                     (f"Q{i+1}", workload_qdir / l.strip())
                     for i, l in enumerate(f.readlines())
@@ -400,7 +398,7 @@ class Workload(object):
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with open_and_save(self.cfg, qpat, "r") as f:
+                with open_and_save(self.dbgym_cfg, qpat, "r") as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:
@@ -463,8 +461,10 @@ class Workload(object):
                     if output_file is not None:
                         query = "EXPLAIN (ANALYZE, TIMING OFF) " + query
 
-                    _, qid_runtime, timeout, explain = acquire_metrics_around_query(
-                        "", None, connection, qid, query, time_left, metrics=False
+                    _, qid_runtime, query_timeout, explain = (
+                        acquire_metrics_around_query(
+                            "", None, connection, qid, query, time_left, metrics=False
+                        )
                     )
 
                     if disable_pg_hint:
@@ -489,7 +489,7 @@ class Workload(object):
         results,
         connection,
         action,
-        timeout,
+        query_timeout,
         reset_eval=False,
         reset_accum_metric=None,
         baseline=False,
@@ -641,7 +641,7 @@ class Workload(object):
                 ):
                     # Case where the per-query and global match each other.
                     assert qid in reset_accum_metric
-                    best_metric, best_time, best_timeout = reset_accum_metric[qid]
+                    best_metric, best_time, best_query_timeout = reset_accum_metric[qid]
                     runs_idx = ("PrevDual", qid_global, False)
 
                     # Note that we skipped.
@@ -650,13 +650,15 @@ class Workload(object):
                     (
                         best_metric,
                         best_time,
-                        best_timeout,
+                        best_query_timeout,
                         best_explain_data,
                         runs_idx,
                     ) = execute_serial_variations(
                         env_spec=env_spec,
                         connection=connection,
-                        timeout=min(timeout, self.workload_timeout - running_time + 1),
+                        query_timeout=min(
+                            query_timeout, self.workload_timeout - running_time + 1
+                        ),
                         logger=self.logger,
                         qid=qid,
                         query=query,
@@ -686,8 +688,10 @@ class Workload(object):
 
                     # If the "new" timed out or if "old" is better, use the old metric.
                     _, old_best_time, _ = reset_accum_metric[qid]
-                    if best_timeout or old_best_time < best_time:
-                        best_metric, best_time, best_timeout = reset_accum_metric[qid]
+                    if best_query_timeout or old_best_time < best_time:
+                        best_metric, best_time, best_query_timeout = reset_accum_metric[
+                            qid
+                        ]
                         runs_idx = ("PrevDual", qid_global)
 
                 assert qid not in qid_runtime_data
@@ -707,11 +711,11 @@ class Workload(object):
                     "start": start_time,
                     "runtime": best_time,
                     "metric": best_metric,
-                    "timeout": best_timeout,
+                    "query_timeout": best_query_timeout,
                     "prefix": runs_idx[0],
                 }
 
-                if runs_idx[0] == "PrevDual" and not best_timeout:
+                if runs_idx[0] == "PrevDual" and not best_query_timeout:
                     # Overwrite the action decision with the prior decision.
                     for knob, val in qid_global:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
@@ -719,17 +723,19 @@ class Workload(object):
 
                     if reset_eval:
                         logging.debug(f"best_observe action deemed not valuable.")
-                elif runs_idx[0] == "GlobalDual" and not best_timeout:
+                elif runs_idx[0] == "GlobalDual" and not best_query_timeout:
                     assert not reset_eval
                     for knob, val in qid_default:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
-                elif runs_idx[0] == "PerQueryInverse" and not best_timeout:
+                elif runs_idx[0] == "PerQueryInverse" and not best_query_timeout:
                     assert not reset_eval
                     for knob, val in inverse_knobs:
                         action[env_spec.action_space.knob_space_ind][knob.name()] = val
                     mutilated = action
-                elif runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_timeout:
+                elif (
+                    runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_query_timeout
+                ):
                     assert not reset_eval
                     enum_knobs = runs_idx[1]
 
@@ -756,7 +762,10 @@ class Workload(object):
 
                 if (
                     qid not in self.best_observed
-                    or (best_time < self.best_observed[qid][1] and not best_timeout)
+                    or (
+                        best_time < self.best_observed[qid][1]
+                        and not best_query_timeout
+                    )
                     or reset_eval
                 ):
                     # Knobs that are actually set.
@@ -794,10 +803,10 @@ class Workload(object):
                     break
 
         # Get the timeouts flag.
-        timeouts = [v["timeout"] for _, v in qid_runtime_data.items()]
+        query_timeouts = [v["query_timeout"] for _, v in qid_runtime_data.items()]
         # Get the accumulated metrics.
         accum_metric = {
-            q: (v["metric"], v["runtime"], v["timeout"])
+            q: (v["metric"], v["runtime"], v["query_timeout"])
             for q, v in qid_runtime_data.items()
         }
 
@@ -874,14 +883,14 @@ class Workload(object):
             if penalty > 0:
                 f.write(f"{len(self.order)},P,{time.time()},{penalty},0,PENALTY\n")
 
-        return True, mutilated, (any(timeouts) or stop_running), accum_metric
+        return True, mutilated, (any(query_timeouts) or stop_running), accum_metric
 
     def execute(
         self,
         connection,
         reward_utility,
         env_spec,
-        timeout=None,
+        query_timeout=None,
         action=None,
         current_state=None,
         update=True,
@@ -891,9 +900,9 @@ class Workload(object):
 
         if self.benchbase:
             # Attach a timeout if necessary to prevent really bad OLAP configs from running.
-            if timeout is not None and timeout > 0:
+            if query_timeout is not None and query_timeout > 0:
                 connection.execute(
-                    f"ALTER SYSTEM SET statement_timeout = {timeout * 1000}"
+                    f"ALTER SYSTEM SET statement_timeout = {query_timeout * 1000}"
                 )
                 connection.execute("SELECT pg_reload_conf()")
 
@@ -927,7 +936,7 @@ class Workload(object):
                     result_dir=results, update=update, did_error=not success
                 )
 
-            if timeout is not None and timeout > 0:
+            if query_timeout is not None and query_timeout > 0:
                 connection.execute("ALTER SYSTEM SET statement_timeout = 0")
                 connection.execute("SELECT pg_reload_conf()")
 
@@ -942,7 +951,7 @@ class Workload(object):
             baseline = current_state is None
 
             success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
-                env_spec, results, connection, action, timeout, baseline=baseline
+                env_spec, results, connection, action, query_timeout, baseline=baseline
             )
             assert success
 

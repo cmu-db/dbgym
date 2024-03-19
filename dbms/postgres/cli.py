@@ -19,8 +19,8 @@ DBGYM_DBNAME = "dbgym"
 
 @click.group(name="postgres")
 @click.pass_obj
-def postgres_group(config: DBGymConfig):
-    config.append_group("postgres")
+def postgres_group(dbgym_cfg: DBGymConfig):
+    dbgym_cfg.append_group("postgres")
 
 
 @postgres_group.command(
@@ -28,8 +28,8 @@ def postgres_group(config: DBGymConfig):
     help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.",
 )
 @click.pass_obj
-def postgres_repo(config: DBGymConfig):
-    _build_repo(config)
+def postgres_repo(dbgym_cfg: DBGymConfig):
+    _build_repo(dbgym_cfg)
 
 
 @postgres_group.command(
@@ -43,12 +43,12 @@ def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: f
     _create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
 
-def _get_pgbin_symlink_path(config: DBGymConfig) -> Path:
-    return config.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
+def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
+    return dbgym_cfg.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
 
 
-def _get_repo_symlink_path(config: DBGymConfig) -> Path:
-    return config.cur_symlinks_build_path("repo")
+def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
+    return dbgym_cfg.cur_symlinks_build_path("repo")
 
 
 def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
@@ -61,32 +61,32 @@ def _get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
 
 
 def _get_pgdata_tgz_symlink_path(
-    config: DBGymConfig, benchmark_name: str, scale_factor: float
+    dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ) -> Path:
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
-    return config.cur_symlinks_data_path(".", mkdir=True) / _get_pgdata_tgz_name(
+    return dbgym_cfg.cur_symlinks_data_path(".", mkdir=True) / _get_pgdata_tgz_name(
         benchmark_name, scale_factor
     )
 
 
-def _build_repo(config: DBGymConfig):
-    repo_symlink_dpath = _get_repo_symlink_path(config)
+def _build_repo(dbgym_cfg: DBGymConfig):
+    repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
     if repo_symlink_dpath.exists():
         dbms_postgres_logger.info(f"Skipping _build_repo: {repo_symlink_dpath}")
         return
 
     dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
-    repo_real_dpath = config.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(f"./build_repo.sh {repo_real_dpath}", cwd=config.cur_source_path())
+    repo_real_dpath = dbgym_cfg.cur_task_runs_build_path("repo", mkdir=True)
+    subprocess_run(f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_cfg.cur_source_path())
 
     # only link at the end so that the link only ever points to a complete repo
     subprocess_run(
-        f"ln -s {repo_real_dpath} {config.cur_symlinks_build_path(mkdir=True)}"
+        f"ln -s {repo_real_dpath} {dbgym_cfg.cur_symlinks_build_path(mkdir=True)}"
     )
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float):
+def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float):
     """
     I chose *not* for this function to skip by default if pgdata_tgz_symlink_path already exists. This
       is because, while the generated data is deterministic given benchmark_name and scale_factor, any
@@ -96,21 +96,21 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
     """
 
     # create a new dir for this pgdata
-    pgdata_real_dpath = config.cur_task_runs_data_path(
+    pgdata_real_dpath = dbgym_cfg.cur_task_runs_data_path(
         _get_pgdata_name(benchmark_name, scale_factor), mkdir=True
     )
 
     # initdb
-    pgbin_path = _get_pgbin_symlink_path(config)
+    pgbin_path = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_path.exists()
     # save any script we call from pgbin_path because they are dependencies generated from another task run
-    save_file(config, pgbin_path / "initdb")
+    save_file(dbgym_cfg, pgbin_path / "initdb")
     subprocess_run(f'./initdb -D "{pgdata_real_dpath}"', cwd=pgbin_path)
 
     # start postgres (all other pgdata setup requires postgres to be started)
-    pgport = config.cur_yaml["port"]
+    pgport = dbgym_cfg.cur_yaml["port"]
     # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-    save_file(config, pgbin_path / "pg_ctl")
+    save_file(dbgym_cfg, pgbin_path / "pg_ctl")
     subprocess.run(
         f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start",
         cwd=pgbin_path,
@@ -118,15 +118,15 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
     )
 
     # setup
-    _generic_pgdata_setup(config)
-    _load_benchmark_into_pgdata(config, benchmark_name, scale_factor)
+    _generic_pgdata_setup(dbgym_cfg)
+    _load_benchmark_into_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
     # stop postgres so that we don't "leak" processes
     subprocess_run(f'./pg_ctl -D "{pgdata_real_dpath}" stop', cwd=pgbin_path)
 
     # create .tgz file
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
-    pgdata_tgz_real_fpath = config.cur_task_runs_data_path(
+    pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
         ".", mkdir=True
     ) / _get_pgdata_tgz_name(benchmark_name, scale_factor)
     # we need to cd into pgdata_real_dpath so that the tar file does not contain folders for the whole path of pgdata_real_dpath
@@ -135,30 +135,30 @@ def _create_pgdata(config: DBGymConfig, benchmark_name: str, scale_factor: float
     # create symlink
     # only link at the end so that the link only ever points to a complete pgdata
     pgdata_tgz_symlink_path = _get_pgdata_tgz_symlink_path(
-        config, benchmark_name, scale_factor
+        dbgym_cfg, benchmark_name, scale_factor
     )
     if pgdata_tgz_symlink_path.exists():
         os.remove(pgdata_tgz_symlink_path)
     subprocess_run(
-        f"ln -s {pgdata_tgz_real_fpath} {config.cur_symlinks_data_path(mkdir=True)}"
+        f"ln -s {pgdata_tgz_real_fpath} {dbgym_cfg.cur_symlinks_data_path(mkdir=True)}"
     )
     assert (
         pgdata_tgz_symlink_path.exists()
-    )  # basically asserts that pgdata_tgz_symlink_path matches config.cur_symlinks_data_path(mkdir=True) / "[pgdata].tgz"
+    )  # basically asserts that pgdata_tgz_symlink_path matches dbgym_cfg.cur_symlinks_data_path(mkdir=True) / "[pgdata].tgz"
 
     dbms_postgres_logger.info(f"Created pgdata in {pgdata_tgz_symlink_path}")
 
 
-def _generic_pgdata_setup(config: DBGymConfig):
+def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
-    pgbin_path = _get_pgbin_symlink_path(config)
+    pgbin_path = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_path.exists()
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    pgport = config.cur_yaml["port"]
+    pguser = dbgym_cfg.cur_yaml["user"]
+    pgpass = dbgym_cfg.cur_yaml["pass"]
+    pgport = dbgym_cfg.cur_yaml["port"]
 
     # create user
-    save_file(config, pgbin_path / "psql")
+    save_file(dbgym_cfg, pgbin_path / "psql")
     subprocess_run(
         f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
         cwd=pgbin_path,
@@ -170,7 +170,7 @@ def _generic_pgdata_setup(config: DBGymConfig):
 
     # load shared preload libraries
     shared_preload_libraries_fpath = (
-        config.cur_source_path() / "shared_preload_libraries.sql"
+        dbgym_cfg.cur_source_path() / "shared_preload_libraries.sql"
     )
     subprocess_run(
         f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
@@ -186,18 +186,18 @@ def _generic_pgdata_setup(config: DBGymConfig):
 
 
 def _load_benchmark_into_pgdata(
-    config: DBGymConfig, benchmark_name: str, scale_factor: float
+    dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ):
     if benchmark_name == "tpch":
-        with _create_conn(config) as conn:
-            _load_tpch(config, conn, scale_factor)
+        with _create_conn(dbgym_cfg) as conn:
+            _load_tpch(dbgym_cfg, conn, scale_factor)
     else:
         raise AssertionError(
             f"_load_benchmark_into_pgdata(): the benchmark of name {benchmark_name} is not implemented"
         )
 
 
-def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
+def _load_tpch(dbgym_cfg: DBGymConfig, conn: Connection, scale_factor: float):
     # *This is a break of abstraction, but that is inevitable*
     # Another way to handle this is to generate the generic pgdata.tgz with a "task.py dbms postgres" invocation
     #   and a [pgdata].tgz loaded with the benchmark data with a second "task.py benchmark tpch" invocation.
@@ -211,10 +211,10 @@ def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
     # just break an integration test and we can fix it. I don't want to prematurely overengineer it
     codebase_path_components = ["dbgym", "benchmark", "tpch"]
     codebase_dname = "_".join(codebase_path_components)
-    schema_root_dpath = config.dbgym_repo_path
+    schema_root_dpath = dbgym_cfg.dbgym_repo_path
     for component in codebase_path_components[1:]:  # [1:] to skip "dbgym"
         schema_root_dpath /= component
-    data_root_dpath = config.dbgym_symlinks_path / codebase_dname / "data"
+    data_root_dpath = dbgym_cfg.dbgym_symlinks_path / codebase_dname / "data"
 
     tables = [
         "region",
@@ -247,10 +247,10 @@ def _load_tpch(config: DBGymConfig, conn: Connection, scale_factor: float):
     sql_file_execute(conn, schema_root_dpath / TPCH_CONSTRAINTS_FNAME)
 
 
-def _create_conn(config: DBGymConfig) -> Connection:
-    pguser = config.cur_yaml["user"]
-    pgpass = config.cur_yaml["pass"]
-    pgport = config.cur_yaml["port"]
+def _create_conn(dbgym_cfg: DBGymConfig) -> Connection:
+    pguser = dbgym_cfg.cur_yaml["user"]
+    pgpass = dbgym_cfg.cur_yaml["pass"]
+    pgport = dbgym_cfg.cur_yaml["port"]
     connstr = (
         f"postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
     )

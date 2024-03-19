@@ -33,14 +33,14 @@ from tune.protox.embedding.utils import (
 from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
 
 
-def train_all_embeddings(cfg, generic_args, train_args):
+def train_all_embeddings(dbgym_cfg, generic_args, train_args):
     """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
     """
     start_time = time.time()
 
-    with open_and_save(cfg, train_args.hpo_space_path, "r") as f:
+    with open_and_save(dbgym_cfg, train_args.hpo_space_path, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
@@ -79,7 +79,10 @@ def train_all_embeddings(cfg, generic_args, train_args):
     resources = {"cpu": 1}
     trainable = with_resources(
         with_parameters(
-            _hpo_train, cfg=cfg, generic_args=generic_args, train_args=train_args
+            _hpo_train,
+            dbgym_cfg=dbgym_cfg,
+            generic_args=generic_args,
+            train_args=train_args,
         ),
         resources,
     )
@@ -105,12 +108,12 @@ def train_all_embeddings(cfg, generic_args, train_args):
         assert False
 
     duration = time.time() - start_time
-    with open(f"{cfg.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
+    with open(f"{dbgym_cfg.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
         f.write(f"{duration}")
 
 
-def _hpo_train(config, cfg, generic_args, train_args):
-    sys.path.append(os.fspath(cfg.dbgym_repo_path))
+def _hpo_train(dbgym_cfg, config, generic_args, train_args):
+    sys.path.append(os.fspath(dbgym_cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
     os.environ["OMP_NUM_THREADS"] = str(train_args.train_max_concurrent)
@@ -132,7 +135,7 @@ def _hpo_train(config, cfg, generic_args, train_args):
                 )
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = cfg.dbgym_this_run_path
+    output_dir = dbgym_cfg.dbgym_this_run_path
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
@@ -150,14 +153,14 @@ def _hpo_train(config, cfg, generic_args, train_args):
 
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(
-        cfg,
-        generic_args.benchmark,
+        dbgym_cfg,
+        generic_args.benchmark_name,
         config,
         generic_args.dataset_path,
         trial_dir,
         generic_args.benchmark_config_path,
         train_args.train_size,
-        generic_args.workload_folder_path,
+        generic_args.workload_path,
         dataloader_num_workers=0,
         disable_tqdm=True,
     )
@@ -182,14 +185,14 @@ def _hpo_train(config, cfg, generic_args, train_args):
 
 
 def _build_trainer(
-    cfg,
-    benchmark,
+    dbgym_cfg,
+    benchmark_name,
     config,
     input_path,
     trial_dir,
     benchmark_config_path,
     train_size,
-    workload_folder_path,
+    workload_path,
     dataloader_num_workers=0,
     disable_tqdm=False,
 ):
@@ -197,10 +200,10 @@ def _build_trainer(
     max_attrs = 0
 
     # Load the benchmark configuration.
-    with open_and_save(cfg, benchmark_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
-            cfg, benchmark, data, workload_folder_path
+            dbgym_cfg, benchmark_name, data, workload_path
         )
 
     config["class_mapping"] = {}
@@ -215,7 +218,7 @@ def _build_trainer(
 
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = load_input_data(
-        cfg,
+        dbgym_cfg,
         input_path,
         train_size,
         max_attrs,
