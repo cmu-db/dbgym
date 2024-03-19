@@ -6,14 +6,14 @@ from typing import Any, Optional, Tuple, Union
 import gymnasium as gym
 import torch
 
-from envs.logger import Logger
-from envs.pg_env import PostgresEnv
-from envs.spaces.holon_space import HolonSpace
-from envs.spaces.primitives import SettingType, is_binary_enum, is_knob_enum
-from envs.spaces.primitives.knob import CategoricalKnob, Knob
-from envs.spaces.state.space import StateSpace
-from envs.spaces.utils import parse_access_methods
-from envs.types import (
+from tune.protox.env.logger import Logger
+from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.primitive import SettingType, is_binary_enum, is_knob_enum
+from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
+from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.space.utils import parse_access_methods
+from tune.protox.env.types import (
     HolonAction,
     BestQueryRun,
     QuerySpaceKnobAction,

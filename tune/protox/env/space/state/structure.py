@@ -7,16 +7,16 @@ import psycopg
 import gymnasium as gym
 from gymnasium import spaces
 
-from envs.spaces.holon_space import HolonSpace
-from envs.spaces.latent_spaces import (
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.latent_spaces import (
     LatentIndexSpace,
     LatentKnobSpace,
     LatentQuerySpace,
 )
-from envs.spaces.primitives.index import IndexAction
-from envs.spaces.state.space import StateSpace
-from envs.spaces.utils import check_subspace
-from envs.types import KnobSpaceAction, IndexSpaceRawSample, QuerySpaceAction
+from tune.protox.env.space.primitive.index import IndexAction
+from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.space.utils import check_subspace
+from tune.protox.env.types import KnobSpaceAction, IndexSpaceRawSample, QuerySpaceAction
 
 
 class StructureStateSpace(StateSpace, spaces.Dict):

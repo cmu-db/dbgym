@@ -2,16 +2,15 @@ import logging
 import re
 import typing
 from distutils import util
-from typing import Any, Optional, Tuple, TypeVar, Union, cast
-
+from typing import Any, Union, cast
 from gymnasium import spaces
 from gymnasium.spaces import Dict, Space
 from psycopg import Connection
 from psycopg.rows import dict_row
 
-from envs.spaces.primitives import KnobClass, SettingType
-from envs.spaces.primitives.knob import CategoricalKnob, Knob, full_knob_name
-from envs.types import KnobMap, KnobSpaceContainer, QueryType, QuerySpaceContainer, QueryMap, QueryTableAccessMap, TableAttrListMap, ServerTableIndexMetadata, ServerIndexMetadata
+from tune.protox.env.space.primitive import KnobClass, SettingType
+from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob, full_knob_name
+from tune.protox.env.types import KnobMap, KnobSpaceContainer, QueryType, QueryMap, QueryTableAccessMap, TableAttrListMap, ServerTableIndexMetadata, ServerIndexMetadata
 
 
 def check_subspace(space: Union[Dict, spaces.Tuple], action: Any) -> bool:

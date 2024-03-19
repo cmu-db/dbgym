@@ -4,7 +4,7 @@ from typing import Iterator, Optional, Tuple
 import pglast # type: ignore
 from pglast import stream
 from pglast.visitors import Continue, Visitor # type: ignore
-from envs.types import TableAliasMap, AttrTableListMap, TableColTuple, TableAttrSetMap, QueryType
+from tune.protox.env.types import TableAliasMap, AttrTableListMap, TableColTuple, TableAttrSetMap, QueryType
 
 
 def traverse(stmt: pglast.ast.Node) -> Iterator[pglast.ast.Node]:

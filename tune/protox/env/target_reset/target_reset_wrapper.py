@@ -3,10 +3,10 @@ from typing import Any, Optional, Tuple, cast
 
 import gymnasium as gym
 
-from envs.logger import Logger
-from envs.pg_env import PostgresEnv
-from envs.utils.reward import RewardUtility
-from envs.types import TargetResetConfig, HolonStateContainer, EnvInfoDict
+from tune.protox.env.logger import Logger
+from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.utils.reward import RewardUtility
+from tune.protox.env.types import TargetResetConfig, HolonStateContainer, EnvInfoDict
 
 
 class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):

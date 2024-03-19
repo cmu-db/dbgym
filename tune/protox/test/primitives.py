@@ -1,8 +1,8 @@
 import unittest
-from envs.spaces.primitives import SettingType, KnobClass
-from envs.spaces.primitives.knob import Knob
-from envs.spaces.primitives.latent_knob import LatentKnob
-from envs.spaces.primitives.index import IndexAction
+from tune.protox.env.space.primitive import SettingType, KnobClass
+from tune.protox.env.space.primitive.knob import Knob
+from tune.protox.env.space.primitive.latent_knob import LatentKnob
+from tune.protox.env.space.primitive.index import IndexAction
 
 class PrimitivesTests(unittest.TestCase):
 

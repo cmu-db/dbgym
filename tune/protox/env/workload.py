@@ -10,21 +10,21 @@ import pglast # type: ignore
 from plumbum import local
 from psycopg import Connection
 
-from envs.logger import Logger, time_record
-from envs.spaces.holon_space import HolonSpace
-from envs.spaces.primitive_spaces import KnobSpace, QuerySpace
-from envs.spaces.primitives.knob import CategoricalKnob, Knob
-from envs.spaces.latent_spaces import LatentKnobSpace, LatentQuerySpace
-from envs.spaces.state.space import StateSpace
-from envs.utils.execute import _acquire_metrics_around_query, execute_variations
-from envs.utils.postgres import PostgresConn
-from envs.utils.reward import RewardUtility
-from envs.utils.workload_analysis import (
+from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.primitive_spaces import KnobSpace, QuerySpace
+from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
+from tune.protox.env.space.latent_spaces import LatentKnobSpace, LatentQuerySpace
+from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.utils.execute import _acquire_metrics_around_query, execute_variations
+from tune.protox.env.utils.postgres import PostgresConn
+from tune.protox.env.utils.reward import RewardUtility
+from tune.protox.env.utils.workload_analysis import (
     extract_aliases,
     extract_columns,
     extract_sqltypes,
 )
-from envs.types import (
+from tune.protox.env.types import (
     QueryType,
     KnobSpaceAction,
     QuerySpaceAction,

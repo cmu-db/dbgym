@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 import pandas as pd
 
-from envs.logger import Logger
+from tune.protox.env.logger import Logger
 
 # Initial penalty to apply to create the "worst" perf from the baseline.
 INITIAL_PENALTY_MULTIPLIER = 4.0

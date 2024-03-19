@@ -10,7 +10,7 @@ import psycopg
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from envs.logger import Logger, time_record
+from tune.protox.env.logger import Logger, time_record
 
 
 class PostgresConn:

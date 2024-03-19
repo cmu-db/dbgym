@@ -1,8 +1,8 @@
 import yaml
 import json
 import unittest
-from envs.workload import Workload
-from envs.spaces.primitive_spaces import IndexSpace
+from tune.protox.env.workload import Workload
+from tune.protox.env.space.primitive_spaces import IndexSpace
 
 
 class WorkloadTests(unittest.TestCase):

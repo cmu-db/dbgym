@@ -2,9 +2,9 @@ import numpy as np
 import yaml
 import json
 import unittest
-from envs.workload import Workload
-from envs.spaces.primitive_spaces import IndexSpace
-from envs.spaces.utils import check_subspace
+from tune.protox.env.workload import Workload
+from tune.protox.env.space.primitive_spaces import IndexSpace
+from tune.protox.env.space.utils import check_subspace
 
 class IndexSpaceTest(unittest.TestCase):
     @staticmethod
