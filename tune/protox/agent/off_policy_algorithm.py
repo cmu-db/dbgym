@@ -1,7 +1,7 @@
 from copy import deepcopy
-from typing import Any, Dict, Optional, Tuple, NDArray
-
+from typing import Any, Dict, Optional, Tuple
 import numpy as np
+from numpy.typing import NDArray
 
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer

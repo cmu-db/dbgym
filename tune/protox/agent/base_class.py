@@ -1,9 +1,9 @@
 """Abstract base classes for RL algorithms."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, NDArray
-
+from typing import Any, Optional
 import numpy as np
+from numpy.typing import NDArray
 
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.agent_env import AgentEnv

@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Optional, NamedTuple, NDArray, cast
+from typing import Any, Dict, List, Optional, NamedTuple, cast
 import copy
-
+from numpy.typing import NDArray
 import numpy as np
 import torch as th
 

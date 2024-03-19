@@ -1,6 +1,7 @@
 import time
-from typing import Any, Optional, Union, NDArray, Tuple, TYPE_CHECKING, cast
+from typing import Any, Optional, Union, Tuple, TYPE_CHECKING, cast
 import numpy as np
+from numpy.typing import NDArray
 import torch as th
 from gymnasium import spaces
 from torch.optim import Optimizer

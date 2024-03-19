@@ -1,11 +1,11 @@
 """Policies: abstract base class and concrete implementations."""
 
-from typing import Any, List, Optional, Tuple, Type, cast, NDArray
-
+from typing import Any, List, Optional, Tuple, Type, cast
 import numpy as np
 import torch as th
 from gymnasium import spaces
 from torch import nn
+from numpy.typing import NDArray
 
 from tune.protox.agent.torch_layers import (
     create_mlp,
