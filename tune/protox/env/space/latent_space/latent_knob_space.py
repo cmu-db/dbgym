@@ -8,7 +8,7 @@ import torch
 from psycopg import Connection
 
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.primitive_spaces import KnobSpace
+from tune.protox.env.space.primitive_space import KnobSpace
 from tune.protox.env.space.primitive import KnobClass, SettingType, is_knob_enum
 from tune.protox.env.space.primitive.knob import resolve_enum_value
 from tune.protox.env.space.primitive.latent_knob import LatentCategoricalKnob, LatentKnob

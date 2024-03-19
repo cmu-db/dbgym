@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 from tune.protox.embedding.vae import VAE
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.primitive_spaces import IndexSpace
+from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.types import (
     DEFAULT_NEIGHBOR_PARAMETERS,
