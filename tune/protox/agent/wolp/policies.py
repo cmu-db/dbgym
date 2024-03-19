@@ -10,7 +10,7 @@ from tune.protox.agent.policies import Actor, BaseModel, ContinuousCritic
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.buffers import ReplayBufferSamples
 from tune.protox.agent.utils import polyak_update
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import Logger, time_record
 
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
