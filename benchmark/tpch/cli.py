@@ -11,6 +11,9 @@ from util.sql import *
 benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
 benchmark_tpch_logger.setLevel(logging.INFO)
 
+TPCH_SCHEMA_FNAME = "tpch_schema.sql"
+TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
+
 
 @click.group(name="tpch")
 @click.pass_obj
@@ -18,12 +21,14 @@ def tpch_group(dbgym_cfg: DBGymConfig):
     dbgym_cfg.append_group("tpch")
 
 
-@tpch_group.command(name="generate-sf")
-@click.argument("sf", type=int)
+@tpch_group.command(name="generate-data")
+@click.argument("scale-factor", type=float)
 @click.pass_obj
-def tpch_generate_sf(dbgym_cfg: DBGymConfig, sf: int):
-    clone(dbgym_cfg)
-    generate_tables(dbgym_cfg, sf)
+# The reason generate-data is separate from create-pgdata is because generate-data is generic
+#   to all DBMSs while create-pgdata is specific to Postgres.
+def tpch_generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
+    _clone(dbgym_cfg)
+    _generate_data(dbgym_cfg, scale_factor)
 
 
 @tpch_group.command(name="generate-workload")
@@ -43,23 +48,12 @@ def tpch_generate_workload(
     seed_end: int,
     generate_type: str,
 ):
-    clone(dbgym_cfg)
-    generate_queries(dbgym_cfg, seed_start, seed_end)
-    generate_workload(dbgym_cfg, workload_name, seed_start, seed_end, generate_type)
+    _clone(dbgym_cfg)
+    _generate_queries(dbgym_cfg, seed_start, seed_end)
+    _generate_workload(dbgym_cfg, workload_name, seed_start, seed_end, generate_type)
 
 
-@tpch_group.command(name="load-sf")
-@click.argument("sf", type=int)
-@click.argument("dbms", type=str)
-@click.argument("dbname", type=str)
-@click.pass_obj
-def tpch_load_tables(dbgym_cfg: DBGymConfig, sf: int, dbms: str, dbname: str):
-    clone(dbgym_cfg)
-    generate_tables(dbgym_cfg, sf)
-    load_tables(dbgym_cfg, sf, dbms, dbname)
-
-
-def clone(dbgym_cfg: DBGymConfig):
+def _clone(dbgym_cfg: DBGymConfig):
     symlink_dir = dbgym_cfg.cur_symlinks_build_path("tpch-kit")
     if symlink_dir.exists():
         benchmark_tpch_logger.info(f"Skipping clone: {symlink_dir}")
@@ -76,7 +70,7 @@ def clone(dbgym_cfg: DBGymConfig):
     benchmark_tpch_logger.info(f"Cloned: {symlink_dir}")
 
 
-def generate_queries(dbgym_cfg, seed_start, seed_end):
+def _generate_queries(dbgym_cfg, seed_start, seed_end):
     build_path = dbgym_cfg.cur_symlinks_build_path()
     assert build_path.exists()
 
@@ -103,26 +97,28 @@ def generate_queries(dbgym_cfg, seed_start, seed_end):
     )
 
 
-def generate_tables(dbgym_cfg: DBGymConfig, sf: int):
+def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
     build_path = dbgym_cfg.cur_symlinks_build_path()
     assert build_path.exists()
 
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    symlink_dir = data_path / f"tables_sf{sf}"
+    symlink_dir = data_path / f"tables_sf{scale_factor}"
     if symlink_dir.exists():
         benchmark_tpch_logger.info(f"Skipping generation: {symlink_dir}")
         return
 
     benchmark_tpch_logger.info(f"Generating: {symlink_dir}")
-    subprocess_run(f"./dbgen -vf -s {sf}", cwd=build_path / "tpch-kit" / "dbgen")
-    real_dir = dbgym_cfg.cur_task_runs_data_path(f"tables_sf{sf}", mkdir=True)
+    subprocess_run(
+        f"./dbgen -vf -s {scale_factor}", cwd=build_path / "tpch-kit" / "dbgen"
+    )
+    real_dir = dbgym_cfg.cur_task_runs_data_path(f"tables_sf{scale_factor}", mkdir=True)
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=build_path / "tpch-kit" / "dbgen")
 
     subprocess_run(f"ln -s {real_dir} {data_path}")
     benchmark_tpch_logger.info(f"Generated: {symlink_dir}")
 
 
-def generate_workload(
+def _generate_workload(
     dbgym_cfg: DBGymConfig,
     workload_name: str,
     seed_start: int,
@@ -158,64 +154,3 @@ def generate_workload(
                 # TODO(WAN): add option to deep-copy the workload.
     subprocess_run(f"ln -s {real_dir} {data_path}")
     benchmark_tpch_logger.info(f"Generated: {workload_path}")
-
-
-def _loaded(conn: Connection):
-    # l_sk_pk is the last index that we create.
-    sql = "SELECT * FROM pg_indexes WHERE indexname = 'l_sk_pk'"
-    res = conn_execute(conn, sql).fetchall()
-    return len(res) > 0
-
-
-def _load(dbgym_cfg: DBGymConfig, conn: Connection, sf: int):
-    schema_root = dbgym_cfg.cur_source_path()
-    data_root = dbgym_cfg.cur_symlinks_data_path()
-
-    tables = [
-        "region",
-        "nation",
-        "part",
-        "supplier",
-        "partsupp",
-        "customer",
-        "orders",
-        "lineitem",
-    ]
-
-    sql_file_execute(conn, schema_root / "tpch_schema.sql")
-    for table in tables:
-        conn_execute(conn, f"TRUNCATE {table} CASCADE")
-    for table in tables:
-        table_path = data_root / f"tables_sf{sf}" / f"{table}.tbl"
-
-        with open(table_path, "r") as table_csv:
-            with conn.connection.dbapi_connection.cursor() as cur:
-                with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
-                    while data := table_csv.read(8192):
-                        copy.write(data)
-    sql_file_execute(conn, schema_root / "tpch_constraints.sql")
-
-
-def load_tables(dbgym_cfg: DBGymConfig, sf: int, dbms: str, dbname: str):
-    # TODO(WAN): repetition and slight break of abstraction here.
-    dbms_yaml = dbgym_cfg.root_yaml["dbms"][dbms]
-    dbms_user = dbms_yaml["user"]
-    dbms_pass = dbms_yaml["pass"]
-    dbms_port = dbms_yaml["port"]
-
-    if dbms == "postgres":
-        connstr = f"postgresql+psycopg://{dbms_user}:{dbms_pass}@localhost:{dbms_port}/{dbname}"
-    else:
-        raise RuntimeError(f"Unknown DBMS: {dbms}")
-
-    engine: Engine = create_engine(
-        connstr,
-        execution_options={"isolation_level": "AUTOCOMMIT"},
-    )
-    with engine.connect() as conn:
-        if _loaded(conn):
-            benchmark_tpch_logger.info(f"Skipping load: TPC-H SF {sf}")
-        else:
-            benchmark_tpch_logger.info(f"Loading: TPC-H SF {sf}")
-            _load(dbgym_cfg, conn, sf)
-    benchmark_tpch_logger.info(f"Loaded: TPC-H SF {sf}")

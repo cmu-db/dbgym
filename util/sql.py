@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import pglast
 from sqlalchemy import Connection, Engine, Inspector, inspect, text
@@ -9,7 +10,7 @@ def conn_execute(conn: Connection, sql: str) -> CursorResult:
     return conn.execute(text(sql))
 
 
-def sql_file_queries(filepath: Path) -> [str]:
+def sql_file_queries(filepath: Path) -> List[str]:
     with open(filepath) as f:
         lines: list[str] = []
         for line in f:

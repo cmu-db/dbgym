@@ -32,8 +32,8 @@ from tune.protox.embedding.train_all import train_all_embeddings
 @click.pass_obj
 
 # generic args
-@click.argument("benchmark-name")
-@click.argument("workload-name")
+@click.argument("benchmark-name", type=str)
+@click.argument("workload-name", type=str)
 @click.option(
     "--benchmark-config-path",
     default=None,
