@@ -1,17 +1,20 @@
 import logging
 import random
+from pathlib import Path
 
 import click
 import numpy as np
 import torch
 
 from misc.utils import (
-    BENCHMARK_PLACEHOLDER,
-    DATA_PATH_PLACEHOLDER,
+    BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_HPO_SPACE_RELPATH,
-    DBGymConfig,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
     default_dataset_path,
+    default_workload_path,
 )
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
@@ -26,22 +29,22 @@ from tune.protox.embedding.train_all import train_all_embeddings
 
 # click setup
 @click.command()
-@click.pass_context
+@click.pass_obj
 
 # generic args
-@click.argument("benchmark")
+@click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
     default=None,
-    type=str,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+    type=Path,
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--dataset-path",
     default=None,
-    type=str,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(DATA_PATH_PLACEHOLDER, BENCHMARK_PLACEHOLDER)}.",
+    type=Path,
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -61,7 +64,7 @@ from tune.protox.embedding.train_all import train_all_embeddings
     "--train-max-concurrent",
     default=1,
     type=int,
-    help="The max # of concurrent embedding models to train. This is usually set lower than `nproc` to reduce memory pressure.",
+    help="The max # of concurrent embedding models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.",
 )
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
 @click.option(
@@ -134,8 +137,8 @@ from tune.protox.embedding.train_all import train_all_embeddings
 )
 @click.option("--flatten-idx", default=0, help="TODO(wz2)")
 def train(
-    ctx,
-    benchmark,
+    dbgym_cfg,
+    benchmark_name,
     workload_name,
     benchmark_config_path,
     dataset_path,
@@ -165,15 +168,21 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg: DBGymConfig = ctx.obj
     if dataset_path == None:
-        dataset_path = default_dataset_path(cfg.cur_symlinks_data_path(), benchmark)
+        dataset_path = default_dataset_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
     if seed == None:
         seed = random.randint(0, 1e8)
+
+    # Convert all input paths to absolute paths
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
+    dataset_path = conv_inputpath_to_abspath(dbgym_cfg, dataset_path)
+    hpo_space_path = conv_inputpath_to_abspath(dbgym_cfg, hpo_space_path)
 
     # setup
     random.seed(seed)
@@ -181,15 +190,12 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_folder_path = (
-        cfg.dbgym_symlinks_path
-        / f"dbgym_benchmark_{benchmark}"
-        / "data"
-        / f"workload_{workload_name}"
+    workload_path = default_workload_path(
+        dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
     )
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark, benchmark_config_path, dataset_path, seed, workload_folder_path
+        benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,
@@ -211,24 +217,24 @@ def train(
     )
 
     # run all steps
-    train_all_embeddings(cfg, generic_args, train_args)
+    train_all_embeddings(dbgym_cfg, generic_args, train_args)
     num_parts = compute_num_parts(num_samples)
-    redist_trained_models(cfg, num_parts)
-    analyze_all_embeddings_parts(cfg, num_parts, generic_args, analyze_args)
-    select_best_embeddings(cfg, generic_args, select_args)
+    redist_trained_models(dbgym_cfg, num_parts)
+    analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_args)
+    select_best_embeddings(dbgym_cfg, generic_args, select_args)
 
 
 class EmbeddingTrainGenericArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
     def __init__(
-        self, benchmark, benchmark_config_path, dataset_path, seed, workload_folder_path
+        self, benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
     ):
-        self.benchmark = benchmark
+        self.benchmark_name = benchmark_name
         self.benchmark_config_path = benchmark_config_path
         self.dataset_path = dataset_path
         self.seed = seed
-        self.workload_folder_path = workload_folder_path
+        self.workload_path = workload_path
 
 
 class EmbeddingTrainAllArgs:

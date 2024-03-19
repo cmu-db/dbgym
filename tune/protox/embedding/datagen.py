@@ -15,9 +15,12 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from misc.utils import (
-    BENCHMARK_PLACEHOLDER,
-    DBGymConfig,
+    BENCHMARK_NAME_PLACEHOLDER,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
+    default_workload_path,
     link_result,
     open_and_save,
 )
@@ -36,16 +39,22 @@ from tune.protox.env.workload_utils import QueryType
 
 # click steup
 @click.command()
-@click.pass_context
+@click.pass_obj
 
 # generic args
-@click.argument("benchmark")
+@click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
     "--benchmark-config-path",
     default=None,
-    type=str,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_PLACEHOLDER)}.",
+    type=Path,
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--workload-path",
+    default=None,
+    type=Path,
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -105,10 +114,11 @@ from tune.protox.env.workload_utils import QueryType
 @click.option("--pad-min", default=None, type=int, help="TODO(wz2)")
 @click.option("--rebias", default=0, type=float, help="TODO(wz2)")
 def datagen(
-    ctx,
-    benchmark,
+    dbgym_cfg,
+    benchmark_name,
     workload_name,
     benchmark_config_path,
+    workload_path,
     seed,
     leading_col_tbls,
     default_sample_limit,
@@ -131,15 +141,22 @@ def datagen(
     # TODO(phw2): do stuff to automatically manage postgres
 
     # set args to defaults programmatically (do this before doing anything else in the function)
-    cfg: DBGymConfig = ctx.obj
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark)
+        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+    if workload_path == None:
+        workload_path = default_workload_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
         seed = random.randint(0, 1e8)
+
+    # Convert all input paths to absolute paths
+    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
 
     # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
@@ -159,17 +176,10 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    workload_folder_path = (
-        cfg.dbgym_symlinks_path
-        / f"dbgym_benchmark_{benchmark}"
-        / "data"
-        / f"workload_{workload_name}"
-    )
-
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark, benchmark_config_path, seed, workload_folder_path
+        benchmark_name, benchmark_config_path, seed, workload_path
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -185,10 +195,10 @@ def datagen(
 
     # run all steps
     start_time = time.time()
-    _gen_traindata_dir(cfg, generic_args, dir_gen_args)
-    _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args)
+    _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
+    _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
-    with open(f"{cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
+    with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
 
 
@@ -199,11 +209,11 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark, benchmark_config_path, seed, workload_folder_path):
-        self.benchmark = benchmark
+    def __init__(self, benchmark_name, benchmark_config_path, seed, workload_path):
+        self.benchmark_name = benchmark_name
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
-        self.workload_folder_path = workload_folder_path
+        self.workload_path = workload_path
 
 
 class EmbeddingDirGenArgs:
@@ -240,18 +250,19 @@ class EmbeddingFileGenArgs:
         self.rebias = rebias
 
 
-def get_traindata_dir(cfg):
-    return cfg.dbgym_this_run_path / "traindata_dir"
+def get_traindata_dir(dbgym_cfg):
+    return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
 
 
-def get_traindata_path(cfg, generic_args):
+def get_traindata_path(dbgym_cfg, generic_args):
     return os.path.join(
-        cfg.dbgym_this_run_path, f"{generic_args.benchmark}_embedding_traindata.parquet"
+        dbgym_cfg.dbgym_this_run_path,
+        f"{generic_args.benchmark_name}_embedding_traindata.parquet",
     )
 
 
-def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
-    with open_and_save(cfg, generic_args.benchmark_config_path, "r") as f:
+def _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args):
+    with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
     max_num_columns = benchmark_config["protox"]["max_num_columns"]
@@ -260,10 +271,10 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
     query_spec = benchmark_config["protox"]["query_spec"]
 
     workload = Workload(
-        cfg, tables, attributes, query_spec, generic_args.workload_folder_path, pid=None
+        dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
     )
     modified_attrs = workload.process_column_usage()
-    traindata_dir = get_traindata_dir(cfg)
+    traindata_dir = get_traindata_dir(dbgym_cfg)
 
     with Pool(dir_gen_args.max_concurrent) as pool:
         results = []
@@ -291,12 +302,12 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
                         pool.apply_async(
                             _produce_index_data,
                             args=(
-                                cfg,
+                                dbgym_cfg,
                                 dir_gen_args.connection_str,
                                 tables,
                                 attributes,
                                 query_spec,
-                                generic_args.workload_folder_path,
+                                generic_args.workload_path,
                                 max_num_columns,
                                 generic_args.seed,
                                 not dir_gen_args.no_generate_costs,
@@ -319,7 +330,7 @@ def _gen_traindata_dir(cfg, generic_args, dir_gen_args):
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
+def _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)["protox"]
@@ -327,7 +338,7 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
 
-    traindata_dir = get_traindata_dir(cfg)
+    traindata_dir = get_traindata_dir(dbgym_cfg)
     files = [f for f in Path(traindata_dir).rglob("*.parquet")]
 
     def read(file):
@@ -415,9 +426,9 @@ def _combine_traindata_dir_into_parquet(cfg, generic_args, file_gen_args):
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = get_traindata_path(cfg, generic_args)
+    traindata_path = get_traindata_path(dbgym_cfg, generic_args)
     df.to_parquet(traindata_path)
-    link_result(cfg, traindata_path)
+    link_result(dbgym_cfg, traindata_path)
 
 
 def _all_subsets(ss):
@@ -445,11 +456,11 @@ def _fetch_server_indexes(connection):
 
 
 # FUTURE(oltp)
-# def load_ou_models(cfg, model_dir):
+# def load_ou_models(dbgym_cfg, model_dir):
 #     models = {}
 #     for f in Path(model_dir).rglob("*.pkl"):
 #         ou_name = str(f.parts[-1]).split(".")[0]
-#         with open_and_save(cfg, f, "rb") as model:
+#         with open_and_save(dbgym_cfg, f, "rb") as model:
 #             models[ou_name] = pickle.load(model)
 #     return models
 
@@ -583,12 +594,12 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
 
 
 def _produce_index_data(
-    cfg,
+    dbgym_cfg,
     connection,
     tables,
     attributes,
     query_spec,
-    workload_folder_path,
+    workload_path,
     max_num_columns,
     seed,
     generate_costs,
@@ -608,7 +619,7 @@ def _produce_index_data(
 
     # Construct workload.
     workload = Workload(
-        cfg, tables, attributes, query_spec, workload_folder_path, pid=str(p)
+        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=str(p)
     )
     modified_attrs = workload.process_column_usage()
 

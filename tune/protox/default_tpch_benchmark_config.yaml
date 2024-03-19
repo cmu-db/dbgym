@@ -1,5 +1,5 @@
 protox:
-  benchmark: tpch
+  benchmark_name: tpch
   oltp_workload: False
 
   query_spec:
