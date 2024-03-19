@@ -11,6 +11,7 @@ from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.buffers import ReplayBufferSamples
 from tune.protox.agent.utils import polyak_update
 from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.types import HolonAction
 
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
