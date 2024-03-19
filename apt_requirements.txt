@@ -1,6 +1,6 @@
-build-essential
 bison
+build-essential
 flex
 libreadline-dev
-zlib1g-dev
 rpm
+zlib1g-dev
