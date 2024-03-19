@@ -7,7 +7,7 @@ import numpy as np
 
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.agent_env import AgentEnv
-from tune.protox.utils.logger import Logger
+from tune.protox.env.logger import Logger
 
 
 class BaseAlgorithm(ABC):

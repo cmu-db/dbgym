@@ -14,7 +14,7 @@ from tune.protox.env.space.index_space import IndexSpace
 from tune.protox.env.space.knob_space import KnobSpace
 from tune.protox.env.space.state_space import MetricStateSpace, StructureStateSpace
 from tune.protox.env.workload import Workload
-from tune.protox.utils.logger import Logger
+from tune.protox.env.logger import Logger
 
 
 def gen_scale_output(mean_output_act, output_scale):
