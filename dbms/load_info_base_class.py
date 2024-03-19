@@ -1,5 +1,3 @@
-from misc.utils import DBGymConfig
-
 class LoadInfoBaseClass:
     '''
     A base class for providing info for DBMSs to load the data of a benchmark

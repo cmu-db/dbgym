@@ -1,0 +1,6 @@
+bison
+build-essential
+flex
+libreadline-dev
+rpm
+zlib1g-dev
