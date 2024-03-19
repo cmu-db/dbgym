@@ -8,7 +8,7 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.latent_spaces import (
+from tune.protox.env.space.latent_space import (
     LatentIndexSpace,
     LatentKnobSpace,
     LatentQuerySpace,

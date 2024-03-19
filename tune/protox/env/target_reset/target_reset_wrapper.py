@@ -5,7 +5,7 @@ import gymnasium as gym
 
 from tune.protox.env.logger import Logger
 from tune.protox.env.pg_env import PostgresEnv
-from tune.protox.env.utils.reward import RewardUtility
+from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.types import TargetResetConfig, HolonStateContainer, EnvInfoDict
 
 

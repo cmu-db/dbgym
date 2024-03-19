@@ -1,5 +1,4 @@
 from typing import Any, Optional, Tuple
-
 import gymnasium as gym
 
 from tune.protox.env.logger import Logger

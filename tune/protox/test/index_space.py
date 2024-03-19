@@ -3,7 +3,7 @@ import yaml
 import json
 import unittest
 from tune.protox.env.workload import Workload
-from tune.protox.env.space.primitive_spaces import IndexSpace
+from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace
 
 class IndexSpaceTest(unittest.TestCase):

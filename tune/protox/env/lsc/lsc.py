@@ -1,5 +1,4 @@
 from typing import Any, Optional, TypeVar, cast
-
 import numpy as np
 import torch
 

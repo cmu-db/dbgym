@@ -12,16 +12,16 @@ import gymnasium as gym
 from typing import Callable, Tuple, Any, Union
 
 from tune.protox.env.logger import Logger
-from tune.protox.env.utils.reward import RewardUtility
-from tune.protox.env.utils.postgres import PostgresConn
+from tune.protox.env.util.reward import RewardUtility
+from tune.protox.env.util.postgres import PostgresConn
 from tune.protox.env.workload import Workload
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.state import LSCStructureStateSpace, LSCMetricStateSpace
-from tune.protox.env.space.latent_spaces.latent_knob_space import LatentKnobSpace
+from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
 from tune.protox.env.lsc.lsc import LSC
-from tune.protox.env.space.latent_spaces.lsc_index_space import LSCIndexSpace
-from tune.protox.env.space.latent_spaces.latent_query_space import LatentQuerySpace
+from tune.protox.env.space.latent_space.lsc_index_space import LSCIndexSpace
+from tune.protox.env.space.latent_space.latent_query_space import LatentQuerySpace
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
