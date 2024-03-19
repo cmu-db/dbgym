@@ -24,6 +24,8 @@ def tpch_group(dbgym_cfg: DBGymConfig):
 @tpch_group.command(name="generate-data")
 @click.argument("scale-factor", type=float)
 @click.pass_obj
+# The reason generate-data is separate from create-pgdata is because generate-data is generic
+#   to all DBMSs while create-pgdata is specific to Postgres.
 def tpch_generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
     _clone(dbgym_cfg)
     _generate_data(dbgym_cfg, scale_factor)

@@ -6,7 +6,8 @@ from pathlib import Path
 import click
 from sqlalchemy import create_engine
 
-from benchmark.tpch.cli import TPCH_CONSTRAINTS_FNAME, TPCH_SCHEMA_FNAME
+from dbms.load_info_base_class import LoadInfoBaseClass
+from benchmark.tpch.load_info import TpchLoadInfo
 from misc.utils import DBGymConfig, save_file
 from util.shell import subprocess_run
 from util.sql import Connection, Engine, conn_execute, sql_file_execute
@@ -24,11 +25,11 @@ def postgres_group(dbgym_cfg: DBGymConfig):
 
 
 @postgres_group.command(
-    name="repo",
+    name="build",
     help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.",
 )
 @click.pass_obj
-def postgres_repo(dbgym_cfg: DBGymConfig):
+def postgres_build(dbgym_cfg: DBGymConfig):
     _build_repo(dbgym_cfg)
 
 
@@ -188,63 +189,34 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
 def _load_benchmark_into_pgdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ):
-    if benchmark_name == "tpch":
-        with _create_conn(dbgym_cfg) as conn:
-            _load_tpch(dbgym_cfg, conn, scale_factor)
-    else:
-        raise AssertionError(
-            f"_load_benchmark_into_pgdata(): the benchmark of name {benchmark_name} is not implemented"
-        )
+    with _create_conn(dbgym_cfg) as conn:
+        if benchmark_name == "tpch":
+            load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
+        else:
+            raise AssertionError(
+                f"_load_benchmark_into_pgdata(): the benchmark of name {benchmark_name} is not implemented"
+            )
+    
+        _load_into_pgdata(conn, load_info)
 
 
-def _load_tpch(dbgym_cfg: DBGymConfig, conn: Connection, scale_factor: float):
-    # *This is a break of abstraction, but that is inevitable*
-    # Another way to handle this is to generate the generic pgdata.tgz with a "task.py dbms postgres" invocation
-    #   and a [pgdata].tgz loaded with the benchmark data with a second "task.py benchmark tpch" invocation.
-    # However, doing that would require the "task.py benchmark tpch" invocation to start and stop Postgres, which
-    #   is an equivalent break of abstraction, only in reverse.
-    # A break of abstraction is inevitable, but this way of breaking it is preferable because it results in only
-    #   a single CLI invocation instead of two, and the # of CLI invocations is something we really want to minimize
-    #   (see documentation for why we want to minimize it so much).
+def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
+    sql_file_execute(conn, load_info.get_schema_fpath())
 
-    # currently, hardcoding the path seems like the easiest solution. If the path ever changes, it'll
-    # just break an integration test and we can fix it. I don't want to prematurely overengineer it
-    codebase_path_components = ["dbgym", "benchmark", "tpch"]
-    codebase_dname = "_".join(codebase_path_components)
-    schema_root_dpath = dbgym_cfg.dbgym_repo_path
-    for component in codebase_path_components[1:]:  # [1:] to skip "dbgym"
-        schema_root_dpath /= component
-    data_root_dpath = dbgym_cfg.dbgym_symlinks_path / codebase_dname / "data"
-
-    tables = [
-        "region",
-        "nation",
-        "part",
-        "supplier",
-        "partsupp",
-        "customer",
-        "orders",
-        "lineitem",
-    ]
-
-    schema_fpath = schema_root_dpath / TPCH_SCHEMA_FNAME
-    assert schema_fpath.exists(), f"schema_fpath ({schema_fpath}) does not exist"
-    sql_file_execute(conn, schema_fpath)
-    for table in tables:
+    # truncate all tables first before even loading a single one
+    for table, _ in load_info.get_tables_and_fpaths():
         conn_execute(conn, f"TRUNCATE {table} CASCADE")
-    tables_dpath = data_root_dpath / f"tables_sf{scale_factor}"
-    assert (
-        tables_dpath.exists()
-    ), f"tables_dpath ({tables_dpath}) does not exist. Make sure you have generated the TPC-H data"
-    for table in tables:
-        table_path = tables_dpath / f"{table}.tbl"
-
-        with open(table_path, "r") as table_csv:
+    # then, load the tables
+    for table, table_fpath in load_info.get_tables_and_fpaths():
+        with open(table_fpath, "r") as table_csv:
             with conn.connection.dbapi_connection.cursor() as cur:
                 with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
                     while data := table_csv.read(8192):
                         copy.write(data)
-    sql_file_execute(conn, schema_root_dpath / TPCH_CONSTRAINTS_FNAME)
+
+    constraints_fpath = load_info.get_constraints_fpath()
+    if constraints_fpath != None:
+        sql_file_execute(conn, constraints_fpath)
 
 
 def _create_conn(dbgym_cfg: DBGymConfig) -> Connection:
