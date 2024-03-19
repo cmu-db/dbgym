@@ -1,9 +1,9 @@
 import math
-
 import torch
 import torch.nn as nn
-from pytorch_metric_learning import losses
-from pytorch_metric_learning.utils import common_functions as c_f
+from pytorch_metric_learning import losses # type: ignore
+from pytorch_metric_learning.utils import common_functions as c_f # type: ignore
+from typing import Union, Callable, Tuple, Any, cast, Optional
 
 COST_COLUMNS = [
     "quant_mult_cost_improvement",
@@ -11,7 +11,7 @@ COST_COLUMNS = [
 ]
 
 
-def get_loss(distance_fn):
+def get_loss(distance_fn: str) -> nn.Module:
     if distance_fn == "l1":
         return nn.L1Loss(reduction="none")
     elif distance_fn == "l2":
@@ -20,8 +20,8 @@ def get_loss(distance_fn):
         assert False
 
 
-def get_bias_fn(config):
-    def bias_fn(data, labels):
+def get_bias_fn(config: dict[str, Any]) -> Callable[[torch.Tensor, torch.Tensor], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]]:
+    def bias_fn(data: torch.Tensor, labels: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         red_index = COST_COLUMNS.index(config["cost_reduction_type"])
         distance_scale = config["distance_scale"]
         if distance_scale == "auto":
@@ -52,15 +52,17 @@ def get_bias_fn(config):
                 top_clamp,
             )
         else:
-            return perf_degrees * (bias_separation + addtl_bias_separation)
+            return cast(torch.Tensor, perf_degrees * (bias_separation + addtl_bias_separation))
 
     return bias_fn
 
 
 def _distance_cost(
-    distance_fn, distance_scale, reduction_type, preds, targets, bias, output_scale
-):
+        distance_fn: str, distance_scale: str, reduction_type: str, preds: torch.Tensor, targets: torch.Tensor,
+        bias: Callable[[torch.Tensor, torch.Tensor], Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]], output_scale: float
+) -> Any:
     bias_vals = bias(preds, targets)
+    assert isinstance(bias_vals, torch.Tensor)
     preds = preds - bias_vals
 
     assert reduction_type in COST_COLUMNS
@@ -74,15 +76,15 @@ def _distance_cost(
     # This subtraction should be fine because target_loc should be between 0 and 1 due to quantile.
     # Then scale it to match the gaussian distance (I think).
     if distance_scale == "auto":
-        distance_scale = math.sqrt(preds.shape[1])
+        distance_scale_val = math.sqrt(preds.shape[1])
     else:
-        distance_scale = float(distance_scale)
+        distance_scale_val = float(distance_scale_val)
 
     # FIXME: Overwrite the distance_scale using the output scale.
-    distance_scale = output_scale
+    distance_scale_val = output_scale
 
     # Produce the actual target location.
-    target_loc = distance_scale * (1 - target_loc)
+    target_loc = distance_scale_val * (1 - target_loc)
     target_loc = target_loc.expand(-1, preds.shape[1])
     preds_dist = preds
 
@@ -94,24 +96,24 @@ def _distance_cost(
     else:
         assert margin == "soft"
         # We accept [preds_dist - margin, preds_dist + margin]
-        margin = float(margin_spec)
+        tmargin = float(margin_spec)
 
         # How far away from the "boundary" that we are...
         dists = torch.abs(preds_dist - target_loc)
-        losses = torch.clamp(dists - margin, min=0)
+        losses = torch.clamp(dists - tmargin, min=0.)
 
     # Reduce to a per-row sum loss term.
     losses = losses.sum(dim=1)
     return losses
 
 
-class CostLoss(losses.BaseMetricLossFunction):
-    def __init__(self, metric_loss_md, *args, **kwargs):
+class CostLoss(losses.BaseMetricLossFunction): # type: ignore
+    def __init__(self, metric_loss_md: dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.spec = metric_loss_md
         self.bias_fn = get_bias_fn(self.spec)
 
-    def compute_loss(self, preds, unused0, unused1, data, *args):
+    def compute_loss(self, preds: torch.Tensor, unused0: Any, unused1: Any, data: torch.Tensor, *args: Any) -> dict[str, Any]:
         losses = _distance_cost(
             self.spec["distance_fn"],
             self.spec["distance_scale"],
@@ -131,8 +133,11 @@ class CostLoss(losses.BaseMetricLossFunction):
         }
 
     def forward(
-        self, embeddings, labels=None, indices_tuple=None, ref_emb=None, ref_labels=None
-    ):
+        self,
+        embeddings: torch.Tensor,
+        labels: torch.Tensor,
+        indices_tuple:Optional[Any]=None, ref_emb:Optional[Any]=None, ref_labels:Optional[Any]=None
+    ) -> Any:
         """
         Args:
             embeddings: tensor of size (batch_size, embedding_size)
