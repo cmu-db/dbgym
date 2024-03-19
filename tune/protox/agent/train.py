@@ -19,7 +19,7 @@ from ray.tune.search.basic_variant import BasicVariantGenerator
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
-    DEFAULT_PROTOX_CONFIG_RELPATH,
+    DEFAULT_SYSKNOBS_RELPATH,
     DEFAULT_WOLP_PARAMS_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
@@ -62,9 +62,9 @@ class AgentTrainArgs:
     help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
-    "--protox-config-path",
-    default=DEFAULT_PROTOX_CONFIG_RELPATH,
-    help=f"The path to the file configuring lots of things about Proto-X.",
+    "--sysknobs-path",
+    default=DEFAULT_SYSKNOBS_RELPATH,
+    help=f"The path to the file configuring the space of system knobs the tuner can tune.",
 )
 @click.option(
     "--hpoed-agent-params-path",
@@ -134,7 +134,7 @@ def train(
     embedding_path,
     benchmark_config_path,
     benchbase_config_path,
-    protox_config_path,
+    sysknobs_path,
     hpoed_agent_params_path,
     pgdata_snapshot_path,
     agent_params_path,
@@ -180,7 +180,7 @@ def train(
     embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
-    protox_config_path = conv_inputpath_to_abspath(dbgym_cfg, protox_config_path)
+    sysknobs_path = conv_inputpath_to_abspath(dbgym_cfg, sysknobs_path)
     hpoed_agent_params_path = conv_inputpath_to_abspath(
         dbgym_cfg, hpoed_agent_params_path
     )
@@ -195,7 +195,7 @@ def train(
     args.embedding_path = embedding_path
     args.benchmark_config_path = benchmark_config_path
     args.benchbase_config_path = benchbase_config_path
-    args.protox_config_path = protox_config_path
+    args.sysknobs_path = sysknobs_path
     args.hpoed_agent_params_path = hpoed_agent_params_path
     args.pgdata_snapshot_path = pgdata_snapshot_path
     args.agent_params_path = agent_params_path
@@ -211,9 +211,8 @@ def train(
     args = DotDict(args.__dict__)
 
     # Get the system knobs.
-    with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
-        protox_config = yaml.safe_load(f)["protox"]
-        system_knobs = protox_config["system_knobs"]
+    with open_and_save(dbgym_cfg, sysknobs_path, "r") as f:
+        system_knobs = yaml.safe_load(f)["system_knobs"]
 
     # Per query knobs.
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
@@ -394,7 +393,7 @@ def create_tune_opt_class(dbgym_cfg_param):
             protox_args["benchbase_config_path"] = Path(
                 protox_args["benchbase_config_path"]
             )
-            protox_args["protox_config_path"] = Path(protox_args["protox_config_path"])
+            protox_args["sysknobs_path"] = Path(protox_args["sysknobs_path"])
             protox_args["hpoed_agent_params_path"] = Path(
                 protox_args["hpoed_agent_params_path"]
             )
@@ -437,7 +436,7 @@ def create_tune_opt_class(dbgym_cfg_param):
             self.port = port
 
             # We will now overwrite the config files.
-            protox_args["protox_config_path"] = Path(self.logdir) / "config.yaml"
+            protox_args["sysknobs_path"] = Path(self.logdir) / "config.yaml"
             protox_args["agent_params_path"] = Path(self.logdir) / "model_params.yaml"
             protox_args["benchmark_config_path"] = (
                 Path(self.logdir) / f"{benchmark_name}.yaml"

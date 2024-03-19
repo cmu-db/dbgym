@@ -66,10 +66,10 @@ class Spec(object):
         workload_timeout,
         logger=None,
     ):
-        with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
-            protox_config = yaml.safe_load(f)["protox"]
-        for k, v in protox_config.items():
-            setattr(self, k, v)
+        # with open_and_save(dbgym_cfg, protox_config_path, "r") as f:
+        #     protox_config = yaml.safe_load(f)["protox"]
+        # for k, v in protox_config.items():
+        #     setattr(self, k, v)
 
         # Acquire the latent index dimension.
         use_vae = self.index_vae_metadata["index_vae"]

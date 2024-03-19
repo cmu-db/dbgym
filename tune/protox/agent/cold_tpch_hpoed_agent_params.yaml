@@ -41,7 +41,7 @@
       "embedding_path": "/home/phw2/dbgym_workspace/symlinks/benchmark_tpch-workload_queries_15721_15723_embedding",
       "benchmark_config_path": "/home/phw2/dbgym/tune/protox/default_tpch_benchmark_config.yaml",
       "benchbase_config_path": "/home/phw2/dbgym/tune/protox/default_tpch_benchbase_config.xml",
-      "protox_config_path": "/home/phw2/dbgym/tune/protox/agent/default_protox_config.yaml",
+      "sysknobs_path": "/home/phw2/dbgym/tune/protox/agent/default_sysknobs.yaml",
       "hpoed_agent_params_path": "/home/phw2/dbgym_workspace/symlinks/hpoed_agent_params.yaml",
       "pgdata_snapshot_path": "/home/phw2/dbgym_workspace/symlinks/dbgym_dbms_postgres/data/benchmark_tpch-workload_queries_15721_15723.tgz",
       "agent_params_path": "/home/phw2/dbgym/tune/protox/agent/wolp/default_wolp_params.yaml",

@@ -75,7 +75,7 @@ class TuneTrial(object):
             self.args.agent,
             seed,
             embedding_path=self.args.embedding_path,
-            protox_config_path=self.args.protox_config_path,
+            sysknobs_path=self.args.sysknobs_path,
             benchbase_config_path=self.args.benchbase_config_path,
             benchmark_config_path=self.args.benchmark_config_path,
             workload_path=self.args.workload_path,
