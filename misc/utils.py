@@ -33,7 +33,6 @@ WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
 DEFAULT_SYSKNOBS_RELPATH = PROTOX_AGENT_RELPATH / "default_sysknobs.yaml"
-DEFAULT_WOLP_PARAMS_RELPATH = PROTOX_WOLP_RELPATH / "default_wolp_params.yaml"
 default_benchmark_config_relpath = (
     lambda benchmark_name: PROTOX_RELPATH
     / f"default_{benchmark_name}_benchmark_config.yaml"

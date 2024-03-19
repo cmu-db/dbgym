@@ -20,7 +20,6 @@ from ray.tune.search.basic_variant import BasicVariantGenerator
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_SYSKNOBS_RELPATH,
-    DEFAULT_WOLP_PARAMS_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     conv_inputpath_to_abspath,
@@ -79,12 +78,6 @@ class AgentTrainArgs:
     help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
-    "--agent-params-path",
-    default=DEFAULT_WOLP_PARAMS_RELPATH,
-    type=Path,
-    help=f"The path to the parameters of the agent.",
-)
-@click.option(
     "--seed",
     default=None,
     type=int,
@@ -137,7 +130,6 @@ def train(
     sysknobs_path,
     hpoed_agent_params_path,
     pgdata_snapshot_path,
-    agent_params_path,
     workload_path,
     seed,
     agent,
@@ -185,7 +177,6 @@ def train(
         dbgym_cfg, hpoed_agent_params_path
     )
     pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pgdata_snapshot_path)
-    agent_params_path = conv_inputpath_to_abspath(dbgym_cfg, agent_params_path)
     workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
@@ -198,7 +189,6 @@ def train(
     args.sysknobs_path = sysknobs_path
     args.hpoed_agent_params_path = hpoed_agent_params_path
     args.pgdata_snapshot_path = pgdata_snapshot_path
-    args.agent_params_path = agent_params_path
     args.workload_path = workload_path
     args.seed = seed
     args.agent = agent
@@ -400,7 +390,6 @@ def create_tune_opt_class(dbgym_cfg_param):
             protox_args["pgdata_snapshot_path"] = Path(
                 protox_args["pgdata_snapshot_path"]
             )
-            protox_args["agent_params_path"] = Path(protox_args["agent_params_path"])
             protox_args["workload_path"] = Path(protox_args["workload_path"])
 
             protox_dir = TuneOpt.dbgym_cfg.dbgym_repo_path
@@ -437,7 +426,6 @@ def create_tune_opt_class(dbgym_cfg_param):
 
             # We will now overwrite the config files.
             protox_args["sysknobs_path"] = Path(self.logdir) / "config.yaml"
-            protox_args["agent_params_path"] = Path(self.logdir) / "model_params.yaml"
             protox_args["benchmark_config_path"] = (
                 Path(self.logdir) / f"{benchmark_name}.yaml"
             )

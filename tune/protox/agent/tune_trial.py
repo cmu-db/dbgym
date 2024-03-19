@@ -138,7 +138,6 @@ class TuneTrial(object):
             self.spec,
             seed,
             self.args.agent,
-            self.args.agent_params_path,
         )
         self.agent.set_logger(self.logger)
         self.agent.set_timeout_checker(timeout_checker)
