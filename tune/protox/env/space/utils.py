@@ -1,114 +1,71 @@
 import logging
 import re
-import xml.etree.ElementTree as ET
+import typing
 from distutils import util
+from typing import Any, Optional, Tuple, TypeVar, Union, cast
 
+from gymnasium import spaces
+from gymnasium.spaces import Dict, Space
+from psycopg import Connection
 from psycopg.rows import dict_row
 
-from tune.protox.env import KnobClass, SettingType
-from tune.protox.env.space.knob import CategoricalKnob, Knob, full_knob_name
+from envs.spaces.primitives import KnobClass, SettingType
+from envs.spaces.primitives.knob import CategoricalKnob, Knob, full_knob_name
+from envs.types import KnobMap, KnobSpaceContainer, QueryType, QuerySpaceContainer, QueryMap, QueryTableAccessMap, TableAttrListMap, ServerTableIndexMetadata, ServerIndexMetadata
 
 
-def check_subspace(space, action):
+def check_subspace(space: Union[Dict, spaces.Tuple], action: Any) -> bool:
     if not space.contains(action):
         for i, subspace in enumerate(space.spaces):
             if isinstance(subspace, str):
+                assert isinstance(space, Dict)
                 if not space.spaces[subspace].contains(action[subspace]):
                     logging.error("Subspace %s rejects %s", subspace, action[subspace])
                     return False
-            elif not subspace.contains(action[i]):
+            elif not cast(Space[Any], subspace).contains(action[i]):
                 logging.error("Subspace %s rejects %s", subspace, action[i])
                 return False
     return True
 
 
-# Defines the relevant metrics that we care about from benchbase.
-# <filter_db>: whether to filter with the benchbase database.
-# <per_table>: whether to process the set of valid_keys per table.
-METRICS_SPECIFICATION = {
-    "pg_stat_database": {
-        "filter_db": True,
-        "per_table": False,
-        "valid_keys": [
-            "temp_files",
-            "tup_returned",
-            "xact_commit",
-            "xact_rollback",
-            "conflicts",
-            "blks_hit",
-            "blks_read",
-            "temp_bytes",
-            "deadlocks",
-            "tup_inserted",
-            "tup_fetched",
-            "tup_updated",
-            "tup_deleted",
-        ],
-    },
-    "pg_stat_bgwriter": {
-        "filter_db": False,
-        "per_table": False,
-        "valid_keys": [
-            "checkpoint_write_time",
-            "buffers_backend_fsync",
-            "buffers_clean",
-            "buffers_checkpoint",
-            "checkpoints_req",
-            "checkpoints_timed",
-            "buffers_alloc",
-            "buffers_backend",
-            "maxwritten_clean",
-        ],
-    },
-    "pg_stat_database_conflicts": {
-        "filter_db": True,
-        "per_table": False,
-        "valid_keys": [
-            "confl_deadlock",
-            "confl_lock",
-            "confl_bufferpin",
-            "confl_snapshot",
-        ],
-    },
-    "pg_stat_user_tables": {
-        "filter_db": False,
-        "per_table": True,
-        "valid_keys": [
-            "n_tup_ins",
-            "n_tup_upd",
-            "n_tup_del",
-            "n_ins_since_vacuum",
-            "n_mod_since_analyze",
-            "n_tup_hot_upd",
-            "idx_tup_fetch",
-            "seq_tup_read",
-            "autoanalyze_count",
-            "autovacuum_count",
-            "n_live_tup",
-            "n_dead_tup",
-            "seq_scan",
-            "idx_scan",
-        ],
-    },
-    "pg_statio_user_tables": {
-        "filter_db": False,
-        "per_table": True,
-        "valid_keys": [
-            "heap_blks_hit",
-            "heap_blks_read",
-            "idx_blks_hit",
-            "idx_blks_read",
-            "tidx_blks_hit",
-            "tidx_blks_read",
-            "toast_blks_hit",
-            "toast_blks_read",
-        ],
-    },
-}
+def _parse_access_method(explain_data: dict[str, Any]) -> dict[str, str]:
+    def recurse(data: dict[str, Any]) -> dict[str, str]:
+        sub_data = {}
+        if "Plans" in data:
+            for p in data["Plans"]:
+                sub_data.update(recurse(p))
+        elif "Plan" in data:
+            sub_data.update(recurse(data["Plan"]))
+
+        if "Alias" in data:
+            sub_data[data["Alias"]] = data["Node Type"]
+        return sub_data
+
+    return recurse(explain_data)
+
+
+def parse_access_methods(
+    connection: Connection[Any], queries: QueryMap
+) -> QueryTableAccessMap:
+    q_ams = QueryTableAccessMap({})
+    for qid, qqueries in queries.items():
+        qams = {}
+        for sql_type, query in qqueries:
+            if sql_type != QueryType.SELECT:
+                assert sql_type != QueryType.INS_UPD_DEL
+                connection.execute(query)
+                continue
+
+            explain = "EXPLAIN (FORMAT JSON) " + query
+            explain_data = [r for r in connection.execute(explain)][0][0][0]
+            qams_delta = _parse_access_method(explain_data)
+            qams.update(qams_delta)
+        q_ams[qid] = qams
+    return q_ams
 
 
 # Convert a string time unit to microseconds.
-def _time_unit_to_us(str):
+def _time_unit_to_us(str: str) -> float:
     if str == "d":
         return 1e6 * 60 * 60 * 24
     elif str == "h":
@@ -126,7 +83,7 @@ def _time_unit_to_us(str):
 
 
 # Parse a pg_setting field value.
-def _parse_field(type, value):
+def _parse_field(type: SettingType, value: Any) -> Any:
     if type == SettingType.BOOLEAN:
         return util.strtobool(value)
     elif type == SettingType.BINARY_ENUM:
@@ -164,22 +121,29 @@ def _parse_field(type, value):
         return None
 
 
-def _project_pg_setting(knob: Knob, setting: str):
+def _project_pg_setting(knob: Knob, setting: Any) -> Any:
     # logging.debug(f"Projecting {setting} into knob {knob.knob_name}")
     value = _parse_field(knob.knob_type, setting)
     value = value if knob.knob_unit == 0 else value / knob.knob_unit
     return knob.project_scraped_setting(value)
 
 
-def fetch_server_knobs(connection, tables, knobs, workload=None):
-    knob_targets = {}
+def fetch_server_knobs(
+    connection: Connection[Any],
+    tables: list[str],
+    knobs: KnobMap,
+    queries: QueryMap,
+) -> KnobSpaceContainer:
+    knob_targets = KnobSpaceContainer({})
     with connection.cursor(row_factory=dict_row) as cursor:
         records = cursor.execute("SHOW ALL")
         for record in records:
             setting_name = record["name"]
             if setting_name in knobs:
                 setting_str = record["setting"]
-                value = _project_pg_setting(knobs[setting_name], setting_str)
+                knob = knobs[setting_name]
+                assert isinstance(knob, Knob)
+                value = _project_pg_setting(knob, setting_str)
                 knob_targets[setting_name] = value
 
         for tbl in tables:
@@ -191,10 +155,12 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
             ][0]
             if pgc_record["reloptions"] is not None:
                 for record in pgc_record["reloptions"]:
-                    for key, value in re.findall(r"(\w+)=(\w*)", record):
+                    for key, value in re.findall(r"(\w+)=(\w*)", cast(str, record)):
                         tbl_key = full_knob_name(table=tbl, knob_name=key)
                         if tbl_key in knobs:
-                            value = _project_pg_setting(knobs[tbl_key], value)
+                            knob = knobs[tbl_key]
+                            assert isinstance(knob, Knob)
+                            value = _project_pg_setting(knob, value)
                             knob_targets[tbl_key] = value
             else:
                 for knobname, knob in knobs.items():
@@ -203,6 +169,7 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
                             tbl_key = full_knob_name(
                                 table=tbl, knob_name=knob.knob_name
                             )
+                            assert isinstance(knob, Knob)
                             knob_targets[tbl_key] = _project_pg_setting(knob, 100.0)
 
     q_ams = None
@@ -218,20 +185,18 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
                 assert knob.query_name is not None
                 installed = False
                 if q_ams is None:
-                    q_ams = {}
-                    if workload is not None:
-                        # Get all access methods.
-                        q_ams = workload.parse_all_access_methods(connection)
+                    q_ams = parse_access_methods(connection, queries)
 
                 if knob.query_name in q_ams:
                     alias = knob.knob_name.split("_scanmethod")[0]
                     if alias in q_ams[knob.query_name]:
-                        val = 1 if "Index" in q_ams[knob.query_name][alias] else 0
+                        val = 1. if "Index" in q_ams[knob.query_name][alias] else 0.
                         knob_targets[knobname] = val
                         installed = True
 
                 if not installed:
                     knob_targets[knobname] = 0.0
+                    logging.getLogger(__name__).warn(f"Found missing alias for {knobname}")
             elif knob.knob_type == SettingType.BOOLEAN:
                 knob_targets[knobname] = 1.0
             elif knob.knob_name == "random_page_cost":
@@ -246,9 +211,11 @@ def fetch_server_knobs(connection, tables, knobs, workload=None):
     return knob_targets
 
 
-def fetch_server_indexes(connection, tables):
-    rel_metadata = {t: [] for t in tables}
-    existing_indexes = {}
+def fetch_server_indexes(
+    connection: Connection[Any], tables: list[str]
+) -> typing.Tuple[TableAttrListMap, ServerTableIndexMetadata]:
+    rel_metadata = TableAttrListMap({t: [] for t in tables})
+    existing_indexes = ServerTableIndexMetadata({})
     with connection.cursor(row_factory=dict_row) as cursor:
         records = cursor.execute(
             """
@@ -295,34 +262,16 @@ def fetch_server_indexes(connection, tables):
                     existing_indexes[relname] = {}
 
                 if idxname not in existing_indexes[relname]:
-                    existing_indexes[relname][idxname] = {
-                        "index_type": index_type,
-                        "columns": [],
-                        "include": [],
-                    }
+                    existing_indexes[relname][idxname] = ServerIndexMetadata(
+                        {
+                            "index_type": index_type,
+                            "columns": [],
+                            "include": [],
+                        }
+                    )
 
                 if is_include:
                     existing_indexes[relname][idxname]["include"].append(colname)
                 else:
                     existing_indexes[relname][idxname]["columns"].append(colname)
     return rel_metadata, existing_indexes
-
-
-def overwrite_benchbase_hintset(root, query_name, set_str):
-    ttypes = root.find("transactiontypes")
-    for ttype in ttypes:
-        name = ttype.find("name")
-        if name is None:
-            continue
-
-        if name.text == query_name:
-            hint_set = ttype.find("hintset")
-            if hint_set is None:
-                hint_set = ET.Element("hintset")
-                hint_set.text = set_str
-                ttype.append(hint_set)
-            else:
-                # Append the hint.
-                hint_set.text = hint_set.text + " " + set_str
-
-            break
