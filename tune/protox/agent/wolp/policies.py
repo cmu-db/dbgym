@@ -12,6 +12,7 @@ from tune.protox.agent.buffers import ReplayBufferSamples
 from tune.protox.agent.utils import polyak_update
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.types import HolonAction, NeighborParameters, DEFAULT_NEIGHBOR_PARAMETERS
+from tune.protox.env.space.holon_space import HolonSpace
 
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
