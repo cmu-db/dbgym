@@ -2,7 +2,7 @@ import unittest
 
 import pglast
 
-from tune.protox.env.workload_utils import *
+from tune.protox.env.util.workload_analysis import *
 
 
 class WorkloadUtilsTests(unittest.TestCase):
