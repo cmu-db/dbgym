@@ -9,34 +9,33 @@ import torch
 from torch import nn
 import numpy as np
 import gymnasium as gym
-from typing import Callable, Tuple, Any, Union, IO
+from typing import Callable, Tuple, Any, Union
 
-from envs.logger import Logger
-from envs.utils.reward import RewardUtility
-from envs.utils.postgres import PostgresConn
-from envs.workload import Workload
-from envs.spaces.holon_space import HolonSpace
-from envs.spaces.state.space import StateSpace
-from envs.spaces.state import LSCStructureStateSpace, LSCMetricStateSpace
-from envs.spaces.latent_spaces.latent_knob_space import LatentKnobSpace
-from envs.lsc.lsc import LSC
-from envs.spaces.latent_spaces.lsc_index_space import LSCIndexSpace
-from envs.spaces.latent_spaces.latent_query_space import LatentQuerySpace
-from envs.pg_env import PostgresEnv
-from envs.lsc.lsc_wrapper import LSCWrapper
-from envs.mqo.mqo_wrapper import MQOWrapper
-from envs.target_reset.target_reset_wrapper import TargetResetWrapper
-from agents.common.agent_env import AgentEnv
-from agents.common.utils import parse_noise_type
-from agents.wolp.wolp import Wolp
-from agents.wolp.policies import WolpPolicy
-from agents.common.policies import ContinuousCritic, Actor
+from tune.protox.env.logger import Logger
+from tune.protox.env.utils.reward import RewardUtility
+from tune.protox.env.utils.postgres import PostgresConn
+from tune.protox.env.workload import Workload
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.space.state import LSCStructureStateSpace, LSCMetricStateSpace
+from tune.protox.env.space.latent_spaces.latent_knob_space import LatentKnobSpace
+from tune.protox.env.lsc.lsc import LSC
+from tune.protox.env.space.latent_spaces.lsc_index_space import LSCIndexSpace
+from tune.protox.env.space.latent_spaces.latent_query_space import LatentQuerySpace
+from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
+from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
+from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
+from tune.protox.agent.agent_env import AgentEnv
+from tune.protox.agent.utils import parse_noise_type
+from tune.protox.agent.wolp.wolp import Wolp
+from tune.protox.agent.wolp.policies import WolpPolicy
+from tune.protox.agent.policies import ContinuousCritic, Actor
 from gymnasium.wrappers import NormalizeObservation, NormalizeReward, FlattenObservation # type: ignore
-from agents.common.buffers import ReplayBuffer
-from envs.target_reset.target_reset_wrapper import TargetResetWrapper
-from agents.common.noise import ClampNoise
-from embeddings.train import _create_vae_model, _fetch_vae_parameters_from_workload
-from envs.types import TableAttrAccessSetsMap, ProtoAction
+from tune.protox.agent.buffers import ReplayBuffer
+from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
+from tune.protox.agent.noise import ClampNoise
+from tune.protox.embedding.train import _create_vae_model, _fetch_vae_parameters_from_workload
+from tune.protox.env.types import TableAttrAccessSetsMap, ProtoAction
 
 
 def _parse_activation_fn(act_type: str) -> type[nn.Module]:
