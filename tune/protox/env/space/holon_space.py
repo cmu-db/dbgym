@@ -8,7 +8,7 @@ from gymnasium import spaces
 from psycopg import Connection
 
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.latent_spaces import (
+from tune.protox.env.space.latent_space import (
     LatentIndexSpace,
     LatentKnobSpace,
     LatentQuerySpace,
