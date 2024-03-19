@@ -235,10 +235,3 @@ class TuneTrial(object):
 
         with open(self.spec.dump_path, "wb") as f:
             pickle.dump(pickle_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def setup_agent(dbgym_cfg, env, spec, seed, agent_type, agent_config):
-    if agent_type == "wolp":
-        return setup_wolp_agent(dbgym_cfg, env, spec, seed, agent_config)
-    else:
-        assert False, f"Unsupported agent {agent_type}"
