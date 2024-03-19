@@ -4,8 +4,6 @@ from numpy.typing import NDArray
 import numpy as np
 import torch as th
 
-from tune.protox.agent.type_aliases import ReplayBufferSamples
-
 class ReplayBufferSamples(NamedTuple):
     observations: th.Tensor
     actions: th.Tensor
