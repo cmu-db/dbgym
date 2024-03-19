@@ -4,12 +4,12 @@ import torch
 from pathlib import Path
 from enum import Enum, unique
 
-from tune.protox.env.space.primitives.knob import CategoricalKnob, Knob
+from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 
 
 # https://mypy.readthedocs.io/en/stable/common_issues.html#import-cycles
 if TYPE_CHECKING:
-    from tune.protox.env.space.primitives.index import IndexAction
+    from tune.protox.env.space.primitive.index import IndexAction
 
 
 @unique
