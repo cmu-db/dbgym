@@ -15,9 +15,8 @@ import yaml
 from misc.utils import open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.trainer import StratifiedRandomSampler
-from tune.protox.embedding.train_all import fetch_index_parameters, load_input_data
-from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
-from tune.protox.env.space.index_policy import IndexRepr
+from tune.protox.embedding.train_all import fetch_index_parameters, load_input_data, create_vae_model
+from tune.protox.embedding.vae import VAELoss, gen_vae_collate
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 
 STATS_FNAME = "stats.txt"
@@ -340,7 +339,7 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
         agent_type="wolp",
         tables=tables,
         max_num_columns=0,
-        index_repr=IndexRepr.ONE_HOT_DETERMINISTIC.name,
+        # index_repr=IndexRepr.ONE_HOT_DETERMINISTIC.name, TODO(phw2)
         seed=np.random.randint(1, 1e10),
         latent_dim=config["latent_dim"],
         index_vae_model=vae,

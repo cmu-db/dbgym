@@ -35,14 +35,14 @@ from tune.protox.embedding.utils import (
     f_unpack_dict,
     parse_hyperopt_config,
 )
-from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate, VAE
+from tune.protox.embedding.vae import VAELoss, gen_vae_collate, VAE
 from tune.protox.env.workload import Workload
 from tune.protox.env.types import TableAttrAccessSetsMap, TableColTuple, TableAttrListMap
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
 
 
-def _fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
+def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
     att_usage = w.column_usages()
     max_indexable = w.max_indexable()
     max_cat_features = max(ntables, max_indexable + 1) # +1 for the "null" per attribute list.
@@ -70,7 +70,7 @@ def fetch_index_parameters(data: dict[str, Any]) -> Tuple[int, int, TableAttrLis
         deterministic_policy = True
     )
 
-    max_attrs, max_cat_features = _fetch_vae_parameters_from_workload(workload, len(tables))
+    max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(tables))
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 

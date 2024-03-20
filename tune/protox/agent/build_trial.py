@@ -34,7 +34,7 @@ from gymnasium.wrappers import NormalizeObservation, NormalizeReward, FlattenObs
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 from tune.protox.agent.noise import ClampNoise
-from tune.protox.embedding.train import _create_vae_model, _fetch_vae_parameters_from_workload
+from tune.protox.embedding.train_all import create_vae_model , fetch_vae_parameters_from_workload
 from tune.protox.env.types import TableAttrAccessSetsMap, ProtoAction
 
 
@@ -209,8 +209,8 @@ def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, lo
         index_output_transform = lambda x: torch.nn.Sigmoid()(x) * vae_config["output_scale"]
         index_noise_scale = _gen_noise_scale(vae_config, hpo_config)
 
-        max_attrs, max_cat_features = _fetch_vae_parameters_from_workload(workload, len(hpo_config["benchmark_config"]["tables"]))
-        vae = _create_vae_model(vae_config, max_attrs, max_cat_features)
+        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(hpo_config["benchmark_config"]["tables"]))
+        vae = create_vae_model(vae_config, max_attrs, max_cat_features)
         vae.load_state_dict(torch.load(hpo_config["embeddings"]))
 
     lsc = LSC(
