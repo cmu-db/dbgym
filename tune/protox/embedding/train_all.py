@@ -29,7 +29,7 @@ from ray.tune.search.hyperopt import HyperOptSearch
 
 from misc.utils import open_and_save, restart_ray, DBGymConfig
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
-from tune.protox.embedding.train import EmbeddingTrainGenericArgs, EmbeddingTrainAllArgs
+from tune.protox.embedding.train_args import EmbeddingTrainGenericArgs, EmbeddingTrainAllArgs
 from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
 from tune.protox.embedding.utils import (
     f_unpack_dict,
