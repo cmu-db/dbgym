@@ -4,13 +4,19 @@ import os
 import random
 import sys
 import time
+from typing import Any, Union, Tuple, Optional, Callable
+from typing_extensions import ParamSpec
 from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+from sklearn.model_selection import train_test_split # type: ignore
+import pandas as pd
+import gc
 import ray
 import torch
 import torch.nn as nn
+from torch.utils.data import TensorDataset
 import tqdm
 import yaml
 from pytorch_metric_learning.utils import logging_presets
@@ -30,7 +36,124 @@ from tune.protox.embedding.utils import (
     load_input_data,
     parse_hyperopt_config,
 )
-from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
+from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate, VAE
+from tune.protox.env.workload import Workload
+from tune.protox.env.types import TableAttrAccessSetsMap, TableColTuple, TableAttrListMap
+from tune.protox.env.space.primitive_space import IndexSpace
+from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
+
+
+def _fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
+    att_usage = w.column_usages()
+    max_indexable = w.max_indexable()
+    max_cat_features = max(ntables, max_indexable + 1) # +1 for the "null" per attribute list.
+    max_attrs = max_indexable + 1 # +1 to account for the table index.
+    return max_attrs, max_cat_features
+
+
+def fetch_index_parameters(data: dict[str, Any]) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
+    tables = data["mythril"]["tables"]
+    attributes = data["mythril"]["attributes"]
+    query_spec = data["mythril"]["query_spec"]
+    workload = Workload(tables, attributes, query_spec, pid=None)
+    att_usage = workload.column_usages()
+
+    space = IndexSpace(
+        tables,
+        max_num_columns=data["mythril"]["max_num_columns"],
+        max_indexable_attributes=workload.max_indexable(),
+        seed=0,
+        rel_metadata = att_usage,
+        attributes_overwrite=att_usage,
+        tbl_include_subsets = TableAttrAccessSetsMap({}),
+        index_space_aux_type = False,
+        index_space_aux_include = False,
+        deterministic_policy = True
+    )
+
+    max_attrs, max_cat_features = _fetch_vae_parameters_from_workload(workload, len(tables))
+    return max_attrs, max_cat_features, att_usage, space.class_mapping
+
+
+def load_input_data(input_file: Union[str, Path], train_size: int, max_attrs: int, require_cost: bool, seed: int) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
+    # Load the input data.
+    columns = []
+    columns += ["tbl_index", "idx_class"]
+    columns += [f"col{c}" for c in range(max_attrs - 1)]
+    if require_cost:
+        columns += COST_COLUMNS
+
+    df = pd.read_parquet(input_file, columns=columns)
+    num_classes: int= df.idx_class.max() + 1
+
+    # Get the y's and the x's.
+    targets = (COST_COLUMNS + ["idx_class"]) if require_cost else ["idx_class"]
+    y = df[targets].values
+    df.drop(columns=COST_COLUMNS + ["idx_class"], inplace=True, errors="ignore")
+    x = df.values
+    del df
+    gc.collect()
+    gc.collect()
+
+    if train_size == 1:
+        train_dataset = TensorDataset(torch.Tensor(x), torch.Tensor(y))
+        del x
+        gc.collect()
+        gc.collect()
+        return train_dataset, y, y[:, -1], None, num_classes
+
+    # Perform the train test split.
+    train_x, val_x, train_y, val_y = train_test_split(
+        x,
+        y,
+        test_size=1 - train_size,
+        train_size=train_size,
+        random_state=seed,
+        shuffle=True,
+        stratify=y[:, -1],
+    )
+    del x
+    del y
+    gc.collect()
+    gc.collect()
+
+    # Form the tensor datasets.
+    train_dataset = TensorDataset(torch.Tensor(train_x), torch.Tensor(train_y))
+    val_dataset = TensorDataset(torch.Tensor(val_x), torch.Tensor(val_y))
+    del val_x
+    del val_y
+    del train_x
+    gc.collect()
+    gc.collect()
+    logging.info("Train Dataset Size: %s", len(train_dataset))
+    return train_dataset, train_y, train_y[:, -1], val_dataset, num_classes
+
+
+def create_vae_model(config: dict[str, Any], max_attrs: int, max_cat_features: int) -> VAE:
+    cat_input = max_attrs * max_cat_features
+
+    assert config["act"] in ["relu", "mish"]
+    assert config["mean_output_act"] in ["tanh_squash", "sigmoid"]
+
+    mean_output_act = {
+        "sigmoid": nn.Sigmoid,
+    }[config["mean_output_act"]]
+
+    torch.set_float32_matmul_precision("high") # type: ignore
+    model = VAE(
+        max_categorical=max_cat_features,
+        input_dim=cat_input,
+        hidden_sizes=list(config["hidden_sizes"]),
+        latent_dim=config["latent_dim"],
+        act=nn.ReLU if config["act"] == "relu" else nn.Mish,
+        bias_init=config["bias_init"],
+        weight_init=config["weight_init"],
+        weight_uniform=config["weight_uniform"],
+        mean_output_act=mean_output_act,
+        output_scale=config.get("output_scale", 1.0),
+    )
+
+    return model
 
 
 def train_all_embeddings(dbgym_cfg, generic_args, train_args):
@@ -318,8 +441,13 @@ def _build_trainer(
     )
 
 
-def _construct_epoch_end(val_dl, config, hooks, model_folder):
-    def epoch_end(trainer, *args, **kwargs):
+P = ParamSpec("P")
+def _construct_epoch_end(val_dl: torch.utils.data.DataLoader[Any], config: dict[str, Any], hooks: Any, model_folder: Union[str, Path]) -> Callable[P, Optional[dict[str, Any]]]:
+    def epoch_end(*args: P.args, **kwargs: P.kwargs) -> Optional[dict[str, Any]]:
+        trainer = kwargs.get("trainer", None)
+        assert trainer
+        assert isinstance(trainer, VAETrainer)
+
         save_interval = config.get("save_every", 1)
         if (trainer.epoch - 1) % save_interval == 0:
             # Save.
@@ -327,8 +455,8 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
             mf.mkdir(parents=True, exist_ok=True)
             hooks.save_models(trainer, str(mf), str(trainer.epoch))
 
-        force = kwargs.get("force", False)
-        suppress = kwargs.get("suppress", False)
+        force = bool(kwargs.get("force", False))
+        suppress = bool(kwargs.get("suppress", False))
 
         if force:
             total_metric_loss = []
@@ -338,9 +466,9 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
                 trainer.switch_eval()
 
                 pbar = None if suppress else tqdm.tqdm(total=len(val_dl))
-                for i, curr_batch in enumerate(val_dl):
+                for i, curr_batch in enumerate(val_dl): # type: ignore
                     # Get the losses.
-                    trainer.calculate_loss(curr_batch)
+                    trainer.calculate_loss(curr_batch) # type: ignore
                     if isinstance(trainer.losses["metric_loss"], torch.Tensor):
                         total_metric_loss.append(trainer.losses["metric_loss"].item())
                     else:
@@ -364,5 +492,7 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
                 "total_avg_loss": np.mean(total_metric_loss)
                 + np.mean(total_recon_loss),
             }
+
+        return None
 
     return epoch_end
