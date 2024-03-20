@@ -9,7 +9,7 @@ from tune.protox.env.space.primitive_space import IndexSpace
 
 class WorkloadTests(unittest.TestCase):
     @staticmethod
-    def load(config_file):
+    def load(config_file: str, workload_path: Path):
         with open(config_file, "r") as f:
             benchmark_config = yaml.safe_load(f)
             benchmark_key = [k for k in benchmark_config.keys()][0]
@@ -21,7 +21,7 @@ class WorkloadTests(unittest.TestCase):
             tables=benchmark_config["tables"],
             attributes=benchmark_config["attributes"],
             query_spec=benchmark_config["query_spec"],
-            workload_path=Path("tune/protox/test/unittest_tpch_dir"),
+            workload_path=workload_path,
             pid=None,
             workload_timeout=0,
             workload_timeout_penalty=1.,
@@ -55,7 +55,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_tpch.yaml")
+        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_tpch.yaml", Path("tune/protox/test/unittest_tpch_dir"))
         self.assertEqual(i.class_mapping, ref)
 
     def test_job(self):
@@ -66,7 +66,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_job_full.yaml")
+        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_job_full.yaml", Path("tune/protox/test/unittest_job_full_dir"))
         self.assertEqual(i.class_mapping, ref)
 
     def test_dsb(self):
@@ -77,7 +77,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_dsb.yaml")
+        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_dsb.yaml", Path("tune/protox/test/unittest_dsb_dir"))
         self.diff_classmapping(ref, i.class_mapping)
 
     def test_tpcc(self):
@@ -88,7 +88,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_tpcc.yaml")
+        w, i = WorkloadTests.load("tune/protox/test/unittest_benchmark_configs/unittest_tpcc.yaml", Path("tune/protox/test/unittest_tpcc_dir"))
         self.assertEqual(i.class_mapping, ref)
 
 

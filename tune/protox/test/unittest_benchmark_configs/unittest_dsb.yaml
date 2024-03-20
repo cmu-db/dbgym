@@ -2,10 +2,7 @@ dsb:
   query_spec:
     benchbase: False
     oltp_workload: False
-    query_directory: "/home/wz2/mythril/queries/dsb"
-    query_order: "/home/wz2/mythril/queries/dsb/d_order.txt"
     tbl_include_subsets_prune: True
-
     tbl_fold_subsets: True
     tbl_fold_delta: 1
     tbl_fold_iterations: 1

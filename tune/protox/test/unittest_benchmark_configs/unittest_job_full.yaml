@@ -1,9 +1,7 @@
 job:
   query_spec:
     benchbase: False
-    oltp_workload: false
-    query_directory: "/home/wz2/mythril/queries/job_full"
-    query_order: "/home/wz2/mythril/queries/job_full/order.txt"
+    oltp_workload: False
     tbl_include_subsets_prune: True
     tbl_fold_subsets: False
     tbl_fold_delta: 1

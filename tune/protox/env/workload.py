@@ -242,8 +242,9 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        workload_order_file = self.workload_path / "order.txt"
-        with self._open_for_reading(workload_order_file, "r") as f:
+        order_or_txn_fname = "txn.txt" if self.oltp_workload else "order.txt"
+        workload_order_or_txn_fpath = self.workload_path / order_or_txn_fname
+        with self._open_for_reading(workload_order_or_txn_fpath, "r") as f:
             lines = f.read().splitlines()
             sqls = [
                 (
