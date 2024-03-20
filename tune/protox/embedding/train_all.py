@@ -170,7 +170,7 @@ def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGen
     restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
 
-    scheduler = FIFOScheduler()
+    scheduler = FIFOScheduler() # type: ignore
     # Search.
     search = HyperOptSearch(
         metric="loss",
@@ -179,10 +179,10 @@ def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGen
         n_initial_points=20,
         space=space,
     )
-    search = ConcurrencyLimiter(search, max_concurrent=train_all_args.train_max_concurrent)
+    limiter = ConcurrencyLimiter(search, max_concurrent=train_all_args.train_max_concurrent)
     tune_config = TuneConfig(
         scheduler=scheduler,
-        search_alg=search,
+        search_alg=limiter,
         num_samples=train_all_args.num_samples,
         max_concurrent_trials=train_all_args.train_max_concurrent,
         chdir_to_trial_dir=True,
