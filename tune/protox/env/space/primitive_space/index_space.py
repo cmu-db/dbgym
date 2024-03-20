@@ -1,11 +1,11 @@
-from typing import Any, Optional, List
+from typing import Any, List, Optional
 
 import gymnasium as gym
 import torch
 from gymnasium import spaces
 
-from tune.protox.env.space.primitive_space.index_policy import IndexPolicy
 from tune.protox.env.space.primitive.index import IndexAction
+from tune.protox.env.space.primitive_space.index_policy import IndexPolicy
 from tune.protox.env.types import (
     IndexSpaceRawSample,
     TableAttrAccessSetsMap,
@@ -93,19 +93,21 @@ class IndexSpace(spaces.Tuple):
         else:
             action[len(self.tables) :] = 1.0 / (self.max_num_columns + 1)
 
-        return self.policy.sample_dist(action, self.np_random, sample_num_columns=True, break_early=False)
+        return self.policy.sample_dist(
+            action, self.np_random, sample_num_columns=True, break_early=False
+        )
 
     def null_action(self) -> IndexSpaceRawSample:
         action = torch.zeros(gym.spaces.utils.flatdim(self))
         if self.index_space_aux_type:
             action = action[2:]
         if self.index_space_aux_include:
-            action = action[:-self.max_inc_columns]
+            action = action[: -self.max_inc_columns]
 
-        action[0] = 1.
+        action[0] = 1.0
         return self.policy.sample_dist(action, self.np_random, sample_num_columns=False)
 
-    def to_jsonable(self, sample_n) -> List[str]: # type: ignore
+    def to_jsonable(self, sample_n) -> List[str]:  # type: ignore
         # Emit the representation of an index.
         ias = [self.to_action(sample) for sample in sample_n]
         return [ia.__repr__() for ia in ias]

@@ -1,4 +1,5 @@
 from typing import Any, Callable, Optional
+
 import psycopg
 import torch
 
@@ -87,7 +88,9 @@ class LSCIndexSpace(LatentIndexSpace):
 
         if latent.shape[-1] != self.latent_dim():
             so = 2 if self.index_space_aux_type else 0
-            latent[:, so:so+self.latent_dim()] = self.lsc.apply_bias(ProtoAction(latent[:, so:so + self.latent_dim()]))
+            latent[:, so : so + self.latent_dim()] = self.lsc.apply_bias(
+                ProtoAction(latent[:, so : so + self.latent_dim()])
+            )
             return latent
         else:
             return self.lsc.apply_bias(latent)

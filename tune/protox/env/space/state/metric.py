@@ -94,6 +94,7 @@ METRICS_SPECIFICATION = {
     },
 }
 
+
 # A metrics-based state returns the physical metrics (i.e., consequences) of running
 # a particular workload in a given configuration. This serves to represent the
 # assumption that we should be indifferent/invariant to <workload, configuration>

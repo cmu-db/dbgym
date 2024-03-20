@@ -1,5 +1,6 @@
 import copy
-from typing import Any, Sequence, List, cast
+from typing import Any, List, Sequence, cast
+
 import numpy as np
 import torch
 from gymnasium import spaces
@@ -140,7 +141,7 @@ class IndexPolicy:
             use_columns = np_random.integers(1, num_columns + 1)
 
         # Prune off.
-        action = action[self.num_tables:]
+        action = action[self.num_tables :]
 
         assert len(action.shape) == 1
         action = action.clone()
@@ -184,14 +185,19 @@ class IndexPolicy:
         ).astype(int)
         if self.index_space_aux_type and self.index_space_aux_include:
             return IndexSpaceRawSample(
-                (0, tbl_index, *np_col_indexes,
-                    np.array([0] * self.max_num_columns, dtype=np.float32)
+                (
+                    0,
+                    tbl_index,
+                    *np_col_indexes,
+                    np.array([0] * self.max_num_columns, dtype=np.float32),
                 )
             )
         elif self.index_space_aux_include:
             return IndexSpaceRawSample(
-                (tbl_index, *np_col_indexes,
-                    np.array([0] * self.max_num_columns, dtype=np.float32)
+                (
+                    tbl_index,
+                    *np_col_indexes,
+                    np.array([0] * self.max_num_columns, dtype=np.float32),
                 )
             )
         elif self.index_space_aux_type:

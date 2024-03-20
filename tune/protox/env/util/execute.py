@@ -9,8 +9,13 @@ from psycopg.errors import QueryCanceled
 from tune.protox.env.logger import Logger
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.types import QueryType
-from tune.protox.env.types import QueryRun, KnobSpaceContainer, BestQueryRun, KnobSpaceAction
+from tune.protox.env.types import (
+    BestQueryRun,
+    KnobSpaceAction,
+    KnobSpaceContainer,
+    QueryRun,
+    QueryType,
+)
 
 
 def _force_statement_timeout(
@@ -118,7 +123,8 @@ def execute_variations(
             + " ".join(
                 [
                     knob.resolve_per_query_knob(
-                        value, all_knobs=sysknobs if sysknobs else KnobSpaceContainer({})
+                        value,
+                        all_knobs=sysknobs if sysknobs else KnobSpaceContainer({}),
                     )
                     for knob, value in qr.qknobs.items()
                 ]

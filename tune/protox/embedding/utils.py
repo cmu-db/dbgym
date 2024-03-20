@@ -1,5 +1,6 @@
 from typing import Any
-from hyperopt import hp # type: ignore
+
+from hyperopt import hp  # type: ignore
 
 
 def f_unpack_dict(dct: dict[str, Any]) -> dict[str, Any]:
@@ -19,7 +20,7 @@ def f_unpack_dict(dct: dict[str, Any]) -> dict[str, Any]:
     : unpacked dictionary
     """
     res: dict[str, Any] = {}
-    for (k, v) in dct.items():
+    for k, v in dct.items():
         if isinstance(v, dict):
             res = {**res, k: v, **f_unpack_dict(v)}
         else:

@@ -1,4 +1,5 @@
 from typing import Any, Optional, Sequence, Union
+
 import gymnasium as gym
 import numpy as np
 
@@ -100,9 +101,11 @@ class LatentCategoricalKnob(CategoricalKnob):
     def sample_weights(self, weights: Optional[Sequence[float]] = None) -> Any:
         return np.random.choice(
             [i for i in range(self.num_elems)],
-            p=(weights / np.sum(weights))
-            if weights is not None and np.sum(weights) > 0
-            else None,
+            p=(
+                (weights / np.sum(weights))
+                if weights is not None and np.sum(weights) > 0
+                else None
+            ),
         )
 
 

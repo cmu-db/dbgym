@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Any, Mapping, Optional, Union, cast, Dict
+from typing import Any, Dict, Mapping, Optional, Union, cast
 
-import torch as th
+import gymnasium as gym
 import numpy as np
 import psycopg
-import gymnasium as gym
+import torch as th
 from gymnasium import spaces
 
 from tune.protox.env.space.holon_space import HolonSpace
@@ -16,7 +16,7 @@ from tune.protox.env.space.latent_space import (
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import check_subspace
-from tune.protox.env.types import KnobSpaceAction, IndexSpaceRawSample, QuerySpaceAction
+from tune.protox.env.types import IndexSpaceRawSample, KnobSpaceAction, QuerySpaceAction
 
 
 class StructureStateSpace(StateSpace, spaces.Dict):
@@ -48,10 +48,14 @@ class StructureStateSpace(StateSpace, spaces.Dict):
         assert isinstance(self.action_space, HolonSpace)
         splits = self.action_space.split_action(prev_state_container)
         knob_states = [v[1] for v in splits if isinstance(v[0], LatentKnobSpace)]
-        knob_state = cast(Optional[KnobSpaceAction], None if len(knob_states) == 0 else knob_states[0])
+        knob_state = cast(
+            Optional[KnobSpaceAction], None if len(knob_states) == 0 else knob_states[0]
+        )
 
         ql_states = [v[1] for v in splits if isinstance(v[0], LatentQuerySpace)]
-        ql_state = cast(Optional[QuerySpaceAction], None if len(ql_states) == 0 else ql_states[0])
+        ql_state = cast(
+            Optional[QuerySpaceAction], None if len(ql_states) == 0 else ql_states[0]
+        )
 
         if knob_state is not None:
             knobs = self.action_space.get_knob_space()

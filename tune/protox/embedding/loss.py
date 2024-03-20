@@ -1,9 +1,10 @@
 import math
+from typing import Any, Callable, Optional, Tuple, Union, cast
+
 import torch
 import torch.nn as nn
-from pytorch_metric_learning import losses # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f # type: ignore
-from typing import Union, Callable, Tuple, Any, cast, Optional
+from pytorch_metric_learning import losses  # type: ignore
+from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
 
 COST_COLUMNS = [
     "quant_mult_cost_improvement",
@@ -20,8 +21,14 @@ def get_loss(distance_fn: str) -> nn.Module:
         assert False
 
 
-def get_bias_fn(config: dict[str, Any]) -> Callable[[torch.Tensor, torch.Tensor], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]]:
-    def bias_fn(data: torch.Tensor, labels: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+def get_bias_fn(
+    config: dict[str, Any]
+) -> Callable[
+    [torch.Tensor, torch.Tensor], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+]:
+    def bias_fn(
+        data: torch.Tensor, labels: torch.Tensor
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         red_index = COST_COLUMNS.index(config["cost_reduction_type"])
         distance_scale = config["distance_scale"]
         if distance_scale == "auto":
@@ -52,14 +59,24 @@ def get_bias_fn(config: dict[str, Any]) -> Callable[[torch.Tensor, torch.Tensor]
                 top_clamp,
             )
         else:
-            return cast(torch.Tensor, perf_degrees * (bias_separation + addtl_bias_separation))
+            return cast(
+                torch.Tensor, perf_degrees * (bias_separation + addtl_bias_separation)
+            )
 
     return bias_fn
 
 
 def _distance_cost(
-        distance_fn: str, distance_scale: str, reduction_type: str, preds: torch.Tensor, targets: torch.Tensor,
-        bias: Callable[[torch.Tensor, torch.Tensor], Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]], output_scale: float
+    distance_fn: str,
+    distance_scale: str,
+    reduction_type: str,
+    preds: torch.Tensor,
+    targets: torch.Tensor,
+    bias: Callable[
+        [torch.Tensor, torch.Tensor],
+        Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor],
+    ],
+    output_scale: float,
 ) -> Any:
     bias_vals = bias(preds, targets)
     assert isinstance(bias_vals, torch.Tensor)
@@ -100,20 +117,27 @@ def _distance_cost(
 
         # How far away from the "boundary" that we are...
         dists = torch.abs(preds_dist - target_loc)
-        losses = torch.clamp(dists - tmargin, min=0.)
+        losses = torch.clamp(dists - tmargin, min=0.0)
 
     # Reduce to a per-row sum loss term.
     losses = losses.sum(dim=1)
     return losses
 
 
-class CostLoss(losses.BaseMetricLossFunction): # type: ignore
+class CostLoss(losses.BaseMetricLossFunction):  # type: ignore
     def __init__(self, metric_loss_md: dict[str, Any], *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.spec = metric_loss_md
         self.bias_fn = get_bias_fn(self.spec)
 
-    def compute_loss(self, preds: torch.Tensor, unused0: Any, unused1: Any, data: torch.Tensor, *args: Any) -> dict[str, Any]:
+    def compute_loss(
+        self,
+        preds: torch.Tensor,
+        unused0: Any,
+        unused1: Any,
+        data: torch.Tensor,
+        *args: Any
+    ) -> dict[str, Any]:
         losses = _distance_cost(
             self.spec["distance_fn"],
             self.spec["distance_scale"],
@@ -136,7 +160,9 @@ class CostLoss(losses.BaseMetricLossFunction): # type: ignore
         self,
         embeddings: torch.Tensor,
         labels: torch.Tensor,
-        indices_tuple:Optional[Any]=None, ref_emb:Optional[Any]=None, ref_labels:Optional[Any]=None
+        indices_tuple: Optional[Any] = None,
+        ref_emb: Optional[Any] = None,
+        ref_labels: Optional[Any] = None,
     ) -> Any:
         """
         Args:

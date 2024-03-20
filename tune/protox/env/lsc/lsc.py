@@ -1,4 +1,5 @@
 from typing import Any, Optional, TypeVar, cast
+
 import numpy as np
 import torch
 
@@ -58,7 +59,9 @@ class LSC(object):
             self.logger.get_logger(__name__).info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(action.shape, self.vae_configuration["latent_dim"])
+        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(
+            action.shape, self.vae_configuration["latent_dim"]
+        )
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]

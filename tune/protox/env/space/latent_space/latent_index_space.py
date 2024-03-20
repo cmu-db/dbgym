@@ -1,4 +1,5 @@
 from typing import Any, Callable, Optional, Tuple
+
 import numpy as np
 import psycopg
 import torch
@@ -6,19 +7,19 @@ from numpy.typing import NDArray
 
 from tune.protox.embedding.vae import VAE
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.primitive.index import IndexAction
+from tune.protox.env.space.primitive_space import IndexSpace
+from tune.protox.env.space.utils import check_subspace, fetch_server_indexes
 from tune.protox.env.types import (
     DEFAULT_NEIGHBOR_PARAMETERS,
+    IndexSpaceContainer,
     IndexSpaceRawSample,
     NeighborParameters,
     ProtoAction,
     QueryMap,
     TableAttrAccessSetsMap,
     TableAttrListMap,
-    IndexSpaceContainer,
 )
-from tune.protox.env.space.utils import check_subspace, fetch_server_indexes
 
 
 class LatentIndexSpace(IndexSpace):
@@ -106,7 +107,7 @@ class LatentIndexSpace(IndexSpace):
             # Yoink only the index components that we care about.
             distort = [l for l in range(0, len(self.tables))]
             [
-                distort.extend([b + i for i in range(0, self.max_num_columns + 1)]) # type: ignore
+                distort.extend([b + i for i in range(0, self.max_num_columns + 1)])  # type: ignore
                 for b in range(len(self.tables), decode_act.shape[1], len(self.tables))
             ]
 
@@ -118,7 +119,9 @@ class LatentIndexSpace(IndexSpace):
         assert isinstance(env_act, list)
         if self.index_space_aux_include:
             # Straighten out the list.
-            th_env_act = torch.as_tensor([(e[:-1]) + tuple(e[-1]) for e in env_act]).reshape(len(env_act), -1)
+            th_env_act = torch.as_tensor(
+                [(e[:-1]) + tuple(e[-1]) for e in env_act]
+            ).reshape(len(env_act), -1)
         else:
             th_env_act = torch.as_tensor(env_act).reshape(len(env_act), -1)
 
@@ -132,8 +135,8 @@ class LatentIndexSpace(IndexSpace):
             th_env_act = th_env_act[:, 1:]
 
         if self.index_space_aux_include:
-            include_col = th_env_act[:, -self.max_inc_columns:].float()
-            th_env_act = th_env_act[:, :-self.max_inc_columns]
+            include_col = th_env_act[:, -self.max_inc_columns :].float()
+            th_env_act = th_env_act[:, : -self.max_inc_columns]
 
         nets = self.vae.get_collate()(th_env_act).float()
 

@@ -86,10 +86,10 @@ class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
         if name in all_attributes and already_found:
             # this env's attribute is being hidden because of a higher env.
             shadowed_wrapper_class = f"{type(self).__module__}.{type(self).__name__}"
-        #elif name in all_attributes and not already_found:
+        # elif name in all_attributes and not already_found:
         #    # we have found the first reference to the attribute. Now check for duplicates.
         #    shadowed_wrapper_class = self.env.getattr_depth_check(name, True)
-        #else:
+        # else:
         #    # this wrapper does not have the attribute. Keep searching.
         #    shadowed_wrapper_class = self.env.getattr_depth_check(name, already_found)
 

@@ -10,5 +10,6 @@ from tune.protox.embedding.train import train
 def embedding_group(dbgym_cfg: DBGymConfig):
     dbgym_cfg.append_group("embedding")
 
+
 embedding_group.add_command(train)
 embedding_group.add_command(datagen)

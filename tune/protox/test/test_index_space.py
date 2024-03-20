@@ -1,15 +1,21 @@
-import numpy as np
-import yaml
 import unittest
 from pathlib import Path
 
-from tune.protox.env.workload import Workload
+import numpy as np
+import yaml
+
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace
+from tune.protox.env.workload import Workload
+
 
 class IndexSpaceTests(unittest.TestCase):
     @staticmethod
-    def load(config_path=Path("tune/protox/test/unittest_tpch.yaml"), aux_type=True, aux_include=True):
+    def load(
+        config_path=Path("tune/protox/test/unittest_tpch.yaml"),
+        aux_type=True,
+        aux_include=True,
+    ):
         with open(config_path, "r") as f:
             benchmark_config = yaml.safe_load(f)
             benchmark_key = [k for k in benchmark_config.keys()][0]
@@ -24,7 +30,7 @@ class IndexSpaceTests(unittest.TestCase):
             workload_path=Path("tune/protox/test/unittest_tpch_dir"),
             pid=None,
             workload_timeout=0,
-            workload_timeout_penalty=1.,
+            workload_timeout_penalty=1.0,
             logger=None,
         )
 
@@ -41,7 +47,6 @@ class IndexSpaceTests(unittest.TestCase):
             deterministic_policy=True,
         )
         return w, i
-
 
     def test_null_action(self):
         w, i = IndexSpaceTests.load()

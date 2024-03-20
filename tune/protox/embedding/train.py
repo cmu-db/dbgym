@@ -25,7 +25,12 @@ from tune.protox.embedding.analyze import (
 )
 from tune.protox.embedding.select import select_best_embeddings
 from tune.protox.embedding.train_all import train_all_embeddings
-from tune.protox.embedding.train_args import EmbeddingTrainGenericArgs, EmbeddingTrainAllArgs, EmbeddingAnalyzeArgs, EmbeddingSelectArgs
+from tune.protox.embedding.train_args import (
+    EmbeddingAnalyzeArgs,
+    EmbeddingSelectArgs,
+    EmbeddingTrainAllArgs,
+    EmbeddingTrainGenericArgs,
+)
 
 
 # click setup

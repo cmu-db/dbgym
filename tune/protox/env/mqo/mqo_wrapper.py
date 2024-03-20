@@ -1,9 +1,9 @@
-import numpy as np
-import json
 import copy
+import json
 from typing import Any, Optional, Tuple, Union
 
 import gymnasium as gym
+import numpy as np
 import torch
 
 from tune.protox.env.logger import Logger
@@ -14,13 +14,13 @@ from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import parse_access_methods
 from tune.protox.env.types import (
-    HolonAction,
     BestQueryRun,
-    QuerySpaceKnobAction,
+    EnvInfoDict,
+    HolonAction,
     KnobSpaceAction,
     KnobSpaceContainer,
+    QuerySpaceKnobAction,
     QueryTableAccessMap,
-    EnvInfoDict,
 )
 
 
@@ -119,9 +119,9 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         env: gym.Env[Any, Any],
         logger: Optional[Logger],
     ):
-        assert isinstance(env, PostgresEnv) or isinstance(env.unwrapped, PostgresEnv), print(
-            "MQOPostgresEnv must be directly above PostgresEnv"
-        )
+        assert isinstance(env, PostgresEnv) or isinstance(
+            env.unwrapped, PostgresEnv
+        ), print("MQOPostgresEnv must be directly above PostgresEnv")
         super().__init__(env)
 
         self.workload_eval_mode = workload_eval_mode
@@ -145,14 +145,18 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         if query_metric_data is not None:
             for q, data in query_metric_data.items():
                 if q not in self.best_observed:
-                    self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                    self.best_observed[q] = BestQueryRun(
+                        data.query_run, data.runtime, data.timeout, None, None
+                    )
                 elif not data.timeout:
                     qobs = self.best_observed[q]
                     assert qobs.runtime and data.runtime
                     if data.runtime < qobs.runtime:
-                        self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                        self.best_observed[q] = BestQueryRun(
+                            data.query_run, data.runtime, data.timeout, None, None
+                        )
 
-    def step( # type: ignore
+    def step(  # type: ignore
         self,
         action: HolonAction,
     ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
@@ -210,7 +214,10 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 (
                     "PerQueryInverse",
                     self.action_space.replace_query(
-                        action, QuerySpaceKnobAction({k: k.invert(v) for k, v in extract_q_knobs.items()})
+                        action,
+                        QuerySpaceKnobAction(
+                            {k: k.invert(v) for k, v in extract_q_knobs.items()}
+                        ),
                     ),
                 )
             )
@@ -235,10 +242,12 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                     "TopEnum",
                     self.action_space.replace_query(
                         action,
-                        QuerySpaceKnobAction({
-                            k: transmute(k, v, top=True)
-                            for k, v in extract_q_knobs.items()
-                        }),
+                        QuerySpaceKnobAction(
+                            {
+                                k: transmute(k, v, top=True)
+                                for k, v in extract_q_knobs.items()
+                            }
+                        ),
                     ),
                 )
             )
@@ -248,10 +257,12 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                     "BottomEnum",
                     self.action_space.replace_query(
                         action,
-                        QuerySpaceKnobAction({
-                            k: transmute(k, v, top=False)
-                            for k, v in extract_q_knobs.items()
-                        }),
+                        QuerySpaceKnobAction(
+                            {
+                                k: transmute(k, v, top=False)
+                                for k, v in extract_q_knobs.items()
+                            }
+                        ),
                     ),
                 )
             )
@@ -273,13 +284,18 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
         return self.unwrapped.step_post_execute(success, action, info)
 
-    def reset(self, *args: Any, **kwargs: Any) -> Tuple[Any, EnvInfoDict]: # type: ignore
+    def reset(self, *args: Any, **kwargs: Any) -> Tuple[Any, EnvInfoDict]:  # type: ignore
         assert isinstance(self.unwrapped, PostgresEnv)
         # First have to shift to the new state.
         state, info = self.unwrapped.reset(*args, **kwargs)
 
         # Now we conditionally evaluate.
-        if self.workload_eval_reset and (kwargs and ("options" in kwargs) and (kwargs["options"]) and ("query_metric_data" in kwargs["options"])):
+        if self.workload_eval_reset and (
+            kwargs
+            and ("options" in kwargs)
+            and (kwargs["options"])
+            and ("query_metric_data" in kwargs["options"])
+        ):
             assert isinstance(self.action_space, HolonSpace)
             assert isinstance(self.observation_space, StateSpace)
 

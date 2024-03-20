@@ -1,41 +1,48 @@
-import os
-import socket
 import glob
-from pathlib import Path
-import shutil
 import json
+import os
+import shutil
+import socket
 import xml.etree.ElementTree as ET
-import torch
-from torch import nn
-import numpy as np
-import gymnasium as gym
-from typing import Callable, Tuple, Any, Union
+from pathlib import Path
+from typing import Any, Callable, Tuple, Union
 
+import gymnasium as gym
+import numpy as np
+import torch
+from gymnasium.wrappers import (  # type: ignore
+    FlattenObservation,
+    NormalizeObservation,
+    NormalizeReward,
+)
+from torch import nn
+
+from tune.protox.agent.agent_env import AgentEnv
+from tune.protox.agent.buffers import ReplayBuffer
+from tune.protox.agent.noise import ClampNoise
+from tune.protox.agent.policies import Actor, ContinuousCritic
+from tune.protox.agent.utils import parse_noise_type
+from tune.protox.agent.wolp.policies import WolpPolicy
+from tune.protox.agent.wolp.wolp import Wolp
+from tune.protox.embedding.train_all import (
+    create_vae_model,
+    fetch_vae_parameters_from_workload,
+)
 from tune.protox.env.logger import Logger
-from tune.protox.env.util.reward import RewardUtility
-from tune.protox.env.util.postgres import PostgresConn
-from tune.protox.env.workload import Workload
-from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.space.state import LSCStructureStateSpace, LSCMetricStateSpace
-from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
 from tune.protox.env.lsc.lsc import LSC
-from tune.protox.env.space.latent_space.lsc_index_space import LSCIndexSpace
-from tune.protox.env.space.latent_space.latent_query_space import LatentQuerySpace
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
+from tune.protox.env.space.latent_space.latent_query_space import LatentQuerySpace
+from tune.protox.env.space.latent_space.lsc_index_space import LSCIndexSpace
+from tune.protox.env.space.state import LSCMetricStateSpace, LSCStructureStateSpace
+from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
-from tune.protox.agent.agent_env import AgentEnv
-from tune.protox.agent.utils import parse_noise_type
-from tune.protox.agent.wolp.wolp import Wolp
-from tune.protox.agent.wolp.policies import WolpPolicy
-from tune.protox.agent.policies import ContinuousCritic, Actor
-from gymnasium.wrappers import NormalizeObservation, NormalizeReward, FlattenObservation # type: ignore
-from tune.protox.agent.buffers import ReplayBuffer
-from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
-from tune.protox.agent.noise import ClampNoise
-from tune.protox.embedding.train_all import create_vae_model , fetch_vae_parameters_from_workload
-from tune.protox.env.types import TableAttrAccessSetsMap, ProtoAction
+from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
+from tune.protox.env.util.postgres import PostgresConn
+from tune.protox.env.util.reward import RewardUtility
+from tune.protox.env.workload import Workload
 
 
 def _parse_activation_fn(act_type: str) -> type[nn.Module]:
@@ -59,7 +66,7 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     port = MIN_PORT
     while port <= MAX_PORT:
         try:
-            s.bind(('', port))
+            s.bind(("", port))
 
             drop = False
             for sig in glob.glob(f"{signal_folder}/*.signal"):
@@ -74,7 +81,7 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 continue
 
-            with open(f"{signal_folder}/{port}.signal", "w") as f: # type: IO[Any]
+            with open(f"{signal_folder}/{port}.signal", "w") as f:  # type: IO[Any]
                 f.write(str(port))
                 f.close()
 
@@ -88,47 +95,81 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
 def _edit_args(logdir: str, port: int, hpo_config: dict[str, Any]) -> dict[str, Any]:
     mythril_dir = hpo_config["mythril_dir"]
     if hpo_config["benchmark_config"]["query_spec"]["query_directory"][0] != "/":
-        hpo_config["benchmark_config"]["query_spec"]["query_directory"] = mythril_dir + "/" + hpo_config["benchmark_config"]["query_spec"]["query_directory"]
+        hpo_config["benchmark_config"]["query_spec"]["query_directory"] = (
+            mythril_dir
+            + "/"
+            + hpo_config["benchmark_config"]["query_spec"]["query_directory"]
+        )
     if hpo_config["benchmark_config"]["query_spec"]["query_order"][0] != "/":
-        hpo_config["benchmark_config"]["query_spec"]["query_order"] = mythril_dir + "/" + hpo_config["benchmark_config"]["query_spec"]["query_order"]
+        hpo_config["benchmark_config"]["query_spec"]["query_order"] = (
+            mythril_dir
+            + "/"
+            + hpo_config["benchmark_config"]["query_spec"]["query_order"]
+        )
 
     if "execute_query_directory" in hpo_config["benchmark_config"]["query_spec"]:
-        if hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"][0] != "/":
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"] = mythril_dir + "/" + hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"]
-        if hpo_config["benchmark_config"]["query_spec"]["execute_query_order"][0] != "/":
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_order"] = mythril_dir + "/" + hpo_config["benchmark_config"]["query_spec"]["execute_query_order"]
+        if (
+            hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"][0]
+            != "/"
+        ):
+            hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"] = (
+                mythril_dir
+                + "/"
+                + hpo_config["benchmark_config"]["query_spec"][
+                    "execute_query_directory"
+                ]
+            )
+        if (
+            hpo_config["benchmark_config"]["query_spec"]["execute_query_order"][0]
+            != "/"
+        ):
+            hpo_config["benchmark_config"]["query_spec"]["execute_query_order"] = (
+                mythril_dir
+                + "/"
+                + hpo_config["benchmark_config"]["query_spec"]["execute_query_order"]
+            )
 
     if "benchbase_config_path" in hpo_config["benchbase_config"]:
         # Copy the benchbase benchmark path.
-        shutil.copy(hpo_config["benchbase_config"]["benchbase_config_path"], Path(logdir) / "benchmark.xml")
-        hpo_config["benchbase_config"]["benchbase_config_path"] = Path(logdir) / "benchmark.xml"
+        shutil.copy(
+            hpo_config["benchbase_config"]["benchbase_config_path"],
+            Path(logdir) / "benchmark.xml",
+        )
+        hpo_config["benchbase_config"]["benchbase_config_path"] = (
+            Path(logdir) / "benchmark.xml"
+        )
 
     if "benchbase_path" in hpo_config["benchbase_config"]:
-        hpo_config["benchbase_config"]["benchbase_path"] = os.path.expanduser(hpo_config["benchbase_config"]["benchbase_path"])
+        hpo_config["benchbase_config"]["benchbase_path"] = os.path.expanduser(
+            hpo_config["benchbase_config"]["benchbase_path"]
+        )
 
     # Append port to the pgdata folder.
     hpo_config["pgconn"]["pg_data"] += f"{port}"
 
-    kvs = {s.split("=")[0]: s.split("=")[1] for s in hpo_config["pgconn"]["pg_conn"].split(" ")}
+    kvs = {
+        s.split("=")[0]: s.split("=")[1]
+        for s in hpo_config["pgconn"]["pg_conn"].split(" ")
+    }
     kvs["port"] = str(port)
     hpo_config["pgconn"]["pg_conn"] = " ".join([f"{k}={v}" for k, v in kvs.items()])
 
     if hpo_config["benchmark_config"]["query_spec"]["oltp_workload"]:
         conf_etree = ET.parse(Path(logdir) / "benchmark.xml")
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
-        conf_etree.getroot().find("url").text = jdbc # type: ignore
+        conf_etree.getroot().find("url").text = jdbc  # type: ignore
 
         oltp_config = hpo_config["benchbase_config"]["oltp_config"]
         if conf_etree.getroot().find("scalefactor") is not None:
-            conf_etree.getroot().find("scalefactor").text = str(oltp_config["oltp_sf"]) # type: ignore
+            conf_etree.getroot().find("scalefactor").text = str(oltp_config["oltp_sf"])  # type: ignore
         if conf_etree.getroot().find("terminals") is not None:
-            conf_etree.getroot().find("terminals").text = str(oltp_config["oltp_num_terminals"]) # type: ignore
+            conf_etree.getroot().find("terminals").text = str(oltp_config["oltp_num_terminals"])  # type: ignore
         if conf_etree.getroot().find("works") is not None:
-            works = conf_etree.getroot().find("works").find("work") # type: ignore
-            if works.find("time") is not None: # type: ignore
-                conf_etree.getroot().find("works").find("work").find("time").text = str(oltp_config["oltp_duration"]) # type: ignore
-            if works.find("warmup") is not None: # type: ignore
-                conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"]) # type: ignore
+            works = conf_etree.getroot().find("works").find("work")  # type: ignore
+            if works.find("time") is not None:  # type: ignore
+                conf_etree.getroot().find("works").find("work").find("time").text = str(oltp_config["oltp_duration"])  # type: ignore
+            if works.find("warmup") is not None:  # type: ignore
+                conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"])  # type: ignore
         conf_etree.write(Path(logdir) / "benchmark.xml")
 
     class Encoder(json.JSONEncoder):
@@ -143,16 +184,25 @@ def _edit_args(logdir: str, port: int, hpo_config: dict[str, Any]) -> dict[str, 
     return hpo_config
 
 
-def _gen_noise_scale(vae_config: dict[str, Any], hpo_config: dict[str, Any]) -> Callable[[ProtoAction, torch.Tensor], ProtoAction]:
+def _gen_noise_scale(
+    vae_config: dict[str, Any], hpo_config: dict[str, Any]
+) -> Callable[[ProtoAction, torch.Tensor], ProtoAction]:
     def f(p: ProtoAction, n: torch.Tensor) -> ProtoAction:
         if hpo_config["scale_noise_perturb"]:
-            return ProtoAction(torch.clamp(p + n * vae_config["output_scale"], 0., vae_config["output_scale"]))
+            return ProtoAction(
+                torch.clamp(
+                    p + n * vae_config["output_scale"], 0.0, vae_config["output_scale"]
+                )
+            )
         else:
-            return ProtoAction(torch.clamp(p + n, 0., 1.))
+            return ProtoAction(torch.clamp(p + n, 0.0, 1.0))
+
     return f
 
 
-def _build_utilities(logdir: str, hpo_config: dict[str, Any]) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
+def _build_utilities(
+    logdir: str, hpo_config: dict[str, Any]
+) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         hpo_config["trace"],
         hpo_config["verbose"],
@@ -162,7 +212,11 @@ def _build_utilities(logdir: str, hpo_config: dict[str, Any]) -> Tuple[Logger, R
     )
 
     reward_utility = RewardUtility(
-        target="tps" if hpo_config["benchmark_config"]["query_spec"]["oltp_workload"] else "latency",
+        target=(
+            "tps"
+            if hpo_config["benchmark_config"]["query_spec"]["oltp_workload"]
+            else "latency"
+        ),
         metric=hpo_config["reward"],
         reward_scaler=hpo_config["reward_scaler"],
         logger=logger,
@@ -190,7 +244,9 @@ def _build_utilities(logdir: str, hpo_config: dict[str, Any]) -> Tuple[Logger, R
     return logger, reward_utility, pgconn, workload
 
 
-def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, logger: Logger) -> Tuple[HolonSpace, LSC]:
+def _build_actions(
+    seed: int, hpo_config: dict[str, Any], workload: Workload, logger: Logger
+) -> Tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
         tables=hpo_config["benchmark_config"]["tables"],
@@ -206,10 +262,14 @@ def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, lo
         vae_config = json.load(f)
 
         assert vae_config["mean_output_act"] == "sigmoid"
-        index_output_transform = lambda x: torch.nn.Sigmoid()(x) * vae_config["output_scale"]
+        index_output_transform = (
+            lambda x: torch.nn.Sigmoid()(x) * vae_config["output_scale"]
+        )
         index_noise_scale = _gen_noise_scale(vae_config, hpo_config)
 
-        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(hpo_config["benchmark_config"]["tables"]))
+        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
+            workload, len(hpo_config["benchmark_config"]["tables"])
+        )
         vae = create_vae_model(vae_config, max_attrs, max_cat_features)
         vae.load_state_dict(torch.load(hpo_config["embeddings"]))
 
@@ -230,7 +290,9 @@ def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, lo
         attributes_overwrite=workload.column_usages(),
         tbl_include_subsets=TableAttrAccessSetsMap(workload.tbl_include_subsets),
         index_space_aux_type=hpo_config["benchmark_config"]["index_space_aux_type"],
-        index_space_aux_include=hpo_config["benchmark_config"]["index_space_aux_include"],
+        index_space_aux_include=hpo_config["benchmark_config"][
+            "index_space_aux_include"
+        ],
         deterministic_policy=True,
         vae=vae,
         latent_dim=vae_config["latent_dim"],
@@ -246,8 +308,16 @@ def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, lo
         quantize_factor=hpo_config["default_quantization_factor"],
         seed=seed,
         per_query_knobs_gen=hpo_config["benchmark_config"]["per_query_knob_gen"],
-        per_query_parallel={} if not hpo_config["benchmark_config"]["per_query_select_parallel"] else workload.query_aliases,
-        per_query_scans={} if not hpo_config["benchmark_config"]["per_query_scan_method"] else workload.query_aliases,
+        per_query_parallel=(
+            {}
+            if not hpo_config["benchmark_config"]["per_query_select_parallel"]
+            else workload.query_aliases
+        ),
+        per_query_scans=(
+            {}
+            if not hpo_config["benchmark_config"]["per_query_scan_method"]
+            else workload.query_aliases
+        ),
         query_names=workload.order,
         logger=logger,
         latent=True,
@@ -263,7 +333,9 @@ def _build_actions(seed: int, hpo_config: dict[str, Any], workload: Workload, lo
     return hspace, lsc
 
 
-def _build_obs_space(action_space: HolonSpace, lsc: LSC, hpo_config: dict[str, Any], seed: int) -> StateSpace:
+def _build_obs_space(
+    action_space: HolonSpace, lsc: LSC, hpo_config: dict[str, Any], seed: int
+) -> StateSpace:
     if hpo_config["metric_state"] == "metric":
         return LSCMetricStateSpace(
             lsc=lsc,
@@ -282,16 +354,18 @@ def _build_obs_space(action_space: HolonSpace, lsc: LSC, hpo_config: dict[str, A
 
 
 def _build_env(
-        hpo_config: dict[str, Any],
-        pgconn: PostgresConn,
-        obs_space: StateSpace,
-        holon_space: HolonSpace,
-        lsc: LSC,
-        workload: Workload,
-        reward_utility: RewardUtility,
-        logger: Logger) -> Tuple[TargetResetWrapper, AgentEnv]:
+    hpo_config: dict[str, Any],
+    pgconn: PostgresConn,
+    obs_space: StateSpace,
+    holon_space: HolonSpace,
+    lsc: LSC,
+    workload: Workload,
+    reward_utility: RewardUtility,
+    logger: Logger,
+) -> Tuple[TargetResetWrapper, AgentEnv]:
 
-    env = gym.make("Postgres-v0",
+    env = gym.make(
+        "Postgres-v0",
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
@@ -307,7 +381,11 @@ def _build_env(
 
     # Check whether to create the MQO wrapper.
     if not hpo_config["benchmark_config"]["query_spec"]["oltp_workload"]:
-        if hpo_config["workload_eval_mode"] != "pq" or hpo_config["workload_eval_inverse"] or hpo_config["workload_eval_reset"]:
+        if (
+            hpo_config["workload_eval_mode"] != "pq"
+            or hpo_config["workload_eval_inverse"]
+            or hpo_config["workload_eval_reset"]
+        ):
             env = MQOWrapper(
                 workload_eval_mode=hpo_config["workload_eval_mode"],
                 workload_eval_inverse=hpo_config["workload_eval_inverse"],
@@ -346,7 +424,13 @@ def _build_env(
     return target_reset, env
 
 
-def _build_agent(seed: int, hpo_config: dict[str, Any], obs_space: StateSpace, action_space: HolonSpace, logger: Logger) -> Wolp:
+def _build_agent(
+    seed: int,
+    hpo_config: dict[str, Any],
+    obs_space: StateSpace,
+    action_space: HolonSpace,
+    logger: Logger,
+) -> Wolp:
     action_dim = noise_action_dim = action_space.latent_dim()
     critic_action_dim = action_space.critic_dim()
 
@@ -376,7 +460,9 @@ def _build_agent(seed: int, hpo_config: dict[str, Any], obs_space: StateSpace, a
         policy_weight_adjustment=hpo_config["policy_weight_adjustment"],
     )
 
-    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=hpo_config["learning_rate"])
+    actor_optimizer = torch.optim.Adam(
+        actor.parameters(), lr=hpo_config["learning_rate"]
+    )
 
     critic = ContinuousCritic(
         observation_space=obs_space,
@@ -402,7 +488,10 @@ def _build_agent(seed: int, hpo_config: dict[str, Any], obs_space: StateSpace, a
         action_dim=critic_action_dim,
     )
 
-    critic_optimizer = torch.optim.Adam(critic.parameters(), lr=hpo_config["learning_rate"] * hpo_config["critic_lr_scale"])
+    critic_optimizer = torch.optim.Adam(
+        critic.parameters(),
+        lr=hpo_config["learning_rate"] * hpo_config["critic_lr_scale"],
+    )
 
     policy = WolpPolicy(
         observation_space=obs_space,
@@ -423,16 +512,33 @@ def _build_agent(seed: int, hpo_config: dict[str, Any], obs_space: StateSpace, a
     # Setup the noise policy.
     noise_params = hpo_config["noise_parameters"]
     means = np.zeros((noise_action_dim,), dtype=np.float32)
-    stddevs = np.full((noise_action_dim,), noise_params["noise_sigma"], dtype=np.float32)
+    stddevs = np.full(
+        (noise_action_dim,), noise_params["noise_sigma"], dtype=np.float32
+    )
     action_noise_type = parse_noise_type(noise_params["noise_type"])
     action_noise = None if not action_noise_type else action_noise_type(means, stddevs)
 
     target_noise = hpo_config["target_noise"]
-    means = np.zeros((hpo_config["batch_size"], noise_action_dim,), dtype=np.float32)
-    stddevs = np.full((hpo_config["batch_size"], noise_action_dim,), target_noise["target_policy_noise"], dtype=np.float32)
+    means = np.zeros(
+        (
+            hpo_config["batch_size"],
+            noise_action_dim,
+        ),
+        dtype=np.float32,
+    )
+    stddevs = np.full(
+        (
+            hpo_config["batch_size"],
+            noise_action_dim,
+        ),
+        target_noise["target_policy_noise"],
+        dtype=np.float32,
+    )
     target_action_noise = parse_noise_type("normal")
     assert target_action_noise
-    clamp_noise = ClampNoise(target_action_noise(means, stddevs), target_noise["target_noise_clip"])
+    clamp_noise = ClampNoise(
+        target_action_noise(means, stddevs), target_noise["target_noise_clip"]
+    )
 
     return Wolp(
         policy=policy,
@@ -452,7 +558,9 @@ def _build_agent(seed: int, hpo_config: dict[str, Any], obs_space: StateSpace, a
     )
 
 
-def build_trial(seed: int, logdir: str, hpo_config: dict[str, Any]) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
+def build_trial(
+    seed: int, logdir: str, hpo_config: dict[str, Any]
+) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_config["pgconn"]["pg_bins"])
@@ -461,7 +569,16 @@ def build_trial(seed: int, logdir: str, hpo_config: dict[str, Any]) -> Tuple[Log
     logger, reward_utility, pgconn, workload = _build_utilities(logdir, hpo_config)
     holon_space, lsc = _build_actions(seed, hpo_config, workload, logger)
     obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
-    target_reset, env = _build_env(hpo_config, pgconn, obs_space, holon_space, lsc, workload, reward_utility, logger)
+    target_reset, env = _build_env(
+        hpo_config,
+        pgconn,
+        obs_space,
+        holon_space,
+        lsc,
+        workload,
+        reward_utility,
+        logger,
+    )
 
     agent = _build_agent(seed, hpo_config, obs_space, holon_space, logger)
     return logger, target_reset, env, agent, signal

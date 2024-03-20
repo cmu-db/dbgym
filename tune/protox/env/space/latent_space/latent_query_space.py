@@ -14,7 +14,9 @@ from tune.protox.env.types import (
 
 
 class LatentQuerySpace(LatentKnobSpace, QuerySpace):
-    def __init__(self, logger: Optional[Logger] = None, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, logger: Optional[Logger] = None, *args: Any, **kwargs: Any
+    ) -> None:
         # Only manually initialize against QuerySpace.
         QuerySpace.__init__(self, *args, **kwargs)
         self.logger = logger

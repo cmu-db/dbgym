@@ -14,8 +14,12 @@ import yaml
 
 from misc.utils import open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
+from tune.protox.embedding.train_all import (
+    create_vae_model,
+    fetch_index_parameters,
+    load_input_data,
+)
 from tune.protox.embedding.trainer import StratifiedRandomSampler
-from tune.protox.embedding.train_all import fetch_index_parameters, load_input_data, create_vae_model
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 

@@ -1,20 +1,24 @@
 import time
-from typing import Any, Optional, Union, Tuple, TYPE_CHECKING, cast
-import numpy as np
-from numpy.typing import NDArray
-import torch as th
-from gymnasium import spaces
-from torch.optim import Optimizer
-import torch.nn.functional as F
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
-from tune.protox.agent.policies import Actor, BaseModel, ContinuousCritic
-from tune.protox.agent.noise import ActionNoise
+import numpy as np
+import torch as th
+import torch.nn.functional as F
+from gymnasium import spaces
+from numpy.typing import NDArray
+from torch.optim import Optimizer
+
 from tune.protox.agent.buffers import ReplayBufferSamples
+from tune.protox.agent.noise import ActionNoise
+from tune.protox.agent.policies import Actor, BaseModel, ContinuousCritic
 from tune.protox.agent.utils import polyak_update
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.types import HolonAction, NeighborParameters, DEFAULT_NEIGHBOR_PARAMETERS
 from tune.protox.env.space.holon_space import HolonSpace
-
+from tune.protox.env.types import (
+    DEFAULT_NEIGHBOR_PARAMETERS,
+    HolonAction,
+    NeighborParameters,
+)
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
     "knob_num_nearest": 1,
@@ -42,7 +46,7 @@ class WolpPolicy(BaseModel):
         action_space: spaces.Space[Any],
         actor: Actor,
         actor_target: Actor,
-        actor_optimizer: Optimizer, 
+        actor_optimizer: Optimizer,
         critic: ContinuousCritic,
         critic_target: ContinuousCritic,
         critic_optimizer: Optimizer,
@@ -154,13 +158,23 @@ class WolpPolicy(BaseModel):
             raw_action = self.actor(thstates)
 
         # Transform and apply the noise.
-        noise = None if action_noise is None else (action_noise if isinstance(action_noise, th.Tensor) else th.as_tensor(action_noise()))
+        noise = (
+            None
+            if action_noise is None
+            else (
+                action_noise
+                if isinstance(action_noise, th.Tensor)
+                else th.as_tensor(action_noise())
+            )
+        )
         if noise is not None and len(noise.shape) == 1:
             # Insert a dimension.
             noise = noise.view(-1, *noise.shape)
 
         if noise is not None and self.logger is not None:
-            self.logger.get_logger(__name__).debug(f"Perturbing with noise class {action_noise}")
+            self.logger.get_logger(__name__).debug(
+                f"Perturbing with noise class {action_noise}"
+            )
 
         assert hasattr(self.action_space, "transform_noise")
         raw_action = self.action_space.transform_noise(raw_action, noise=noise)
@@ -203,7 +217,8 @@ class WolpPolicy(BaseModel):
                 replay_data.next_observations,
                 use_target=True,
                 action_noise=target_action_noise,
-                neighbor_parameters=neighbor_parameters)
+                neighbor_parameters=neighbor_parameters,
+            )
 
             # Compute the next Q-values: min over all critics targets
             next_q_values = th.cat(
@@ -220,7 +235,9 @@ class WolpPolicy(BaseModel):
         # Get current Q-values estimates for each critic network
         current_q_values = self.critic(replay_data.observations, embeds)
         # Compute critic loss.
-        critic_losses = [F.mse_loss(current_q, target_q_values) for current_q in current_q_values]
+        critic_losses = [
+            F.mse_loss(current_q, target_q_values) for current_q in current_q_values
+        ]
         critic_loss = cast(th.Tensor, sum(critic_losses))
 
         # Optimize the critics
@@ -241,7 +258,11 @@ class WolpPolicy(BaseModel):
         raw_actions = self.actor(replay_data.observations)
 
         if "lsc" in replay_data.infos[0]:
-            lscs = th.as_tensor(np.array([i["lsc"] for i in replay_data.infos])).float().view(-1, 1)
+            lscs = (
+                th.as_tensor(np.array([i["lsc"] for i in replay_data.infos]))
+                .float()
+                .view(-1, 1)
+            )
             # TODO(wz2,PROTOX_DELTA): Assume that we're looking at the "center".
             # Practically, maybe we should check through the critic what would actually be selected here.
             # The paper uses the historic action. This refactor assumes the neighborhood center.
@@ -260,7 +281,7 @@ class WolpPolicy(BaseModel):
         # Optimize the actor
         self.actor_optimizer.zero_grad()
         assert not th.isnan(actor_loss).any()
-        actor_loss.backward() # type: ignore
+        actor_loss.backward()  # type: ignore
         th.nn.utils.clip_grad_norm_(list(self.actor.parameters()), self.grad_clip)  # type: ignore
         self.actor.check_grad()
         self.actor_optimizer.step()
@@ -271,4 +292,3 @@ class WolpPolicy(BaseModel):
             self.critic.parameters(), self.critic_target.parameters(), self.tau
         )
         polyak_update(self.actor.parameters(), self.actor_target.parameters(), self.tau)
-

@@ -1,7 +1,9 @@
 import unittest
+
+from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.primitive.knob import Knob
 from tune.protox.env.space.primitive.latent_knob import LatentKnob
-from tune.protox.env.space.primitive.index import IndexAction
+
 
 class PrimitivesTests(unittest.TestCase):
 
@@ -12,8 +14,8 @@ class PrimitivesTests(unittest.TestCase):
             knob_name="kn",
             metadata={
                 "type": "float",
-                "min": 0.,
-                "max": 1.,
+                "min": 0.0,
+                "max": 1.0,
                 "quantize": 10,
                 "log_scale": False,
                 "unit": 0,
@@ -35,8 +37,8 @@ class PrimitivesTests(unittest.TestCase):
             knob_name="kn",
             metadata={
                 "type": "integer",
-                "min": 1.,
-                "max": 1024.,
+                "min": 1.0,
+                "max": 1024.0,
                 "quantize": 0,
                 "log_scale": True,
                 "unit": 0,
@@ -58,8 +60,8 @@ class PrimitivesTests(unittest.TestCase):
             knob_name="kn",
             metadata={
                 "type": "float",
-                "min": 0.,
-                "max": 1.,
+                "min": 0.0,
+                "max": 1.0,
                 "quantize": 10,
                 "log_scale": False,
                 "unit": 0,
@@ -75,8 +77,8 @@ class PrimitivesTests(unittest.TestCase):
         self.assertEqual(round(k.project_scraped_setting(0.62), 2), 0.6)
 
         self.assertEqual(k.to_latent(0.5), 0.0)
-        self.assertEqual(k.from_latent(-1.), 0.0)
-        self.assertEqual(k.from_latent(1.), 1.0)
+        self.assertEqual(k.from_latent(-1.0), 0.0)
+        self.assertEqual(k.from_latent(1.0), 1.0)
         self.assertEqual(k.from_latent(0.5), 0.7)
 
         self.assertEqual(k.shift_offset(0.5, 0), None)
@@ -94,7 +96,10 @@ class PrimitivesTests(unittest.TestCase):
             bias=0.0,
         )
         IndexAction.index_counter = 0
-        self.assertEqual(ia1.sql(add=True), "CREATE INDEX  index1 ON tbl USING btree (a,b,c) INCLUDE (d,e)")
+        self.assertEqual(
+            ia1.sql(add=True),
+            "CREATE INDEX  index1 ON tbl USING btree (a,b,c) INCLUDE (d,e)",
+        )
 
         ia2 = IndexAction(
             idx_type="btree",

@@ -6,7 +6,12 @@ from gymnasium.spaces import Box, Discrete, Space
 from gymnasium.spaces.utils import flatdim, flatten, flatten_space, unflatten
 from numpy.typing import NDArray
 
-from tune.protox.env.space.primitive import KnobClass, SettingType, is_boolean, is_knob_enum
+from tune.protox.env.space.primitive import (
+    KnobClass,
+    SettingType,
+    is_boolean,
+    is_knob_enum,
+)
 
 
 def full_knob_name(
@@ -133,7 +138,9 @@ class Knob(Space[Any]):
         # FIXME: We currently basically bias aggressively against the lower bucket, under the prior
         # belief that the incremental gain of going higher is less potentially / more consumption
         # and so it is ok to bias lower.
-        quantized_value = math.floor(round(raw_value / self.bucket_size, 8)) * self.bucket_size
+        quantized_value = (
+            math.floor(round(raw_value / self.bucket_size, 8)) * self.bucket_size
+        )
         return np.clip(quantized_value, self.min_value, self.max_value)
 
     def project_scraped_setting(self, value: Any) -> Any:

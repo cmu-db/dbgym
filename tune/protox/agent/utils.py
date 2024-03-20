@@ -1,6 +1,7 @@
+from enum import Enum
 from itertools import zip_longest
 from typing import Any, Iterable, NamedTuple, Optional, Type
-from enum import Enum
+
 import torch as th
 
 from tune.protox.agent.noise import (

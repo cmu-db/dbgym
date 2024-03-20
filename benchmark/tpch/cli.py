@@ -1,4 +1,5 @@
 import logging
+
 import click
 
 from misc.utils import DBGymConfig

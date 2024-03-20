@@ -3,6 +3,7 @@ import re
 import typing
 from distutils import util
 from typing import Any, Union, cast
+
 from gymnasium import spaces
 from gymnasium.spaces import Dict, Space
 from psycopg import Connection
@@ -10,7 +11,16 @@ from psycopg.rows import dict_row
 
 from tune.protox.env.space.primitive import KnobClass, SettingType
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob, full_knob_name
-from tune.protox.env.types import KnobMap, KnobSpaceContainer, QueryType, QueryMap, QueryTableAccessMap, TableAttrListMap, ServerTableIndexMetadata, ServerIndexMetadata
+from tune.protox.env.types import (
+    KnobMap,
+    KnobSpaceContainer,
+    QueryMap,
+    QueryTableAccessMap,
+    QueryType,
+    ServerIndexMetadata,
+    ServerTableIndexMetadata,
+    TableAttrListMap,
+)
 
 
 def check_subspace(space: Union[Dict, spaces.Tuple], action: Any) -> bool:
@@ -189,13 +199,15 @@ def fetch_server_knobs(
                 if knob.query_name in q_ams:
                     alias = knob.knob_name.split("_scanmethod")[0]
                     if alias in q_ams[knob.query_name]:
-                        val = 1. if "Index" in q_ams[knob.query_name][alias] else 0.
+                        val = 1.0 if "Index" in q_ams[knob.query_name][alias] else 0.0
                         knob_targets[knobname] = val
                         installed = True
 
                 if not installed:
                     knob_targets[knobname] = 0.0
-                    logging.getLogger(__name__).warn(f"Found missing alias for {knobname}")
+                    logging.getLogger(__name__).warn(
+                        f"Found missing alias for {knobname}"
+                    )
             elif knob.knob_type == SettingType.BOOLEAN:
                 knob_targets[knobname] = 1.0
             elif knob.knob_name == "random_page_cost":

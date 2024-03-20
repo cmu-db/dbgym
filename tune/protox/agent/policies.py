@@ -1,15 +1,14 @@
 """Policies: abstract base class and concrete implementations."""
 
 from typing import Any, List, Optional, Tuple, Type, cast
+
 import numpy as np
 import torch as th
 from gymnasium import spaces
-from torch import nn
 from numpy.typing import NDArray
+from torch import nn
 
-from tune.protox.agent.torch_layers import (
-    create_mlp,
-)
+from tune.protox.agent.torch_layers import create_mlp
 
 
 class BaseModel(nn.Module):
@@ -59,7 +58,11 @@ class BaseModel(nn.Module):
         observation = np.array(observation)
         if not isinstance(observation, dict):
             # Add batch dimension if needed
-            sh = self.observation_space.shape if self.observation_space.shape else [spaces.utils.flatdim(self.observation_space)]
+            sh = (
+                self.observation_space.shape
+                if self.observation_space.shape
+                else [spaces.utils.flatdim(self.observation_space)]
+            )
             observation = observation.reshape((-1, *sh))
 
         return th.as_tensor(observation)
@@ -118,8 +121,8 @@ class Actor(BaseModel):
         layers = [l for l in self.mu.children()]
         assert isinstance(layers[0], nn.Linear), print(layers[0], type(layers[0]))
         assert layers[0].weight.grad is not None
-        assert not layers[0].weight.grad.isnan().any() # Check no NaN.
-        assert layers[0].weight.grad.any() # Check grad at least flows.
+        assert not layers[0].weight.grad.isnan().any()  # Check no NaN.
+        assert layers[0].weight.grad.any()  # Check grad at least flows.
 
 
 class ContinuousCritic(BaseModel):
@@ -195,5 +198,5 @@ class ContinuousCritic(BaseModel):
         layers = [l for l in self.q_networks[0].children()]
         assert isinstance(layers[0], nn.Linear), print(layers[0], type(layers[0]))
         assert layers[0].weight.grad is not None
-        assert not layers[0].weight.grad.isnan().any() # Check no NaN.
-        assert layers[0].weight.grad.any() # Check grad at least flows.
+        assert not layers[0].weight.grad.isnan().any()  # Check no NaN.
+        assert layers[0].weight.grad.any()  # Check grad at least flows.

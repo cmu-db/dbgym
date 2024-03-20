@@ -5,8 +5,8 @@ import gymnasium as gym
 
 from tune.protox.env.logger import Logger
 from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.types import EnvInfoDict, HolonStateContainer, TargetResetConfig
 from tune.protox.env.util.reward import RewardUtility
-from tune.protox.env.types import TargetResetConfig, HolonStateContainer, EnvInfoDict
 
 
 class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
@@ -34,7 +34,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
         assert sc
         return sc
 
-    def step( # type: ignore
+    def step(  # type: ignore
         self, *args: Any, **kwargs: Any
     ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
         """Steps through the environment, normalizing the rewards returned."""
@@ -59,21 +59,25 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                 if self.start_reset:
                     self.tracked_states = [
                         self.tracked_states[0],
-                        TargetResetConfig({
-                            "metric": metric,
-                            "env_state": obs,
-                            "config": state,
-                            "query_metric_data": query_metric_data
-                        }),
+                        TargetResetConfig(
+                            {
+                                "metric": metric,
+                                "env_state": obs,
+                                "config": state,
+                                "query_metric_data": query_metric_data,
+                            }
+                        ),
                     ]
                 else:
                     self.tracked_states = [
-                        TargetResetConfig({
-                            "metric": metric,
-                            "env_state": obs,
-                            "config": state,
-                            "query_metric_data": query_metric_data
-                        }),
+                        TargetResetConfig(
+                            {
+                                "metric": metric,
+                                "env_state": obs,
+                                "config": state,
+                                "query_metric_data": query_metric_data,
+                            }
+                        ),
                     ]
         return obs, rews, terms, truncs, infos
 
@@ -86,12 +90,14 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
             self.real_best_metric = self.best_metric
 
             self.tracked_states = [
-                TargetResetConfig({
-                    "metric": self.best_metric,
-                    "env_state": state.copy(),
-                    "config": self._get_state(),
-                    "query_metric_data": info.get("query_metric_data", None),
-                })
+                TargetResetConfig(
+                    {
+                        "metric": self.best_metric,
+                        "env_state": state.copy(),
+                        "config": self._get_state(),
+                        "query_metric_data": info.get("query_metric_data", None),
+                    }
+                )
             ]
         else:
             reset_config = random.choice(self.tracked_states)

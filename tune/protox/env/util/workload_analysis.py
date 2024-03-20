@@ -1,10 +1,17 @@
 from enum import Enum, unique
 from typing import Iterator, Optional, Tuple
 
-import pglast # type: ignore
+import pglast  # type: ignore
 from pglast import stream
-from pglast.visitors import Continue, Visitor # type: ignore
-from tune.protox.env.types import TableAliasMap, AttrTableListMap, TableColTuple, TableAttrSetMap, QueryType
+from pglast.visitors import Continue, Visitor  # type: ignore
+
+from tune.protox.env.types import (
+    AttrTableListMap,
+    QueryType,
+    TableAliasMap,
+    TableAttrSetMap,
+    TableColTuple,
+)
 
 
 def traverse(stmt: pglast.ast.Node) -> Iterator[pglast.ast.Node]:
@@ -66,19 +73,27 @@ def extract_sqltypes(
     sqls = []
     for stmt in stmts:
         sql_type = QueryType.UNKNOWN
-        if isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.SelectStmt):
+        if isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.SelectStmt
+        ):
             sql_type = QueryType.SELECT
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.ViewStmt):
+        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.ViewStmt
+        ):
             sql_type = QueryType.CREATE_VIEW
-        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(stmt.stmt, pglast.ast.DropStmt):
+        elif isinstance(stmt, pglast.ast.RawStmt) and isinstance(
+            stmt.stmt, pglast.ast.DropStmt
+        ):
             drop_ast = stmt.stmt
             if drop_ast.removeType == pglast.enums.parsenodes.ObjectType.OBJECT_VIEW:
                 sql_type = QueryType.DROP_VIEW
-            elif isinstance(stmt, pglast.ast.RawStmt) and any([
-                isinstance(stmt.stmt, pglast.ast.InsertStmt),
-                isinstance(stmt.stmt, pglast.ast.UpdateStmt),
-                isinstance(stmt.stmt, pglast.ast.DeleteStmt),
-            ]):
+            elif isinstance(stmt, pglast.ast.RawStmt) and any(
+                [
+                    isinstance(stmt.stmt, pglast.ast.InsertStmt),
+                    isinstance(stmt.stmt, pglast.ast.UpdateStmt),
+                    isinstance(stmt.stmt, pglast.ast.DeleteStmt),
+                ]
+            ):
                 sql_type = QueryType.INS_UPD_DEL
 
         q = stream.RawStream()(stmt)

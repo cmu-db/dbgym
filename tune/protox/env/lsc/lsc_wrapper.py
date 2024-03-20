@@ -1,4 +1,5 @@
 from typing import Any, Optional, Tuple
+
 import gymnasium as gym
 
 from tune.protox.env.logger import Logger
@@ -41,6 +42,8 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
         if self.logger:
             lsc = state["lsc"]
-            self.logger.get_logger(__name__).debug(f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})")
+            self.logger.get_logger(__name__).debug(
+                f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
+            )
 
         return state, float(reward), term, trunc, info

@@ -61,7 +61,7 @@ class IndexAction(object):
     def idx_name(self) -> str:
         if self._idx_name is not None:
             return self._idx_name
- 
+
         IndexAction.index_counter += 1
         self._idx_name = f"index{IndexAction.index_counter}"
         return self._idx_name
@@ -79,9 +79,11 @@ class IndexAction(object):
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
             columns=",".join(self.columns),
-            inc_clause=""
-            if len(self.inc_names) == 0
-            else "INCLUDE (" + ",".join(self.inc_names) + ")",
+            inc_clause=(
+                ""
+                if len(self.inc_names) == 0
+                else "INCLUDE (" + ",".join(self.inc_names) + ")"
+            ),
         )
 
     # This equality/hash mechanism is purely based off of index identity.
@@ -121,7 +123,9 @@ class IndexAction(object):
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
             columns=",".join(self.columns),
-            inc_clause=""
-            if len(self.inc_names) == 0
-            else "INCLUDE (" + ",".join(self.inc_names) + ")",
+            inc_clause=(
+                ""
+                if len(self.inc_names) == 0
+                else "INCLUDE (" + ",".join(self.inc_names) + ")"
+            ),
         )

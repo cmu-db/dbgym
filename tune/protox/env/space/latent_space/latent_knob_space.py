@@ -8,10 +8,14 @@ import torch
 from psycopg import Connection
 
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.primitive_space import KnobSpace
 from tune.protox.env.space.primitive import KnobClass, SettingType, is_knob_enum
 from tune.protox.env.space.primitive.knob import resolve_enum_value
-from tune.protox.env.space.primitive.latent_knob import LatentCategoricalKnob, LatentKnob
+from tune.protox.env.space.primitive.latent_knob import (
+    LatentCategoricalKnob,
+    LatentKnob,
+)
+from tune.protox.env.space.primitive_space import KnobSpace
+from tune.protox.env.space.utils import check_subspace, fetch_server_knobs
 from tune.protox.env.types import (
     DEFAULT_NEIGHBOR_PARAMETERS,
     KnobSpaceAction,
@@ -20,11 +24,12 @@ from tune.protox.env.types import (
     ProtoAction,
     QueryMap,
 )
-from tune.protox.env.space.utils import check_subspace, fetch_server_knobs
 
 
 class LatentKnobSpace(KnobSpace):
-    def __init__(self, logger: Optional[Logger]=None, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, logger: Optional[Logger] = None, *args: Any, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.final_dim = gym.spaces.utils.flatdim(self)
         self.categorical_start = self.final_dim
@@ -44,10 +49,10 @@ class LatentKnobSpace(KnobSpace):
         cont_dim = self.categorical_start
         cat_dim = self.final_dim - cont_dim
 
-        cont, *cats = subproto.split([cont_dim] + self.cat_dims, dim=-1) # type: ignore
+        cont, *cats = subproto.split([cont_dim] + self.cat_dims, dim=-1)  # type: ignore
         cont = torch.tanh(cont)
         if noise is not None:
-            cont_noise, _ = noise.split([cont_dim, cat_dim], dim=-1) # type: ignore
+            cont_noise, _ = noise.split([cont_dim, cat_dim], dim=-1)  # type: ignore
             # TODO(wz2): We only apply the noise to the continuous dimensions.
             # In theory, for categorical, we would noise the logits and use something like boltzmann.
             cont = torch.clamp(cont + cont_noise, -1.0, 1.0)
@@ -131,7 +136,9 @@ class LatentKnobSpace(KnobSpace):
                 # Iterate through every knob and adjust based on the sampled mask.
                 if isinstance(knob, LatentCategoricalKnob):
                     new_value = knob.sample_weights(
-                        weights=raw_action[cat_start : cat_start + knob.num_elems].tolist()
+                        weights=raw_action[
+                            cat_start : cat_start + knob.num_elems
+                        ].tolist()
                     )
                     new_action[knobname] = new_value
                     cat_start += knob.num_elems

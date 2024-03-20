@@ -1,22 +1,19 @@
+import gc
 import json
 import logging
 import os
 import random
 import sys
 import time
-from typing import Any, Union, Tuple, Optional, Callable
-from typing_extensions import ParamSpec
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Callable, Optional, Tuple, Union
 
 import numpy as np
-from sklearn.model_selection import train_test_split # type: ignore
 import pandas as pd
-import gc
 import ray
 import torch
 import torch.nn as nn
-from torch.utils.data import TensorDataset
 import tqdm
 import yaml
 from pytorch_metric_learning.utils import logging_presets
@@ -26,31 +23,41 @@ from ray.tune import TuneConfig, with_parameters, with_resources
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search import ConcurrencyLimiter
 from ray.tune.search.hyperopt import HyperOptSearch
+from sklearn.model_selection import train_test_split  # type: ignore
+from torch.utils.data import TensorDataset
+from typing_extensions import ParamSpec
 
-from misc.utils import open_and_save, restart_ray, DBGymConfig
-from tune.protox.embedding.loss import CostLoss, get_bias_fn
-from tune.protox.embedding.train_args import EmbeddingTrainGenericArgs, EmbeddingTrainAllArgs
-from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
-from tune.protox.embedding.utils import (
-    f_unpack_dict,
-    parse_hyperopt_config,
-)
-from tune.protox.embedding.vae import VAELoss, gen_vae_collate, VAE
-from tune.protox.env.workload import Workload
-from tune.protox.env.types import TableAttrAccessSetsMap, TableColTuple, TableAttrListMap
-from tune.protox.env.space.primitive_space import IndexSpace
+from misc.utils import DBGymConfig, open_and_save, restart_ray
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
+from tune.protox.embedding.train_args import (
+    EmbeddingTrainAllArgs,
+    EmbeddingTrainGenericArgs,
+)
+from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
+from tune.protox.embedding.utils import f_unpack_dict, parse_hyperopt_config
+from tune.protox.embedding.vae import VAE, VAELoss, gen_vae_collate
+from tune.protox.env.space.primitive_space import IndexSpace
+from tune.protox.env.types import (
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableColTuple,
+)
+from tune.protox.env.workload import Workload
 
 
 def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
     att_usage = w.column_usages()
     max_indexable = w.max_indexable()
-    max_cat_features = max(ntables, max_indexable + 1) # +1 for the "null" per attribute list.
-    max_attrs = max_indexable + 1 # +1 to account for the table index.
+    max_cat_features = max(
+        ntables, max_indexable + 1
+    )  # +1 for the "null" per attribute list.
+    max_attrs = max_indexable + 1  # +1 to account for the table index.
     return max_attrs, max_cat_features
 
 
-def fetch_index_parameters(data: dict[str, Any]) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
+def fetch_index_parameters(
+    data: dict[str, Any]
+) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
     tables = data["mythril"]["tables"]
     attributes = data["mythril"]["attributes"]
     query_spec = data["mythril"]["query_spec"]
@@ -62,19 +69,23 @@ def fetch_index_parameters(data: dict[str, Any]) -> Tuple[int, int, TableAttrLis
         max_num_columns=data["mythril"]["max_num_columns"],
         max_indexable_attributes=workload.max_indexable(),
         seed=0,
-        rel_metadata = att_usage,
+        rel_metadata=att_usage,
         attributes_overwrite=att_usage,
-        tbl_include_subsets = TableAttrAccessSetsMap({}),
-        index_space_aux_type = False,
-        index_space_aux_include = False,
-        deterministic_policy = True
+        tbl_include_subsets=TableAttrAccessSetsMap({}),
+        index_space_aux_type=False,
+        index_space_aux_include=False,
+        deterministic_policy=True,
     )
 
-    max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(tables))
+    max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
+        workload, len(tables)
+    )
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def load_input_data(input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
+def load_input_data(
+    input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
+) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -83,7 +94,7 @@ def load_input_data(input_path: Path, train_size: int, max_attrs: int, require_c
         columns += COST_COLUMNS
 
     df = pd.read_parquet(input_path, columns=columns)
-    num_classes: int= df.idx_class.max() + 1
+    num_classes: int = df.idx_class.max() + 1
 
     # Get the y's and the x's.
     targets = (COST_COLUMNS + ["idx_class"]) if require_cost else ["idx_class"]
@@ -128,7 +139,9 @@ def load_input_data(input_path: Path, train_size: int, max_attrs: int, require_c
     return train_dataset, train_y, train_y[:, -1], val_dataset, num_classes
 
 
-def create_vae_model(config: dict[str, Any], max_attrs: int, max_cat_features: int) -> VAE:
+def create_vae_model(
+    config: dict[str, Any], max_attrs: int, max_cat_features: int
+) -> VAE:
     cat_input = max_attrs * max_cat_features
 
     assert config["act"] in ["relu", "mish"]
@@ -138,7 +151,7 @@ def create_vae_model(config: dict[str, Any], max_attrs: int, max_cat_features: i
         "sigmoid": nn.Sigmoid,
     }[config["mean_output_act"]]
 
-    torch.set_float32_matmul_precision("high") # type: ignore
+    torch.set_float32_matmul_precision("high")  # type: ignore
     model = VAE(
         max_categorical=max_cat_features,
         input_dim=cat_input,
@@ -155,7 +168,11 @@ def create_vae_model(config: dict[str, Any], max_attrs: int, max_cat_features: i
     return model
 
 
-def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGenericArgs, train_all_args: EmbeddingTrainAllArgs):
+def train_all_embeddings(
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingTrainGenericArgs,
+    train_all_args: EmbeddingTrainAllArgs,
+):
     """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
@@ -170,7 +187,7 @@ def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGen
     restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
 
-    scheduler = FIFOScheduler() # type: ignore
+    scheduler = FIFOScheduler()  # type: ignore
     # Search.
     search = HyperOptSearch(
         metric="loss",
@@ -179,7 +196,9 @@ def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGen
         n_initial_points=20,
         space=space,
     )
-    limiter = ConcurrencyLimiter(search, max_concurrent=train_all_args.train_max_concurrent)
+    limiter = ConcurrencyLimiter(
+        search, max_concurrent=train_all_args.train_max_concurrent
+    )
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=limiter,
@@ -234,7 +253,12 @@ def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGen
         f.write(f"{duration}")
 
 
-def _hpo_train(dbgym_cfg: DBGymConfig, config: dict[str, Any], generic_args: EmbeddingTrainGenericArgs, train_all_args: EmbeddingTrainAllArgs):
+def _hpo_train(
+    dbgym_cfg: DBGymConfig,
+    config: dict[str, Any],
+    generic_args: EmbeddingTrainGenericArgs,
+    train_all_args: EmbeddingTrainAllArgs,
+):
     sys.path.append(os.fspath(dbgym_cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
@@ -398,11 +422,13 @@ def _build_trainer(
     val_dl = torch.utils.data.DataLoader(
         val_dataset, batch_size=4096, collate_fn=collate_fn
     )
-    epoch_end: Callable[..., Optional[dict[str, Any]]] = _construct_epoch_end(val_dl, config, hooks, model_folder)
+    epoch_end: Callable[..., Optional[dict[str, Any]]] = _construct_epoch_end(
+        val_dl, config, hooks, model_folder
+    )
 
     def clip_grad() -> None:
         if config["grad_clip_amount"] is not None:
-            torch.nn.utils.clip_grad_norm_( # type: ignore
+            torch.nn.utils.clip_grad_norm_(  # type: ignore
                 model.parameters(), config["grad_clip_amount"]
             )
 
@@ -442,7 +468,14 @@ def _build_trainer(
 
 
 P = ParamSpec("P")
-def _construct_epoch_end(val_dl: torch.utils.data.DataLoader[Any], config: dict[str, Any], hooks: Any, model_folder: Union[str, Path]) -> Callable[P, Optional[dict[str, Any]]]:
+
+
+def _construct_epoch_end(
+    val_dl: torch.utils.data.DataLoader[Any],
+    config: dict[str, Any],
+    hooks: Any,
+    model_folder: Union[str, Path],
+) -> Callable[P, Optional[dict[str, Any]]]:
     def epoch_end(*args: P.args, **kwargs: P.kwargs) -> Optional[dict[str, Any]]:
         trainer = kwargs.get("trainer", None)
         assert trainer
@@ -466,9 +499,9 @@ def _construct_epoch_end(val_dl: torch.utils.data.DataLoader[Any], config: dict[
                 trainer.switch_eval()
 
                 pbar = None if suppress else tqdm.tqdm(total=len(val_dl))
-                for i, curr_batch in enumerate(val_dl): # type: ignore
+                for i, curr_batch in enumerate(val_dl):  # type: ignore
                     # Get the losses.
-                    trainer.calculate_loss(curr_batch) # type: ignore
+                    trainer.calculate_loss(curr_batch)  # type: ignore
                     if isinstance(trainer.losses["metric_loss"], torch.Tensor):
                         total_metric_loss.append(trainer.losses["metric_loss"].item())
                     else:

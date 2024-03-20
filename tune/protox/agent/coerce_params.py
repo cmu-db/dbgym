@@ -1,5 +1,7 @@
 from typing import Any
+
 import yaml
+
 
 def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str, Any]:
     if "space_version" not in hpo_config:
@@ -50,7 +52,9 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
                 "initial": hpo_config["lsc_parameters"]["lsc_shift_initial"],
                 "increment": hpo_config["lsc_parameters"]["lsc_shift_increment"],
                 "max": hpo_config["lsc_parameters"]["lsc_shift_max"],
-                "shift_eps_freq": hpo_config["lsc_parameters"]["lsc_shift_schedule_eps_freq"],
+                "shift_eps_freq": hpo_config["lsc_parameters"][
+                    "lsc_shift_schedule_eps_freq"
+                ],
                 "shift_after": hpo_config["lsc_parameters"]["lsc_shift_after"],
             },
             "neighbor_parameters": {
@@ -61,7 +65,9 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
                 "index_num_samples": hpo_config["neighbor_parameters"][
                     "index_num_samples"
                 ],
-                "index_rules": hpo_config["neighbor_parameters"].get("index_subset", True),
+                "index_rules": hpo_config["neighbor_parameters"].get(
+                    "index_subset", True
+                ),
             },
             "embeddings": hpo_config["vae_metadata"]["embeddings"],
         }

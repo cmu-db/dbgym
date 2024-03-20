@@ -1,4 +1,5 @@
-from typing import List, Type, Optional
+from typing import List, Optional, Type
+
 import torch as th
 from torch import nn
 

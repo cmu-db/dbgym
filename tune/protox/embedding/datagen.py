@@ -6,6 +6,7 @@ import time
 from itertools import chain, combinations
 from multiprocessing import Pool
 from pathlib import Path
+
 import click
 import numpy as np
 import pandas as pd
@@ -17,17 +18,17 @@ from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
     conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
     default_workload_path,
     link_result,
     open_and_save,
-    DBGymConfig
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
-from tune.protox.env.workload import Workload
 from tune.protox.env.types import QueryType
+from tune.protox.env.workload import Workload
 
 # FUTURE(oltp)
 # try:
@@ -324,7 +325,9 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, file_gen_args):
+def _combine_traindata_dir_into_parquet(
+    dbgym_cfg: DBGymConfig, generic_args, file_gen_args
+):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)["protox"]
@@ -413,8 +416,8 @@ def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, fi
         sep_bias = file_gen_args.rebias
         for g in groups.itertuples():
             d = df[
-                (df.tbl_index == g.Index[0]) # type: ignore
-                & (df.idx_class == g.Index[1]) # type: ignore
+                (df.tbl_index == g.Index[0])  # type: ignore
+                & (df.idx_class == g.Index[1])  # type: ignore
                 & (df.quant_mult_cost_improvement >= g._6)
             ].copy()
             d["quant_mult_cost_improvement"] = cur_bias - (file_gen_args.rebias / 2)
@@ -669,10 +672,12 @@ def _produce_index_data(
                         f"{target} {leading_col_name} {p} progress update: {i} / {sample_limit}."
                     )
 
-                act = idxs.sample(mask={
-                    "table_idx": None if target is None else table_idx,
-                    "col_idx": leading_col,
-                })
+                act = idxs.sample(
+                    mask={
+                        "table_idx": None if target is None else table_idx,
+                        "col_idx": leading_col,
+                    }
+                )
                 ia = idxs.to_action(act)
 
                 accum = {

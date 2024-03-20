@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from numpy.typing import NDArray
+
 import numpy as np
+from numpy.typing import NDArray
 
 
 class ActionNoise(ABC):

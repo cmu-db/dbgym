@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, Union
+
 import numpy as np
 from plumbum import local
 from torch.utils.tensorboard import SummaryWriter  # type: ignore

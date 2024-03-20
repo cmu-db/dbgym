@@ -1,26 +1,26 @@
+import argparse
+import json
+import os
 import sys
 import time
-import json
-import yaml
-import argparse
-from pathlib import Path
-from ray import tune
-import numpy as np
-import torch
-import os
-import pandas as pd
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Union
+
+import numpy as np
+import pandas as pd
 import ray
-from ray.tune import Trainable, SyncConfig
+import torch
+import yaml
+from ray import tune
+from ray.air import FailureConfig, RunConfig
+from ray.tune import SyncConfig, Trainable, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
-from ray.tune import TuneConfig
-from ray.air import RunConfig, FailureConfig
 
-from tune.protox.agent.coerce_params import coerce_params
-from tune.protox.agent.build_trial import build_trial
 from misc.utils import DBGymConfig
+from tune.protox.agent.build_trial import build_trial
+from tune.protox.agent.coerce_params import coerce_params
 
 
 def _build_space(
@@ -29,11 +29,11 @@ def _build_space(
     data_snapshot: str,
     embeddings: list[str],
     pgconn: dict[str, str],
-    benchbase_config: dict[str, Any]={},
-    duration: int=30,
-    seed: int=0,
-    workload_timeouts: list[int]=[600],
-    query_timeouts: list[int]=[30],
+    benchbase_config: dict[str, Any] = {},
+    duration: int = 30,
+    seed: int = 0,
+    workload_timeouts: list[int] = [600],
+    query_timeouts: list[int] = [30],
 ) -> dict[str, Any]:
 
     return {
@@ -67,9 +67,11 @@ def _build_space(
         "maximize_state": not benchmark_config.get("oltp_workload", False),
         # Whether to normalize state or not.
         "normalize_state": tune.sample_from(
-            lambda spc: False
-            if spc["config"]["metric_state"] == "structure_normalize"
-            else bool(np.random.choice([False, True]))
+            lambda spc: (
+                False
+                if spc["config"]["metric_state"] == "structure_normalize"
+                else bool(np.random.choice([False, True]))
+            )
         ),
         # Whether to normalize reward or not.
         "normalize_reward": tune.choice([False, True]),
@@ -116,17 +118,21 @@ def _build_space(
         "target_noise": {
             "target_noise_clip": tune.choice([0, 0.05, 0.1, 0.15]),
             "target_policy_noise": tune.sample_from(
-                lambda spc: 0.1
-                if spc["config"]["target_noise"]["target_noise_clip"] == 0
-                else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
+                lambda spc: (
+                    0.1
+                    if spc["config"]["target_noise"]["target_noise_clip"] == 0
+                    else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
+                )
             ),
         },
         # Training steps.
         "train_freq_unit": tune.choice(["step", "episode"]),
         "train_freq_frequency": tune.sample_from(
-            lambda spc: 1
-            if spc["config"]["train_freq_unit"] == "episode"
-            else int(np.random.choice([1, 2]))
+            lambda spc: (
+                1
+                if spc["config"]["train_freq_unit"] == "episode"
+                else int(np.random.choice([1, 2]))
+            )
         ),
         # Noise parameters.
         "noise_parameters": {
@@ -167,7 +173,7 @@ class TuneTimeoutChecker(object):
         self.limit = (duration * 3600) > 0
         self.remain = int(duration * 3600)
         self.running = False
-        self.start = 0.
+        self.start = 0.0
 
     def resume(self) -> None:
         self.start = time.time()
@@ -197,7 +203,7 @@ class TuneTrial:
         # sys.path.append() must take in strings as input, not Path objects
         sys.path.append(str(dbgym_cfg.dbgym_repo_path))
 
-        torch.set_default_dtype(torch.float32) # type: ignore
+        torch.set_default_dtype(torch.float32)  # type: ignore
         seed = (
             hpo_config["seed"]
             if hpo_config["seed"] != -1
@@ -209,9 +215,7 @@ class TuneTrial:
 
         self.timeout = TuneTimeoutChecker(hpo_config["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
-            seed=seed,
-            logdir=self.logdir,
-            hpo_config=hpo_config
+            seed=seed, logdir=self.logdir, hpo_config=hpo_config
         )
         self.logger.get_logger(None).info("%s", hpo_config)
         self.logger.get_logger(None).info(f"Seed: {seed}")
@@ -257,13 +261,13 @@ class TuneTrial:
             "AgentEpisode": episode,
             "AgentTimesteps": it,
             "TrialStep": self.step_count,
-            "Best Metric": self.target_reset.real_best_metric
-            if self.target_reset
-            else -1,
-            "Best Seen Metric": self.target_reset.best_metric
-            if self.target_reset
-            else -1,
-            "HoursElapsed": (time.time() - self.start_time) / 3600.,
+            "Best Metric": (
+                self.target_reset.real_best_metric if self.target_reset else -1
+            ),
+            "Best Seen Metric": (
+                self.target_reset.best_metric if self.target_reset else -1
+            ),
+            "HoursElapsed": (time.time() - self.start_time) / 3600.0,
         }
 
         # If we've timed out. Note that we've timed out.
@@ -275,7 +279,7 @@ class TuneTrial:
 
     def cleanup(self) -> None:
         self.logger.flush()
-        self.env.close() # type: ignore
+        self.env.close()  # type: ignore
         if Path(self.signal).exists():
             os.remove(self.signal)
 
@@ -291,10 +295,10 @@ def create_tune_opt_class(dbgym_cfg_param):
 
     class TuneOpt(Trainable):
         dbgym_cfg = global_dbgym_cfg
-        
+
         def setup(self, hpo_config: dict[str, Any]) -> None:
             self.trial = TuneTrial()
-            self.trial.logdir = self.logdir # type: ignore
+            self.trial.logdir = self.logdir  # type: ignore
             self.trial.setup(hpo_config)
 
         def step(self) -> dict[Any, Any]:
@@ -311,19 +315,21 @@ def create_tune_opt_class(dbgym_cfg_param):
             # We can't actually do anything about this right now.
             pass
 
-
     def tune_single_trial(args: Any) -> None:
         with open(args.hpo_params_file, "r") as f:
             hpo_config = json.load(f)
 
         # Coerce using a dummy space.
-        hpo_config = coerce_params(_build_space(
-            sysknobs={},
-            benchmark_config={},
-            data_snapshot="",
-            embeddings=[],
-            pgconn={}
-        ), hpo_config)
+        hpo_config = coerce_params(
+            _build_space(
+                sysknobs={},
+                benchmark_config={},
+                data_snapshot="",
+                embeddings=[],
+                pgconn={},
+            ),
+            hpo_config,
+        )
 
         # Assume we are executing from the root.
         hpo_config["mythril_dir"] = os.getcwd()
@@ -334,8 +340,8 @@ def create_tune_opt_class(dbgym_cfg_param):
         # Piggyback off the HPO magic.
         t = TuneTrial()
         # This is a hack.
-        t.logdir = Path("artifacts/") # type: ignore
-        t.logdir.mkdir(parents=True, exist_ok=True) # type: ignore
+        t.logdir = Path("artifacts/")  # type: ignore
+        t.logdir.mkdir(parents=True, exist_ok=True)  # type: ignore
         t.setup(hpo_config)
         start = time.time()
 
@@ -349,7 +355,6 @@ def create_tune_opt_class(dbgym_cfg_param):
         t.cleanup()
         # Output the step data.
         pd.DataFrame(data).to_csv(args.output_step_data, index=False)
-
 
     def tune_hpo(args: Any) -> None:
         with open(args.sysknobs) as f:
@@ -371,18 +376,20 @@ def create_tune_opt_class(dbgym_cfg_param):
                 "pg_data": args.pg_data,
                 "pg_bins": args.pg_bins,
             },
-            benchbase_config={
-                "oltp_config": {
-                    "oltp_num_terminals": args.oltp_num_terminals,
-                    "oltp_duration": args.oltp_duration,
-                    "oltp_sf": args.oltp_sf,
-                    "oltp_warmup": args.oltp_warmup,
-                },
-                "benchbase_path": args.benchbase_path,
-                "benchbase_config_path": args.benchbase_config_path,
-            }
-            if args.oltp
-            else {},
+            benchbase_config=(
+                {
+                    "oltp_config": {
+                        "oltp_num_terminals": args.oltp_num_terminals,
+                        "oltp_duration": args.oltp_duration,
+                        "oltp_sf": args.oltp_sf,
+                        "oltp_warmup": args.oltp_warmup,
+                    },
+                    "benchbase_path": args.benchbase_path,
+                    "benchbase_config_path": args.benchbase_config_path,
+                }
+                if args.oltp
+                else {}
+            ),
             duration=args.duration,
             seed=args.seed,
             workload_timeouts=[int(w) for w in args.workload_timeout.split(",")],
@@ -394,7 +401,7 @@ def create_tune_opt_class(dbgym_cfg_param):
         ray.init(address=args.ray_address, log_to_driver=False)
 
         # Scheduler.
-        scheduler = FIFOScheduler() # type: ignore
+        scheduler = FIFOScheduler()  # type: ignore
 
         initial_configs = None
         if args.initial_configs is not None:

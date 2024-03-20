@@ -10,5 +10,6 @@ from tune.protox.embedding.cli import embedding_group
 def protox_group(dbgym_cfg: DBGymConfig):
     dbgym_cfg.append_group("protox")
 
+
 protox_group.add_command(embedding_group)
 protox_group.add_command(agent_group)

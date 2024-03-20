@@ -4,15 +4,36 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union, cast
+
 import numpy as np
-import pglast # type: ignore
+import pglast  # type: ignore
 from plumbum import local
 
+from misc.utils import DBGymConfig, open_and_save
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.util.execute import _acquire_metrics_around_query, execute_variations
+from tune.protox.env.types import (
+    AttrTableListMap,
+    BestQueryRun,
+    HolonAction,
+    KnobSpaceAction,
+    QueryMap,
+    QueryRun,
+    QuerySpaceAction,
+    QuerySpaceKnobAction,
+    QuerySpec,
+    QueryType,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableAttrSetMap,
+    TableColTuple,
+)
+from tune.protox.env.util.execute import (
+    _acquire_metrics_around_query,
+    execute_variations,
+)
 from tune.protox.env.util.postgres import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.util.workload_analysis import (
@@ -20,23 +41,6 @@ from tune.protox.env.util.workload_analysis import (
     extract_columns,
     extract_sqltypes,
 )
-from tune.protox.env.types import (
-    QueryType,
-    KnobSpaceAction,
-    QuerySpaceAction,
-    QuerySpaceKnobAction,
-    HolonAction,
-    QueryRun,
-    BestQueryRun,
-    AttrTableListMap,
-    QuerySpec,
-    QueryMap,
-    TableColTuple,
-    TableAttrListMap,
-    TableAttrAccessSetsMap,
-    TableAttrSetMap,
-)
-from misc.utils import DBGymConfig, open_and_save
 
 
 class Workload(object):
@@ -55,7 +59,6 @@ class Workload(object):
             return open_and_save(self.dbgym_cfg, path)
         else:
             return open(path)
-        
 
     def _crunch(
         self,
@@ -76,9 +79,9 @@ class Workload(object):
         self.queries_mix = {}
         self.query_aliases = {}
         self.query_usages = TableAttrListMap({t: [] for t in self.tables})
-        tbl_include_subsets = TableAttrAccessSetsMap({
-            tbl: set() for tbl in self.attributes.keys()
-        })
+        tbl_include_subsets = TableAttrAccessSetsMap(
+            {tbl: set() for tbl in self.attributes.keys()}
+        )
         for stem, sql_file, ratio in sqls:
             assert stem not in self.queries
             self.order.append(stem)
@@ -107,17 +110,23 @@ class Workload(object):
                     tbl_col_usages, all_refs = extract_columns(
                         stmt, self.tables, all_attributes, self.query_aliases[stem]
                     )
-                    tbl_col_usages = TableAttrSetMap({
-                        t: set([a for a in atts if a in self.attributes[t]])
-                        for t, atts in tbl_col_usages.items()
-                    })
+                    tbl_col_usages = TableAttrSetMap(
+                        {
+                            t: set([a for a in atts if a in self.attributes[t]])
+                            for t, atts in tbl_col_usages.items()
+                        }
+                    )
 
                     for tbl, atts in tbl_col_usages.items():
                         for att in atts:
                             # Update the (tbl, col) query references.
                             if (tbl, att) not in self.tbl_filter_queries_usage:
-                                self.tbl_filter_queries_usage[TableColTuple((tbl, att))] = set()
-                            self.tbl_filter_queries_usage[TableColTuple((tbl, att))].add(stem)
+                                self.tbl_filter_queries_usage[
+                                    TableColTuple((tbl, att))
+                                ] = set()
+                            self.tbl_filter_queries_usage[
+                                TableColTuple((tbl, att))
+                            ].add(stem)
 
                             # Update query_usages (reflects predicate usage).
                             if att not in self.query_usages[tbl]:
@@ -133,10 +142,12 @@ class Workload(object):
 
         # Do this so query_usages is actually in the right order.
         # Order based on the original attribute list.
-        self.query_usages = TableAttrListMap({
-            tbl: [a for a in atts if a in self.query_usages[tbl]]
-            for tbl, atts in self.attributes.items()
-        })
+        self.query_usages = TableAttrListMap(
+            {
+                tbl: [a for a in atts if a in self.query_usages[tbl]]
+                for tbl, atts in self.attributes.items()
+            }
+        )
 
         if do_tbl_include_subsets_prune:
             self.tbl_include_subsets = {}
@@ -298,7 +309,9 @@ class Workload(object):
         if (table, col) not in self.tbl_filter_queries_usage:
             return []
         return [
-            q for q in self.order if q in self.tbl_filter_queries_usage[TableColTuple((table, col))]
+            q
+            for q in self.order
+            if q in self.tbl_filter_queries_usage[TableColTuple((table, col))]
         ]
 
     def column_usages(self) -> TableAttrListMap:
@@ -339,19 +352,25 @@ class Workload(object):
         if len(actions) > 0:
             assert action_space
 
-            sysknobs = cast(KnobSpaceAction, [
-                v
-                for t, v in action_space.split_action(actions[0])
-                if isinstance(t, LatentKnobSpace)
-            ][0])
-            ql_knobs = cast(list[Tuple[LatentQuerySpace, QuerySpaceAction]], [
+            sysknobs = cast(
+                KnobSpaceAction,
                 [
-                    (t, v)
-                    for t, v in action_space.split_action(action)
-                    if isinstance(t, LatentQuerySpace)
-                ][0]
-                for action in actions
-            ])
+                    v
+                    for t, v in action_space.split_action(actions[0])
+                    if isinstance(t, LatentKnobSpace)
+                ][0],
+            )
+            ql_knobs = cast(
+                list[Tuple[LatentQuerySpace, QuerySpaceAction]],
+                [
+                    [
+                        (t, v)
+                        for t, v in action_space.split_action(action)
+                        if isinstance(t, LatentQuerySpace)
+                    ][0]
+                    for action in actions
+                ],
+            )
 
         # Figure out workload to execute.
         if workload_qdir is not None and workload_qdir[0] is not None:
@@ -441,11 +460,13 @@ class Workload(object):
                         QueryRun(
                             act_name,
                             f"{act_name}_{qid}",
-                            QuerySpaceKnobAction({
-                                ql_knob[0].knobs[k]: ql_knob[1][k]
-                                for k in ql_knob[1].keys()
-                                if f"{qid}_" in k
-                            }),
+                            QuerySpaceKnobAction(
+                                {
+                                    ql_knob[0].knobs[k]: ql_knob[1][k]
+                                    for k in ql_knob[1].keys()
+                                    if f"{qid}_" in k
+                                }
+                            ),
                         )
                         for ql_knob, act_name in zip(ql_knobs, actions_names)
                     ]
@@ -463,11 +484,15 @@ class Workload(object):
                         # If we have a reset metric, use it's timeout and convert to seconds.
                         truntime = reset_metrics[qid].runtime
                         assert truntime is not None
-                        target_pqt = truntime / 1.e6
+                        target_pqt = truntime / 1.0e6
 
                         # If we've seen this exact before, skip it.
                         rmetrics = reset_metrics[qid]
-                        skip_execute = (rmetrics.query_run is not None) and (rmetrics.query_run.qknobs is not None) and (rmetrics.query_run.qknobs == runs[-1].qknobs)
+                        skip_execute = (
+                            (rmetrics.query_run is not None)
+                            and (rmetrics.query_run.qknobs is not None)
+                            and (rmetrics.query_run.qknobs == runs[-1].qknobs)
+                        )
 
                     if not skip_execute:
                         best_run: BestQueryRun = execute_variations(
@@ -486,7 +511,11 @@ class Workload(object):
                     if reset_metrics is not None and qid in reset_metrics:
                         # Old one is actually better so let's use that.
                         rmetric = reset_metrics[qid]
-                        if best_run.timeout or (best_run.runtime and rmetric.runtime and rmetric.runtime < best_run.runtime):
+                        if best_run.timeout or (
+                            best_run.runtime
+                            and rmetric.runtime
+                            and rmetric.runtime < best_run.runtime
+                        ):
                             best_run = rmetric
 
                     assert best_run.runtime
@@ -520,7 +549,8 @@ class Workload(object):
                     if run.explain_data is not None:
                         assert run.query_run and run.query_run.qknobs is not None
                         pqkk = [
-                            (knob.name(), val) for knob, val in run.query_run.qknobs.items()
+                            (knob.name(), val)
+                            for knob, val in run.query_run.qknobs.items()
                         ]
                         f.write(f"{qid}\n{run.query_run.prefix}: {pqkk}\n")
                         f.write(json.dumps(run.explain_data))
@@ -529,7 +559,10 @@ class Workload(object):
             if obs_space and obs_space.require_metrics():
                 # Create the metrics.
                 # Log the metrics data as a flattened.
-                accum_data = cast(list[dict[str, Any]], [v.metric_data for _, v in qid_runtime_data.items()])
+                accum_data = cast(
+                    list[dict[str, Any]],
+                    [v.metric_data for _, v in qid_runtime_data.items()],
+                )
                 accum_stats = obs_space.merge_deltas(accum_data)
                 with open(self.dbgym_cfg, results_dir / "run.metrics.json", "w") as f:
                     # Flatten it.
@@ -559,7 +592,7 @@ class Workload(object):
                     "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
                 )
 
-                start = 0.
+                start = 0.0
                 for i, qid in enumerate(self.order):
                     if qid in qid_runtime_data:
                         data = qid_runtime_data[qid]

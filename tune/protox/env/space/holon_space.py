@@ -1,6 +1,7 @@
 import copy
 import itertools
-from typing import Any, Optional, Tuple, Union, cast, Iterable, List
+from typing import Any, Iterable, List, Optional, Tuple, Union, cast
+
 import gymnasium as gym
 import numpy as np
 import torch
@@ -16,24 +17,29 @@ from tune.protox.env.space.latent_space import (
 )
 from tune.protox.env.space.utils import check_subspace
 from tune.protox.env.types import (
-    QueryType,
+    DEFAULT_NEIGHBOR_PARAMETERS,
     HolonAction,
+    HolonStateContainer,
     HolonSubAction,
     IndexSpaceRawSample,
-    QuerySpaceKnobAction,
-    ProtoAction,
-    NeighborParameters,
-    DEFAULT_NEIGHBOR_PARAMETERS,
-    HolonStateContainer,
     KnobSpaceAction,
+    NeighborParameters,
+    ProtoAction,
     QuerySpaceAction,
+    QuerySpaceKnobAction,
+    QueryType,
 )
 
 HolonSubSpace = Union[LatentKnobSpace, LatentIndexSpace, LatentQuerySpace]
 
 
 class HolonSpace(spaces.Tuple):
-    def _latent_assert_check(self, carprod_neighbors: list[HolonAction], carprod_embeds: torch.Tensor, first_drift: int):
+    def _latent_assert_check(
+        self,
+        carprod_neighbors: list[HolonAction],
+        carprod_embeds: torch.Tensor,
+        first_drift: int,
+    ):
         zero = self.to_latent([carprod_neighbors[0]])[0]
         last = self.to_latent([carprod_neighbors[-1]])[0]
         first_d = self.to_latent([carprod_neighbors[first_drift]])[0]
@@ -43,7 +49,9 @@ class HolonSpace(spaces.Tuple):
 
         assert eq_fn(zero, carprod_embeds[0]), print(zero, carprod_embeds[0])
         assert eq_fn(last, carprod_embeds[-1]), print(last, carprod_embeds[-1])
-        assert eq_fn(first_d, carprod_embeds[first_drift]), print(first_d, carprod_embeds[first_drift])
+        assert eq_fn(first_d, carprod_embeds[first_drift]), print(
+            first_d, carprod_embeds[first_drift]
+        )
 
         if self.logger:
             self.logger.get_logger(__name__).debug("Neighborhood Check passed.")
@@ -60,9 +68,11 @@ class HolonSpace(spaces.Tuple):
         super().__init__(spaces, seed=seed)
 
         raw_dims = [
-            gym.spaces.utils.flatdim(space)
-            if space.latent_dim() == 0
-            else space.latent_dim()
+            (
+                gym.spaces.utils.flatdim(space)
+                if space.latent_dim() == 0
+                else space.latent_dim()
+            )
             for space in self.spaces
             if hasattr(space, "latent_dim")
         ]
@@ -72,14 +82,19 @@ class HolonSpace(spaces.Tuple):
         self.logger = logger
 
     def get_spaces(self) -> list[Tuple[str, HolonSubSpace]]:
-        r = cast(list[Tuple[str, HolonSubSpace]], [(s.name, str, s) for s in self.spaces if hasattr(s, "name")])
+        r = cast(
+            list[Tuple[str, HolonSubSpace]],
+            [(s.name, str, s) for s in self.spaces if hasattr(s, "name")],
+        )
         assert len(r) == 3
         return r
 
     def null_action(self, sc: HolonStateContainer) -> HolonAction:
         assert isinstance(self.spaces[1], LatentIndexSpace)
         null_index = self.spaces[1].null_action()
-        return HolonAction((cast(KnobSpaceAction, sc[0]), null_index, cast(QuerySpaceAction, sc[2])))
+        return HolonAction(
+            (cast(KnobSpaceAction, sc[0]), null_index, cast(QuerySpaceAction, sc[2]))
+        )
 
     def split_action(
         self, action: HolonAction
@@ -90,7 +105,9 @@ class HolonSpace(spaces.Tuple):
             (cast(LatentQuerySpace, self.spaces[2]), action[2]),
         ]
 
-    def extract_query(self, action: Union[HolonAction, HolonStateContainer]) -> QuerySpaceKnobAction:
+    def extract_query(
+        self, action: Union[HolonAction, HolonStateContainer]
+    ) -> QuerySpaceKnobAction:
         for i, s in enumerate(self.spaces):
             if isinstance(s, LatentQuerySpace):
                 q_act = action[i]
@@ -116,7 +133,9 @@ class HolonSpace(spaces.Tuple):
         return self.raw_dims[-1]
 
     def critic_dim(self) -> int:
-        r = [space.critic_dim() for space in self.spaces if hasattr(space, "critic_dim")]
+        r = [
+            space.critic_dim() for space in self.spaces if hasattr(space, "critic_dim")
+        ]
         assert len(r) == 3
         return sum(r)
 
@@ -132,9 +151,7 @@ class HolonSpace(spaces.Tuple):
         assert isinstance(self.spaces[2], LatentQuerySpace)
         return self.spaces[2]
 
-    def pad_center_latent(
-        self, proto: ProtoAction, lscs: torch.Tensor
-    ) -> ProtoAction:
+    def pad_center_latent(self, proto: ProtoAction, lscs: torch.Tensor) -> ProtoAction:
         assert len(proto.shape) == 2
 
         components = []
@@ -142,7 +159,9 @@ class HolonSpace(spaces.Tuple):
             start = self.raw_dims[i - 1] if i > 0 else 0
             end = self.raw_dims[i]
             assert isinstance(s, (LatentKnobSpace, LSCIndexSpace, LatentQuerySpace))
-            components.append(s.pad_center_latent(ProtoAction(proto[:, start:end]), lscs))
+            components.append(
+                s.pad_center_latent(ProtoAction(proto[:, start:end]), lscs)
+            )
 
         return ProtoAction(torch.cat(cast(list[torch.Tensor], components), dim=1))
 
@@ -184,15 +203,25 @@ class HolonSpace(spaces.Tuple):
         latent_cmps = []
         for i, s in enumerate(self.spaces):
             if isinstance(s, LatentIndexSpace):
-                latent_cmps.append(s.to_latent(cast(list[IndexSpaceRawSample], [a[i] for a in env_act])))
+                latent_cmps.append(
+                    s.to_latent(
+                        cast(list[IndexSpaceRawSample], [a[i] for a in env_act])
+                    )
+                )
             else:
                 assert isinstance(s, (LatentKnobSpace, LatentQuerySpace))
-                latent_cmps.append(s.to_latent(cast(list[KnobSpaceAction], [a[i] for a in env_act])))
+                latent_cmps.append(
+                    s.to_latent(cast(list[KnobSpaceAction], [a[i] for a in env_act]))
+                )
 
         return ProtoAction(torch.concat(cast(list[torch.Tensor], latent_cmps), dim=1))
 
     def sample_latent(self, mask: Optional[Any] = None) -> ProtoAction:
-        r = [s.sample_latent(mask=mask) for s in self.spaces if hasattr(s, "sample_latent")]
+        r = [
+            s.sample_latent(mask=mask)
+            for s in self.spaces
+            if hasattr(s, "sample_latent")
+        ]
         assert len(r) == 3
         return ProtoAction(torch.concat(r, dim=1))
 
@@ -215,7 +244,10 @@ class HolonSpace(spaces.Tuple):
             # TODO(wz2,PROTOX_DELTA): For pseudo-backwards compatibility, we meld the knob + query space together.
             # In this way, we don't actually generate knob x query cartesian product.
             # Rather, we directly fuse min(knob_neighbors, query_neighbors) together and then cross with indexes.
-            meld_groups = [[self.get_knob_space(), self.get_query_space()], [self.get_index_space()]]
+            meld_groups = [
+                [self.get_knob_space(), self.get_query_space()],
+                [self.get_index_space()],
+            ]
 
             for meld_group in meld_groups:
                 meld_group_envs = []
@@ -230,16 +262,22 @@ class HolonSpace(spaces.Tuple):
                     subproto = proto[
                         (self.space_dims[i - 1] if i > 0 else 0) : self.space_dims[i]
                     ]
-                    assert isinstance(s, (LatentKnobSpace, LatentIndexSpace, LatentQuerySpace))
+                    assert isinstance(
+                        s, (LatentKnobSpace, LatentIndexSpace, LatentQuerySpace)
+                    )
                     envs = s.neighborhood(subproto, neighbor_parameters)
                     meld_group_envs.append(envs)
 
                     if isinstance(s, LatentIndexSpace):
                         # Compute their latent representation first.
-                        meld_group_embeds.append(s.to_latent(cast(list[IndexSpaceRawSample], envs)))
+                        meld_group_embeds.append(
+                            s.to_latent(cast(list[IndexSpaceRawSample], envs))
+                        )
                     else:
                         assert isinstance(s, (LatentKnobSpace, LatentQuerySpace))
-                        meld_group_embeds.append(s.to_latent(cast(list[KnobSpaceAction], envs)))
+                        meld_group_embeds.append(
+                            s.to_latent(cast(list[KnobSpaceAction], envs))
+                        )
 
                 if len(meld_group_envs) > 1:
                     # Join the meld groups.
@@ -251,9 +289,22 @@ class HolonSpace(spaces.Tuple):
                     embed_neighbors.append(meld_group_embeds[0])
 
             # Cartesian product itself is naturally in the joint space.
-            carprod_neighbors = cast(list[HolonAction], [(mg0[0], mg1, mg0[1]) for (mg0, mg1) in itertools.product(*envs_neighbors)])
+            carprod_neighbors = cast(
+                list[HolonAction],
+                [
+                    (mg0[0], mg1, mg0[1])
+                    for (mg0, mg1) in itertools.product(*envs_neighbors)
+                ],
+            )
             # Trust that the cartesian product is generated the same way.
-            carprod_embeds = torch.stack(list(map(lambda mg: torch.cat((mg[0][0], mg[1], mg[0][1])), itertools.product(*embed_neighbors))))
+            carprod_embeds = torch.stack(
+                list(
+                    map(
+                        lambda mg: torch.cat((mg[0][0], mg[1], mg[0][1])),
+                        itertools.product(*embed_neighbors),
+                    )
+                )
+            )
             assert len(carprod_neighbors) == carprod_embeds.shape[0]
 
             # This is a sanity check to avoid having to to_latent() on each holon.
@@ -263,7 +314,9 @@ class HolonSpace(spaces.Tuple):
             # Only run this check if we are attempting to sample an action and not during learn.
             if len(env_action) == 1:
                 assert len(self.spaces) == len(carprod_neighbors[0])
-                self._latent_assert_check(carprod_neighbors, carprod_embeds, first_drift)
+                self._latent_assert_check(
+                    carprod_neighbors, carprod_embeds, first_drift
+                )
 
             env_acts.extend(carprod_neighbors)
             emb_acts.append(carprod_embeds)
@@ -279,7 +332,12 @@ class HolonSpace(spaces.Tuple):
         queries: dict[str, list[Tuple[QueryType, str]]],
     ) -> HolonStateContainer:
         t = tuple(
-            s.generate_state_container(prev_state_container[i] if prev_state_container else None, action[i] if action else None, connection, queries)
+            s.generate_state_container(
+                prev_state_container[i] if prev_state_container else None,
+                action[i] if action else None,
+                connection,
+                queries,
+            )
             for i, s in enumerate(self.spaces)
             if hasattr(s, "generate_state_container")
         )

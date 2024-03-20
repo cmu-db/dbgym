@@ -1,8 +1,9 @@
-import json
 import copy
+import json
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union
+
 import gymnasium as gym
 import psycopg
 from plumbum import local
@@ -10,15 +11,15 @@ from plumbum import local
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.util.postgres import PostgresConn
-from tune.protox.env.util.reward import RewardUtility
-from tune.protox.env.workload import Workload
 from tune.protox.env.types import (
+    EnvInfoDict,
     HolonAction,
     HolonStateContainer,
     TargetResetConfig,
-    EnvInfoDict,
 )
+from tune.protox.env.util.postgres import PostgresConn
+from tune.protox.env.util.reward import RewardUtility
+from tune.protox.env.workload import Workload
 
 
 class PostgresEnv(gym.Env[Any, Any]):
@@ -73,7 +74,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
 
     @time_record("reset")
-    def reset( # type: ignore
+    def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
     ) -> Tuple[Any, EnvInfoDict]:
         reset_start = time.time()
@@ -85,11 +86,13 @@ class PostgresEnv(gym.Env[Any, Any]):
 
         target_config: Optional[TargetResetConfig] = None
         if options is not None:
-            target_config = TargetResetConfig({
-                "metric": options.get("metric", None),
-                "env_state": options.get("env_state", None),
-                "config": options.get("config", None),
-            })
+            target_config = TargetResetConfig(
+                {
+                    "metric": options.get("metric", None),
+                    "env_state": options.get("env_state", None),
+                    "config": options.get("config", None),
+                }
+            )
 
         self.current_step = 0
         info = EnvInfoDict({})
@@ -146,7 +149,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.action_space, HolonSpace)
 
             # Get the stock state container.
-            sc = self.action_space.generate_state_container(None, None, self.pgconn.conn(), self.workload.queries)
+            sc = self.action_space.generate_state_container(
+                None, None, self.pgconn.conn(), self.workload.queries
+            )
             default_action = self.action_space.null_action(sc)
 
             success, metric, _, results, _, query_metric_data = self.workload.execute(
@@ -280,7 +285,9 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results": results,
-                    "action_json": json.dumps(self.action_space.to_jsonable([a[1] for a in actions])),
+                    "action_json": json.dumps(
+                        self.action_space.to_jsonable([a[1] for a in actions])
+                    ),
                 }
             )
         )
@@ -334,7 +341,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             info,
         )
 
-    def step( # type: ignore
+    def step(  # type: ignore
         self, action: HolonAction
     ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
         assert not self.replay

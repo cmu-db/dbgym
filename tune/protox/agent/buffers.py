@@ -1,8 +1,10 @@
-from typing import Any, Dict, List, Optional, NamedTuple, cast
 import copy
-from numpy.typing import NDArray
+from typing import Any, Dict, List, NamedTuple, Optional, cast
+
 import numpy as np
 import torch as th
+from numpy.typing import NDArray
+
 
 class ReplayBufferSamples(NamedTuple):
     observations: th.Tensor

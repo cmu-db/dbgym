@@ -1,14 +1,19 @@
 from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
 from numpy.typing import NDArray
 
+from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ActionNoise
-from tune.protox.agent.utils import RolloutReturn, TrainFreq, TrainFrequencyUnit
-from tune.protox.agent.utils import should_collect_more_steps
-from tune.protox.agent.agent_env import AgentEnv
+from tune.protox.agent.utils import (
+    RolloutReturn,
+    TrainFreq,
+    TrainFrequencyUnit,
+    should_collect_more_steps,
+)
 
 
 class OffPolicyAlgorithm(BaseAlgorithm):

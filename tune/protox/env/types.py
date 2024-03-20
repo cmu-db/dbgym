@@ -1,11 +1,20 @@
-from typing import Any, NamedTuple, NewType, Tuple, TypeAlias, TypedDict, Union, Optional, TYPE_CHECKING
+from enum import Enum, unique
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    NewType,
+    Optional,
+    Tuple,
+    TypeAlias,
+    TypedDict,
+    Union,
+)
 
 import torch
-from pathlib import Path
-from enum import Enum, unique
 
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
-
 
 # https://mypy.readthedocs.io/en/stable/common_issues.html#import-cycles
 if TYPE_CHECKING:
