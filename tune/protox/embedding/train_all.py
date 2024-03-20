@@ -29,6 +29,7 @@ from ray.tune.search.hyperopt import HyperOptSearch
 
 from misc.utils import open_and_save, restart_ray, DBGymConfig
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
+from tune.protox.embedding.train import EmbeddingTrainGenericArgs, EmbeddingTrainAllArgs
 from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
 from tune.protox.embedding.utils import (
     f_unpack_dict,
@@ -154,14 +155,14 @@ def create_vae_model(config: dict[str, Any], max_attrs: int, max_cat_features: i
     return model
 
 
-def train_all_embeddings(dbgym_cfg, generic_args, train_args):
+def train_all_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGenericArgs, train_all_args: EmbeddingTrainAllArgs):
     """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
     """
     start_time = time.time()
 
-    with open_and_save(dbgym_cfg, train_args.hpo_space_path, "r") as f:
+    with open_and_save(dbgym_cfg, train_all_args.hpo_space_path, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
@@ -178,12 +179,12 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
         n_initial_points=20,
         space=space,
     )
-    search = ConcurrencyLimiter(search, max_concurrent=train_args.train_max_concurrent)
+    search = ConcurrencyLimiter(search, max_concurrent=train_all_args.train_max_concurrent)
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
-        num_samples=train_args.num_samples,
-        max_concurrent_trials=train_args.train_max_concurrent,
+        num_samples=train_all_args.num_samples,
+        max_concurrent_trials=train_all_args.train_max_concurrent,
         chdir_to_trial_dir=True,
     )
 
@@ -203,7 +204,7 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
             _hpo_train,
             dbgym_cfg=dbgym_cfg,
             generic_args=generic_args,
-            train_args=train_args,
+            train_all_args=train_all_args,
         ),
         resources,
     )
@@ -233,11 +234,11 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
         f.write(f"{duration}")
 
 
-def _hpo_train(dbgym_cfg, config, generic_args, train_args):
+def _hpo_train(dbgym_cfg: DBGymConfig, config: dict[str, Any], generic_args: EmbeddingTrainGenericArgs, train_all_args: EmbeddingTrainAllArgs):
     sys.path.append(os.fspath(dbgym_cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
-    os.environ["OMP_NUM_THREADS"] = str(train_args.train_max_concurrent)
+    os.environ["OMP_NUM_THREADS"] = str(train_all_args.train_max_concurrent)
 
     config = f_unpack_dict(config)
     if config.get("use_bias", False):
@@ -263,12 +264,12 @@ def _hpo_train(dbgym_cfg, config, generic_args, train_args):
     trial_dir.mkdir(parents=True, exist_ok=False)
 
     # Seed
-    seed = np.random.randint(1, 1e8)
+    seed = np.random.randint(int(1), int(1e8))
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     config["seed"] = seed
-    config["iterations_per_epoch"] = train_args.iterations_per_epoch
+    config["iterations_per_epoch"] = train_all_args.iterations_per_epoch
 
     logging.info(config)
 
@@ -280,7 +281,7 @@ def _hpo_train(dbgym_cfg, config, generic_args, train_args):
         generic_args.dataset_path,
         trial_dir,
         generic_args.benchmark_config_path,
-        train_args.train_size,
+        train_all_args.train_size,
         generic_args.workload_path,
         dataloader_num_workers=0,
         disable_tqdm=True,
@@ -301,7 +302,9 @@ def _hpo_train(dbgym_cfg, config, generic_args, train_args):
             torch.save(trainer.fail_data, f"{trial_dir}/fail_data.pth")
         session.report({"loss": 1e8})
     else:
-        loss = epoch_end(trainer, force=True, suppress=True)["total_avg_loss"]
+        res_dict = epoch_end(trainer=trainer, force=True, suppress=True)
+        assert res_dict
+        loss = res_dict["total_avg_loss"]
         session.report({"loss": loss})
 
 
