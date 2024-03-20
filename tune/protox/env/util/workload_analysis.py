@@ -87,14 +87,14 @@ def extract_sqltypes(
             drop_ast = stmt.stmt
             if drop_ast.removeType == pglast.enums.parsenodes.ObjectType.OBJECT_VIEW:
                 sql_type = QueryType.DROP_VIEW
-            elif isinstance(stmt, pglast.ast.RawStmt) and any(
-                [
-                    isinstance(stmt.stmt, pglast.ast.InsertStmt),
-                    isinstance(stmt.stmt, pglast.ast.UpdateStmt),
-                    isinstance(stmt.stmt, pglast.ast.DeleteStmt),
-                ]
-            ):
-                sql_type = QueryType.INS_UPD_DEL
+        elif isinstance(stmt, pglast.ast.RawStmt) and any(
+            [
+                isinstance(stmt.stmt, pglast.ast.InsertStmt),
+                isinstance(stmt.stmt, pglast.ast.UpdateStmt),
+                isinstance(stmt.stmt, pglast.ast.DeleteStmt),
+            ]
+        ):
+            sql_type = QueryType.INS_UPD_DEL
 
         q = stream.RawStream()(stmt)
         if pid is not None and "pid" in q:
