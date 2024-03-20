@@ -335,7 +335,7 @@ def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, fi
     traindata_dir = get_traindata_dir(dbgym_cfg)
     files = [f for f in Path(traindata_dir).rglob("*.parquet")]
 
-    def read(file):
+    def read(file: Path) -> pd.DataFrame:
         tbl = Path(file).parts[-2]
         if tbl not in tbl_dirs:
             tbl = Path(file).parts[-3]
@@ -361,21 +361,23 @@ def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, fi
 
         if file_gen_args.table_shape:
             df["quant_mult_cost_improvement"] = quantile_transform(
-                mult_tbl.values.reshape(-1, 1),
+                mult_tbl.to_numpy().reshape(-1, 1),
                 n_quantiles=100000,
                 subsample=df.shape[0],
             )
             df["quant_rel_cost_improvement"] = quantile_transform(
-                rel_tbl.values.reshape(-1, 1), n_quantiles=100000, subsample=df.shape[0]
+                rel_tbl.to_numpy().reshape(-1, 1),
+                n_quantiles=100000,
+                subsample=df.shape[0],
             )
         else:
             df["quant_mult_cost_improvement"] = quantile_transform(
-                mult.values.reshape(-1, 1),
+                mult.to_numpy().reshape(-1, 1),
                 n_quantiles=min(100000, df.shape[0]),
                 subsample=df.shape[0],
             )
             df["quant_rel_cost_improvement"] = quantile_transform(
-                rel.values.reshape(-1, 1),
+                rel.to_numpy().reshape(-1, 1),
                 n_quantiles=min(100000, df.shape[0]),
                 subsample=df.shape[0],
             )
@@ -411,8 +413,8 @@ def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, fi
         sep_bias = file_gen_args.rebias
         for g in groups.itertuples():
             d = df[
-                (df.tbl_index == g.Index[0])
-                & (df.idx_class == g.Index[1])
+                (df.tbl_index == g.Index[0]) # type: ignore
+                & (df.idx_class == g.Index[1]) # type: ignore
                 & (df.quant_mult_cost_improvement >= g._6)
             ].copy()
             d["quant_mult_cost_improvement"] = cur_bias - (file_gen_args.rebias / 2)
