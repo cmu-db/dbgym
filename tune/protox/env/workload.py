@@ -237,7 +237,7 @@ class Workload(object):
             sqls = [
                 (
                     line.split(",")[0],
-                    Path(query_spec["query_directory"]) / line.split(",")[1],
+                    self.workload_path / line.split(",")[1],
                     1.0,
                 )
                 for line in lines
@@ -251,7 +251,7 @@ class Workload(object):
                 sqls = [
                     (
                         split[0],
-                        Path(query_spec["query_directory"]) / split[1],
+                        self.workload_path / split[1],
                         float(split[2]),
                     )
                     for split in splits

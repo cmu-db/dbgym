@@ -2,8 +2,6 @@ tpch:
   query_spec:
     benchbase: False
     oltp_workload: False
-    query_directory: "/home/wz2/mythril/queries/tpch"
-    query_order: "/home/wz2/mythril/queries/tpch/order.txt"
     tbl_include_subsets_prune: True
     tbl_fold_subsets: False
     tbl_fold_delta: 1

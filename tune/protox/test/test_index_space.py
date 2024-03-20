@@ -21,6 +21,7 @@ class IndexSpaceTests(unittest.TestCase):
             tables=benchmark_config["tables"],
             attributes=benchmark_config["attributes"],
             query_spec=benchmark_config["query_spec"],
+            workload_path=Path("tune/protox/test/unittest_tpch_dir"),
             pid=None,
             workload_timeout=0,
             workload_timeout_penalty=1.,
