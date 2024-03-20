@@ -36,6 +36,7 @@ from tune.protox.env.types import (
     TableAttrAccessSetsMap,
     TableAttrSetMap,
 )
+from misc.utils import DBGymConfig
 
 
 class Workload(object):
@@ -176,6 +177,7 @@ class Workload(object):
 
     def __init__(
         self,
+        dbgym_cfg: DBGymConfig,
         tables: list[str],
         attributes: TableAttrListMap,
         query_spec: QuerySpec,

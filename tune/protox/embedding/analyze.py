@@ -18,7 +18,7 @@ from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.utils import fetch_index_parameters, load_input_data
 from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
 from tune.protox.env.space.index_policy import IndexRepr
-from tune.protox.env.space.index_space import IndexSpace
+from tune.protox.env.space.primitive_space.index_space import IndexSpace
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"

@@ -6,7 +6,6 @@ import time
 from itertools import chain, combinations
 from multiprocessing import Pool
 from pathlib import Path
-
 import click
 import numpy as np
 import pandas as pd
@@ -23,11 +22,12 @@ from misc.utils import (
     default_workload_path,
     link_result,
     open_and_save,
+    DBGymConfig
 )
 from tune.protox.embedding.loss import COST_COLUMNS
-from tune.protox.env.space.index_space import IndexRepr, IndexSpace
+from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.workload import Workload
-from tune.protox.env.workload_utils import QueryType
+from tune.protox.env.types import QueryType
 
 # FUTURE(oltp)
 # try:
@@ -106,7 +106,6 @@ from tune.protox.env.workload_utils import QueryType
 )
 # TODO(wz2): when would we not want to generate costs?
 @click.option("--no-generate-costs", is_flag=True, help="Turn off generating costs.")
-@click.option("--truncate-target", default=None, type=int, help="TODO(wz2)")
 
 # file gen args
 @click.option("--table-shape", is_flag=True, help="TODO(wz2)")
@@ -127,7 +126,6 @@ def datagen(
     max_concurrent,
     connection_str,
     no_generate_costs,
-    truncate_target,
     table_shape,
     dual_class,
     pad_min,
@@ -189,7 +187,6 @@ def datagen(
         max_concurrent,
         connection_str,
         no_generate_costs,
-        truncate_target,
     )
     file_gen_args = EmbeddingFileGenArgs(table_shape, dual_class, pad_min, rebias)
 
@@ -228,7 +225,6 @@ class EmbeddingDirGenArgs:
         max_concurrent,
         connection_str,
         no_generate_costs,
-        truncate_target,
     ):
         self.leading_col_tbls = leading_col_tbls
         self.default_sample_limit = default_sample_limit
@@ -237,7 +233,6 @@ class EmbeddingDirGenArgs:
         self.max_concurrent = max_concurrent
         self.connection_str = connection_str
         self.no_generate_costs = no_generate_costs
-        self.truncate_target = truncate_target
 
 
 class EmbeddingFileGenArgs:
@@ -254,14 +249,14 @@ def get_traindata_dir(dbgym_cfg):
     return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
 
 
-def get_traindata_path(dbgym_cfg, generic_args):
+def get_traindata_path(dbgym_cfg: DBGymConfig, generic_args):
     return os.path.join(
         dbgym_cfg.dbgym_this_run_path,
         f"{generic_args.benchmark_name}_embedding_traindata.parquet",
     )
 
 
-def _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args):
+def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
@@ -315,7 +310,6 @@ def _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args):
                                 tbl,  # target
                                 colidx if col is not None else None,
                                 col,
-                                dir_gen_args.truncate_target,
                                 job_id,
                                 output,
                             ),
@@ -330,7 +324,7 @@ def _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args):
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args):
+def _combine_traindata_dir_into_parquet(dbgym_cfg: DBGymConfig, generic_args, file_gen_args):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)["protox"]
@@ -456,7 +450,7 @@ def _fetch_server_indexes(connection):
 
 
 # FUTURE(oltp)
-# def load_ou_models(dbgym_cfg, model_dir):
+# def load_ou_models(dbgym_cfg: DBGymConfig, model_dir):
 #     models = {}
 #     for f in Path(model_dir).rglob("*.pkl"):
 #         ou_name = str(f.parts[-1]).split(".")[0]
@@ -586,7 +580,7 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
         if target is None:
             table_ref_qs = ref_qs
         else:
-            qs = workload.check_queries_for_table(target)
+            qs = workload.queries_for_table(target)
             batches = [(q, workload.queries[q], workload.query_aliases[q]) for q in qs]
             table_ref_qs = _execute_explains(cursor, batches, models)
             table_ref_qs = _augment_query_data(workload, table_ref_qs)
@@ -607,7 +601,6 @@ def _produce_index_data(
     target,
     leading_col,
     leading_col_name,
-    truncate_target,
     p,
     output,
 ):
@@ -621,7 +614,7 @@ def _produce_index_data(
     workload = Workload(
         dbgym_cfg, tables, attributes, query_spec, workload_path, pid=str(p)
     )
-    modified_attrs = workload.process_column_usage()
+    modified_attrs = workload.column_usages()
 
     np.random.seed(seed)
     random.seed(seed)
@@ -632,7 +625,7 @@ def _produce_index_data(
         "wolp",
         tables,
         max_num_columns,
-        IndexRepr.ONE_HOT.name,
+        max_indexable_attributes=workload.max_indexable(),
         seed=seed,
         latent_dim=0,
         attributes_overwrite=modified_attrs,
@@ -674,10 +667,11 @@ def _produce_index_data(
                         f"{target} {leading_col_name} {p} progress update: {i} / {sample_limit}."
                     )
 
-                act = idxs.random_action_table(
-                    None if target is None else table_idx, leading_col, truncate_target
-                )
-                ia = idxs.construct_indexaction(act)
+                act = idxs.sample(mask={
+                    "table_idx": None if target is None else table_idx,
+                    "col_idx": leading_col,
+                })
+                ia = idxs.to_action(act)
 
                 accum = {
                     "table": ia.tbl_name,
@@ -685,7 +679,7 @@ def _produce_index_data(
                 if generate_costs:
                     index_size = 0
                     # Only try to build if we actually need the cost information.
-                    ia = idxs.construct_indexaction(act)
+                    ia = idxs.to_action(act)
                     cmds = []
                     if ia.is_valid:
                         # Always try to add the index.
@@ -710,11 +704,11 @@ def _produce_index_data(
 
                         indexrelid = r[0][0]
                         if models is None:
-                            qs_for_tbl = workload.check_queries_for_table_col(
+                            qs_for_tbl = workload.queries_for_table_col(
                                 ia.tbl_name, ia.columns[0]
                             )
                         else:
-                            qs_for_tbl = workload.check_queries_for_table(ia.tbl_name)
+                            qs_for_tbl = workload.queries_for_table(ia.tbl_name)
 
                         batches = [
                             (q, workload.queries[q], workload.query_aliases[q])
