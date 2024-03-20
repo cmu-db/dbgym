@@ -86,3 +86,7 @@ class WorkloadTests(unittest.TestCase):
 
         w, i = WorkloadTests.load("configs/benchmark/tpcc.yaml")
         self.assertEqual(i.class_mapping, ref)
+
+
+if __name__ == "__main__":
+    unittest.main()

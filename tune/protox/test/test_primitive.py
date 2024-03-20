@@ -139,3 +139,7 @@ class PrimitivesTests(unittest.TestCase):
             bias=0.0,
         )
         self.assertNotEqual(ia1, ia5)
+
+
+if __name__ == "__main__":
+    unittest.main()

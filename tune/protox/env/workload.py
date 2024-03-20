@@ -40,6 +40,23 @@ from misc.utils import DBGymConfig, open_and_save
 
 
 class Workload(object):
+    # Usually, we want to call open_and_save() when opening a file for reading
+    # However, when creating a Workload object for unittesting, we just want to call open()
+    def _open_for_reading(
+        self,
+        path,
+        mode="r",
+    ):
+        # when opening for writing we always use open() so we don't need this function, which is
+        # why we assert here
+        # I still chose to make mode an argument just to make the interface identical to open()/open_and_save()
+        assert mode == "r"
+        if self.dbgym_cfg != None:
+            return open_and_save(self.dbgym_cfg, path)
+        else:
+            return open(path)
+        
+
     def _crunch(
         self,
         all_attributes: AttrTableListMap,
@@ -67,7 +84,7 @@ class Workload(object):
             self.order.append(stem)
             self.queries_mix[stem] = ratio
 
-            with open_and_save(self.dbgym_cfg, sql_file, "r") as q:
+            with self._open_for_reading(sql_file, "r") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -215,7 +232,7 @@ class Workload(object):
         # Get the order in which we should execute in.
         sqls = []
         workload_order_file = self.workload_path / "order.txt"
-        with open_and_save(self.dbgym_cfg, workload_order_file, "r") as f:
+        with self._open_for_reading(workload_order_file, "r") as f:
             lines = f.read().splitlines()
             sqls = [
                 (
@@ -228,7 +245,7 @@ class Workload(object):
 
         # TODO(phw2): pass "query_transactional" somewhere other than query_spec, just like "query_order" is
         if "query_transactional" in query_spec:
-            with open_and_save(self.dbgym_cfg, query_spec["query_transactional"], "r") as f:
+            with self._open_for_reading(query_spec["query_transactional"], "r") as f:
                 lines = f.read().splitlines()
                 splits = [line.split(",") for line in lines]
                 sqls = [
@@ -340,7 +357,7 @@ class Workload(object):
         if workload_qdir is not None and workload_qdir[0] is not None:
             # Load actual queries to execute.
             workload_dir, workload_qlist = workload_qdir
-            with open_and_save(self.dbgym_cfg, workload_qlist, "r") as f:
+            with self._open_for_reading(workload_qlist, "r") as f:
                 psql_order = [
                     (f"Q{i+1}", Path(workload_dir) / l.strip())
                     for i, l in enumerate(f.readlines())
@@ -350,7 +367,7 @@ class Workload(object):
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with open_and_save(self.dbgym_cfg, qpat, "r") as f:
+                with self._open_for_reading(qpat, "r") as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:
