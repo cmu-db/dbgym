@@ -1,8 +1,5 @@
 import logging
-from pathlib import Path
-
 import click
-from sqlalchemy import create_engine
 
 from misc.utils import DBGymConfig
 from util.shell import subprocess_run
