@@ -27,13 +27,11 @@ from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search import ConcurrencyLimiter
 from ray.tune.search.hyperopt import HyperOptSearch
 
-from misc.utils import open_and_save, restart_ray
+from misc.utils import open_and_save, restart_ray, DBGymConfig
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
 from tune.protox.embedding.utils import (
     f_unpack_dict,
-    fetch_index_parameters,
-    load_input_data,
     parse_hyperopt_config,
 )
 from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate, VAE
@@ -75,7 +73,7 @@ def fetch_index_parameters(data: dict[str, Any]) -> Tuple[int, int, TableAttrLis
     return max_attrs, max_cat_features, att_usage, space.class_mapping
 
 
-def load_input_data(input_file: Union[str, Path], train_size: int, max_attrs: int, require_cost: bool, seed: int) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
+def load_input_data(input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]
@@ -83,7 +81,7 @@ def load_input_data(input_file: Union[str, Path], train_size: int, max_attrs: in
     if require_cost:
         columns += COST_COLUMNS
 
-    df = pd.read_parquet(input_file, columns=columns)
+    df = pd.read_parquet(input_path, columns=columns)
     num_classes: int= df.idx_class.max() + 1
 
     # Get the y's and the x's.
@@ -308,14 +306,14 @@ def _hpo_train(dbgym_cfg, config, generic_args, train_args):
 
 
 def _build_trainer(
-    dbgym_cfg,
-    benchmark_name,
-    config,
-    input_path,
-    trial_dir,
-    benchmark_config_path,
-    train_size,
-    workload_path,
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    config: dict[str, Any],
+    input_path: Path,
+    trial_dpath: Path,
+    benchmark_config_path: Path,
+    train_size: int,
+    workload_path: Path,
     dataloader_num_workers=0,
     disable_tqdm=False,
 ):
@@ -368,8 +366,6 @@ def _build_trainer(
     }
 
     metric_loss = CostLoss(config["metric_loss_md"])
-    # Default miner.
-    tminers = {}
 
     # Define the loss functions.
     loss_funcs = {
@@ -389,20 +385,21 @@ def _build_trainer(
 
     # Define the tester hook.
     record_keeper, _, _ = logging_presets.get_record_keeper(
-        f"{trial_dir}/logs", f"{trial_dir}/tboard"
+        {trial_dpath} / "logs", {trial_dpath} / "tboard"
     )
     hooks = logging_presets.get_hook_container(record_keeper)
-    model_folder = f"{trial_dir}/models"
+    model_folder = {trial_dpath} / "models"
 
     # Validation step loop.
+    assert val_dataset
     val_dl = torch.utils.data.DataLoader(
         val_dataset, batch_size=4096, collate_fn=collate_fn
     )
-    epoch_end = _construct_epoch_end(val_dl, config, hooks, model_folder)
+    epoch_end: Callable[..., Optional[dict[str, Any]]] = _construct_epoch_end(val_dl, config, hooks, model_folder)
 
-    def clip_grad():
+    def clip_grad() -> None:
         if config["grad_clip_amount"] is not None:
-            torch.nn.utils.clip_grad_norm_(
+            torch.nn.utils.clip_grad_norm_( # type: ignore
                 model.parameters(), config["grad_clip_amount"]
             )
 
@@ -419,7 +416,7 @@ def _build_trainer(
             optimizers=optimizers,
             batch_size=config["batch_size"],
             loss_funcs=loss_funcs,
-            mining_funcs=tminers,
+            mining_funcs={},
             dataset=train_dataset,
             sampler=sampler,
             iterations_per_epoch=(
