@@ -48,6 +48,9 @@ def extract_aliases(stmts: pglast.ast.Node) -> TableAliasMap:
                 elif isinstance(node, pglast.ast.RangeVar):
                     ft = node
                     relname = ft.relname
+                    if isinstance(stmt.stmt, pglast.ast.ViewStmt):
+                        if node == stmt.stmt.view:
+                            continue
 
                     alias = (
                         ft.relname
