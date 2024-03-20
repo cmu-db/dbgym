@@ -1,30 +1,25 @@
-import itertools
-import random
-from typing import Iterator
-
-import numpy as np
-import torch
 import tqdm
-from pytorch_metric_learning import trainers
-from pytorch_metric_learning.utils import common_functions as c_f
+import random
+import itertools
+import numpy as np
+from numpy.typing import NDArray
+import torch
 from torch.utils.data import Sampler
+from typing import Iterator, Any, Callable, Union, Tuple, Optional
+from pytorch_metric_learning import trainers # type: ignore
+from pytorch_metric_learning.utils import common_functions as c_f # type: ignore
 
 
 class StratifiedRandomSampler(Sampler[int]):
-    allow_repeats = True
-    labels = None
-    max_class = 0
-    batch_size = 0
-    elem_per_class = 0
-
-    def __init__(self, labels, max_class: int, batch_size: int, allow_repeats=True):
+    def __init__(self, labels: NDArray[Any], max_class: int, batch_size: int, allow_repeats: bool=True):
         self.allow_repeats = allow_repeats
         self.labels = labels
         self.max_class = max_class
         self.batch_size = batch_size
+        self.elem_per_class = 0
         assert self.batch_size > 0
 
-    def compute(self):
+    def compute(self) -> Tuple[dict[int, Tuple[int, NDArray[Any]]], int, int]:
         r = {}
         for c in range(self.max_class):
             lc = np.argwhere(self.labels == c)
@@ -51,7 +46,7 @@ class StratifiedRandomSampler(Sampler[int]):
         else:
             for k in r:
                 if r[k][0] > 0:
-                    random.shuffle(r[k][1])
+                    random.shuffle(list(r[k][1]))
 
             for i in range(min_steps):
                 elems = [
@@ -71,34 +66,36 @@ class StratifiedRandomSampler(Sampler[int]):
             return min_steps
 
 
-class VAETrainer(trainers.BaseTrainer):
-    def __init__(self, disable_tqdm, bias_fn, *args, **kwargs):
+class VAETrainer(trainers.BaseTrainer): # type: ignore
+    def __init__(self, disable_tqdm: bool,
+            bias_fn: Optional[Callable[[torch.Tensor, torch.Tensor], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]]],
+            *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.failed = False
-        self.fail_msg = None
-        self.fail_data = None
+        self.fail_msg: Optional[str] = None
+        self.fail_data: Optional[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = None
         self.disable_tqdm = disable_tqdm
         self.bias_fn = bias_fn
         self.eval = False
 
         self.last_recon_loss = 0
 
-    def compute(self, base_output):
+    def compute(self, base_output: Any) -> None:
         assert False
 
-    def maybe_get_metric_loss(self, embeddings, labels, indices_tuple):
+    def maybe_get_metric_loss(self, embeddings: torch.Tensor, labels: torch.Tensor, indices_tuple: Any) -> Any:
         if self.loss_weights.get("metric_loss", 0) > 0:
             return self.loss_funcs["metric_loss"](embeddings, labels, indices_tuple)
         return 0
 
-    def maybe_get_vae_loss(self, preds, data, labels):
+    def maybe_get_vae_loss(self, preds: torch.Tensor, data: torch.Tensor, labels: torch.Tensor) -> Any:
         if self.loss_weights.get("vae_loss", 0) > 0:
             return self.loss_funcs["vae_loss"](
                 preds, None, None, (data, labels), is_eval=self.eval
             )
         return 0
 
-    def calculate_loss(self, curr_batch):
+    def calculate_loss(self, curr_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
         data, labels = curr_batch
         if labels.shape[1] == 1:
             # Flatten labels if it's a class.
@@ -138,11 +135,11 @@ class VAETrainer(trainers.BaseTrainer):
             self.loss_funcs["vae_loss"].last_loss_dict["recon_loss"]["losses"].item()
         )
 
-    def backward(self):
+    def backward(self) -> None:
         if not self.failed:
             self.losses["total_loss"].backward()
 
-    def train(self, start_epoch=1, num_epochs=1):
+    def train(self, start_epoch: int=1, num_epochs: int=1) -> None:
         self.initialize_dataloader()
         for self.epoch in range(start_epoch, num_epochs + 1):
             self.set_to_train()
@@ -151,7 +148,7 @@ class VAETrainer(trainers.BaseTrainer):
             if not self.disable_tqdm:
                 pbar = tqdm.tqdm(range(self.iterations_per_epoch))
             else:
-                pbar = range(self.iterations_per_epoch)
+                pbar = range(self.iterations_per_epoch) # type: ignore
 
             for self.iteration in pbar:
                 self.forward_and_backward()
@@ -210,22 +207,19 @@ class VAETrainer(trainers.BaseTrainer):
             if self.end_of_epoch_hook(self) is False:
                 break
 
-    def compute_embeddings(self, base_output):
-        embeddings, _, _ = self.compute(base_output)
-        return embeddings
+    def compute_embeddings(self, base_output: Any) -> None:
+        assert False
 
-    def get_batch(self):
-        self.dataloader_iter, curr_batch = c_f.try_next_on_generator(
-            self.dataloader_iter, self.dataloader
-        )
+    def get_batch(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        self.dataloader_iter, curr_batch = c_f.try_next_on_generator(self.dataloader_iter, self.dataloader) # type: ignore
         data, labels = self.data_and_label_getter(curr_batch)
         return data, labels
 
-    def modify_schema(self):
+    def modify_schema(self) -> None:
         self.schema["loss_funcs"].keys += ["vae_loss"]
 
-    def switch_eval(self):
+    def switch_eval(self) -> None:
         self.eval = True
 
-    def switch_train(self):
+    def switch_train(self) -> None:
         self.eval = False
