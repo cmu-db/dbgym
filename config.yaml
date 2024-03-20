@@ -1,7 +1,4 @@
 dbgym_workspace_path: ../dbgym_workspace
-
-dbms:
-  postgres:
-    user: noisepage_user
-    pass: noisepage_pass
-    port: 15721
+postgres_user: noisepage_user
+postgres_pass: noisepage_pass
+postgres_port: 15721

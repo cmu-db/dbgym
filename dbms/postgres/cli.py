@@ -222,9 +222,9 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
 
 
 def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
-    pguser = dbgym_cfg.cur_yaml["user"]
-    pgpass = dbgym_cfg.cur_yaml["pass"]
-    pgport = dbgym_cfg.cur_yaml["port"]
+    pguser = dbgym_cfg.root_yaml["postgres_user"]
+    pgpass = dbgym_cfg.root_yaml["postgres_pass"]
+    pgport = dbgym_cfg.root_yaml["postgres_port"]
     connstr = (
         f"postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
     )
