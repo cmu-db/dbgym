@@ -1,6 +1,5 @@
 import numpy as np
 import yaml
-import json
 import unittest
 from tune.protox.env.workload import Workload
 from tune.protox.env.space.primitive_space import IndexSpace

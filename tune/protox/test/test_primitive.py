@@ -1,5 +1,4 @@
 import unittest
-from tune.protox.env.space.primitive import SettingType, KnobClass
 from tune.protox.env.space.primitive.knob import Knob
 from tune.protox.env.space.primitive.latent_knob import LatentKnob
 from tune.protox.env.space.primitive.index import IndexAction
