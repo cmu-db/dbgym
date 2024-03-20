@@ -36,7 +36,7 @@ from tune.protox.env.types import (
     TableAttrAccessSetsMap,
     TableAttrSetMap,
 )
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, open_and_save
 
 
 class Workload(object):
@@ -67,7 +67,7 @@ class Workload(object):
             self.order.append(stem)
             self.queries_mix[stem] = ratio
 
-            with open(sql_file, "r") as q:
+            with open_and_save(self.dbgym_cfg, sql_file, "r") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -181,12 +181,15 @@ class Workload(object):
         tables: list[str],
         attributes: TableAttrListMap,
         query_spec: QuerySpec,
+        workload_path: Path,
         pid: Optional[int] = None,
         workload_timeout: float = 0,
         workload_timeout_penalty: float = 1.0,
         logger: Optional[Logger] = None,
     ) -> None:
 
+        self.dbgym_cfg = dbgym_cfg
+        self.workload_path = workload_path
         # Whether we should use benchbase or not.
         self.benchbase = query_spec["benchbase"]
         self.oltp_workload = query_spec["oltp_workload"]
@@ -211,20 +214,21 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        if "query_order" in query_spec:
-            with open(query_spec["query_order"], "r") as f:
-                lines = f.read().splitlines()
-                sqls = [
-                    (
-                        line.split(",")[0],
-                        Path(query_spec["query_directory"]) / line.split(",")[1],
-                        1.0,
-                    )
-                    for line in lines
-                ]
+        workload_order_file = self.workload_path / "order.txt"
+        with open_and_save(self.dbgym_cfg, workload_order_file, "r") as f:
+            lines = f.read().splitlines()
+            sqls = [
+                (
+                    line.split(",")[0],
+                    Path(query_spec["query_directory"]) / line.split(",")[1],
+                    1.0,
+                )
+                for line in lines
+            ]
 
+        # TODO(phw2): pass "query_transactional" somewhere other than query_spec, just like "query_order" is
         if "query_transactional" in query_spec:
-            with open(query_spec["query_transactional"], "r") as f:
+            with open_and_save(self.dbgym_cfg, query_spec["query_transactional"], "r") as f:
                 lines = f.read().splitlines()
                 splits = [line.split(",") for line in lines]
                 sqls = [
@@ -240,8 +244,9 @@ class Workload(object):
         query_usages = copy.deepcopy(self.query_usages)
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
+        # TODO(phw2): pass "execute_query_order" somewhere other than query_spec, just like "query_order" is
         if "execute_query_order" in query_spec:
-            with open(query_spec["execute_query_order"], "r") as f:
+            with open_and_save(dbgym_cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
@@ -335,7 +340,7 @@ class Workload(object):
         if workload_qdir is not None and workload_qdir[0] is not None:
             # Load actual queries to execute.
             workload_dir, workload_qlist = workload_qdir
-            with open(workload_qlist, "r") as f:
+            with open_and_save(self.dbgym_cfg, workload_qlist, "r") as f:
                 psql_order = [
                     (f"Q{i+1}", Path(workload_dir) / l.strip())
                     for i, l in enumerate(f.readlines())
@@ -345,7 +350,7 @@ class Workload(object):
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with open(qpat, "r") as f:
+                with open_and_save(self.dbgym_cfg, qpat, "r") as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:
@@ -492,7 +497,7 @@ class Workload(object):
             if not results_dir.exists():
                 results_dir.mkdir(parents=True, exist_ok=True)
 
-            with open(results_dir / "run.plans", "w") as f:
+            with open(self.dbgym_cfg, results_dir / "run.plans", "w") as f:
                 # Output the explain data.
                 for qid, run in qid_runtime_data.items():
                     if run.explain_data is not None:
@@ -509,7 +514,7 @@ class Workload(object):
                 # Log the metrics data as a flattened.
                 accum_data = cast(list[dict[str, Any]], [v.metric_data for _, v in qid_runtime_data.items()])
                 accum_stats = obs_space.merge_deltas(accum_data)
-                with open(results_dir / "run.metrics.json", "w") as f:
+                with open(self.dbgym_cfg, results_dir / "run.metrics.json", "w") as f:
                     # Flatten it.
                     def flatten(d: dict[str, Any]) -> dict[str, Any]:
                         flat: dict[str, Any] = {}
@@ -531,7 +536,7 @@ class Workload(object):
                     output["flattened"] = True
                     f.write(json.dumps(output, indent=4))
 
-            with open(results_dir / "run.raw.csv", "w") as f:
+            with open(self.dbgym_cfg, results_dir / "run.raw.csv", "w") as f:
                 # Write the raw query data.
                 f.write(
                     "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
