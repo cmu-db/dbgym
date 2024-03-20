@@ -1,12 +1,11 @@
 protox:
-  benchmark_name: tpch
-  oltp_workload: False
-
   query_spec:
     benchbase: False
-    allow_per_query: True
-    early_workload_kill: True
+    oltp_workload: False
     tbl_include_subsets_prune: True
+    tbl_fold_subsets: False
+    tbl_fold_delta: 1
+    tbl_fold_iterations: 1
 
   max_num_columns: 16
   tables:

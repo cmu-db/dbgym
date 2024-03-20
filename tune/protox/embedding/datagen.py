@@ -1,3 +1,4 @@
+import copy
 import gc
 import math
 import os
@@ -257,7 +258,7 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
     workload = Workload(
         dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
     )
-    modified_attrs = workload.process_column_usage()
+    modified_attrs = workload.column_usages()
     traindata_dir = get_traindata_dir(dbgym_cfg)
 
     with Pool(dir_gen_args.max_concurrent) as pool:
@@ -613,13 +614,16 @@ def _produce_index_data(
     # TODO: In theory we want to bias the sampling towards longer length.
     # Since the options grow exponentially from there...
     idxs = IndexSpace(
-        "wolp",
         tables,
         max_num_columns,
         max_indexable_attributes=workload.max_indexable(),
         seed=seed,
-        latent_dim=0,
-        attributes_overwrite=modified_attrs,
+        rel_metadata=copy.deepcopy(modified_attrs),
+        attributes_overwrite=copy.deepcopy(modified_attrs),
+        tbl_include_subsets={},
+        index_space_aux_type=False,
+        index_space_aux_include=False,
+        deterministic_policy=False,
     )
 
     table_idx = 0

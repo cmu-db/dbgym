@@ -340,7 +340,6 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
     vae.to(device=device).eval()
 
     idxs = IndexSpace(
-        agent_type="wolp",
         tables=tables,
         max_num_columns=0,
         # index_repr=IndexRepr.ONE_HOT_DETERMINISTIC.name, TODO(phw2)

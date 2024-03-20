@@ -2,9 +2,12 @@
 
 set -euxo pipefail
 
-# postgres + benchmark
-python3 task.py --no-startup-check dbms postgres build
+# benchmark
 python3 task.py --no-startup-check benchmark tpch generate-data 0.01
+python3 task.py --no-startup-check benchmark tpch generate-workload queries_15721_15723 15721 15723
+
+# postgres
+python3 task.py --no-startup-check dbms postgres build
 python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
 
 # embedding
