@@ -1,6 +1,5 @@
 import unittest
 from pathlib import Path
-
 import numpy as np
 import yaml
 
@@ -12,7 +11,7 @@ from tune.protox.env.workload import Workload
 class IndexSpaceTests(unittest.TestCase):
     @staticmethod
     def load(
-        config_path=Path("tune/protox/test/unittest_tpch.yaml"),
+        config_path=Path("tune/protox/test/unittest_benchmark_configs/unittest_tpch.yaml"),
         aux_type=True,
         aux_include=True,
     ):
