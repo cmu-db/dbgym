@@ -2,9 +2,9 @@ import logging
 import os
 import subprocess
 from pathlib import Path
-
 import click
 from sqlalchemy import create_engine
+import psycopg
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
@@ -191,7 +191,7 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
 def _load_benchmark_into_pgdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ):
-    with _create_conn(dbgym_cfg) as conn:
+    with create_conn(dbgym_cfg, use_psycopg=False) as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
         else:
@@ -221,15 +221,20 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
         sql_file_execute(conn, constraints_fpath)
 
 
-def _create_conn(dbgym_cfg: DBGymConfig) -> Connection:
+def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
     pguser = dbgym_cfg.cur_yaml["user"]
     pgpass = dbgym_cfg.cur_yaml["pass"]
     pgport = dbgym_cfg.cur_yaml["port"]
     connstr = (
         f"postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
     )
-    engine: Engine = create_engine(
-        connstr,
-        execution_options={"isolation_level": "AUTOCOMMIT"},
-    )
-    return engine.connect()
+    if use_psycopg:
+        return psycopg.connect(
+            connstr, autocommit=True, prepare_threshold=None
+        )
+    else:
+        engine: Engine = create_engine(
+            connstr,
+            execution_options={"isolation_level": "AUTOCOMMIT"},
+        )
+        return engine.connect()

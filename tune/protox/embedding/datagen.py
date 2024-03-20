@@ -10,7 +10,6 @@ from pathlib import Path
 import click
 import numpy as np
 import pandas as pd
-import psycopg
 import yaml
 from sklearn.preprocessing import quantile_transform
 
@@ -29,6 +28,7 @@ from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
+from dbms.postgres.cli import create_conn
 
 # FUTURE(oltp)
 # try:
@@ -97,14 +97,6 @@ from tune.protox.env.workload import Workload
     type=int,
     help="The max # of concurrent threads that will be creating hypothetical indexes. The default is `nproc`.",
 )
-# TODO(phw2): figure out a better way to do Postgres connections
-@click.option(
-    "--connection-str",
-    required=True,
-    default=None,
-    type=str,
-    help="The Postgres connection string.",
-)
 # TODO(wz2): when would we not want to generate costs?
 @click.option("--no-generate-costs", is_flag=True, help="Turn off generating costs.")
 
@@ -125,7 +117,6 @@ def datagen(
     override_sample_limits,
     file_limit,
     max_concurrent,
-    connection_str,
     no_generate_costs,
     table_shape,
     dual_class,
@@ -186,7 +177,6 @@ def datagen(
         override_sample_limits,
         file_limit,
         max_concurrent,
-        connection_str,
         no_generate_costs,
     )
     file_gen_args = EmbeddingFileGenArgs(table_shape, dual_class, pad_min, rebias)
@@ -224,7 +214,6 @@ class EmbeddingDirGenArgs:
         override_sample_limits,
         file_limit,
         max_concurrent,
-        connection_str,
         no_generate_costs,
     ):
         self.leading_col_tbls = leading_col_tbls
@@ -232,7 +221,6 @@ class EmbeddingDirGenArgs:
         self.override_sample_limits = override_sample_limits
         self.file_limit = file_limit
         self.max_concurrent = max_concurrent
-        self.connection_str = connection_str
         self.no_generate_costs = no_generate_costs
 
 
@@ -299,7 +287,6 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
                             _produce_index_data,
                             args=(
                                 dbgym_cfg,
-                                dir_gen_args.connection_str,
                                 tables,
                                 attributes,
                                 query_spec,
@@ -594,7 +581,6 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
 
 def _produce_index_data(
     dbgym_cfg,
-    connection,
     tables,
     attributes,
     query_spec,
@@ -647,9 +633,7 @@ def _produce_index_data(
             # there are no indexes to generate.
             return
 
-    with psycopg.connect(
-        connection, autocommit=True, prepare_threshold=None
-    ) as connection:
+    with create_conn(dbgym_cfg, use_psycopg=True) as connection:
         _fetch_server_indexes(connection)
         idxs.reset(connection=connection)
         if generate_costs:
