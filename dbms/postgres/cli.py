@@ -104,28 +104,23 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
     )
 
     # initdb
-    pgbin_path = _get_pgbin_symlink_path(dbgym_cfg)
-    assert pgbin_path.exists()
-    # save any script we call from pgbin_path because they are dependencies generated from another task run
-    save_file(dbgym_cfg, pgbin_path / "initdb")
-    subprocess_run(f'./initdb -D "{pgdata_real_dpath}"', cwd=pgbin_path)
+    pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
+    assert pgbin_symlink_dpath.exists()
+    # save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run
+    save_file(dbgym_cfg, pgbin_symlink_dpath / "initdb")
+    subprocess_run(f'./initdb -D "{pgdata_real_dpath}"', cwd=pgbin_symlink_dpath)
 
     # start postgres (all other pgdata setup requires postgres to be started)
-    pgport = dbgym_cfg.cur_yaml["port"]
     # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-    save_file(dbgym_cfg, pgbin_path / "pg_ctl")
-    subprocess.run(
-        f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start",
-        cwd=pgbin_path,
-        shell=True,
-    )
+    save_file(dbgym_cfg, pgbin_symlink_dpath / "pg_ctl")
+    start_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_real_dpath)
 
     # setup
     _generic_pgdata_setup(dbgym_cfg)
     _load_benchmark_into_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
     # stop postgres so that we don't "leak" processes
-    subprocess_run(f'./pg_ctl -D "{pgdata_real_dpath}" stop', cwd=pgbin_path)
+    stop_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_real_dpath)
 
     # create .tgz file
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
@@ -154,21 +149,21 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
 
 def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
-    pgbin_path = _get_pgbin_symlink_path(dbgym_cfg)
-    assert pgbin_path.exists()
+    pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
+    assert pgbin_symlink_dpath.exists()
     pguser = dbgym_cfg.cur_yaml["user"]
     pgpass = dbgym_cfg.cur_yaml["pass"]
     pgport = dbgym_cfg.cur_yaml["port"]
 
     # create user
-    save_file(dbgym_cfg, pgbin_path / "psql")
+    save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
     subprocess_run(
         f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
+        cwd=pgbin_symlink_dpath,
     )
     subprocess_run(
         f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
-        cwd=pgbin_path,
+        cwd=pgbin_symlink_dpath,
     )
 
     # load shared preload libraries
@@ -177,14 +172,14 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     )
     subprocess_run(
         f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
+        cwd=pgbin_symlink_dpath,
     )
 
     # create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
         f"./psql -c \"create database {DBGYM_DBNAME} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
-        cwd=pgbin_path,
+        cwd=pgbin_symlink_dpath,
     )
 
 
@@ -221,18 +216,55 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
         sql_file_execute(conn, constraints_fpath)
 
 
+def unzip_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
+    pass
+
+
+def start_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:
+    _start_or_stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath, True)
+
+
+def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:
+    _start_or_stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath, False)
+
+
+def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path, is_start: bool) -> None:
+    # they should be absolute paths and should exist
+    assert pgbin_dpath.is_absolute() and pgbin_dpath.exists()
+    assert pgdata_dpath.is_absolute() and pgdata_dpath.exists()
+    # the inputs may be symlinks so we need to resolve them first
+    pgbin_real_dpath = pgbin_dpath.resolve()
+    pgdata_real_dpath = pgdata_dpath.resolve()
+    pgport = dbgym_cfg.cur_yaml["port"]
+    save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
+
+    cmd_str = "start" if is_start else "stop"
+    subprocess_run_kwargs = {
+        "args": f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' {cmd_str}",
+        "cwd": pgbin_real_dpath,
+        "shell": True,
+    }
+
+    if is_start:
+        # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
+        subprocess.run(**subprocess_run_kwargs)
+    else:
+        subprocess_run(**subprocess_run_kwargs)
+
+
 def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
     pguser = dbgym_cfg.root_yaml["postgres_user"]
     pgpass = dbgym_cfg.root_yaml["postgres_pass"]
     pgport = dbgym_cfg.root_yaml["postgres_port"]
-    connstr = (
-        f"postgresql+psycopg://{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
-    )
+    connstr_suffix = f"{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
+
     if use_psycopg:
+        connstr = f"postgresql://{connstr_suffix}"
         return psycopg.connect(
             connstr, autocommit=True, prepare_threshold=None
         )
     else:
+        connstr = f"postgresql+psycopg://{connstr_suffix}"
         engine: Engine = create_engine(
             connstr,
             execution_options={"isolation_level": "AUTOCOMMIT"},

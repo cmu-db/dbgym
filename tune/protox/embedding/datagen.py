@@ -7,7 +7,6 @@ import time
 from itertools import chain, combinations
 from multiprocessing import Pool
 from pathlib import Path
-
 import click
 import numpy as np
 import pandas as pd
@@ -22,6 +21,8 @@ from misc.utils import (
     conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
     default_workload_path,
+    default_pgdata_snapshot_path,
+    default_pgbin_path,
     link_result,
     open_and_save,
 )
@@ -29,7 +30,7 @@ from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
-from dbms.postgres.cli import create_conn
+from dbms.postgres.cli import create_conn, start_or_stop_postgres
 
 # FUTURE(oltp)
 # try:
@@ -129,8 +130,6 @@ def datagen(
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     """
-    # TODO(phw2): do stuff to automatically manage postgres
-
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -184,11 +183,13 @@ def datagen(
 
     # run all steps
     start_time = time.time()
+    start_or_stop_postgres(dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path), default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path), True)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
+    start_or_stop_postgres(dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path), default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path), False)
 
 
 class EmbeddingDatagenGenericArgs:

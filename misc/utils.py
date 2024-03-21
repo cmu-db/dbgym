@@ -80,6 +80,12 @@ default_pgdata_snapshot_path = (
     / "data"
     / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
 )
+default_pgbin_path = (
+    lambda workspace_path: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_dbms_postgres" / "build" / "repo" / "boot"/ "build" / "postgres" / "bin"
+)
 
 
 class DBGymConfig:
