@@ -221,7 +221,7 @@ def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
     # it may be a symlink so we need to resolve them first
     pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
     save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
-    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    pgdata_dpath = dbgym_cfg.dbgym_tmp_path
     subprocess_run(f"tar -xzf {pgdata_snapshot_real_fpath} -C {pgdata_dpath}")
     return pgdata_dpath
 
