@@ -217,6 +217,7 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
 
 
 def unzip_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
+    # save pgdata.tgz
     pass
 
 

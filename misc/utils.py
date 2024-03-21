@@ -142,6 +142,14 @@ class DBGymConfig:
             self.dbgym_workspace_path
         )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
+        # tmp is a workspace for this run only
+        # one use for it is to place the unzipped pgdata
+        # there's no need to save the actual pgdata dir in run_*/ because we just save a symlink to
+        #   the .tgz file we unzipped
+        self.dbgym_tmp_path = self.dbgym_workspace_path / "tmp"
+        if self.dbgym_tmp_path.exists():
+            shutil.rmtree(self.dbgym_tmp_path)
+        self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.
         self.dbgym_this_run_path = (
@@ -149,6 +157,10 @@ class DBGymConfig:
         )
         # exist_ok is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+
+    def __del__(self):
+        if self.dbgym_tmp_path.exists():
+            shutil.rmtree(self.dbgym_tmp_path)
 
     # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
