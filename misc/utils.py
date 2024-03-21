@@ -24,10 +24,17 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
 
+def get_scale_factor_string(scale_factor: float | str) -> str:
+    if scale_factor == SCALE_FACTOR_PLACEHOLDER:
+        return scale_factor
+    else:
+        return str(scale_factor).replace(".", "point")
+
 
 # Other parameters
 BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
 WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
+SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
@@ -49,16 +56,16 @@ default_benchbase_config_relpath = (
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
 default_dataset_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding_traindata.parquet"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
 )
 default_embedding_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
 )
 default_hpoed_agent_params_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
@@ -73,12 +80,12 @@ default_workload_path = (
     / f"workload_{workload_name}"
 )
 default_pgdata_snapshot_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / f"dbgym_dbms_postgres"
     / "data"
-    / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
+    / f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pgdata.tgz"
 )
 default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(

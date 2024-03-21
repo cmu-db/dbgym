@@ -1,10 +1,6 @@
-import copy
 import json
 import logging
-import os
 import random
-import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +9,7 @@ import ray
 import yaml
 from ray.air import FailureConfig, RunConfig
 from ray.train import SyncConfig
-from ray.tune import Trainable, TuneConfig
+from ray.tune import TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
@@ -22,6 +18,7 @@ from misc.utils import (
     DEFAULT_SYSKNOBS_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
+    SCALE_FACTOR_PLACEHOLDER,
     conv_inputpath_to_abspath,
     default_benchbase_config_relpath,
     default_benchmark_config_relpath,
@@ -46,7 +43,7 @@ class AgentTrainArgs:
 @click.option(
     "--embedding-path",
     default=None,
-    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
+    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
@@ -75,7 +72,7 @@ class AgentTrainArgs:
     "--pgdata-snapshot-path",
     default=None,
     type=Path,
-    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",

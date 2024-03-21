@@ -8,7 +8,7 @@ import psycopg
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, save_file
+from misc.utils import DBGymConfig, save_file, get_scale_factor_string
 from util.shell import subprocess_run
 from util.sql import Connection, Engine, conn_execute, sql_file_execute
 
@@ -53,11 +53,10 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 
 
 def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
-    scale_factor_str = str(scale_factor).replace(".", "point")
-    return f"{benchmark_name}_sf{scale_factor_str}_pgdata"
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pgdata"
 
 
-def _get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
     return _get_pgdata_name(benchmark_name, scale_factor) + ".tgz"
 
 
@@ -65,7 +64,7 @@ def _get_pgdata_tgz_symlink_path(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ) -> Path:
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
-    return dbgym_cfg.cur_symlinks_data_path(".", mkdir=True) / _get_pgdata_tgz_name(
+    return dbgym_cfg.cur_symlinks_data_path(".", mkdir=True) / get_pgdata_tgz_name(
         benchmark_name, scale_factor
     )
 
@@ -126,7 +125,7 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
     pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
         ".", mkdir=True
-    ) / _get_pgdata_tgz_name(benchmark_name, scale_factor)
+    ) / get_pgdata_tgz_name(benchmark_name, scale_factor)
     # we need to cd into pgdata_real_dpath so that the tar file does not contain folders for the whole path of pgdata_real_dpath
     subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_real_dpath)
 
@@ -216,9 +215,15 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
         sql_file_execute(conn, constraints_fpath)
 
 
-def unzip_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
-    # save pgdata.tgz
-    pass
+def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
+    # it should be an absolute path and it should exist
+    assert pgdata_snapshot_fpath.is_absolute() and pgdata_snapshot_fpath.exists(), f"untar_snapshot(): pgdata_snapshot_fpath ({pgdata_snapshot_fpath}) either doesn't exist or is not absolute"
+    # it may be a symlink so we need to resolve them first
+    pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
+    save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
+    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    subprocess_run(f"tar -xzf {pgdata_snapshot_real_fpath} -C {pgdata_dpath}")
+    return pgdata_dpath
 
 
 def start_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:

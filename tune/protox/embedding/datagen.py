@@ -17,6 +17,7 @@ from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
+    SCALE_FACTOR_PLACEHOLDER,
     DBGymConfig,
     conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
@@ -30,7 +31,7 @@ from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
-from dbms.postgres.cli import create_conn, start_or_stop_postgres
+from dbms.postgres.cli import create_conn, start_postgres, stop_postgres, untar_snapshot
 
 # FUTURE(oltp)
 # try:
@@ -47,6 +48,18 @@ from dbms.postgres.cli import create_conn, start_or_stop_postgres
 # generic args
 @click.argument("benchmark-name")
 @click.argument("workload-name")
+@click.option(
+    "--scale-factor",
+    default=1.0,
+    type=float,
+    help=f"The scale factor of the benchmark.",
+)
+@click.option(
+    "--pgdata-snapshot-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
 @click.option(
     "--benchmark-config-path",
     default=None,
@@ -111,6 +124,8 @@ def datagen(
     dbgym_cfg,
     benchmark_name,
     workload_name,
+    scale_factor,
+    pgdata_snapshot_path,
     benchmark_config_path,
     workload_path,
     seed,
@@ -139,6 +154,10 @@ def datagen(
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
+    if pgdata_snapshot_path == None:
+        pgdata_snapshot_path = default_pgdata_snapshot_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
+        )
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
@@ -147,6 +166,7 @@ def datagen(
     # Convert all input paths to absolute paths
     workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
+    pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pgdata_snapshot_path)
 
     # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
@@ -169,7 +189,7 @@ def datagen(
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark_name, benchmark_config_path, seed, workload_path
+        benchmark_name, benchmark_config_path, seed, workload_path, pgdata_snapshot_path,
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -183,13 +203,15 @@ def datagen(
 
     # run all steps
     start_time = time.time()
-    start_or_stop_postgres(dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path), default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path), True)
+    pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pgdata_snapshot_path)
+    pgbin_dpath = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    start_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
-    start_or_stop_postgres(dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path), default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path), False)
+    stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
 
 
 class EmbeddingDatagenGenericArgs:
@@ -199,11 +221,12 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark_name, benchmark_config_path, seed, workload_path):
+    def __init__(self, benchmark_name, benchmark_config_path, seed, workload_path, pgdata_snapshot_path):
         self.benchmark_name = benchmark_name
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
         self.workload_path = workload_path
+        self.pgdata_snapshot_path = pgdata_snapshot_path
 
 
 class EmbeddingDirGenArgs:

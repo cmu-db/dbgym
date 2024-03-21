@@ -11,6 +11,7 @@ from misc.utils import (
     DEFAULT_HPO_SPACE_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
+    SCALE_FACTOR_PLACEHOLDER,
     conv_inputpath_to_abspath,
     default_benchmark_config_relpath,
     default_dataset_path,
@@ -50,7 +51,7 @@ from tune.protox.embedding.train_args import (
     "--dataset-path",
     default=None,
     type=Path,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_dataset_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
