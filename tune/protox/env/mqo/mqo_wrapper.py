@@ -141,20 +141,20 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.best_observed: dict[str, BestQueryRun] = {}
         self.logger = logger
 
-    def _update_best_observed(self, query_metric_data: dict[str, BestQueryRun]) -> None:
+    def _update_best_observed(self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False) -> None:
         if query_metric_data is not None:
             for q, data in query_metric_data.items():
-                if q not in self.best_observed:
-                    self.best_observed[q] = BestQueryRun(
-                        data.query_run, data.runtime, data.timeout, None, None
-                    )
+                if q not in self.best_observed or force_overwrite:
+                    self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                    if self.logger:
+                        self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6} (force: {force_overwrite})")
                 elif not data.timeout:
                     qobs = self.best_observed[q]
                     assert qobs.runtime and data.runtime
                     if data.runtime < qobs.runtime:
-                        self.best_observed[q] = BestQueryRun(
-                            data.query_run, data.runtime, data.timeout, None, None
-                        )
+                        self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                        if self.logger:
+                            self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6}")
 
     def step(  # type: ignore
         self,
@@ -301,17 +301,17 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
             # Get a null action.
             null_action = self.action_space.null_action(info["state_container"])
-            # Reset-to
+            # Reset-to -- the configuration we reset towards.
             reset_qknob = self.action_space.extract_query(info["state_container"])
             assert reset_qknob
 
+            # Replace into the null action the best-observed so far.
             best_qknobs = self.action_space.extract_query(null_action)
             assert best_qknobs
             for qid, qr in self.best_observed.items():
                 assert qr.query_run
                 best_qknobs.update(qr.query_run.qknobs)
 
-            # Replace into the null action.
             runs = [
                 (
                     "ResetPerQuery",
@@ -343,8 +343,12 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 first=False,
             )
 
-            # reset_qknob -- is the per query from the configuration being reset.
-            # runs[0][1]/best_qknobs -- is the best observed.
+            # Update the best observed.
+            self._update_best_observed(target_metric_data, force_overwrite=True)
+
+            # runs[0][1]/best_qknobs -- is the best observed qknobs.
+            # target_metric_data tells us if best_qknobs is good or if the config we reset to is good.
+            # reset_qknob -- is the per query from the configuration being reset which we defer to if we've timed out.
             #
             # Merge the optimality between best_observed and what we are resetting
             # to based on the feedback in target_metric_data.
@@ -353,11 +357,18 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
             # Reward should be irrelevant. If we do accidentally use it, cause an error.
-            info = EnvInfoDict({"metric": metric, "reward": np.inf, "results": results})
+            # Similarly, metric should be irrelevant. Do not shift the workload timeout.
+            info = EnvInfoDict({"metric": None, "reward": None, "results": results})
             # Use this to adjust the container and state but don't shift the step.
             state, _, _, _, info = self.unwrapped.step_post_execute(
                 True, action, info, soft=True
             )
+
+            # Update the reward baseline.
+            if self.unwrapped.reward_utility:
+                self.unwrapped.reward_utility.set_relative_baseline(
+                    self.unwrapped.baseline_metric, prev_result=metric,
+                )
 
             if self.logger:
                 self.logger.get_logger(__name__).debug("Maximized on reset.")

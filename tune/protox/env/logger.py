@@ -23,6 +23,11 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
             # TODO(wz2): This is a hack to get a logger instance.
             assert hasattr(args[0], "logger"), print(args[0], type(args[0]))
+
+            if args[0].logger is None:
+                # If there is no logger, just return.
+                return ret
+
             assert isinstance(args[0].logger, Logger)
             if args[0].logger is not None:
                 cls_name = type(args[0]).__name__

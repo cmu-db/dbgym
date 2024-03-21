@@ -1,3 +1,4 @@
+import copy
 import gc
 import itertools
 import json
@@ -18,10 +19,13 @@ from tune.protox.embedding.train_all import (
     create_vae_model,
     fetch_index_parameters,
     load_input_data,
+    fetch_vae_parameters_from_workload
 )
 from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
+from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
+from tune.protox.env.workload import Workload
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"
@@ -319,83 +323,82 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
 
     # Load the benchmark configuration.
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
-        data = yaml.safe_load(f)
-        tables = data["protox"]["tables"]
-        max_attrs, max_cat_features, att_usage, _ = fetch_index_parameters(
-            dbgym_cfg, generic_args.benchmark_name, data, generic_args.workload_path
-        )
+        benchmark_config = yaml.safe_load(f)
+        benchmark_config = benchmark_config[[k for k in benchmark_config.keys()][0]]
 
-    # don't use open_and_save() because we generated embeddings_config_fpath in this run
+    max_num_columns = benchmark_config["max_num_columns"]
+    tables = benchmark_config["tables"]
+    attributes = benchmark_config["attributes"]
+    query_spec = benchmark_config["query_spec"]
+
+    workload = Workload(tables, attributes, query_spec, pid=None)
+    modified_attrs = workload.column_usages()
+
+    # Load VAE.
     embeddings_dpath = embedder_fpath.parent.parent.parent  # part*/embeddings_*/
-    embeddings_config_fpath = os.path.join(
-        embeddings_dpath, "config"
-    )  # part*/embeddings_*/config
+    embeddings_config_fpath = embeddings_dpath / "config" # part*/embeddings_*/config
+    # don't use open_and_save() because we generated embeddings_config_fpath in this run
     with open(embeddings_config_fpath, "r") as f:
         config = json.load(f)
+        assert config["mean_output_act"] == "sigmoid"
+        index_output_transform = lambda x: torch.nn.Sigmoid()(x) * config["output_scale"]
+        def index_noise_scale(x, n):
+            assert n is None
+            return torch.clamp(x, 0., config["output_scale"])
+        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(tables))
+        vae = create_vae_model(config, max_attrs, max_cat_features)
+        vae.load_state_dict(torch.load(embedder_fpath))
+        vae.eval()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    vae = create_vae_model(config, max_attrs, max_cat_features)
-    # Load the specific epoch model.
-    vae.load_state_dict(torch.load(embedder_fpath, map_location=device))
-    vae.to(device=device).eval()
-
-    idxs = IndexSpace(
+    idxs = LatentIndexSpace(
         tables=tables,
-        max_num_columns=0,
-        # index_repr=IndexRepr.ONE_HOT_DETERMINISTIC.name, TODO(phw2)
+        max_num_columns=max_num_columns,
+        max_indexable_attributes=workload.max_indexable(),
         seed=np.random.randint(1, 1e10),
+        rel_metadata=copy.deepcopy(modified_attrs),
+        attributes_overwrite=copy.deepcopy(modified_attrs),
+        tbl_include_subsets={},
+        vae=vae,
+        index_space_aux_type=False,
+        index_space_aux_include=False,
+        deterministic_policy=True,
         latent_dim=config["latent_dim"],
-        index_vae_model=vae,
-        index_output_scale=1.0,
-        attributes_overwrite=att_usage,
-    )
-    idxs.rel_metadata = att_usage
-    idxs._build_mapping(att_usage)
-
-    def decode_to_classes(rand_points):
-        with torch.no_grad():
-            rand_decoded = idxs._decode(act=rand_points)
-            classes = {}
-            for r in range(rand_points.shape[0]):
-                act = idxs.index_repr_policy.sample_action(
-                    idxs.np_random, rand_decoded[r], att_usage, False, True
-                )
-                idx_class = idxs.get_index_class(act)
-                if idx_class not in classes:
-                    classes[idx_class] = 0
-                classes[idx_class] += 1
-        return sorted(
-            [(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True
-        )
+        index_output_transform=index_output_transform,
+        # No-op noise.
+        index_noise_scale=index_noise_scale,
+        logger=None)
 
     output_scale = config["metric_loss_md"]["output_scale"]
     bias_separation = config["metric_loss_md"]["bias_separation"]
     num_segments = min(analyze_args.max_segments, math.ceil(1.0 / bias_separation))
 
     base = 0
-    epoch_dpath = os.path.join(
-        embeddings_dpath, "models", f"epoch{epoch_i}"
-    )  # part*/embeddings_*/models/epoch*/
-    ranges_fpath = os.path.join(epoch_dpath, RANGES_FNAME)
+    epoch_dpath = embeddings_dpath / "models" / f"epoch{epoch_i}" # part*/embeddings_*/models/epoch*/
+    ranges_fpath = epoch_dpath / RANGES_FNAME
     with open(ranges_fpath, "w") as f:
         for _ in tqdm.tqdm(range(num_segments), total=num_segments, leave=False):
-            classes = decode_to_classes(
-                torch.rand(analyze_args.num_points_to_sample, config["latent_dim"])
-                * output_scale
-                + base
-            )
+            classes = {}
+            with torch.no_grad():
+                points = torch.rand(analyze_args.num_points_to_sample, config["latent_dim"]) * output_scale + base
+                protos = idxs.from_latent(points)
+                neighbors = [idxs.neighborhood(proto, neighbor_parameters={
+                    "knob_num_nearest": 100,
+                    "knob_span": 1,
+                    "index_num_samples": 1,
+                    "index_rules": False,
+                })[0] for proto in protos]
+
+                for n in neighbors:
+                    idx_class = idxs.get_index_class(n)
+                    if idx_class not in classes:
+                        classes[idx_class] = 0
+                    classes[idx_class] += 1
+            classes = sorted([(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True)
             if analyze_args.num_classes_to_keep != 0:
-                classes = classes[: analyze_args.num_classes_to_keep]
+                classes = classes[:analyze_args.num_classes_to_keep]
 
             f.write(f"Generating range {base} - {base + output_scale}\n")
-            f.write(
-                "\n".join(
-                    [
-                        f"{k}: {v / analyze_args.num_points_to_sample}"
-                        for (k, v) in classes
-                    ]
-                )
-            )
+            f.write("\n".join([f"{k}: {v / analyze_args.num_points_to_sample}" for (k, v) in classes]))
             f.write("\n")
             base += output_scale
 

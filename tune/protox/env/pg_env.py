@@ -308,9 +308,10 @@ class PostgresEnv(gym.Env[Any, Any]):
             self._restore_last_snapshot()
 
         if success:
-            if not self.workload.oltp_workload:
-                # Update the workload metric timeout if we've succeeded.
-                self.workload.set_workload_timeout(info["metric"])
+            if not soft:
+                if not self.workload.oltp_workload:
+                    # Update the workload metric timeout if we've succeeded.
+                    self.workload.set_workload_timeout(info["metric"])
 
             # Get the current view of the state container.
             assert isinstance(self.action_space, HolonSpace)

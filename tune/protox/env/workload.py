@@ -1,3 +1,4 @@
+import math
 import copy
 import json
 import shutil
@@ -485,7 +486,7 @@ class Workload(object):
                         # If we have a reset metric, use it's timeout and convert to seconds.
                         truntime = reset_metrics[qid].runtime
                         assert truntime is not None
-                        target_pqt = truntime / 1.0e6
+                        target_pqt = math.ceil(truntime / 1.0e6)
 
                         # If we've seen this exact before, skip it.
                         rmetrics = reset_metrics[qid]
