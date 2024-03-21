@@ -92,6 +92,12 @@ class Workload(object):
                 sql = q.read()
                 assert not sql.startswith("/*")
 
+                # TODO(WAN): HACK HACK HACK
+                if Path(sql_file).name == "15.sql" and "benchmark_tpch" in str(
+                    Path(sql_file).absolute()
+                ):
+                    sql = sql.replace("revenue0", "revenue0_PID")
+
                 stmts = pglast.parse_sql(sql)
 
                 # Extract aliases.

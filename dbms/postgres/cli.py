@@ -248,18 +248,11 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dp
     pgport = dbgym_cfg.root_yaml["postgres_port"]
     save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
 
-    cmd_str = "start" if is_start else "stop"
-    subprocess_run_kwargs = {
-        "args": f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' {cmd_str}",
-        "cwd": pgbin_real_dpath,
-        "shell": True,
-    }
-
     if is_start:
         # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-        subprocess.run(**subprocess_run_kwargs)
+        subprocess.run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
     else:
-        subprocess_run(**subprocess_run_kwargs)
+        subprocess_run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
 
 
 def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
