@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 from sqlalchemy import create_engine
 import psycopg
+import shutil
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
@@ -221,7 +222,10 @@ def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
     # it may be a symlink so we need to resolve them first
     pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
     save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
-    pgdata_dpath = dbgym_cfg.dbgym_tmp_path
+    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    if pgdata_dpath.exists():
+        shutil.rmtree(pgdata_dpath)
+    pgdata_dpath.mkdir(parents=False, exist_ok=False)
     subprocess_run(f"tar -xzf {pgdata_snapshot_real_fpath} -C {pgdata_dpath}")
     return pgdata_dpath
 

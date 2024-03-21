@@ -663,7 +663,6 @@ def _produce_index_data(
 
     with create_conn(dbgym_cfg, use_psycopg=True) as connection:
         _fetch_server_indexes(connection)
-        idxs.reset(connection=connection)
         if generate_costs:
             try:
                 connection.execute("CREATE EXTENSION IF NOT EXISTS hypopg")

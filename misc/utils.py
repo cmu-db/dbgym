@@ -166,8 +166,9 @@ class DBGymConfig:
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
     def __del__(self):
-        if self.dbgym_tmp_path.exists():
-            shutil.rmtree(self.dbgym_tmp_path)
+        pass # DEBUG(phw2)
+        # if self.dbgym_tmp_path.exists():
+        #     shutil.rmtree(self.dbgym_tmp_path)
 
     # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
