@@ -241,7 +241,7 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dp
     # the inputs may be symlinks so we need to resolve them first
     pgbin_real_dpath = pgbin_dpath.resolve()
     pgdata_real_dpath = pgdata_dpath.resolve()
-    pgport = dbgym_cfg.cur_yaml["port"]
+    pgport = dbgym_cfg.root_yaml["postgres_port"]
     save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
 
     cmd_str = "start" if is_start else "stop"
