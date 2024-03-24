@@ -283,11 +283,9 @@ def _hpo_train(
                 )
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = dbgym_cfg.dbgym_this_run_path
-
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
-    trial_dir.mkdir(parents=True, exist_ok=False)
+    trial_dpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / f"embeddings_{dtime}_{os.getpid()}"
+    assert not trial_dpath.exists(), f"at this point, trial_dpath ({trial_dpath}) should not exist"
 
     # Seed
     seed = np.random.randint(int(1), int(1e8))
@@ -304,7 +302,7 @@ def _hpo_train(
         dbgym_cfg,
         config,
         generic_args.traindata_path,
-        trial_dir,
+        trial_dpath,
         generic_args.benchmark_config_path,
         train_all_args.train_size,
         generic_args.workload_path,
@@ -313,18 +311,18 @@ def _hpo_train(
     )
 
     # Dump the config that we are executing.
-    with open(f"{trial_dir}/config", "w") as f:
+    with open(f"{trial_dpath}/config", "w") as f:
         f.write(json.dumps(config, indent=4))
 
     trainer.train(num_epochs=config["num_epochs"])
     if trainer.failed:
         # Trainer has failed.
-        with open(f"{trial_dir}/FAILED", "w") as f:
+        with open(f"{trial_dpath}/FAILED", "w") as f:
             if trainer.fail_msg is not None:
                 f.write(trainer.fail_msg)
 
         if trainer.fail_data is not None:
-            torch.save(trainer.fail_data, f"{trial_dir}/fail_data.pth")
+            torch.save(trainer.fail_data, f"{trial_dpath}/fail_data.pth")
         session.report({"loss": 1e8})
     else:
         res_dict = epoch_end(trainer=trainer, force=True, suppress=True)
