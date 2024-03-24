@@ -27,7 +27,7 @@ from sklearn.model_selection import train_test_split  # type: ignore
 from torch.utils.data import TensorDataset
 from typing_extensions import ParamSpec
 
-from misc.utils import DBGymConfig, open_and_save, restart_ray
+from misc.utils import DBGymConfig, open_and_save, restart_ray, save_file
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
 from tune.protox.embedding.train_args import (
     EmbeddingTrainAllArgs,
@@ -85,7 +85,7 @@ def fetch_index_parameters(
 
 
 def load_input_data(
-    input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
+    dbgym_cfg: DBGymConfig, input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
 ) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
@@ -94,6 +94,7 @@ def load_input_data(
     if require_cost:
         columns += COST_COLUMNS
 
+    save_file(dbgym_cfg, input_path)
     df = pd.read_parquet(input_path, columns=columns)
     num_classes: int = df.idx_class.max() + 1
 
