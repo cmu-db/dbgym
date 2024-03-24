@@ -85,7 +85,7 @@ def fetch_index_parameters(
 
 
 def load_input_data(
-    dbgym_cfg: DBGymConfig, input_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
+    dbgym_cfg: DBGymConfig, traindata_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
 ) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
@@ -94,8 +94,8 @@ def load_input_data(
     if require_cost:
         columns += COST_COLUMNS
 
-    save_file(dbgym_cfg, input_path)
-    df = pd.read_parquet(input_path, columns=columns)
+    save_file(dbgym_cfg, traindata_path)
+    df = pd.read_parquet(traindata_path, columns=columns)
     num_classes: int = df.idx_class.max() + 1
 
     # Get the y's and the x's.
@@ -303,7 +303,7 @@ def _hpo_train(
     trainer, epoch_end = _build_trainer(
         dbgym_cfg,
         config,
-        generic_args.dataset_path,
+        generic_args.traindata_path,
         trial_dir,
         generic_args.benchmark_config_path,
         train_all_args.train_size,
@@ -336,7 +336,7 @@ def _hpo_train(
 def _build_trainer(
     dbgym_cfg: DBGymConfig,
     config: dict[str, Any],
-    input_path: Path,
+    traindata_path: Path,
     trial_dpath: Path,
     benchmark_config_path: Path,
     train_size: int,
@@ -367,7 +367,7 @@ def _build_trainer(
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = load_input_data(
         dbgym_cfg,
-        input_path,
+        traindata_path,
         train_size,
         max_attrs,
         config["metric_loss_md"].get("require_cost", False),

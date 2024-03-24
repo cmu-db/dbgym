@@ -154,7 +154,7 @@ def train(
     workload_name,
     scale_factor,
     benchmark_config_path,
-    dataset_path,
+    traindata_path,
     seed,
     hpo_space_path,
     train_max_concurrent,
@@ -181,8 +181,8 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    if dataset_path == None:
-        dataset_path = default_dataset_path(
+    if traindata_path == None:
+        traindata_path = default_dataset_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor
         )
     # TODO(phw2): figure out whether different scale factors use the same config
@@ -194,7 +194,7 @@ def train(
 
     # Convert all input paths to absolute paths
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    dataset_path = conv_inputpath_to_abspath(dbgym_cfg, dataset_path)
+    traindata_path = conv_inputpath_to_abspath(dbgym_cfg, traindata_path)
     hpo_space_path = conv_inputpath_to_abspath(dbgym_cfg, hpo_space_path)
 
     # setup
@@ -208,7 +208,7 @@ def train(
     ))
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark_name, benchmark_config_path, dataset_path, seed, workload_path
+        benchmark_name, benchmark_config_path, traindata_path, seed, workload_path
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,

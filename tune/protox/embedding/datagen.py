@@ -24,6 +24,7 @@ from misc.utils import (
     default_workload_path,
     default_pgdata_snapshot_path,
     default_pgbin_path,
+    dataset_fname,
     link_result,
     open_and_save,
 )
@@ -188,7 +189,7 @@ def datagen(
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark_name, benchmark_config_path, seed, workload_path, pgdata_snapshot_path,
+        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pgdata_snapshot_path,
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -220,8 +221,10 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark_name, benchmark_config_path, seed, workload_path, pgdata_snapshot_path):
+    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pgdata_snapshot_path):
         self.benchmark_name = benchmark_name
+        self.workload_name = workload_name
+        self.scale_factor = scale_factor
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
         self.workload_path = workload_path
@@ -260,13 +263,6 @@ class EmbeddingFileGenArgs:
 
 def get_traindata_dir(dbgym_cfg):
     return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
-
-
-def get_traindata_path(dbgym_cfg: DBGymConfig, generic_args):
-    return os.path.join(
-        dbgym_cfg.dbgym_this_run_path,
-        f"{generic_args.benchmark_name}_embedding_traindata.parquet",
-    )
 
 
 def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
@@ -337,7 +333,7 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
 
 
 def _combine_traindata_dir_into_parquet(
-    dbgym_cfg: DBGymConfig, generic_args, file_gen_args
+    dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGenericArgs, file_gen_args: EmbeddingFileGenArgs
 ):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
@@ -436,7 +432,7 @@ def _combine_traindata_dir_into_parquet(
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = get_traindata_path(dbgym_cfg, generic_args)
+    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / dataset_fname(generic_args.benchmark_name, generic_args.workload_name, generic_args.scale_factor)
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 

@@ -54,11 +54,14 @@ default_benchbase_config_relpath = (
 #   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
+dataset_fname = (
+    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
+)
 default_dataset_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
+    / dataset_fname(benchmark_name, workload_name, scale_factor)
 )
 default_embedding_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(

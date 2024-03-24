@@ -19,10 +19,10 @@ class DotDict(dict):
 def select_best_embeddings(dbgym_cfg, generic_args, select_args):
     data = _load_data(dbgym_cfg, select_args)
 
-    if generic_args.dataset_path is not None and os.path.exists(
-        generic_args.dataset_path
+    if generic_args.traindata_path is not None and os.path.exists(
+        generic_args.traindata_path
     ):
-        raw_data = pd.read_parquet(generic_args.dataset_path)
+        raw_data = pd.read_parquet(generic_args.traindata_path)
         data = _attach(data, raw_data, select_args.idx_limit)
 
     data.to_csv(

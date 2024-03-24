@@ -152,7 +152,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
                 # Get the dataset if we need to.
                 dataset, _, idx_class, _, num_classes = load_input_data(
                     dbgym_cfg,
-                    generic_args.dataset_path,
+                    generic_args.traindata_path,
                     1.0,
                     max_attrs,
                     require_cost,
