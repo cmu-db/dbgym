@@ -1,4 +1,5 @@
 import gc
+import copy
 import json
 import logging
 import os
@@ -8,7 +9,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
-
 import numpy as np
 import pandas as pd
 import ray
@@ -63,15 +63,15 @@ def fetch_index_parameters(
     attributes = data["protox"]["attributes"]
     query_spec = data["protox"]["query_spec"]
     workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None)
-    att_usage = workload.column_usages()
+    modified_attrs = workload.column_usages()
 
     space = IndexSpace(
         tables,
         max_num_columns=data["protox"]["max_num_columns"],
         max_indexable_attributes=workload.max_indexable(),
         seed=0,
-        rel_metadata=att_usage,
-        attributes_overwrite=att_usage,
+        rel_metadata=copy.deepcopy(modified_attrs),
+        attributes_overwrite=copy.deepcopy(modified_attrs),
         tbl_include_subsets=TableAttrAccessSetsMap({}),
         index_space_aux_type=False,
         index_space_aux_include=False,
@@ -81,7 +81,7 @@ def fetch_index_parameters(
     max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
         workload, len(tables)
     )
-    return max_attrs, max_cat_features, att_usage, space.class_mapping
+    return max_attrs, max_cat_features, modified_attrs, space.class_mapping
 
 
 def load_input_data(
