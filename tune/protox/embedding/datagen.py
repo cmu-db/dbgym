@@ -24,7 +24,7 @@ from misc.utils import (
     default_workload_path,
     default_pgdata_snapshot_path,
     default_pgbin_path,
-    dataset_fname,
+    traindata_fname,
     link_result,
     open_and_save,
 )
@@ -432,7 +432,7 @@ def _combine_traindata_dir_into_parquet(
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / dataset_fname(generic_args.benchmark_name, generic_args.workload_name, generic_args.scale_factor)
+    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / traindata_fname(generic_args.benchmark_name, generic_args.workload_name, generic_args.scale_factor)
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 
