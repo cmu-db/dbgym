@@ -410,10 +410,10 @@ def _build_trainer(
 
     # Define the tester hook.
     record_keeper, _, _ = logging_presets.get_record_keeper(
-        {trial_dpath} / "logs", {trial_dpath} / "tboard"
+        trial_dpath / "logs", trial_dpath / "tboard"
     )
     hooks = logging_presets.get_hook_container(record_keeper)
-    model_folder = {trial_dpath} / "models"
+    model_folder = trial_dpath / "models"
 
     # Validation step loop.
     assert val_dataset
