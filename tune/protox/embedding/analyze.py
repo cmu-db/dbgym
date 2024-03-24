@@ -99,7 +99,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, _ = fetch_index_parameters(
-            dbgym_cfg, generic_args.benchmark_name, data, generic_args.workload_path
+            dbgym_cfg, data, generic_args.workload_path
         )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

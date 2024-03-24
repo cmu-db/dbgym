@@ -42,6 +42,11 @@ from tune.protox.embedding.train_args import (
 @click.argument("benchmark-name", type=str)
 @click.argument("workload-name", type=str)
 @click.option(
+    "--scale-factor",
+    default=1.0,
+    help=f"The scale factor used when generating the data of the benchmark.",
+)
+@click.option(
     "--benchmark-config-path",
     default=None,
     type=Path,
@@ -147,6 +152,7 @@ def train(
     dbgym_cfg,
     benchmark_name,
     workload_name,
+    scale_factor,
     benchmark_config_path,
     dataset_path,
     seed,
@@ -177,7 +183,7 @@ def train(
     # set args to defaults programmatically (do this before doing anything else in the function)
     if dataset_path == None:
         dataset_path = default_dataset_path(
-            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor
         )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
@@ -197,9 +203,9 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = default_workload_path(
+    workload_path = conv_inputpath_to_abspath(dbgym_cfg, default_workload_path(
         dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
-    )
+    ))
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
         benchmark_name, benchmark_config_path, dataset_path, seed, workload_path

@@ -46,7 +46,6 @@ from tune.protox.env.workload import Workload
 
 
 def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
-    att_usage = w.column_usages()
     max_indexable = w.max_indexable()
     max_cat_features = max(
         ntables, max_indexable + 1
@@ -56,17 +55,19 @@ def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, 
 
 
 def fetch_index_parameters(
-    data: dict[str, Any]
+    dbgym_cfg: DBGymConfig,
+    data: dict[str, Any],
+    workload_path: Path,
 ) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
-    tables = data["mythril"]["tables"]
-    attributes = data["mythril"]["attributes"]
-    query_spec = data["mythril"]["query_spec"]
-    workload = Workload(tables, attributes, query_spec, pid=None)
+    tables = data["protox"]["tables"]
+    attributes = data["protox"]["attributes"]
+    query_spec = data["protox"]["query_spec"]
+    workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None)
     att_usage = workload.column_usages()
 
     space = IndexSpace(
         tables,
-        max_num_columns=data["mythril"]["max_num_columns"],
+        max_num_columns=data["protox"]["max_num_columns"],
         max_indexable_attributes=workload.max_indexable(),
         seed=0,
         rel_metadata=att_usage,
@@ -254,8 +255,8 @@ def train_all_embeddings(
 
 
 def _hpo_train(
-    dbgym_cfg: DBGymConfig,
     config: dict[str, Any],
+    dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingTrainGenericArgs,
     train_all_args: EmbeddingTrainAllArgs,
 ):
@@ -300,7 +301,6 @@ def _hpo_train(
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(
         dbgym_cfg,
-        generic_args.benchmark_name,
         config,
         generic_args.dataset_path,
         trial_dir,
@@ -334,7 +334,6 @@ def _hpo_train(
 
 def _build_trainer(
     dbgym_cfg: DBGymConfig,
-    benchmark_name: str,
     config: dict[str, Any],
     input_path: Path,
     trial_dpath: Path,
@@ -351,7 +350,7 @@ def _build_trainer(
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
-            dbgym_cfg, benchmark_name, data, workload_path
+            dbgym_cfg, data, workload_path
         )
 
     config["class_mapping"] = {}

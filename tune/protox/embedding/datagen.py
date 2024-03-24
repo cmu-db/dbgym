@@ -51,8 +51,7 @@ from dbms.postgres.cli import create_conn, start_postgres, stop_postgres, untar_
 @click.option(
     "--scale-factor",
     default=1.0,
-    type=float,
-    help=f"The scale factor of the benchmark.",
+    help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
     "--pgdata-snapshot-path",
