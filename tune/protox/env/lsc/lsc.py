@@ -22,6 +22,7 @@ class LSC(object):
         self.num_steps = 0
         self.num_episodes = 0
         self.vae_configuration = vae_config
+        self.enabled = lsc_parameters["enabled"]
 
         lsc_splits = lsc_parameters["initial"].split(",")
         lsc_increments = lsc_parameters["increment"].split(",")
@@ -58,10 +59,12 @@ class LSC(object):
             )
             self.logger.get_logger(__name__).info("LSC Shift Max: %s", self.max)
 
+
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(
-            action.shape, self.vae_configuration["latent_dim"]
-        )
+        if not self.enabled:
+            return action
+
+        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(action.shape, self.vae_configuration["latent_dim"])
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
@@ -69,24 +72,35 @@ class LSC(object):
         return ProtoAction(action + lsc_shift)
 
     def current_bias(self) -> float:
+        if not self.enabled:
+            return 0.0
+
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
         lsc_shift = lsc_shift * self.vae_configuration["output_scale"]
         return cast(float, lsc_shift)
 
     def current_scale(self) -> np.typing.NDArray[np.float32]:
+        if not self.enabled:
+            return np.array([-1.], dtype=np.float32)
+
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
         lsc_max = self.max[(self.num_steps % self.horizon)]
         rel = lsc_shift / lsc_max
         return np.array([(rel * 2.0) - 1], dtype=np.float32)
 
+
     def inverse_scale(self, value: torch.Tensor) -> torch.Tensor:
+        if not self.enabled:
+            return torch.zeros_like(value).float()
+
         lsc_max = self.max[0]
         lsc_shift = ((value + 1) / 2.0) * lsc_max
         return cast(torch.Tensor, lsc_shift * self.vae_configuration["output_scale"])
 
+
     def advance(self) -> None:
-        if self.frozen:
+        if self.frozen or (not self.enabled):
             return
 
         self.num_steps += 1
@@ -98,7 +112,7 @@ class LSC(object):
         self.frozen = False
 
     def reset(self) -> None:
-        if self.frozen:
+        if self.frozen or (not self.enabled):
             return
 
         # Advance the episode count.
