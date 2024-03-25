@@ -1,26 +1,111 @@
-import argparse
-import json
-import os
 import sys
 import time
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Union
-
-import numpy as np
-import pandas as pd
-import ray
-import torch
+import json
 import yaml
+from pathlib import Path
 from ray import tune
-from ray.air import FailureConfig, RunConfig
-from ray.tune import SyncConfig, Trainable, TuneConfig
+import numpy as np
+import torch
+import os
+import pandas as pd
+from datetime import datetime
+from typing import Any, Union
+import click
+import ray
+from ray.tune import Trainable, SyncConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
+from ray.tune import TuneConfig
+from ray.air import RunConfig, FailureConfig
 
-from misc.utils import DBGymConfig
-from tune.protox.agent.build_trial import build_trial
 from tune.protox.agent.coerce_params import coerce_params
+from tune.protox.agent.build_trial import build_trial
+from misc.utils import default_hpoed_agent_params_path, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_relpath, default_benchbase_config_relpath, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+
+
+@click.command()
+@click.pass_obj
+@click.argument("benchmark-name")
+@click.argument("workload-name")
+@click.option(
+    "--embedding-path",
+    default=None,
+    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
+)
+@click.option(
+    "--benchmark-config-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--benchbase-config-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--sysknobs-path",
+    default=DEFAULT_SYSKNOBS_RELPATH,
+    help=f"The path to the file configuring the space of system knobs the tuner can tune.",
+)
+@click.option(
+    "--hpoed-agent-params-path",
+    default=None,
+    type=Path,
+    help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+)
+@click.option(
+    "--pgdata-snapshot-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
+@click.option(
+    "--seed",
+    default=None,
+    type=int,
+    help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
+)
+@click.option(
+    "--workload-path",
+    default=None,
+    type=Path,
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent."
+)
+@click.option(
+    "--max-concurrent",
+    default=1,
+    help=f"The max # of concurrent agent models to train. Note that unlike in HPO, all will use the same hyperparameters. This just helps control for other sources of randomness.",
+)
+@click.option(
+    "--num-samples",
+    default=40,
+    help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
+)
+@click.option(
+    "--early-kill", is_flag=True, help="Whether the tuner times out its steps."
+)
+@click.option(
+    "--duration", default=0.01, type=float, help="The total number of hours to run for."
+)
+@click.option(
+    "--workload-timeout",
+    default=600,
+    type=int,
+    help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.",
+)
+@click.option(
+    "--query-timeout",
+    default=30,
+    type=int,
+    help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
+)
+def hpo():
+    pass
 
 
 def _build_space(
@@ -29,11 +114,11 @@ def _build_space(
     data_snapshot: str,
     embeddings: list[str],
     pgconn: dict[str, str],
-    benchbase_config: dict[str, Any] = {},
-    duration: int = 30,
-    seed: int = 0,
-    workload_timeouts: list[int] = [600],
-    query_timeouts: list[int] = [30],
+    benchbase_config: dict[str, Any]={},
+    duration: int=30,
+    seed: int=0,
+    workload_timeouts: list[int]=[600],
+    query_timeouts: list[int]=[30],
 ) -> dict[str, Any]:
 
     return {
@@ -67,11 +152,9 @@ def _build_space(
         "maximize_state": not benchmark_config.get("oltp_workload", False),
         # Whether to normalize state or not.
         "normalize_state": tune.sample_from(
-            lambda spc: (
-                False
-                if spc["config"]["metric_state"] == "structure_normalize"
-                else bool(np.random.choice([False, True]))
-            )
+            lambda spc: False
+            if spc["config"]["metric_state"] == "structure_normalize"
+            else bool(np.random.choice([False, True]))
         ),
         # Whether to normalize reward or not.
         "normalize_reward": tune.choice([False, True]),
@@ -118,21 +201,17 @@ def _build_space(
         "target_noise": {
             "target_noise_clip": tune.choice([0, 0.05, 0.1, 0.15]),
             "target_policy_noise": tune.sample_from(
-                lambda spc: (
-                    0.1
-                    if spc["config"]["target_noise"]["target_noise_clip"] == 0
-                    else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
-                )
+                lambda spc: 0.1
+                if spc["config"]["target_noise"]["target_noise_clip"] == 0
+                else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
             ),
         },
         # Training steps.
         "train_freq_unit": tune.choice(["step", "episode"]),
         "train_freq_frequency": tune.sample_from(
-            lambda spc: (
-                1
-                if spc["config"]["train_freq_unit"] == "episode"
-                else int(np.random.choice([1, 2]))
-            )
+            lambda spc: 1
+            if spc["config"]["train_freq_unit"] == "episode"
+            else int(np.random.choice([1, 2]))
         ),
         # Noise parameters.
         "noise_parameters": {
@@ -173,7 +252,7 @@ class TuneTimeoutChecker(object):
         self.limit = (duration * 3600) > 0
         self.remain = int(duration * 3600)
         self.running = False
-        self.start = 0.0
+        self.start = 0.
 
     def resume(self) -> None:
         self.start = time.time()
@@ -198,12 +277,11 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def setup(self, dbgym_cfg: DBGymConfig, hpo_config: dict[str, Any]) -> None:
-        # Attach protox directory to the search path.
-        # sys.path.append() must take in strings as input, not Path objects
-        sys.path.append(str(dbgym_cfg.dbgym_repo_path))
+    def setup(self, hpo_config: dict[str, Any]) -> None:
+        # Attach mythril directory to the search path.
+        sys.path.append(os.path.expanduser(hpo_config["mythril_dir"]))
 
-        torch.set_default_dtype(torch.float32)  # type: ignore
+        torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
             hpo_config["seed"]
             if hpo_config["seed"] != -1
@@ -215,7 +293,9 @@ class TuneTrial:
 
         self.timeout = TuneTimeoutChecker(hpo_config["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
-            seed=seed, logdir=self.logdir, hpo_config=hpo_config
+            seed=seed,
+            logdir=self.logdir,
+            hpo_config=hpo_config
         )
         self.logger.get_logger(None).info("%s", hpo_config)
         self.logger.get_logger(None).info(f"Seed: {seed}")
@@ -261,13 +341,13 @@ class TuneTrial:
             "AgentEpisode": episode,
             "AgentTimesteps": it,
             "TrialStep": self.step_count,
-            "Best Metric": (
-                self.target_reset.real_best_metric if self.target_reset else -1
-            ),
-            "Best Seen Metric": (
-                self.target_reset.best_metric if self.target_reset else -1
-            ),
-            "HoursElapsed": (time.time() - self.start_time) / 3600.0,
+            "Best Metric": self.target_reset.real_best_metric
+            if self.target_reset
+            else -1,
+            "Best Seen Metric": self.target_reset.best_metric
+            if self.target_reset
+            else -1,
+            "HoursElapsed": (time.time() - self.start_time) / 3600.,
         }
 
         # If we've timed out. Note that we've timed out.
@@ -279,169 +359,155 @@ class TuneTrial:
 
     def cleanup(self) -> None:
         self.logger.flush()
-        self.env.close()  # type: ignore
+        self.env.close() # type: ignore
         if Path(self.signal).exists():
             os.remove(self.signal)
 
 
-# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_config`. This is because it's a pain to turn DBGymConfig
-#   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
-# Using a function to create a class is Ray's recommended way of doing this (see
-#   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
-# If you don't create the class with a function, it doesn't work due to how Ray serializes classes
-def create_tune_opt_class(dbgym_cfg_param):
-    global global_dbgym_cfg
-    global_dbgym_cfg = dbgym_cfg_param
+class TuneOpt(Trainable):
+    def setup(self, hpo_config: dict[str, Any]) -> None:
+        self.trial = TuneTrial()
+        self.trial.logdir = self.logdir # type: ignore
+        self.trial.setup(hpo_config)
 
-    class TuneOpt(Trainable):
-        dbgym_cfg = global_dbgym_cfg
+    def step(self) -> dict[Any, Any]:
+        return self.trial.step()
 
-        def setup(self, hpo_config: dict[str, Any]) -> None:
-            self.trial = TuneTrial()
-            self.trial.logdir = self.logdir  # type: ignore
-            self.trial.setup(hpo_config)
+    def cleanup(self) -> None:
+        return self.trial.cleanup()
 
-        def step(self) -> dict[Any, Any]:
-            return self.trial.step()
+    def save_checkpoint(self, checkpoint_dir: str) -> None:
+        # We can't actually do anything about this right now.
+        pass
 
-        def cleanup(self) -> None:
-            return self.trial.cleanup()
+    def load_checkpoint(self, checkpoint_dir: Union[dict[Any, Any], None]) -> None:
+        # We can't actually do anything about this right now.
+        pass
 
-        def save_checkpoint(self, checkpoint_dir: str) -> None:
-            # We can't actually do anything about this right now.
-            pass
 
-        def load_checkpoint(self, checkpoint_dir: Union[dict[Any, Any], None]) -> None:
-            # We can't actually do anything about this right now.
-            pass
+def tune_single_trial(args: Any) -> None:
+    with open(args.hpo_params_file, "r") as f:
+        hpo_config = json.load(f)
 
-    def tune_single_trial(args: Any) -> None:
-        with open(args.hpo_params_file, "r") as f:
-            hpo_config = json.load(f)
+    # Coerce using a dummy space.
+    hpo_config = coerce_params(_build_space(
+        sysknobs={},
+        benchmark_config={},
+        data_snapshot="",
+        embeddings=[],
+        pgconn={}
+    ), hpo_config)
 
-        # Coerce using a dummy space.
-        hpo_config = coerce_params(
-            _build_space(
-                sysknobs={},
-                benchmark_config={},
-                data_snapshot="",
-                embeddings=[],
-                pgconn={},
-            ),
-            hpo_config,
-        )
+    # Assume we are executing from the root.
+    hpo_config["mythril_dir"] = os.getcwd()
 
-        # Assume we are executing from the root.
-        hpo_config["mythril_dir"] = os.getcwd()
+    # Get the duration.
+    assert "duration" in hpo_config
 
-        # Get the duration.
-        assert "duration" in hpo_config
+    # Piggyback off the HPO magic.
+    t = TuneTrial()
+    # This is a hack.
+    t.logdir = Path("artifacts/") # type: ignore
+    t.logdir.mkdir(parents=True, exist_ok=True) # type: ignore
+    t.setup(hpo_config)
+    start = time.time()
 
-        # Piggyback off the HPO magic.
-        t = TuneTrial()
-        # This is a hack.
-        t.logdir = Path("artifacts/")  # type: ignore
-        t.logdir.mkdir(parents=True, exist_ok=True)  # type: ignore
-        t.setup(hpo_config)
-        start = time.time()
+    data = []
+    while (time.time() - start) < hpo_config["duration"] * 3600:
+        data.append(t.step())
 
-        data = []
-        while (time.time() - start) < hpo_config["duration"] * 3600:
-            data.append(t.step())
-
-            # Continuously write the file out.
-            pd.DataFrame(data).to_csv(args.output_step_data, index=False)
-
-        t.cleanup()
-        # Output the step data.
+        # Continuously write the file out.
         pd.DataFrame(data).to_csv(args.output_step_data, index=False)
 
-    def tune_hpo(args: Any) -> None:
-        with open(args.sysknobs) as f:
-            sysknobs = yaml.safe_load(f)["system_knobs"]
+    t.cleanup()
+    # Output the step data.
+    pd.DataFrame(data).to_csv(args.output_step_data, index=False)
 
-        with open(args.benchmark_config) as f:
-            benchmark_config = yaml.safe_load(f)
-            benchmark = [k for k in benchmark_config.keys()][0]
-            benchmark_config = benchmark_config[benchmark]
-            benchmark_config["benchmark"] = benchmark
 
-        space = _build_space(
-            sysknobs,
-            benchmark_config,
-            args.data_snapshot_path,
-            args.embeddings.split(","),
-            pgconn={
-                "pg_conn": args.pg_conn,
-                "pg_data": args.pg_data,
-                "pg_bins": args.pg_bins,
+def tune_hpo(args: Any) -> None:
+    with open(args.sysknobs) as f:
+        sysknobs = yaml.safe_load(f)["system_knobs"]
+
+    with open(args.benchmark_config) as f:
+        benchmark_config = yaml.safe_load(f)
+        benchmark = [k for k in benchmark_config.keys()][0]
+        benchmark_config = benchmark_config[benchmark]
+        benchmark_config["benchmark"] = benchmark
+
+    space = _build_space(
+        sysknobs,
+        benchmark_config,
+        args.data_snapshot_path,
+        args.embeddings.split(","),
+        pgconn={
+            "pg_conn": args.pg_conn,
+            "pg_data": args.pg_data,
+            "pg_bins": args.pg_bins,
+        },
+        benchbase_config={
+            "oltp_config": {
+                "oltp_num_terminals": args.oltp_num_terminals,
+                "oltp_duration": args.oltp_duration,
+                "oltp_sf": args.oltp_sf,
+                "oltp_warmup": args.oltp_warmup,
             },
-            benchbase_config=(
-                {
-                    "oltp_config": {
-                        "oltp_num_terminals": args.oltp_num_terminals,
-                        "oltp_duration": args.oltp_duration,
-                        "oltp_sf": args.oltp_sf,
-                        "oltp_warmup": args.oltp_warmup,
-                    },
-                    "benchbase_path": args.benchbase_path,
-                    "benchbase_config_path": args.benchbase_config_path,
-                }
-                if args.oltp
-                else {}
-            ),
-            duration=args.duration,
-            seed=args.seed,
-            workload_timeouts=[int(w) for w in args.workload_timeout.split(",")],
-            query_timeouts=[int(w) for w in args.query_timeout.split(",")],
-        )
-        # Attach the mythril directory.
-        space["mythril_dir"] = args.mythril_dir
+            "benchbase_path": args.benchbase_path,
+            "benchbase_config_path": args.benchbase_config_path,
+        }
+        if args.oltp
+        else {},
+        duration=args.duration,
+        seed=args.seed,
+        workload_timeouts=[int(w) for w in args.workload_timeout.split(",")],
+        query_timeouts=[int(w) for w in args.query_timeout.split(",")],
+    )
+    # Attach the mythril directory.
+    space["mythril_dir"] = args.mythril_dir
 
-        ray.init(address=args.ray_address, log_to_driver=False)
+    ray.init(address=args.ray_address, log_to_driver=False)
 
-        # Scheduler.
-        scheduler = FIFOScheduler()  # type: ignore
+    # Scheduler.
+    scheduler = FIFOScheduler() # type: ignore
 
-        initial_configs = None
-        if args.initial_configs is not None:
-            with open(args.initial_configs, "r") as f:
-                initial_configs = json.load(f)
+    initial_configs = None
+    if args.initial_configs is not None:
+        with open(args.initial_configs, "r") as f:
+            initial_configs = json.load(f)
 
-        # Search.
-        search = BasicVariantGenerator(
-            points_to_evaluate=initial_configs, max_concurrent=args.max_concurrent
-        )
+    # Search.
+    search = BasicVariantGenerator(
+        points_to_evaluate=initial_configs, max_concurrent=args.max_concurrent
+    )
 
-        tune_config = TuneConfig(
-            scheduler=scheduler,
-            search_alg=search,
-            num_samples=args.num_trials,
-            max_concurrent_trials=args.max_concurrent,
-            chdir_to_trial_dir=True,
-            metric="Best Metric",
-            mode="max" if args.oltp else "min",
-        )
+    tune_config = TuneConfig(
+        scheduler=scheduler,
+        search_alg=search,
+        num_samples=args.num_trials,
+        max_concurrent_trials=args.max_concurrent,
+        chdir_to_trial_dir=True,
+        metric="Best Metric",
+        mode="max" if args.oltp else "min",
+    )
 
-        dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        run_config = RunConfig(
-            name=f"MythrilHPO_{dtime}",
-            failure_config=FailureConfig(max_failures=0, fail_fast=True),
-            sync_config=SyncConfig(upload_dir=None, syncer=None),
-            verbose=2,
-            log_to_file=True,
-        )
+    dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    run_config = RunConfig(
+        name=f"MythrilHPO_{dtime}",
+        failure_config=FailureConfig(max_failures=0, fail_fast=True),
+        sync_config=SyncConfig(upload_dir=None, syncer=None),
+        verbose=2,
+        log_to_file=True,
+    )
 
-        tuner = ray.tune.Tuner(
-            TuneOpt,
-            tune_config=tune_config,
-            run_config=run_config,
-            param_space=space,
-        )
+    tuner = ray.tune.Tuner(
+        TuneOpt,
+        tune_config=tune_config,
+        run_config=run_config,
+        param_space=space,
+    )
 
-        results = tuner.fit()
-        if results.num_errors > 0:
-            for i in range(len(results)):
-                if results[i].error:
-                    print(f"Trial {results[i]} FAILED")
-            assert False, print("Encountered exceptions!")
+    results = tuner.fit()
+    if results.num_errors > 0:
+        for i in range(len(results)):
+            if results[i].error:
+                print(f"Trial {results[i]} FAILED")
+        assert False, print("Encountered exceptions!")

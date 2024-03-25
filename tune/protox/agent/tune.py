@@ -117,7 +117,7 @@ class AgentTrainArgs:
     type=int,
     help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
 )
-def train(
+def tune(
     dbgym_cfg,
     benchmark_name,
     workload_name,

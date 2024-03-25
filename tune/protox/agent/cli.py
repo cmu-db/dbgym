@@ -1,7 +1,7 @@
 import click
 
 from misc.utils import DBGymConfig
-from tune.protox.agent.train import train
+from tune.protox.agent.tune import tune
 
 
 @click.group("agent")
@@ -10,4 +10,4 @@ def agent_group(dbgym_cfg: DBGymConfig):
     dbgym_cfg.append_group("agent")
 
 
-agent_group.add_command(train)
+agent_group.add_command(tune)
