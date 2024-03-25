@@ -1,3 +1,10 @@
+'''
+At a high level, this file's goal is to provide helpers to manage a Postgres instance during
+    agent tuning.
+On the other hand, the goal of dbms.postgres.cli is to (1) install+build postgres and (2)
+    create pgdata.
+util.pg provides helpers used by *both* of the above files (as well as other files).
+'''
 import os
 import shutil
 import threading

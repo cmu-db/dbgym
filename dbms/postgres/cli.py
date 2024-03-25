@@ -1,22 +1,24 @@
+'''
+At a high level, this file's goal is to (1) install+build postgres and (2) create pgdata.
+On the other hand, the goal of tune.protox.env.util.postgres is to provide helpers to manage
+    a Postgres instance during agent tuning.
+util.pg provides helpers used by *both* of the above files (as well as other files).
+'''
 import logging
 import os
 import subprocess
 from pathlib import Path
 import click
-from sqlalchemy import create_engine
-import psycopg
 import shutil
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, save_file, get_scale_factor_string
 from util.shell import subprocess_run
-from util.sql import Connection, Engine, conn_execute, sql_file_execute
+from util.pg import Connection, Engine, conn_execute, sql_file_execute
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
-
-DBGYM_DBNAME = "dbgym"
 
 
 @click.group(name="postgres")
@@ -253,29 +255,3 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dp
         subprocess.run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
     else:
         subprocess_run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
-
-
-def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=False) -> str:
-    pguser = dbgym_cfg.root_yaml["postgres_user"]
-    pgpass = dbgym_cfg.root_yaml["postgres_pass"]
-    pgport = dbgym_cfg.root_yaml["postgres_port"]
-    connstr_suffix = f"{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
-    # use_psycopg means whether or not we use the psycopg.connect() function
-    # counterintuively, you *don't* need psycopg in the connection string if you *are*
-    #   using the psycopg.connect() function
-    connstr_prefix = "postgresql" if use_psycopg else "postgresql+psycopg"
-    return connstr_prefix + "://" + connstr_suffix
-
-
-def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
-    connstr = get_connstr(dbgym_cfg, use_psycopg=use_psycopg)
-    if use_psycopg:
-        return psycopg.connect(
-            connstr, autocommit=True, prepare_threshold=None
-        )
-    else:
-        engine: Engine = create_engine(
-            connstr,
-            execution_options={"isolation_level": "AUTOCOMMIT"},
-        )
-        return engine.connect()

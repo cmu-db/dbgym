@@ -4,7 +4,7 @@ import click
 
 from misc.utils import DBGymConfig
 from util.shell import subprocess_run
-from util.sql import *
+from util.pg import *
 
 benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
 benchmark_tpch_logger.setLevel(logging.INFO)
