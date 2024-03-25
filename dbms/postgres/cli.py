@@ -255,19 +255,25 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dp
         subprocess_run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
 
 
-def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
+def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=False) -> str:
     pguser = dbgym_cfg.root_yaml["postgres_user"]
     pgpass = dbgym_cfg.root_yaml["postgres_pass"]
     pgport = dbgym_cfg.root_yaml["postgres_port"]
     connstr_suffix = f"{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_DBNAME}"
+    # use_psycopg means whether or not we use the psycopg.connect() function
+    # counterintuively, you *don't* need psycopg in the connection string if you *are*
+    #   using the psycopg.connect() function
+    connstr_prefix = "postgresql" if use_psycopg else "postgresql+psycopg"
+    return connstr_prefix + "://" + connstr_suffix
 
+
+def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
+    connstr = get_connstr(dbgym_cfg, use_psycopg=use_psycopg)
     if use_psycopg:
-        connstr = f"postgresql://{connstr_suffix}"
         return psycopg.connect(
             connstr, autocommit=True, prepare_threshold=None
         )
     else:
-        connstr = f"postgresql+psycopg://{connstr_suffix}"
         engine: Engine = create_engine(
             connstr,
             execution_options={"isolation_level": "AUTOCOMMIT"},
