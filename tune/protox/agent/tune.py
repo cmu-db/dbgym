@@ -203,15 +203,15 @@ def tune(
 
     # Per query knobs.
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
-        bb_config = yaml.safe_load(f)["protox"]
-        per_query_scan_method = bb_config["per_query_scan_method"]
-        per_query_select_parallel = bb_config["per_query_select_parallel"]
-        index_space_aux_type = bb_config["index_space_aux_type"]
-        index_space_aux_include = bb_config["index_space_aux_include"]
-        per_query_knobs = bb_config["per_query_knobs"]
-        per_query_knob_gen = bb_config["per_query_knob_gen"]
-        query_spec = bb_config["query_spec"]
-        is_oltp = bb_config["oltp_workload"]
+        benchmark_config = yaml.safe_load(f)["protox"]
+        per_query_scan_method = benchmark_config["per_query_scan_method"]
+        per_query_select_parallel = benchmark_config["per_query_select_parallel"]
+        index_space_aux_type = benchmark_config["index_space_aux_type"]
+        index_space_aux_include = benchmark_config["index_space_aux_include"]
+        per_query_knobs = benchmark_config["per_query_knobs"]
+        per_query_knob_gen = benchmark_config["per_query_knob_gen"]
+        query_spec = benchmark_config["query_spec"]
+        is_oltp = benchmark_config["oltp_workload"]
 
     # Connect to cluster or die.
     restart_ray()

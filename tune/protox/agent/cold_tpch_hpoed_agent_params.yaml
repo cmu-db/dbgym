@@ -553,7 +553,7 @@
     "train_freq_frequency": 1,
     "train_freq_unit": "episode",
     "vae_metadata": {
-      "embeddings": "runnable/job/pretrained_embedder/embedder.pth",
+      "embedding_paths": "runnable/job/pretrained_embedder/embedder.pth",
       "filter_index_column": true,
       "index_repr": "ONE_HOT_DETERMINISTIC",
       "index_vae": true,

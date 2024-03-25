@@ -69,7 +69,7 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
                     "index_subset", True
                 ),
             },
-            "embeddings": hpo_config["vae_metadata"]["embeddings"],
+            "embedding_paths": hpo_config["vae_metadata"]["embedding_paths"],
         }
 
         for s in space.keys():

@@ -20,7 +20,27 @@ from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import default_hpoed_agent_params_path, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_relpath, default_benchbase_config_relpath, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+from misc.utils import DBGymConfig, open_and_save, restart_ray, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_relpath, default_benchbase_config_relpath, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+
+
+class AgentHPOArgs:
+    def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pgdata_snapshot_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+        self.benchmark_name = benchmark_name
+        self.workload_name = workload_name
+        self.embedding_path = embedding_path
+        self.benchmark_config_path = benchmark_config_path
+        self.benchbase_config_path = benchbase_config_path
+        self.sysknobs_path = sysknobs_path
+        self.pgdata_snapshot_path = pgdata_snapshot_path
+        self.workload_path = workload_path
+        self.seed = seed
+        self.agent = agent
+        self.max_concurrent = max_concurrent
+        self.num_samples = num_samples
+        self.early_kill = early_kill
+        self.duration = duration
+        self.workload_timeout = workload_timeout
+        self.query_timeout = query_timeout
 
 
 @click.command()
@@ -48,12 +68,6 @@ from misc.utils import default_hpoed_agent_params_path, default_pgdata_snapshot_
     "--sysknobs-path",
     default=DEFAULT_SYSKNOBS_RELPATH,
     help=f"The path to the file configuring the space of system knobs the tuner can tune.",
-)
-@click.option(
-    "--hpoed-agent-params-path",
-    default=None,
-    type=Path,
-    help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgdata-snapshot-path",
@@ -104,15 +118,34 @@ from misc.utils import default_hpoed_agent_params_path, default_pgdata_snapshot_
     type=int,
     help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
 )
-def hpo():
-    pass
+def hpo(
+    dbgym_cfg,
+    benchmark_name,
+    workload_name,
+    embedding_path,
+    benchmark_config_path,
+    benchbase_config_path,
+    sysknobs_path,
+    pgdata_snapshot_path,
+    workload_path,
+    seed,
+    agent,
+    max_concurrent,
+    num_samples,
+    early_kill,
+    duration,
+    workload_timeout,
+    query_timeout,
+):
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pgdata_snapshot_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
+    _tune_hpo(hpo_args)
 
 
 def _build_space(
     sysknobs: dict[str, Any],
     benchmark_config: dict[str, Any],
-    data_snapshot: str,
-    embeddings: list[str],
+    pgdata_snapshot_path: Path,
+    embedding_paths: list[str],
     pgconn: dict[str, str],
     benchbase_config: dict[str, Any]={},
     duration: int=30,
@@ -132,7 +165,7 @@ def _build_space(
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
         # Paths.
-        "data_snapshot_path": data_snapshot,
+        "pgdata_snapshot_path": str(pgdata_snapshot_path),
         "output_log_path": "artifacts/",
         "pgconn": pgconn,
         "benchmark_config": benchmark_config,
@@ -162,7 +195,7 @@ def _build_space(
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
         # Embeddings.
-        "embeddings": tune.choice(embeddings),
+        "embedding_paths": tune.choice(embedding_paths),
         # LSC Parameters.
         # Note that the units for these are based on the embedding itself.
         "lsc": {
@@ -394,7 +427,7 @@ def tune_single_trial(args: Any) -> None:
         sysknobs={},
         benchmark_config={},
         data_snapshot="",
-        embeddings=[],
+        embedding_paths=[],
         pgconn={}
     ), hpo_config)
 
@@ -424,69 +457,70 @@ def tune_single_trial(args: Any) -> None:
     pd.DataFrame(data).to_csv(args.output_step_data, index=False)
 
 
-def tune_hpo(args: Any) -> None:
-    with open(args.sysknobs) as f:
+def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
+    with open_and_save(dbgym_cfg, hpo_args.sysknobs_path) as f:
         sysknobs = yaml.safe_load(f)["system_knobs"]
 
-    with open(args.benchmark_config) as f:
+    with open_and_save(dbgym_cfg, hpo_args.benchmark_config_path) as f:
         benchmark_config = yaml.safe_load(f)
+        is_oltp = benchmark_config["protox"]["query_spec"]["oltp_workload"]
         benchmark = [k for k in benchmark_config.keys()][0]
         benchmark_config = benchmark_config[benchmark]
         benchmark_config["benchmark"] = benchmark
 
+    # TODO(phw2): read the dir hpo_args.embedding_path and get a list of embeddings
+    embedding_paths = [hpo_args.embedding_path]
+    # TODO(phw2): make workload and query timeout params lists instead of just ints
+    workload_timeouts = [hpo_args.workload_timeout]
+    query_timeouts = [hpo_args.query_timeout]
+
+    benchbase_config = {
+        "oltp_config": {
+            "oltp_num_terminals": hpo_args.oltp_num_terminals,
+            "oltp_duration": hpo_args.oltp_duration,
+            "oltp_sf": hpo_args.oltp_sf,
+            "oltp_warmup": hpo_args.oltp_warmup,
+        },
+        "benchbase_path": hpo_args.benchbase_path,
+        "benchbase_config_path": hpo_args.benchbase_config_path,
+    } if is_oltp else {}
+
     space = _build_space(
         sysknobs,
         benchmark_config,
-        args.data_snapshot_path,
-        args.embeddings.split(","),
+        hpo_args.pgdata_snapshot_path,
+        embedding_paths,
         pgconn={
-            "pg_conn": args.pg_conn,
-            "pg_data": args.pg_data,
-            "pg_bins": args.pg_bins,
+            "pg_conn": hpo_args.pg_conn,
+            "pg_data": hpo_args.pg_data,
+            "pg_bins": hpo_args.pg_bins,
         },
-        benchbase_config={
-            "oltp_config": {
-                "oltp_num_terminals": args.oltp_num_terminals,
-                "oltp_duration": args.oltp_duration,
-                "oltp_sf": args.oltp_sf,
-                "oltp_warmup": args.oltp_warmup,
-            },
-            "benchbase_path": args.benchbase_path,
-            "benchbase_config_path": args.benchbase_config_path,
-        }
-        if args.oltp
-        else {},
-        duration=args.duration,
-        seed=args.seed,
-        workload_timeouts=[int(w) for w in args.workload_timeout.split(",")],
-        query_timeouts=[int(w) for w in args.query_timeout.split(",")],
+        benchbase_config=benchbase_config,
+        duration=hpo_args.duration,
+        seed=hpo_args.seed,
+        workload_timeouts=workload_timeouts,
+        query_timeouts=query_timeouts,
     )
-    # Attach the mythril directory.
-    space["mythril_dir"] = args.mythril_dir
 
-    ray.init(address=args.ray_address, log_to_driver=False)
+    restart_ray()
+    ray.init(address=hpo_args.ray_address, log_to_driver=False)
 
     # Scheduler.
     scheduler = FIFOScheduler() # type: ignore
 
-    initial_configs = None
-    if args.initial_configs is not None:
-        with open(args.initial_configs, "r") as f:
-            initial_configs = json.load(f)
-
     # Search.
     search = BasicVariantGenerator(
-        points_to_evaluate=initial_configs, max_concurrent=args.max_concurrent
+        max_concurrent=hpo_args.max_concurrent
     )
 
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
-        num_samples=args.num_trials,
-        max_concurrent_trials=args.max_concurrent,
+        num_samples=hpo_args.num_samples,
+        max_concurrent_trials=hpo_args.max_concurrent,
         chdir_to_trial_dir=True,
         metric="Best Metric",
-        mode="max" if args.oltp else "min",
+        mode="max" if is_oltp else "min",
     )
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

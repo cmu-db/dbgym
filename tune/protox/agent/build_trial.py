@@ -258,7 +258,7 @@ def _build_actions(
         latent=True,
     )
 
-    with open(Path(hpo_config["embeddings"]).parent / "config") as f:
+    with open(Path(hpo_config["embedding_paths"]).parent / "config") as f:
         vae_config = json.load(f)
 
         assert vae_config["mean_output_act"] == "sigmoid"
@@ -271,7 +271,7 @@ def _build_actions(
             workload, len(hpo_config["benchmark_config"]["tables"])
         )
         vae = create_vae_model(vae_config, max_attrs, max_cat_features)
-        vae.load_state_dict(torch.load(hpo_config["embeddings"]))
+        vae.load_state_dict(torch.load(hpo_config["embedding_paths"]))
 
     lsc = LSC(
         horizon=hpo_config["horizon"],
