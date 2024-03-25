@@ -13,7 +13,7 @@ from misc.utils import (
     WORKSPACE_PATH_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
     conv_inputpath_to_abspath,
-    default_benchmark_config_relpath,
+    default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
 )
@@ -50,7 +50,7 @@ from tune.protox.embedding.train_args import (
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--traindata-path",
@@ -188,7 +188,7 @@ def train(
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+        benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if seed == None:
         seed = random.randint(0, 1e8)
 

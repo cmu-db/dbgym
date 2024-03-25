@@ -20,7 +20,7 @@ from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_relpath, default_benchbase_config_relpath, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
 
 
 class AgentHPOArgs:
@@ -48,6 +48,11 @@ class AgentHPOArgs:
 @click.argument("benchmark-name")
 @click.argument("workload-name")
 @click.option(
+    "--scale-factor",
+    default=1.0,
+    help=f"The scale factor used when generating the data of the benchmark.",
+)
+@click.option(
     "--embedding-path",
     default=None,
     help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
@@ -56,13 +61,13 @@ class AgentHPOArgs:
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchbase-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--sysknobs-path",
@@ -76,16 +81,16 @@ class AgentHPOArgs:
     help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
-    "--seed",
-    default=None,
-    type=int,
-    help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
-)
-@click.option(
     "--workload-path",
     default=None,
     type=Path,
     help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+)
+@click.option(
+    "--seed",
+    default=None,
+    type=int,
+    help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
 )
 @click.option(
     "--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent."
@@ -122,6 +127,7 @@ def hpo(
     dbgym_cfg,
     benchmark_name,
     workload_name,
+    scale_factor,
     embedding_path,
     benchmark_config_path,
     benchbase_config_path,
@@ -137,8 +143,29 @@ def hpo(
     workload_timeout,
     query_timeout,
 ):
+    # Set args to defaults programmatically (do this before doing anything else in the function)
+    if embedding_path == None:
+        embedding_path = default_embedding_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
+    if benchmark_config_path == None:
+        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+    if benchbase_config_path == None:
+        benchbase_config_path = default_benchbase_config_path(benchmark_name)
+    if pgdata_snapshot_path == None:
+        pgdata_snapshot_path = default_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
+    if workload_path == None:
+        workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+
+    # Convert all input paths to absolute paths
+    embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
+    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
+    benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
+    sysknobs_path = conv_inputpath_to_abspath(dbgym_cfg, sysknobs_path)
+    pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pgdata_snapshot_path)
+    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
+
+    # Create args object
     hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pgdata_snapshot_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
-    _tune_hpo(hpo_args)
+    _tune_hpo(dbgym_cfg, hpo_args)
 
 
 def _build_space(

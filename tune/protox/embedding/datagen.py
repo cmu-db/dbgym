@@ -20,7 +20,7 @@ from misc.utils import (
     SCALE_FACTOR_PLACEHOLDER,
     DBGymConfig,
     conv_inputpath_to_abspath,
-    default_benchmark_config_relpath,
+    default_benchmark_config_path,
     default_workload_path,
     default_pgdata_snapshot_path,
     default_pgbin_path,
@@ -64,7 +64,7 @@ from dbms.postgres.cli import create_conn, start_postgres, stop_postgres, untar_
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
@@ -149,7 +149,7 @@ def datagen(
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+        benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if workload_path == None:
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

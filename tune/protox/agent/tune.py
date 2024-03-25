@@ -20,8 +20,8 @@ from misc.utils import (
     WORKSPACE_PATH_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
     conv_inputpath_to_abspath,
-    default_benchbase_config_relpath,
-    default_benchmark_config_relpath,
+    default_benchbase_config_path,
+    default_benchmark_config_path,
     default_embedding_path,
     default_hpoed_agent_params_path,
     default_pgdata_snapshot_path,
@@ -49,13 +49,13 @@ class AgentTrainArgs:
     "--benchmark-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchbase-config-path",
     default=None,
     type=Path,
-    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_relpath(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--sysknobs-path",
@@ -147,9 +147,9 @@ def tune(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path == None:
-        benchmark_config_path = default_benchmark_config_relpath(benchmark_name)
+        benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if benchbase_config_path == None:
-        benchbase_config_path = default_benchbase_config_relpath(benchmark_name)
+        benchbase_config_path = default_benchbase_config_path(benchmark_name)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path
