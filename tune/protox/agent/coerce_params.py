@@ -28,8 +28,8 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
             "query_timeout": hpo_config["mythril_args"]["timeout"],
             "data_snapshot_path": hpo_config["mythril_args"]["data_snapshot_path"],
             "output_log_path": "artifacts",
-            "pgconn": {
-                "pg_conn": "host=localhost port=5432 user=admin dbname=benchbase",
+            "pgconn_info": {
+                "pg_connstr": "host=localhost port=5432 user=admin dbname=benchbase",
                 "pg_data": "/mnt/nvme0n1/wz2/noisepage/pgdata",
                 "pg_bins": "/mnt/nvme0n1/wz2/noisepage/",
             },

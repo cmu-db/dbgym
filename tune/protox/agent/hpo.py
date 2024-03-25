@@ -21,6 +21,7 @@ from ray.air import RunConfig, FailureConfig
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
 from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+from util.pg import get_connstr
 
 
 class AgentHPOArgs:
@@ -194,7 +195,7 @@ def _build_space(
         # Paths.
         "pgdata_snapshot_path": str(pgdata_snapshot_path),
         "output_log_path": "artifacts/",
-        "pgconn": pgconn,
+        "pgconn_info": pgconn,
         "benchmark_config": benchmark_config,
         "benchbase_config": benchbase_config,
         # Horizon before resetting.
@@ -512,13 +513,14 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         "benchbase_config_path": hpo_args.benchbase_config_path,
     } if is_oltp else {}
 
+    pg_connstr = get_connstr(dbgym_cfg)
     space = _build_space(
         sysknobs,
         benchmark_config,
         hpo_args.pgdata_snapshot_path,
         embedding_paths,
         pgconn={
-            "pg_conn": hpo_args.pg_conn,
+            "pg_connstr": hpo_args.pg_conn,
             "pg_data": hpo_args.pg_data,
             "pg_bins": hpo_args.pg_bins,
         },

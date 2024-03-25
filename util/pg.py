@@ -32,7 +32,7 @@ def sql_file_execute(conn: Connection, filepath: Path) -> None:
         conn_execute(conn, sql)
 
 
-def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=False) -> str:
+def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=True) -> str:
     pguser = dbgym_cfg.root_yaml["postgres_user"]
     pgpass = dbgym_cfg.root_yaml["postgres_pass"]
     pgport = dbgym_cfg.root_yaml["postgres_port"]
@@ -44,7 +44,7 @@ def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=False) -> str:
     return connstr_prefix + "://" + connstr_suffix
 
 
-def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=False) -> Connection:
+def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=True) -> Connection:
     connstr = get_connstr(dbgym_cfg, use_psycopg=use_psycopg)
     if use_psycopg:
         return psycopg.connect(

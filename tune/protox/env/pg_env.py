@@ -216,8 +216,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
         # Save the old configuration file.
-        old_conf_path = f"{self.pgconn.postgres_data}/postgresql.auto.conf"
-        conf_path = f"{self.pgconn.postgres_data}/postgresql.auto.old"
+        old_conf_path = f"{self.pgconn.pgdata_path}/postgresql.auto.conf"
+        conf_path = f"{self.pgconn.pgdata_path}/postgresql.auto.old"
         local["cp"][old_conf_path, conf_path].run()
 
         # Figure out what we have to change to get to the new configuration.
@@ -403,6 +403,6 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def close(self) -> None:
         self.pgconn.shutdown_postgres()
-        local["rm"]["-rf", self.pgconn.postgres_data].run()
-        local["rm"]["-rf", f"{self.pgconn.postgres_data}.tgz"].run()
-        local["rm"]["-rf", f"{self.pgconn.postgres_data}.tgz.tmp"].run()
+        local["rm"]["-rf", self.pgconn.pgdata_path].run()
+        local["rm"]["-rf", f"{self.pgconn.pgdata_path}.tgz"].run()
+        local["rm"]["-rf", f"{self.pgconn.pgdata_path}.tgz.tmp"].run()

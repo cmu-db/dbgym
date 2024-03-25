@@ -656,7 +656,7 @@ def _produce_index_data(
             # there are no indexes to generate.
             return
 
-    with create_conn(dbgym_cfg, use_psycopg=True) as connection:
+    with create_conn(dbgym_cfg) as connection:
         _fetch_server_indexes(connection)
         if generate_costs:
             try:

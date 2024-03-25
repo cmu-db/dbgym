@@ -15,7 +15,8 @@ from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, save_file, get_scale_factor_string
 from util.shell import subprocess_run
-from util.pg import Connection, Engine, conn_execute, sql_file_execute
+from sqlalchemy import Connection
+from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
@@ -153,9 +154,9 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
     pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_symlink_dpath.exists()
-    pguser = dbgym_cfg.cur_yaml["user"]
-    pgpass = dbgym_cfg.cur_yaml["pass"]
-    pgport = dbgym_cfg.cur_yaml["port"]
+    pguser = dbgym_cfg.root_yaml["postgres_user"]
+    pgpass = dbgym_cfg.root_yaml["postgres_pass"]
+    pgport = dbgym_cfg.root_yaml["postgres_port"]
 
     # create user
     save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
@@ -180,7 +181,7 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
-        f"./psql -c \"create database {DBGYM_DBNAME} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
+        f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
 

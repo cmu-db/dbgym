@@ -23,24 +23,24 @@ from tune.protox.env.logger import Logger, time_record
 class PostgresConn:
     def __init__(
         self,
-        postgres_conn: str,
-        postgres_data: Union[str, Path],
-        postgres_path: Union[str, Path],
+        postgres_connstr: str,
+        pgdata_path: Union[str, Path],
+        pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
         logger: Logger,
     ) -> None:
 
         Path(postgres_logs_dir).mkdir(parents=True, exist_ok=True)
-        self.postgres_path = postgres_path
-        self.postgres_data = postgres_data
+        self.pgbin_path = pgbin_path
+        self.pgdata_path = pgdata_path
         self.postgres_logs_dir = postgres_logs_dir
-        self.connection = postgres_conn
+        self.connection = postgres_connstr
         self.connect_timeout = connect_timeout
         self.log_step = 0
         self.logger = logger
 
-        kvs = {s.split("=")[0]: s.split("=")[1] for s in postgres_conn.split(" ")}
+        kvs = {s.split("=")[0]: s.split("=")[1] for s in postgres_connstr.split(" ")}
         self.postgres_db = kvs["dbname"]
         self.postgres_host = kvs["host"]
         self.postgres_port = kvs["port"]
@@ -70,13 +70,13 @@ class PostgresConn:
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()
-        if not Path(self.postgres_data).exists():
+        if not Path(self.pgdata_path).exists():
             return
 
         while True:
             self.logger.get_logger(__name__).debug("Shutting down postgres...")
-            _, stdout, stderr = local[f"{self.postgres_path}/pg_ctl"][
-                "stop", "--wait", "-t", "180", "-D", self.postgres_data
+            _, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
+                "stop", "--wait", "-t", "180", "-D", self.pgdata_path
             ].run(retcode=None)
             time.sleep(1)
             self.logger.get_logger(__name__).debug(
@@ -84,7 +84,7 @@ class PostgresConn:
             )
 
             # Wait until pg_isready fails.
-            retcode, _, _ = local[f"{self.postgres_path}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 self.postgres_host,
                 "--port",
@@ -93,7 +93,7 @@ class PostgresConn:
                 self.postgres_db,
             ].run(retcode=None)
 
-            exists = (Path(self.postgres_data) / "postmaster.pid").exists()
+            exists = (Path(self.pgdata_path) / "postmaster.pid").exists()
             if not exists and retcode != 0:
                 break
 
@@ -107,25 +107,29 @@ class PostgresConn:
         # Install the new configuration changes.
         if conf_changes is not None:
             conf_changes.append("shared_preload_libraries='pg_hint_plan'")
-            with open(f"{self.postgres_data}/postgresql.auto.conf", "w") as f:
+            with open(f"{self.pgdata_path}/postgresql.auto.conf", "w") as f:
                 f.write("\n".join(conf_changes))
 
         # Start postgres instance.
         self.shutdown_postgres()
         self.move_log()
 
+        # Note that even though this function saves a .tgz file just like dbms.postgres.cli does,
+        #   these two functions are not redundant. This function saves a .tgz that is an *intermediate*
+        #   result of a specific tuning run. On the other hand, dbms.postgres.cli saves a .tgz that is
+        #   an *end* result; it will be used as the "starting" point for multiple tuning runs.
         if save_snapshot:
             # Create an archive of pgdata as a snapshot.
             local["tar"][
                 "cf",
-                f"{self.postgres_data}.tgz.tmp",
+                f"{self.pgdata_path}.tgz.tmp",
                 "-C",
-                self.postgres_path,
-                self.postgres_data,
+                self.pgbin_path,
+                self.pgdata_path,
             ].run()
 
         # Make sure the PID lock file doesn't exist.
-        pid_lock = Path(f"{self.postgres_data}/postmaster.pid")
+        pid_lock = Path(f"{self.pgdata_path}/postmaster.pid")
         assert not pid_lock.exists()
 
         if dump_page_cache:
@@ -135,9 +139,9 @@ class PostgresConn:
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
-            retcode, stdout, stderr = local[f"{self.postgres_path}/pg_ctl"][
+            retcode, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "-D",
-                self.postgres_data,
+                self.pgdata_path,
                 "--wait",
                 "-t",
                 "180",
@@ -169,7 +173,7 @@ class PostgresConn:
                 )
                 return False
 
-            retcode, _, _ = local[f"{self.postgres_path}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 self.postgres_host,
                 "--port",
@@ -188,7 +192,7 @@ class PostgresConn:
 
         # Copy the temporary over since we know the temporary can load.
         if save_snapshot:
-            shutil.move(f"{self.postgres_data}.tgz.tmp", f"{self.postgres_data}.tgz")
+            shutil.move(f"{self.pgdata_path}.tgz.tmp", f"{self.pgdata_path}.tgz")
 
         return True
 
@@ -256,21 +260,21 @@ class PostgresConn:
         assert archive or last
         self.shutdown_postgres()
 
-        local["rm"]["-rf", self.postgres_data].run()
-        local["mkdir"]["-m", "0700", "-p", self.postgres_data].run()
+        local["rm"]["-rf", self.pgdata_path].run()
+        local["mkdir"]["-m", "0700", "-p", self.pgdata_path].run()
 
-        # Strip the "pgdata" so we can implant directly into the target postgres_data.
-        archive = archive if not last else f"{self.postgres_data}.tgz"
+        # Strip the "pgdata" so we can implant directly into the target pgdata_path.
+        archive = archive if not last else f"{self.pgdata_path}.tgz"
         assert archive
         assert Path(archive).exists()
 
         local["tar"][
-            "xf", archive, "-C", self.postgres_data, "--strip-components", "1"
+            "xf", archive, "-C", self.pgdata_path, "--strip-components", "1"
         ].run()
         # Imprint the required port.
         (
             (local["echo"][f"port={self.postgres_port}"])
-            >> f"{self.postgres_data}/postgresql.conf"
+            >> f"{self.pgdata_path}/postgresql.conf"
         )()
 
         return self.start_with_changes(conf_changes=None)
