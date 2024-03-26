@@ -289,7 +289,7 @@ def tune(
     run_config = RunConfig(
         name=f"ProtoxHPO_{dtime}",
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
-        sync_config=SyncConfig(),
+        sync_config=SyncConfig(upload_dir=None, syncer=None),
         verbose=2,
         log_to_file=True,
     )

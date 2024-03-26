@@ -12,11 +12,12 @@ from datetime import datetime
 from typing import Any, Union
 import click
 import ray
-from ray.tune import Trainable, SyncConfig
+from ray.tune import Trainable
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 from ray.tune import TuneConfig
 from ray.air import RunConfig, FailureConfig
+from ray.train import SyncConfig
 
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
@@ -567,7 +568,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     run_config = RunConfig(
         name=f"ProtoxHPO_{dtime}",
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
-        sync_config=SyncConfig(),
+        sync_config=SyncConfig(upload_dir=None, syncer=None),
         verbose=2,
         log_to_file=True,
     )
