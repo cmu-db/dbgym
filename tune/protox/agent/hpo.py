@@ -543,7 +543,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     )
 
     restart_ray()
-    ray.init(address=hpo_args.ray_address, log_to_driver=False)
+    ray.init(address="localhost:6379", log_to_driver=False)
 
     # Scheduler.
     scheduler = FIFOScheduler() # type: ignore
@@ -565,7 +565,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_config = RunConfig(
-        name=f"MythrilHPO_{dtime}",
+        name=f"ProtoxHPO_{dtime}",
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
         sync_config=SyncConfig(upload_dir=None, syncer=None),
         verbose=2,
