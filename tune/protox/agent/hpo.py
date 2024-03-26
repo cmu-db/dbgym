@@ -520,9 +520,9 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         hpo_args.pgdata_snapshot_path,
         embedding_paths,
         pgconn={
-            "pg_connstr": hpo_args.pg_conn,
-            "pg_data": hpo_args.pg_data,
-            "pg_bins": hpo_args.pg_bins,
+            "pg_connstr": pg_connstr,
+            "pgdata_path": hpo_args.pg_data,
+            "pgbin_path": hpo_args.pg_bins,
         },
         benchbase_config=benchbase_config,
         duration=hpo_args.duration,

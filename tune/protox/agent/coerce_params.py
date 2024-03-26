@@ -30,8 +30,8 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
             "output_log_path": "artifacts",
             "pgconn_info": {
                 "pg_connstr": "host=localhost port=5432 user=admin dbname=benchbase",
-                "pg_data": "/mnt/nvme0n1/wz2/noisepage/pgdata",
-                "pg_bins": "/mnt/nvme0n1/wz2/noisepage/",
+                "pgdata_path": "/mnt/nvme0n1/wz2/noisepage/pgdata",
+                "pgbin_path": "/mnt/nvme0n1/wz2/noisepage/",
             },
             "benchmark_config": benchmark_config,
             "benchbase_config": {

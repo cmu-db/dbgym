@@ -145,7 +145,7 @@ def _edit_args(logdir: str, port: int, hpo_config: dict[str, Any]) -> dict[str, 
         )
 
     # Append port to the pgdata folder.
-    hpo_config["pgconn_info"]["pg_data"] += f"{port}"
+    hpo_config["pgconn_info"]["pgdata_path"] += f"{port}"
 
     kvs = {
         s.split("=")[0]: s.split("=")[1]
@@ -223,9 +223,9 @@ def _build_utilities(
     )
 
     pgconn = PostgresConn(
-        postgres_connstr=hpo_config["pgconn_info"]["pg_connstr"],
-        pgdata_path=hpo_config["pgconn_info"]["pg_data"],
-        pgbin_path=hpo_config["pgconn_info"]["pg_bins"],
+        pgconnstr=hpo_config["pgconn_info"]["pg_connstr"],
+        pgdata_path=hpo_config["pgconn_info"]["pgdata_path"],
+        pgbin_path=hpo_config["pgconn_info"]["pgbin_path"],
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
         connect_timeout=300,
         logger=logger,
@@ -563,7 +563,7 @@ def build_trial(
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
-    port, signal = _get_signal(hpo_config["pgconn_info"]["pg_bins"])
+    port, signal = _get_signal(hpo_config["pgconn_info"]["pgbin_path"])
     hpo_config = _edit_args(logdir, port, hpo_config)
 
     logger, reward_utility, pgconn, workload = _build_utilities(logdir, hpo_config)
