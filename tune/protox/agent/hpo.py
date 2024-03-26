@@ -169,6 +169,9 @@ def hpo(
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
+# The reason we put the paths inside the space is so that the tuner only receives the space .json file
+#   as a CLI arg and doesn't need any other CLI args. The hyperparameters are selected using the paths
+#   given here, so it doesn't make sense to specify them separately when tuning.
 def _build_space(
     sysknobs: dict[str, Any],
     benchmark_config: dict[str, Any],

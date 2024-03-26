@@ -19,6 +19,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from tune.protox.env.logger import Logger, time_record
 from misc.utils import DBGymConfig, parent_dir
+from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
 
 
 class PostgresConn:
@@ -26,8 +27,6 @@ class PostgresConn:
         self,
         dbgym_cfg: DBGymConfig,
         pgport: int,
-        pguser: str,
-        pgpass: str,
         pristine_pgdata_snapshot_fpath: Path,
         pgbin_dpath: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
@@ -37,9 +36,9 @@ class PostgresConn:
 
         Path(postgres_logs_dir).mkdir(parents=True, exist_ok=True)
         self.dbgym_cfg = dbgym_cfg
+        self.pgport = pgport
         self.pgbin_dpath = pgbin_dpath
         self.postgres_logs_dir = postgres_logs_dir
-        self.pgconnstr = pgconnstr
         self.connect_timeout = connect_timeout
         self.log_step = 0
         self.logger = logger
@@ -54,18 +53,17 @@ class PostgresConn:
         #   discarded once tuning is completed.
         self.checkpoint_pgdata_snapshot_fpath = dbgym_cfg.dbgym_tmp_path / "checkpoint_pgdata.tgz"
         # pgdata_dpath is the pgdata that is *actively being tuned*
-        self.pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+        self.pgdata_dpath = dbgym_cfg.dbgym_tmp_path / f"pgdata{self.pgport}"
 
-        kvs = {s.split("=")[0]: s.split("=")[1] for s in pgconnstr.split(" ")}
-        self.postgres_db = kvs["dbname"]
-        self.postgres_host = kvs["host"]
-        self.postgres_port = kvs["port"]
         self._conn: Optional[psycopg.Connection[Any]] = None
+
+    def _get_connstr(self):
+        return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
     def conn(self) -> psycopg.Connection[Any]:
         if self._conn is None:
             self._conn = psycopg.connect(
-                self.pgconnstr, autocommit=True, prepare_threshold=None
+                self._get_connstr(), autocommit=True, prepare_threshold=None
             )
         return self._conn
 
@@ -191,11 +189,11 @@ class PostgresConn:
 
             retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
                 "--host",
-                self.postgres_host,
+                "localhost",
                 "--port",
-                str(self.postgres_port),
+                str(self.pgport),
                 "--dbname",
-                self.postgres_db,
+                DBGYM_POSTGRES_DBNAME,
             ].run(retcode=None)
             if retcode == 0:
                 break
@@ -242,7 +240,7 @@ class PostgresConn:
         conn.execute("SET statement_timeout = 300000")
 
         try:
-            timer = threading.Timer(300.0, cancel_fn, args=(self.pgconnstr,))
+            timer = threading.Timer(300.0, cancel_fn, args=(self._get_connstr(),))
             timer.start()
 
             conn.execute(sql)
