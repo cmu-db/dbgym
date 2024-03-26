@@ -100,11 +100,11 @@ class PostgresConn:
             # Wait until pg_isready fails.
             retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
                 "--host",
-                self.postgres_host,
+                "localhost",
                 "--port",
                 str(self.pgport),
                 "--dbname",
-                self.postgres_db,
+                DBGYM_POSTGRES_DBNAME,
             ].run(retcode=None)
 
             exists = (Path(self.pgdata_dpath) / "postmaster.pid").exists()
