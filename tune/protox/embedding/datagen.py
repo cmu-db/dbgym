@@ -23,7 +23,7 @@ from misc.utils import (
     conv_inputpath_to_abspath,
     default_benchmark_config_path,
     default_workload_path,
-    default_pgdata_snapshot_path,
+    default_pristine_pgdata_snapshot_path,
     default_pgbin_path,
     traindata_fname,
     link_result,
@@ -57,11 +57,12 @@ from util.shell import subprocess_run
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
+# TODO(phw2): need to run pgtune before gathering data
 @click.option(
-    "--pgdata-snapshot-path",
+    "--pristine-pgdata-snapshot-path",
     default=None,
     type=Path,
-    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the pgdata directory to build an embedding space over. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchmark-config-path",
@@ -128,7 +129,7 @@ def datagen(
     benchmark_name,
     workload_name,
     scale_factor,
-    pgdata_snapshot_path,
+    pristine_pgdata_snapshot_path,
     benchmark_config_path,
     workload_path,
     seed,
@@ -157,8 +158,8 @@ def datagen(
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
-    if pgdata_snapshot_path == None:
-        pgdata_snapshot_path = default_pgdata_snapshot_path(
+    if pristine_pgdata_snapshot_path == None:
+        pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
     if max_concurrent == None:
@@ -169,7 +170,7 @@ def datagen(
     # Convert all input paths to absolute paths
     workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
     benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pgdata_snapshot_path)
+    pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
 
     # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
@@ -192,7 +193,7 @@ def datagen(
     # group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pgdata_snapshot_path,
+        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path,
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -206,7 +207,7 @@ def datagen(
 
     # run all steps
     start_time = time.time()
-    pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pgdata_snapshot_path)
+    pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pristine_pgdata_snapshot_path)
     pgbin_dpath = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     start_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
@@ -238,14 +239,14 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pgdata_snapshot_path):
+    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.scale_factor = scale_factor
         self.benchmark_config_path = benchmark_config_path
         self.seed = seed
         self.workload_path = workload_path
-        self.pgdata_snapshot_path = pgdata_snapshot_path
+        self.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
 
 
 class EmbeddingDirGenArgs:

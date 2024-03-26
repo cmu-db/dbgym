@@ -24,7 +24,7 @@ from misc.utils import (
     default_benchmark_config_path,
     default_embedding_path,
     default_hpoed_agent_params_path,
-    default_pgdata_snapshot_path,
+    default_pristine_pgdata_snapshot_path,
     default_workload_path,
     open_and_save,
     restart_ray,
@@ -69,10 +69,10 @@ class AgentTrainArgs:
     help=f"The path to the agent params found by the HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
-    "--pgdata-snapshot-path",
+    "--pristine-pgdata-snapshot-path",
     default=None,
     type=Path,
-    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the pgdata directory for a specific workload. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -126,7 +126,7 @@ def tune(
     benchbase_config_path,
     sysknobs_path,
     hpoed_agent_params_path,
-    pgdata_snapshot_path,
+    pristine_pgdata_snapshot_path,
     workload_path,
     seed,
     agent,
@@ -154,8 +154,8 @@ def tune(
         hpoed_agent_params_path = default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path
         )
-    if pgdata_snapshot_path == None:
-        pgdata_snapshot_path = default_pgdata_snapshot_path(
+    if pristine_pgdata_snapshot_path == None:
+        pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if workload_path == None:
@@ -173,7 +173,7 @@ def tune(
     hpoed_agent_params_path = conv_inputpath_to_abspath(
         dbgym_cfg, hpoed_agent_params_path
     )
-    pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pgdata_snapshot_path)
+    pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
     workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
@@ -185,7 +185,7 @@ def tune(
     args.benchbase_config_path = benchbase_config_path
     args.sysknobs_path = sysknobs_path
     args.hpoed_agent_params_path = hpoed_agent_params_path
-    args.pgdata_snapshot_path = pgdata_snapshot_path
+    args.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
     args.workload_path = workload_path
     args.seed = seed
     args.agent = agent

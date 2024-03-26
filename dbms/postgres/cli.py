@@ -57,7 +57,7 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 
 
 def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pgdata"
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata"
 
 
 def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:

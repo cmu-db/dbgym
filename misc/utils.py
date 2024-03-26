@@ -7,6 +7,8 @@ from pathlib import Path
 import click
 import yaml
 
+from dbms.postgres.cli import get_pgdata_tgz_name
+
 # Relpaths of different folders in the codebase
 TUNE_RELPATH = Path("tune")
 PROTOX_RELPATH = TUNE_RELPATH / "protox"
@@ -81,13 +83,13 @@ default_workload_path = (
     / "data"
     / f"workload_{workload_name}"
 )
-default_pgdata_snapshot_path = (
+default_pristine_pgdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / f"dbgym_dbms_postgres"
     / "data"
-    / f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pgdata.tgz"
+    / get_pgdata_tgz_name(benchmark_name, scale_factor)
 )
 default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(

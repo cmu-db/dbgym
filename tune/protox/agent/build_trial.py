@@ -299,7 +299,7 @@ def _build_env(
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
-        pgdata_snapshot_path=hpo_config["pgdata_snapshot_path"],
+        pristine_pgdata_snapshot_path=hpo_config["pristine_pgdata_snapshot_path"],
         horizon=hpo_config["horizon"],
         reward_utility=reward_utility,
         pgconn=pgconn,

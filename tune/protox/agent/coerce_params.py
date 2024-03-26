@@ -26,7 +26,7 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
             "duration": hpo_config["mythril_args"]["duration"],
             "workload_timeout": hpo_config["mythril_args"]["workload_timeout"],
             "query_timeout": hpo_config["mythril_args"]["timeout"],
-            "pgdata_snapshot_path": hpo_config["mythril_args"]["pgdata_snapshot_path"],
+            "pristine_pgdata_snapshot_path": hpo_config["mythril_args"]["pristine_pgdata_snapshot_path"],
             "output_log_path": "artifacts",
             "pgconn_info": {
                 "pgport": 5432,
