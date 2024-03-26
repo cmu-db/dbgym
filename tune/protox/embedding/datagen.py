@@ -20,7 +20,7 @@ from misc.utils import (
     WORKSPACE_PATH_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
     DBGymConfig,
-    conv_inputpath_to_abspath,
+    conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_workload_path,
     default_pristine_pgdata_snapshot_path,
@@ -168,9 +168,9 @@ def datagen(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
-    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
 
     # process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")

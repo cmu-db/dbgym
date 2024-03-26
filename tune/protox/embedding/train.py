@@ -12,7 +12,7 @@ from misc.utils import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
-    conv_inputpath_to_abspath,
+    conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
@@ -193,9 +193,9 @@ def train(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    traindata_path = conv_inputpath_to_abspath(dbgym_cfg, traindata_path)
-    hpo_space_path = conv_inputpath_to_abspath(dbgym_cfg, hpo_space_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    traindata_path = conv_inputpath_to_realabspath(dbgym_cfg, traindata_path)
+    hpo_space_path = conv_inputpath_to_realabspath(dbgym_cfg, hpo_space_path)
 
     # setup
     random.seed(seed)
@@ -203,7 +203,7 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = conv_inputpath_to_abspath(dbgym_cfg, default_workload_path(
+    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, default_workload_path(
         dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
     ))
     # group args. see comment in datagen.py:datagen()

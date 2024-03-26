@@ -70,6 +70,8 @@ default_embedding_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
+    / "dbgym_tune_protox_embedding"
+    / "data"
     / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
 )
 default_hpoed_agent_params_path = (
@@ -224,25 +226,30 @@ class DBGymConfig:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
 
-def conv_inputpath_to_abspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
+def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
     """
-    Convert any user inputted path to an absolute path
+    Convert any user inputted path to a real, absolute path
     For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
     Relative paths are relative to the base dbgym repo dir
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     """
-    # expanduser() is always "safe" to call
-    inputpath = os.path.expanduser(inputpath)
-    # the reason we don't call os.path.abspath() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
+    # for simplicity we only process Path objects
+    realabspath = Path(inputpath)
+    # expanduser() is always "ok" to call first
+    realabspath = realabspath.expanduser()
+    # the reason we don't call Path.absolute() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
     #   which is not necessary where cwd() points at the time of calling this function
-    if os.path.isabs(inputpath):
-        inputpath = os.path.normpath(inputpath)
-    else:
-        inputpath = os.path.normpath(os.path.join(dbgym_cfg.dbgym_repo_path, inputpath))
-    # as mentioned in the function doc, we always return a Path object
-    return Path(inputpath)
+    if not realabspath.is_absolute():
+        realabspath = dbgym_cfg.dbgym_repo_path / realabspath
+    # resolve has two uses: normalize the path (remove ..) and resolve symlinks
+    # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
+    #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
+    realabspath = realabspath.resolve()
+    assert realabspath.is_absolute(), f"after being processed, realabspath ({realabspath}) is still not absolute"
+    assert realabspath.exists(), f"after being processed, realabspath ({realabspath}) is still a non-existent path"
+    return realabspath
 
 
 def is_base_git_dir(cwd) -> bool:
@@ -294,11 +301,10 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
 
 def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     """
-    Open a file or symlink and "save" it to [workspace]/task_runs/run_*/.
-        If you open a symlink, it'll save the real file the link points to rather than the link itself.
+    Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
-    Note that open() only opens files, not symlinks, so the interface is not exactly the same. Opening symlinks is
-        crucial because it means we can change symlink files in [workspace]/data/ instead of changing config files
+    This file does not work if open_fpath is a symlink, to make its interface identical to that of open().
+        Make sure to resolve all symlinks with conv_inputpath_to_realabspath().
     See the comment of save_file() for what "saving" means
     If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
         This shouldn't be too hard to remember because this function crashes if open_fpath doesn't exist,
@@ -314,7 +320,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     assert os.path.isabs(
         open_fpath
     ), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
-    open_fpath = os.path.realpath(open_fpath)  # traverse symlinks
+    assert not os.path.islink(open_fpath), f"open_fpath ({open_fpath}) should not be a symlink"
     assert os.path.exists(open_fpath), f"open_fpath ({open_fpath}) does not exist"
     # open_and_save *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
     #   a file though. we sometimes save a directory (see save_file() for details)
@@ -328,7 +334,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
 
 
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike):
+def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -338,8 +344,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike):
         In these cases we create a symlink so we have full provenance for how the dependency was created
     """
     # process fpath and ensure that it's a file at the end
-    fpath = conv_inputpath_to_abspath(dbgym_cfg, fpath)
+    fpath = conv_inputpath_to_realabspath(dbgym_cfg, fpath)
     fpath = os.path.realpath(fpath)  # traverse symlinks
+    assert not os.path.islink(fpath), f"fpath ({fpath}) should not be a symlink"
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
     assert not is_child_path(
@@ -421,7 +428,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     Will override the old symlink if there is one
     This is called so that [workspace]/data/ always contains the latest generated version of a file
     """
-    result_path = conv_inputpath_to_abspath(dbgym_cfg, result_path)
+    result_path = conv_inputpath_to_realabspath(dbgym_cfg, result_path)
     assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_path)
 

@@ -19,7 +19,7 @@ from misc.utils import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
-    conv_inputpath_to_abspath,
+    conv_inputpath_to_realabspath,
     default_benchbase_config_path,
     default_benchmark_config_path,
     default_embedding_path,
@@ -166,15 +166,15 @@ def tune(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
-    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
-    sysknobs_path = conv_inputpath_to_abspath(dbgym_cfg, sysknobs_path)
-    hpoed_agent_params_path = conv_inputpath_to_abspath(
+    embedding_path = conv_inputpath_to_realabspath(dbgym_cfg, embedding_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
+    sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
+    hpoed_agent_params_path = conv_inputpath_to_realabspath(
         dbgym_cfg, hpoed_agent_params_path
     )
-    pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
-    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
+    pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
 
     # Build "args" object. TODO(phw2): after setting up E2E testing, including with agent HPO, refactor so we don't need the "args" object
     args = AgentTrainArgs()

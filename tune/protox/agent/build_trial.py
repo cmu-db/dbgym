@@ -17,7 +17,7 @@ from gymnasium.wrappers import (  # type: ignore
 )
 from torch import nn
 
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, open_and_save, save_file
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -154,17 +154,19 @@ def _build_utilities(
     pgconn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
-        pristine_pgdata_snapshot_fpath=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
-        pgbin_dpath=hpo_config["pgconn_info"]["pgbin_path"],
+        pristine_pgdata_snapshot_fpath=Path(hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"]),
+        pgbin_dpath=Path(hpo_config["pgconn_info"]["pgbin_path"]),
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
         connect_timeout=300,
         logger=logger,
     )
 
     workload = Workload(
+        dbgym_cfg=dbgym_cfg,
         tables=hpo_config["benchmark_config"]["tables"],
         attributes=hpo_config["benchmark_config"]["attributes"],
         query_spec=hpo_config["benchmark_config"]["query_spec"],
+        workload_path=Path(hpo_config["workload_path"]),
         pid=None,
         workload_timeout=hpo_config["workload_timeout"],
         workload_timeout_penalty=hpo_config["workload_timeout_penalty"],
@@ -175,7 +177,7 @@ def _build_utilities(
 
 
 def _build_actions(
-    seed: int, hpo_config: dict[str, Any], workload: Workload, logger: Logger
+    dbgym_cfg: DBGymConfig, seed: int, hpo_config: dict[str, Any], workload: Workload, logger: Logger
 ) -> Tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
@@ -188,7 +190,7 @@ def _build_actions(
         latent=True,
     )
 
-    with open(Path(hpo_config["embedding_paths"]).parent / "config") as f:
+    with open_and_save(dbgym_cfg, Path(hpo_config["embedding_path"]) / "config") as f:
         vae_config = json.load(f)
 
         assert vae_config["mean_output_act"] == "sigmoid"
@@ -201,7 +203,9 @@ def _build_actions(
             workload, len(hpo_config["benchmark_config"]["tables"])
         )
         vae = create_vae_model(vae_config, max_attrs, max_cat_features)
-        vae.load_state_dict(torch.load(hpo_config["embedding_paths"]))
+        embedder_symlink_fpath = Path(hpo_config["embedding_path"]) / "embedder.pth"
+        save_file(embedder_symlink_fpath)
+        vae.load_state_dict(torch.load())
 
     lsc = LSC(
         horizon=hpo_config["horizon"],

@@ -22,7 +22,7 @@ from ray.train import SyncConfig
 
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
 
 
 class AgentHPOArgs:
@@ -170,13 +170,13 @@ def hpo(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
-    benchmark_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchmark_config_path)
-    benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
-    sysknobs_path = conv_inputpath_to_abspath(dbgym_cfg, sysknobs_path)
-    pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
-    pgbin_path = conv_inputpath_to_abspath(dbgym_cfg, pgbin_path)
-    workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
+    embedding_path = conv_inputpath_to_realabspath(dbgym_cfg, embedding_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
+    sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
+    pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
+    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
 
     # Create args object
     hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
@@ -190,7 +190,8 @@ def _build_space(
     sysknobs: dict[str, Any],
     benchmark_config: dict[str, Any],
     pristine_pgdata_snapshot_path: Path,
-    embedding_paths: list[str],
+    workload_path: Path,
+    embedding_path: list[str],
     pgconn_info: dict[str, str],
     benchbase_config: dict[str, Any]={},
     duration: int=30,
@@ -211,6 +212,7 @@ def _build_space(
         "query_timeout": tune.choice(query_timeouts),
         # Paths.
         "pristine_pgdata_snapshot_path": str(pristine_pgdata_snapshot_path),
+        "workload_path": str(workload_path),
         "output_log_path": "artifacts/",
         "pgconn_info": pgconn_info,
         "benchmark_config": benchmark_config,
@@ -240,7 +242,7 @@ def _build_space(
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
         # Embeddings.
-        "embedding_paths": tune.choice(embedding_paths),
+        "embedding_path": tune.choice(embedding_path),
         # LSC Parameters.
         # Note that the units for these are based on the embedding itself.
         "lsc": {
@@ -489,7 +491,7 @@ def tune_single_trial(args: Any) -> None:
         sysknobs={},
         benchmark_config={},
         data_snapshot="",
-        embedding_paths=[],
+        embedding_path=[],
         pgconn_info={}
     ), hpo_config)
 
@@ -532,7 +534,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchmark_config["benchmark"] = benchmark
 
     # TODO(phw2): read the dir hpo_args.embedding_path and get a list of embeddings
-    embedding_paths = [hpo_args.embedding_path]
+    embedding_path = [hpo_args.embedding_path]
     # TODO(phw2): make workload and query timeout params lists instead of just ints
     workload_timeouts = [hpo_args.workload_timeout]
     query_timeouts = [hpo_args.query_timeout]
@@ -552,7 +554,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         sysknobs,
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
-        embedding_paths,
+        hpo_args.workload_path,
+        embedding_path,
         pgconn_info={
             "pristine_pgdata_snapshot_path": hpo_args.pristine_pgdata_snapshot_path,
             "pgbin_path": hpo_args.pgbin_path,
