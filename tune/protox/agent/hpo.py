@@ -354,7 +354,7 @@ class TuneTimeoutChecker(object):
 class TuneTrial:
     def setup(self, hpo_config: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
-        sys.path.append(os.path.expanduser(hpo_config["mythril_dir"]))
+        sys.path.append(os.path.expanduser(hpo_config["dbgym_dir"]))
 
         torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
@@ -460,6 +460,7 @@ class TuneOpt(Trainable):
         pass
 
 
+# This is used when you already have a good set of HPOs and just want to tune the DBMS
 def tune_single_trial(args: Any) -> None:
     with open(args.hpo_params_file, "r") as f:
         hpo_config = json.load(f)
@@ -474,7 +475,8 @@ def tune_single_trial(args: Any) -> None:
     ), hpo_config)
 
     # Assume we are executing from the root.
-    hpo_config["mythril_dir"] = os.getcwd()
+    # TODO(phw2): get this from dbgym_cfg
+    hpo_config["dbgym_dir"] = os.getcwd()
 
     # Get the duration.
     assert "duration" in hpo_config
@@ -528,6 +530,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     } if is_oltp else {}
 
     space = _build_space(
+        dbgym_cfg,
         sysknobs,
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
@@ -542,6 +545,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )
+    # Attach the dbgym directory.
+    space["dbgym_dir"] = dbgym_cfg.dbgym_repo_path
 
     restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
