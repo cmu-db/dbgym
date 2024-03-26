@@ -34,7 +34,7 @@ from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
-from dbms.postgres.cli import create_conn, start_postgres, stop_postgres, untar_snapshot
+from dbms.postgres.cli import create_conn, start_postgres, stop_postgres
 from util.shell import subprocess_run
 
 # FUTURE(oltp)
