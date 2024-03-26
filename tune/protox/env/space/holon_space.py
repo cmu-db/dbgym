@@ -84,7 +84,7 @@ class HolonSpace(spaces.Tuple):
     def get_spaces(self) -> list[Tuple[str, HolonSubSpace]]:
         r = cast(
             list[Tuple[str, HolonSubSpace]],
-            [(s.name, str, s) for s in self.spaces if hasattr(s, "name")],
+            [(s.name, s) for s in self.spaces if hasattr(s, "name")],
         )
         assert len(r) == 3
         return r

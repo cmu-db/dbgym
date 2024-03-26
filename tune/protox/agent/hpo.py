@@ -228,7 +228,7 @@ def _build_space(
         "reward_scaler": tune.choice([1, 2, 5, 10]),
         "workload_timeout_penalty": tune.choice([1, 2, 4]),
         # State.
-        "metric_state": tune.choice(["metric", "structure", "structure_normalize"]),
+        "metric_state": tune.choice(["metric", "structure"]),
         "maximize_state": not benchmark_config.get("oltp_workload", False),
         # Whether to normalize state or not.
         "normalize_state": tune.sample_from(

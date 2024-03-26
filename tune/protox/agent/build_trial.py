@@ -203,9 +203,9 @@ def _build_actions(
             workload, len(hpo_config["benchmark_config"]["tables"])
         )
         vae = create_vae_model(vae_config, max_attrs, max_cat_features)
-        embedder_symlink_fpath = Path(hpo_config["embedding_path"]) / "embedder.pth"
-        save_file(embedder_symlink_fpath)
-        vae.load_state_dict(torch.load())
+        embedder_fpath = Path(hpo_config["embedding_path"]) / "embedder.pth"
+        save_file(dbgym_cfg, embedder_fpath)
+        vae.load_state_dict(torch.load(embedder_fpath))
 
     lsc = LSC(
         horizon=hpo_config["horizon"],
@@ -303,7 +303,6 @@ def _build_env(
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
-        pristine_pgdata_snapshot_path=hpo_config["pristine_pgdata_snapshot_path"],
         horizon=hpo_config["horizon"],
         reward_utility=reward_utility,
         pgconn=pgconn,
@@ -501,7 +500,7 @@ def build_trial(
     _modify_benchbase_config(logdir, port, hpo_config)
 
     logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, hpo_config)
-    holon_space, lsc = _build_actions(seed, hpo_config, workload, logger)
+    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_config, workload, logger)
     obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
     target_reset, env = _build_env(
         hpo_config,
