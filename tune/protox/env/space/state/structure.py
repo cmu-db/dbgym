@@ -86,9 +86,10 @@ class StructureStateSpace(StateSpace, spaces.Dict):
 
         if indexes is not None:
             index_space = self.action_space.get_index_space()
-            if len(indexes) > 0:
+            # TODO(wz2): Incorporate existing stock-config indexes into state and then make the guard len(indexes) > 0 instead of len(env_acts) > 0
+            env_acts = [v.raw_repr for v in indexes if v.raw_repr]
+            if len(env_acts) > 0:
                 with th.no_grad():
-                    env_acts = [v.raw_repr for v in indexes if v.raw_repr]
                     latents = index_space.to_latent(env_acts).numpy()
                     latents = latents.sum(axis=0)
                     latents /= len(indexes)

@@ -34,7 +34,7 @@ class LSCStructureStateSpace(StructureStateSpace):
 class LSCMetricStateSpace(MetricStateSpace):
     def __init__(self, dbgym_cfg: DBGymConfig, lsc: LSC, tables: list[str], seed: int):
         spaces = {"lsc": Box(low=-1, high=1.0)}
-        super().__init__(spaces, dbgym_cfg, tables, seed)
+        super().__init__(dbgym_cfg, spaces, tables, seed)
         self.lsc = lsc
 
     def construct_offline(
