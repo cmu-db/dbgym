@@ -594,7 +594,7 @@ class Workload(object):
                     output["flattened"] = True
                     f.write(json.dumps(output, indent=4))
 
-            with open(self.dbgym_cfg, results_dir / "run.raw.csv", "w") as f:
+            with open(results_dir / "run.raw.csv", "w") as f:
                 # Write the raw query data.
                 f.write(
                     "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"

@@ -504,7 +504,7 @@ def build_trial(
 
     logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, hpo_config)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_config, workload, logger)
-    obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
+    obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpo_config, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
         hpo_config,
