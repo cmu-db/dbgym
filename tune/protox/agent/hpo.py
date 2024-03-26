@@ -482,12 +482,12 @@ def create_tune_opt_class(dbgym_cfg_param):
 
 
 # This is used when you already have a good set of HPOs and just want to tune the DBMS
-def tune_single_trial(args: Any) -> None:
-    with open(args.hpo_params_file, "r") as f:
+def tune_single_trial(dbgym_cfg: DBGymConfig, args: Any) -> None:
+    with open_and_save(dbgym_cfg, args.hpo_params_file, "r") as f:
         hpo_config = json.load(f)
 
     # Coerce using a dummy space.
-    hpo_config = coerce_params(_build_space(
+    hpo_config = coerce_params(dbgym_cfg, _build_space(
         sysknobs={},
         benchmark_config={},
         data_snapshot="",

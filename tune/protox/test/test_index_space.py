@@ -15,6 +15,7 @@ class IndexSpaceTests(unittest.TestCase):
         aux_type=True,
         aux_include=True,
     ):
+        # don't call open_and_save() because this is a unittest
         with open(config_path, "r") as f:
             benchmark_config = yaml.safe_load(f)
             benchmark_key = [k for k in benchmark_config.keys()][0]

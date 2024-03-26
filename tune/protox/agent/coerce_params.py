@@ -1,15 +1,16 @@
 from typing import Any
-
 import yaml
 
+from misc.utils import DBGymConfig, open_and_save
 
-def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str, Any]:
+
+def coerce_params(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str, Any]:
     if "space_version" not in hpo_config:
         # This is an old version. Coerce the params file.
         new_config = {}
         margs = hpo_config["mythril_args"]
 
-        with open(margs["benchmark_config"]) as f:
+        with open_and_save(dbgym_cfg, margs["benchmark_config"]) as f:
             benchmark_config = yaml.safe_load(f)
             benchmark = [k for k in benchmark_config.keys()][0]
             benchmark_config = benchmark_config[benchmark]

@@ -354,7 +354,7 @@ def _combine_traindata_dir_into_parquet(
     dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGenericArgs, file_gen_args: EmbeddingFileGenArgs
 ):
     tbl_dirs = {}
-    with open(generic_args.benchmark_config_path, "r") as f:
+    with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
         benchmark_config = benchmark_config[[k for k in benchmark_config.keys()][0]]
         tables = benchmark_config["tables"]

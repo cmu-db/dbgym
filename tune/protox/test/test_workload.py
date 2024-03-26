@@ -10,6 +10,7 @@ from tune.protox.env.space.primitive_space import IndexSpace
 class WorkloadTests(unittest.TestCase):
     @staticmethod
     def load(config_file: str, workload_path: Path):
+        # don't call open_and_save() because this is a unittest
         with open(config_file, "r") as f:
             benchmark_config = yaml.safe_load(f)
             benchmark_key = [k for k in benchmark_config.keys()][0]
@@ -59,6 +60,7 @@ class WorkloadTests(unittest.TestCase):
         self.assertEqual(i.class_mapping, ref)
 
     def test_job(self):
+        # don't call open_and_save() because this is a unittest
         with open("tune/protox/test/unittest_ref_models/ref_job_full_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
             ref = {
@@ -70,6 +72,7 @@ class WorkloadTests(unittest.TestCase):
         self.assertEqual(i.class_mapping, ref)
 
     def test_dsb(self):
+        # don't call open_and_save() because this is a unittest
         with open("tune/protox/test/unittest_ref_models/ref_dsb_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
             ref = {
@@ -81,6 +84,7 @@ class WorkloadTests(unittest.TestCase):
         self.diff_classmapping(ref, i.class_mapping)
 
     def test_tpcc(self):
+        # don't call open_and_save() because this is a unittest
         with open("tune/protox/test/unittest_ref_models/ref_tpcc_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
             ref = {

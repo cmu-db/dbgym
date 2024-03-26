@@ -268,10 +268,11 @@ def _build_actions(
 
 
 def _build_obs_space(
-    action_space: HolonSpace, lsc: LSC, hpo_config: dict[str, Any], seed: int
+    dbgym_cfg: DBGymConfig, action_space: HolonSpace, lsc: LSC, hpo_config: dict[str, Any], seed: int
 ) -> StateSpace:
     if hpo_config["metric_state"] == "metric":
         return LSCMetricStateSpace(
+            dbgym_cfg=dbgym_cfg,
             lsc=lsc,
             tables=hpo_config["benchmark_config"]["tables"],
             seed=seed,
@@ -288,6 +289,7 @@ def _build_obs_space(
 
 
 def _build_env(
+    dbgym_cfg: DBGymConfig,
     hpo_config: dict[str, Any],
     pgconn: PostgresConn,
     obs_space: StateSpace,
@@ -300,6 +302,7 @@ def _build_env(
 
     env = gym.make(
         "Postgres-v0",
+        dbgym_cfg=dbgym_cfg,
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
@@ -503,6 +506,7 @@ def build_trial(
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_config, workload, logger)
     obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
     target_reset, env = _build_env(
+        dbgym_cfg,
         hpo_config,
         pgconn,
         obs_space,

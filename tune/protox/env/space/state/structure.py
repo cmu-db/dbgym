@@ -7,6 +7,7 @@ import psycopg
 import torch as th
 from gymnasium import spaces
 
+from misc.utils import DBGymConfig
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import (
     LatentIndexSpace,
@@ -38,7 +39,7 @@ class StructureStateSpace(StateSpace, spaces.Dict):
     def require_metrics(self) -> bool:
         return False
 
-    def check_benchbase(self, results: Union[str, Path]) -> bool:
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
         # We don't use benchbase metrics anyways.
         return True
 

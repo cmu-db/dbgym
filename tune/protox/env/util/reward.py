@@ -60,6 +60,7 @@ class RewardUtility(object):
         self.logger.get_logger(__name__).debug(
             f"Reading TPS metric from file: {summary}"
         )
+        # don't call open_and_save() because summary is generated from this run
         with open(summary, "r") as f:
             s = json.load(f)
             tps = s["Throughput (requests/second)"]
@@ -76,6 +77,7 @@ class RewardUtility(object):
         self.logger.get_logger(__name__).debug(
             f"Reading TPS metric from file: {summary}"
         )
+        # don't call open_and_save() because summary is generated from this run
         with open(summary, "r") as f:
             tps = json.load(f)["Throughput (requests/second)"]
         return float(tps)

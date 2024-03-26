@@ -8,6 +8,7 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
+from misc.utils import DBGymConfig
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
@@ -25,6 +26,7 @@ from tune.protox.env.workload import Workload
 class PostgresEnv(gym.Env[Any, Any]):
     def __init__(
         self,
+        dbgym_cfg: DBGymConfig,
         observation_space: StateSpace,
         action_space: HolonSpace,
         workload: Workload,
@@ -38,6 +40,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     ):
         super().__init__()
 
+        self.dbgym_cfg = dbgym_cfg
         self.replay = replay
         self.logger = logger
         self.action_space = action_space

@@ -3,6 +3,7 @@ from typing import Any
 import psycopg
 from gymnasium.spaces import Box
 
+from misc.utils import DBGymConfig
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.metric import MetricStateSpace
@@ -31,9 +32,9 @@ class LSCStructureStateSpace(StructureStateSpace):
 
 
 class LSCMetricStateSpace(MetricStateSpace):
-    def __init__(self, lsc: LSC, tables: list[str], seed: int):
+    def __init__(self, dbgym_cfg: DBGymConfig, lsc: LSC, tables: list[str], seed: int):
         spaces = {"lsc": Box(low=-1, high=1.0)}
-        super().__init__(spaces, tables, seed)
+        super().__init__(spaces, dbgym_cfg, tables, seed)
         self.lsc = lsc
 
     def construct_offline(

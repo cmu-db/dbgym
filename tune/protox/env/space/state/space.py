@@ -5,6 +5,8 @@ from typing import Any, Union
 from gymnasium import spaces
 from psycopg import Connection
 
+from misc.utils import DBGymConfig
+
 
 class StateSpace(ABC, spaces.Space[Any]):
     @abstractmethod
@@ -12,7 +14,7 @@ class StateSpace(ABC, spaces.Space[Any]):
         pass
 
     @abstractmethod
-    def check_benchbase(self, results: Union[str, Path]) -> bool:
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
         pass
 
     @abstractmethod

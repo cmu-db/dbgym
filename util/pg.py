@@ -5,6 +5,8 @@ from sqlalchemy import Connection, Engine, text, create_engine
 from sqlalchemy.engine import CursorResult
 import psycopg
 
+from misc.utils import DBGymConfig, open_and_save
+
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"
 DBGYM_POSTGRES_DBNAME = "dbgym"
@@ -15,8 +17,8 @@ def conn_execute(conn: Connection, sql: str) -> CursorResult:
     return conn.execute(text(sql))
 
 
-def sql_file_queries(filepath: Path) -> List[str]:
-    with open(filepath) as f:
+def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> List[str]:
+    with open_and_save(dbgym_cfg, filepath) as f:
         lines: list[str] = []
         for line in f:
             if line.startswith("--"):

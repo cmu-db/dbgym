@@ -8,6 +8,7 @@ from gymnasium import spaces
 from gymnasium.spaces import Box, Space
 from psycopg.rows import dict_row
 
+from misc.utils import DBGymConfig, open_and_save
 from tune.protox.env.space.state.space import StateSpace
 
 # Defines the relevant metrics that we care about from benchbase.
@@ -127,8 +128,9 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         return True
 
     def __init__(
-        self, spaces: Mapping[str, spaces.Space[Any]], tables: list[str], seed: int
+        self, dbgym_cfg: DBGymConfig, spaces: Mapping[str, spaces.Space[Any]], tables: list[str], seed: int
     ) -> None:
+        self.dbgym_cfg = dbgym_cfg
         self.tables = tables
         self.internal_spaces: dict[str, Space[Any]] = {}
         self.internal_spaces.update(spaces)
@@ -149,7 +151,7 @@ class MetricStateSpace(StateSpace, spaces.Dict):
                     self.internal_spaces[metric] = Box(low=-np.inf, high=np.inf)
         super().__init__(self.internal_spaces, seed)
 
-    def check_benchbase(self, results: Union[str, Path]) -> bool:
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
         assert results is not None
         assert Path(results).exists()
         metric_files = [f for f in Path(results).rglob("*metrics.json")]
@@ -162,10 +164,10 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         final = metric_files[1] if initial == metric_files[0] else metric_files[0]
 
         try:
-            with open(initial) as f:
+            with open_and_save(dbgym_cfg, initial) as f:
                 initial_metrics = json.load(f)
 
-            with open(final) as f:
+            with open_and_save(dbgym_cfg, final) as f:
                 final_metrics = json.load(f)
         except Exception as e:
             return False
@@ -210,7 +212,7 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         # consequence of executing in the current environment.
         metric_files = [f for f in Path(data).rglob("*metrics.json")]
         if len(metric_files) == 1:
-            with open(metric_files[0], "r") as f:
+            with open_and_save(metric_files[0], "r") as f:
                 metrics = json.load(f)
                 assert "flattened" in metrics
                 metrics.pop("flattened")
@@ -232,10 +234,10 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         )
         final = metric_files[1] if initial == metric_files[0] else metric_files[0]
 
-        with open(initial) as f:
+        with open_and_save(self.dbgym_cfg, initial) as f:
             initial_metrics = json.load(f)
 
-        with open(final) as f:
+        with open_and_save(self.dbgym_cfg, final) as f:
             final_metrics = json.load(f)
 
         return self.state_delta(initial_metrics, final_metrics)

@@ -13,7 +13,7 @@ import torch
 import tqdm
 import yaml
 
-from misc.utils import open_and_save
+from misc.utils import open_and_save, save_file
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
     create_vae_model,
@@ -339,7 +339,7 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
     embeddings_dpath = embedder_fpath.parent.parent.parent  # part*/embeddings_*/
     embeddings_config_fpath = embeddings_dpath / "config" # part*/embeddings_*/config
     # don't use open_and_save() because we generated embeddings_config_fpath in this run
-    with open(embeddings_config_fpath, "r") as f:
+    with open_and_save(dbgym_cfg, embeddings_config_fpath, "r") as f:
         config = json.load(f)
         assert config["mean_output_act"] == "sigmoid"
         index_output_transform = lambda x: torch.nn.Sigmoid()(x) * config["output_scale"]
@@ -348,6 +348,7 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
             return torch.clamp(x, 0., config["output_scale"])
         max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(tables))
         vae = create_vae_model(config, max_attrs, max_cat_features)
+        save_file(dbgym_cfg, embedder_fpath)
         vae.load_state_dict(torch.load(embedder_fpath))
         vae.eval()
 

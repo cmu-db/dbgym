@@ -551,7 +551,7 @@ class Workload(object):
             if not results_dir.exists():
                 results_dir.mkdir(parents=True, exist_ok=True)
 
-            with open(self.dbgym_cfg, results_dir / "run.plans", "w") as f:
+            with open(results_dir / "run.plans", "w") as f:
                 # Output the explain data.
                 for qid, run in qid_runtime_data.items():
                     if run.explain_data is not None:
@@ -680,7 +680,7 @@ class Workload(object):
             # Execute benchbase if specified.
             success = self._execute_benchbase(benchbase_config, results)
             # We can only create a state if we succeeded.
-            success = obs_space.check_benchbase(results)
+            success = obs_space.check_benchbase(self.dbgym_cfg, results)
         else:
             ret = self._execute_workload(
                 pgconn,

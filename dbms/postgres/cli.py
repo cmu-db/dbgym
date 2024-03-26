@@ -13,7 +13,7 @@ import shutil
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, save_file, get_pgdata_tgz_name
+from misc.utils import DBGymConfig, open_and_save, save_file, get_pgdata_tgz_name
 from util.shell import subprocess_run
 from sqlalchemy import Connection
 from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS
@@ -189,10 +189,10 @@ def _load_benchmark_into_pgdata(
                 f"_load_benchmark_into_pgdata(): the benchmark of name {benchmark_name} is not implemented"
             )
 
-        _load_into_pgdata(conn, load_info)
+        _load_into_pgdata(dbgym_cfg, conn, load_info)
 
 
-def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
+def _load_into_pgdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass):
     sql_file_execute(conn, load_info.get_schema_fpath())
 
     # truncate all tables first before even loading a single one
@@ -200,7 +200,7 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
         conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # then, load the tables
     for table, table_fpath in load_info.get_tables_and_fpaths():
-        with open(table_fpath, "r") as table_csv:
+        with open_and_save(dbgym_cfg, table_fpath, "r") as table_csv:
             with conn.connection.dbapi_connection.cursor() as cur:
                 with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
                     while data := table_csv.read(8192):
