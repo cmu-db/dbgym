@@ -217,8 +217,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
         # Save the old configuration file.
-        old_conf_path = f"{self.pgconn.pgdata_path}/postgresql.auto.conf"
-        conf_path = f"{self.pgconn.pgdata_path}/postgresql.auto.old"
+        old_conf_path = f"{self.pgconn.pgdata_dpath}/postgresql.auto.conf"
+        conf_path = f"{self.pgconn.pgdata_dpath}/postgresql.auto.old"
         local["cp"][old_conf_path, conf_path].run()
 
         # Figure out what we have to change to get to the new configuration.
@@ -404,6 +404,8 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def close(self) -> None:
         self.pgconn.shutdown_postgres()
-        local["rm"]["-rf", self.pgconn.pgdata_path].run()
-        local["rm"]["-rf", f"{self.pgconn.pgdata_path}.tgz"].run()
-        local["rm"]["-rf", f"{self.pgconn.pgdata_path}.tgz.tmp"].run()
+        # Even though these files get deleted because tmp/ gets deleted,
+        #   we'll just delete them here anyways because why not
+        local["rm"]["-rf", self.pgconn.pgdata_dpath].run()
+        local["rm"]["-rf", self.pgconn.checkpoint_pgdata_snapshot_fpath].run()
+        local["rm"]["-rf", f"{self.pgconn.checkpoint_pgdata_snapshot_fpath}.tmp"].run()
