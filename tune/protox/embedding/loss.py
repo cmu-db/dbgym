@@ -95,7 +95,7 @@ def _distance_cost(
     if distance_scale == "auto":
         distance_scale_val = math.sqrt(preds.shape[1])
     else:
-        distance_scale_val = float(distance_scale_val)
+        distance_scale_val = float(distance_scale)
 
     # FIXME: Overwrite the distance_scale using the output scale.
     distance_scale_val = output_scale

@@ -5,7 +5,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union, cast
-
+import tempfile
 import numpy as np
 import pglast  # type: ignore
 from plumbum import local
@@ -671,13 +671,12 @@ class Workload(object):
         if self.logger:
             self.logger.get_logger(__name__).info("Starting to run benchmark...")
 
-        if self.benchbase:
-            # Purge results directory first.
-            assert "benchbase_path" in benchbase_config, f"benchbase_config ({benchbase_config}) does not have the key \"benchbase_path\""
-            bb_path = benchbase_config["benchbase_path"]
-            results = f"{bb_path}/results{pgconn.pgport}"
-            shutil.rmtree(results, ignore_errors=True)
+        # Purge results directory first.
+        tmp_dir = tempfile.gettempdir()
+        results = f"{tmp_dir}/results{pgconn.pgport}"
+        shutil.rmtree(results, ignore_errors=True)
 
+        if self.benchbase:
             # Execute benchbase if specified.
             success = self._execute_benchbase(benchbase_config, results)
             # We can only create a state if we succeeded.

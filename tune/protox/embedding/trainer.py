@@ -226,7 +226,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
                 self.step_lr_schedulers(end_of_epoch=False)
             self.step_lr_schedulers(end_of_epoch=True)
             self.zero_losses()
-            if self.end_of_epoch_hook(self) is False:
+            if self.end_of_epoch_hook(trainer=self) is False:
                 break
 
     def compute_embeddings(self, base_output: Any) -> None:

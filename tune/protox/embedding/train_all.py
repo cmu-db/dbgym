@@ -59,18 +59,18 @@ def fetch_index_parameters(
     data: dict[str, Any],
     workload_path: Path,
 ) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
-    tables = data["protox"]["tables"]
-    attributes = data["protox"]["attributes"]
-    query_spec = data["protox"]["query_spec"]
+    tables = data["tables"]
+    attributes = data["attributes"]
+    query_spec = data["query_spec"]
     workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None)
     modified_attrs = workload.column_usages()
 
     space = IndexSpace(
         tables,
-        max_num_columns=data["protox"]["max_num_columns"],
+        max_num_columns=data["max_num_columns"],
         max_indexable_attributes=workload.max_indexable(),
         seed=0,
-        rel_metadata=copy.deepcopy(modified_attrs),
+        rel_metadata=modified_attrs,
         attributes_overwrite=copy.deepcopy(modified_attrs),
         tbl_include_subsets=TableAttrAccessSetsMap({}),
         index_space_aux_type=False,
@@ -348,6 +348,7 @@ def _build_trainer(
     # Load the benchmark configuration.
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
+        data = data[[k for k in data.keys()][0]]
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
             dbgym_cfg, data, workload_path
         )

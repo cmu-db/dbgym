@@ -98,6 +98,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
     # Load the benchmark configuration.
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
+        data = data[[k for k in data.keys()][0]]
         max_attrs, max_cat_features, _, _ = fetch_index_parameters(
             dbgym_cfg, data, generic_args.workload_path
         )
@@ -237,7 +238,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
                                 preds=decoded,
                                 unused0=None,
                                 unused1=None,
-                                data=(x, y),
+                                tdata=(x, y),
                                 is_eval=True,
                             )
 
@@ -284,7 +285,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
                         )
                         for stat_key, stats in accumulated_stats.items()
                     }
-                    stats["error"] = error.item()
+                    stats["error"] = error
                     f.write(json.dumps(stats, indent=4))
 
                 del dataloader

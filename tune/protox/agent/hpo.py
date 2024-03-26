@@ -592,7 +592,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     run_config = RunConfig(
         name=f"ProtoxHPO_{dtime}",
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
-        sync_config=SyncConfig(upload_dir=None, syncer=None),
+        sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
     )

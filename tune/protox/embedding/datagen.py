@@ -355,7 +355,8 @@ def _combine_traindata_dir_into_parquet(
 ):
     tbl_dirs = {}
     with open(generic_args.benchmark_config_path, "r") as f:
-        benchmark_config = yaml.safe_load(f)["protox"]
+        benchmark_config = yaml.safe_load(f)
+        benchmark_config = benchmark_config[[k for k in benchmark_config.keys()][0]]
         tables = benchmark_config["tables"]
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
