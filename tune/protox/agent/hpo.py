@@ -21,7 +21,6 @@ from ray.air import RunConfig, FailureConfig
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
 from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
-from util.pg import get_postgres_configs
 
 
 class AgentHPOArgs:
