@@ -369,7 +369,7 @@ def _build_env(
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
-        data_snapshot_path=hpo_config["data_snapshot_path"],
+        pgdata_snapshot_path=hpo_config["pgdata_snapshot_path"],
         horizon=hpo_config["horizon"],
         reward_utility=reward_utility,
         pgconn=pgconn,

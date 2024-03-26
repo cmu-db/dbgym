@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import yaml
 from sklearn.preprocessing import quantile_transform
+import shutil
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
@@ -27,12 +28,14 @@ from misc.utils import (
     traindata_fname,
     link_result,
     open_and_save,
+    save_file,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
 from dbms.postgres.cli import create_conn, start_postgres, stop_postgres, untar_snapshot
+from util.shell import subprocess_run
 
 # FUTURE(oltp)
 # try:
@@ -212,6 +215,20 @@ def datagen(
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
     stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
+
+
+def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
+    # it should be an absolute path and it should exist
+    assert pgdata_snapshot_fpath.is_absolute() and pgdata_snapshot_fpath.exists(), f"untar_snapshot(): pgdata_snapshot_fpath ({pgdata_snapshot_fpath}) either doesn't exist or is not absolute"
+    # it may be a symlink so we need to resolve them first
+    pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
+    save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
+    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    if pgdata_dpath.exists():
+        shutil.rmtree(pgdata_dpath)
+    pgdata_dpath.mkdir(parents=False, exist_ok=False)
+    subprocess_run(f"tar -xzf {pgdata_snapshot_real_fpath} -C {pgdata_dpath}")
+    return pgdata_dpath
 
 
 class EmbeddingDatagenGenericArgs:

@@ -219,20 +219,6 @@ def _load_into_pgdata(conn: Connection, load_info: LoadInfoBaseClass):
         sql_file_execute(conn, constraints_fpath)
 
 
-def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
-    # it should be an absolute path and it should exist
-    assert pgdata_snapshot_fpath.is_absolute() and pgdata_snapshot_fpath.exists(), f"untar_snapshot(): pgdata_snapshot_fpath ({pgdata_snapshot_fpath}) either doesn't exist or is not absolute"
-    # it may be a symlink so we need to resolve them first
-    pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
-    save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
-    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
-    if pgdata_dpath.exists():
-        shutil.rmtree(pgdata_dpath)
-    pgdata_dpath.mkdir(parents=False, exist_ok=False)
-    subprocess_run(f"tar -xzf {pgdata_snapshot_real_fpath} -C {pgdata_dpath}")
-    return pgdata_dpath
-
-
 def start_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:
     _start_or_stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath, True)
 

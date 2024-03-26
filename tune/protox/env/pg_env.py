@@ -28,7 +28,6 @@ class PostgresEnv(gym.Env[Any, Any]):
         observation_space: StateSpace,
         action_space: HolonSpace,
         workload: Workload,
-        data_snapshot_path: Union[str, Path],
         horizon: int,
         reward_utility: RewardUtility,
         pgconn: PostgresConn,
@@ -48,7 +47,6 @@ class PostgresEnv(gym.Env[Any, Any]):
         self.reward_utility = reward_utility
 
         self.benchbase_config = benchbase_config
-        self.data_snapshot_path = data_snapshot_path
         self.pgconn = pgconn
         self.pqt = pqt
 
@@ -58,7 +56,7 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def _restore_last_snapshot(self) -> None:
         assert self.horizon > 1 and self.workload.oltp_workload
-        assert self.pgconn.restore_snapshot(last=True)
+        assert self.pgconn.restore_checkpointed_snapshot()
         assert isinstance(self.action_space, HolonSpace)
 
         self.state_container = self.action_space.generate_state_container(
@@ -104,7 +102,7 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             if self.workload.oltp_workload and self.horizon == 1:
                 # Restore a pristine snapshot of the world if OTLP and horizon = 1
-                self.pgconn.restore_snapshot(archive=self.data_snapshot_path)
+                self.pgconn.restore_pristine_snapshot()
             else:
                 # Instead of restoring a pristine snapshot, just reset the knobs.
                 # This in effect "resets" the baseline knob settings.
@@ -141,7 +139,7 @@ class PostgresEnv(gym.Env[Any, Any]):
 
         else:
             # Restore a pristine snapshot of the world.
-            self.pgconn.restore_snapshot(archive=self.data_snapshot_path)
+            self.pgconn.restore_pristine_snapshot()
             assert not self.replay
 
             # On the first time, run the benchmark to get the baseline.
@@ -398,7 +396,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         return self.pgconn.start_with_changes(
             conf_changes=config_changes,
             dump_page_cache=dump_page_cache,
-            save_snapshot=self.workload.oltp_workload and self.horizon > 1,
+            save_checkpoint=self.workload.oltp_workload and self.horizon > 1,
         )
 
     def close(self) -> None:
