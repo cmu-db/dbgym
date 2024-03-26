@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import pglast
 from sqlalchemy import Connection, Engine, text, create_engine
 from sqlalchemy.engine import CursorResult
@@ -7,7 +7,10 @@ import psycopg
 
 from misc.utils import DBGymConfig
 
+DBGYM_POSTGRES_USER = "dbgym_user"
+DBGYM_POSTGRES_PASS = "dbgym_pass"
 DBGYM_POSTGRES_DBNAME = "dbgym"
+DEFAULT_POSTGRES_PORT = 5432
 
 
 def conn_execute(conn: Connection, sql: str) -> CursorResult:
@@ -32,11 +35,10 @@ def sql_file_execute(conn: Connection, filepath: Path) -> None:
         conn_execute(conn, sql)
 
 
-def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=True) -> str:
-    pguser = dbgym_cfg.root_yaml["postgres_user"]
-    pgpass = dbgym_cfg.root_yaml["postgres_pass"]
-    pgport = dbgym_cfg.root_yaml["postgres_port"]
-    connstr_suffix = f"{pguser}:{pgpass}@localhost:{pgport}/{DBGYM_POSTGRES_DBNAME}"
+# The reason pgport is an argument is because when doing agnet HPO, we want to run multiple instances of Postgres
+#   at the same time. In this situation, they need to have different ports
+def get_connstr(pgport: int=DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
+    connstr_suffix = f"{DBGYM_POSTGRES_USER}:{DBGYM_POSTGRES_PASS}@localhost:{pgport}/{DBGYM_POSTGRES_DBNAME}"
     # use_psycopg means whether or not we use the psycopg.connect() function
     # counterintuively, you *don't* need psycopg in the connection string if you *are*
     #   using the psycopg.connect() function
@@ -44,8 +46,8 @@ def get_connstr(dbgym_cfg: DBGymConfig, use_psycopg=True) -> str:
     return connstr_prefix + "://" + connstr_suffix
 
 
-def create_conn(dbgym_cfg: DBGymConfig, use_psycopg=True) -> Connection:
-    connstr = get_connstr(dbgym_cfg, use_psycopg=use_psycopg)
+def create_conn(pgport: int=DEFAULT_POSTGRES_PORT, use_psycopg=True) -> Connection:
+    connstr = get_connstr(use_psycopg=use_psycopg, pgport=pgport)
     if use_psycopg:
         return psycopg.connect(
             connstr, autocommit=True, prepare_threshold=None

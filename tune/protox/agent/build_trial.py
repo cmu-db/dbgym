@@ -92,68 +92,7 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     raise IOError("No free ports to bind postgres to.")
 
 
-def _edit_args(logdir: str, port: int, hpo_config: dict[str, Any]) -> dict[str, Any]:
-    mythril_dir = hpo_config["mythril_dir"]
-    if hpo_config["benchmark_config"]["query_spec"]["query_directory"][0] != "/":
-        hpo_config["benchmark_config"]["query_spec"]["query_directory"] = (
-            mythril_dir
-            + "/"
-            + hpo_config["benchmark_config"]["query_spec"]["query_directory"]
-        )
-    if hpo_config["benchmark_config"]["query_spec"]["query_order"][0] != "/":
-        hpo_config["benchmark_config"]["query_spec"]["query_order"] = (
-            mythril_dir
-            + "/"
-            + hpo_config["benchmark_config"]["query_spec"]["query_order"]
-        )
-
-    if "execute_query_directory" in hpo_config["benchmark_config"]["query_spec"]:
-        if (
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"][0]
-            != "/"
-        ):
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_directory"] = (
-                mythril_dir
-                + "/"
-                + hpo_config["benchmark_config"]["query_spec"][
-                    "execute_query_directory"
-                ]
-            )
-        if (
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_order"][0]
-            != "/"
-        ):
-            hpo_config["benchmark_config"]["query_spec"]["execute_query_order"] = (
-                mythril_dir
-                + "/"
-                + hpo_config["benchmark_config"]["query_spec"]["execute_query_order"]
-            )
-
-    if "benchbase_config_path" in hpo_config["benchbase_config"]:
-        # Copy the benchbase benchmark path.
-        shutil.copy(
-            hpo_config["benchbase_config"]["benchbase_config_path"],
-            Path(logdir) / "benchmark.xml",
-        )
-        hpo_config["benchbase_config"]["benchbase_config_path"] = (
-            Path(logdir) / "benchmark.xml"
-        )
-
-    if "benchbase_path" in hpo_config["benchbase_config"]:
-        hpo_config["benchbase_config"]["benchbase_path"] = os.path.expanduser(
-            hpo_config["benchbase_config"]["benchbase_path"]
-        )
-
-    # Append port to the pgdata folder.
-    hpo_config["pgconn_info"]["pgdata_path"] += f"{port}"
-
-    kvs = {
-        s.split("=")[0]: s.split("=")[1]
-        for s in hpo_config["pgconn_info"]["pg_connstr"].split(" ")
-    }
-    kvs["port"] = str(port)
-    hpo_config["pgconn_info"]["pg_connstr"] = " ".join([f"{k}={v}" for k, v in kvs.items()])
-
+def _modify_benchbase_config(logdir: str, port: int, hpo_config: dict[str, Any]) -> None:
     if hpo_config["benchmark_config"]["query_spec"]["oltp_workload"]:
         conf_etree = ET.parse(Path(logdir) / "benchmark.xml")
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
@@ -171,17 +110,6 @@ def _edit_args(logdir: str, port: int, hpo_config: dict[str, Any]) -> dict[str, 
             if works.find("warmup") is not None:  # type: ignore
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"])  # type: ignore
         conf_etree.write(Path(logdir) / "benchmark.xml")
-
-    class Encoder(json.JSONEncoder):
-        def default(self, obj: Any) -> Any:
-            if isinstance(obj, Path):
-                return str(obj)
-            return super(Encoder, self).default(obj)
-
-    with open(Path(logdir) / "hpo_params.json", "w") as f:
-        json.dump(hpo_config, f, indent=4, cls=Encoder)
-
-    return hpo_config
 
 
 def _gen_noise_scale(
@@ -223,7 +151,9 @@ def _build_utilities(
     )
 
     pgconn = PostgresConn(
-        pgconnstr=hpo_config["pgconn_info"]["pg_connstr"],
+        pgport=hpo_config["pgconn_info"]["pgport"],
+        pguser=hpo_config["pgconn_info"]["pguser"],
+        pgpass=hpo_config["pgconn_info"]["pgpass"],
         pgdata_path=hpo_config["pgconn_info"]["pgdata_path"],
         pgbin_path=hpo_config["pgconn_info"]["pgbin_path"],
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
@@ -564,7 +494,7 @@ def build_trial(
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_config["pgconn_info"]["pgbin_path"])
-    hpo_config = _edit_args(logdir, port, hpo_config)
+    _modify_benchbase_config(logdir, port, hpo_config)
 
     logger, reward_utility, pgconn, workload = _build_utilities(logdir, hpo_config)
     holon_space, lsc = _build_actions(seed, hpo_config, workload, logger)

@@ -25,7 +25,9 @@ class PostgresConn:
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
-        pgconnstr: str,
+        pgport: int,
+        pguser: str,
+        pgpass: str,
         pristine_pgdata_snapshot_fpath: Path,
         pgbin_dpath: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
@@ -119,7 +121,7 @@ class PostgresConn:
         save_checkpoint: bool = False,
     ) -> bool:
         '''
-        This function assumes that the pgdata snapshot has already been untarred
+        This function assumes that some snapshot has already been untarred into self.pgdata_dpath
         '''
         # Install the new configuration changes.
         if conf_changes is not None:

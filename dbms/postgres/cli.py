@@ -189,7 +189,7 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
 def _load_benchmark_into_pgdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ):
-    with create_conn(dbgym_cfg, use_psycopg=False) as conn:
+    with create_conn(use_psycopg=False) as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
         else:

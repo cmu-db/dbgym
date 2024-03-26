@@ -29,7 +29,9 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
             "pgdata_snapshot_path": hpo_config["mythril_args"]["pgdata_snapshot_path"],
             "output_log_path": "artifacts",
             "pgconn_info": {
-                "pg_connstr": "host=localhost port=5432 user=admin dbname=benchbase",
+                "pgport": 5432,
+                "pguser": "admin",
+                "pgpass": "",
                 "pgdata_path": "/mnt/nvme0n1/wz2/noisepage/pgdata",
                 "pgbin_path": "/mnt/nvme0n1/wz2/noisepage/",
             },
