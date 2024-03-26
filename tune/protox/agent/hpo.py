@@ -10,6 +10,7 @@ import os
 import pandas as pd
 from datetime import datetime
 from typing import Any, Union
+import random
 import click
 import ray
 from ray.tune import Trainable
@@ -165,6 +166,8 @@ def hpo(
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path == None:
         workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+    if seed == None:
+        seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
     embedding_path = conv_inputpath_to_abspath(dbgym_cfg, embedding_path)
@@ -530,7 +533,6 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     } if is_oltp else {}
 
     space = _build_space(
-        dbgym_cfg,
         sysknobs,
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
