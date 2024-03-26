@@ -29,11 +29,8 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
     else:
         return str(scale_factor).replace(".", "point")
     
-def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata"
-
 def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
-    return _get_pgdata_name(benchmark_name, scale_factor) + ".tgz"
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata.tgz"
 
 
 # Other parameters

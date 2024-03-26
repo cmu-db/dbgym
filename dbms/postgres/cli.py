@@ -16,7 +16,8 @@ from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, save_file, get_pgdata_tgz_name
 from util.shell import subprocess_run
 from sqlalchemy import Connection
-from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn
+from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS
+
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
@@ -93,37 +94,36 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
       _create_pgdata() not propagate to [pgdata].tgz by default.
     """
 
-    # create a new dir for this pgdata
-    pgdata_real_dpath = dbgym_cfg.cur_task_runs_data_path(
-        _get_pgdata_name(benchmark_name, scale_factor), mkdir=True
-    )
+    # Create a temporary dir for this pgdata
+    # It's ok for the pgdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place
+    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
 
     # initdb
     pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_symlink_dpath.exists()
     # save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run
     save_file(dbgym_cfg, pgbin_symlink_dpath / "initdb")
-    subprocess_run(f'./initdb -D "{pgdata_real_dpath}"', cwd=pgbin_symlink_dpath)
+    subprocess_run(f'./initdb -D "{pgdata_dpath}"', cwd=pgbin_symlink_dpath)
 
     # start postgres (all other pgdata setup requires postgres to be started)
     # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
     save_file(dbgym_cfg, pgbin_symlink_dpath / "pg_ctl")
-    start_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_real_dpath)
+    start_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_dpath)
 
     # setup
     _generic_pgdata_setup(dbgym_cfg)
     _load_benchmark_into_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
     # stop postgres so that we don't "leak" processes
-    stop_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_real_dpath)
+    stop_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_dpath)
 
     # create .tgz file
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
     pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
         ".", mkdir=True
     ) / get_pgdata_tgz_name(benchmark_name, scale_factor)
-    # we need to cd into pgdata_real_dpath so that the tar file does not contain folders for the whole path of pgdata_real_dpath
-    subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_real_dpath)
+    # we need to cd into pgdata_dpath so that the tar file does not contain folders for the whole path of pgdata_dpath
+    subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_dpath)
 
     # create symlink
     # only link at the end so that the link only ever points to a complete pgdata
@@ -146,9 +146,9 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
     pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_symlink_dpath.exists()
-    pguser = dbgym_cfg.root_yaml["postgres_user"]
-    pgpass = dbgym_cfg.root_yaml["postgres_pass"]
-    pgport = dbgym_cfg.root_yaml["postgres_port"]
+    pguser = DBGYM_POSTGRES_USER
+    pgpass = DBGYM_POSTGRES_PASS
+    pgport = DEFAULT_POSTGRES_PORT
 
     # create user
     save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
@@ -225,12 +225,12 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dp
     assert pgdata_dpath.is_absolute() and pgdata_dpath.exists()
     # the inputs may be symlinks so we need to resolve them first
     pgbin_real_dpath = pgbin_dpath.resolve()
-    pgdata_real_dpath = pgdata_dpath.resolve()
-    pgport = dbgym_cfg.root_yaml["postgres_port"]
+    pgdata_dpath = pgdata_dpath.resolve()
+    pgport = DEFAULT_POSTGRES_PORT
     save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
 
     if is_start:
         # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-        subprocess.run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
+        subprocess.run(f"./pg_ctl -D \"{pgdata_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
     else:
-        subprocess_run(f"./pg_ctl -D \"{pgdata_real_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
+        subprocess_run(f"./pg_ctl -D \"{pgdata_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
