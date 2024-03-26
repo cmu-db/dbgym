@@ -152,7 +152,7 @@ def _build_utilities(
 
     pgconn = PostgresConn(
         pgport=pgport,
-        pgdata_path=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
+        pristine_pgdata_snapshot_path=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
         pgbin_path=hpo_config["pgconn_info"]["pgbin_path"],
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
         connect_timeout=300,
