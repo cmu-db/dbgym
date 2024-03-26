@@ -1,5 +1,8 @@
-from benchmark.tpch.cli import TPCH_CONSTRAINTS_FNAME, TPCH_SCHEMA_FNAME
 from dbms.load_info_base_class import LoadInfoBaseClass
+
+
+TPCH_SCHEMA_FNAME = "tpch_schema.sql"
+TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
 
 
 class TpchLoadInfo(LoadInfoBaseClass):

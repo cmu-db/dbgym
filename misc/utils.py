@@ -7,8 +7,6 @@ from pathlib import Path
 import click
 import yaml
 
-from dbms.postgres.cli import get_pgdata_tgz_name
-
 # Relpaths of different folders in the codebase
 TUNE_RELPATH = Path("tune")
 PROTOX_RELPATH = TUNE_RELPATH / "protox"
@@ -21,7 +19,7 @@ PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 
 
-# This is a function because both DBGymConfig and the default path globalvars use it
+# Helper functions that both this file and other files use
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
 
@@ -30,6 +28,12 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
         return scale_factor
     else:
         return str(scale_factor).replace(".", "point")
+    
+def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata"
+
+def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+    return _get_pgdata_name(benchmark_name, scale_factor) + ".tgz"
 
 
 # Other parameters

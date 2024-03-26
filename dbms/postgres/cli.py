@@ -13,7 +13,7 @@ import shutil
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, save_file, get_scale_factor_string
+from misc.utils import DBGymConfig, save_file, get_pgdata_tgz_name
 from util.shell import subprocess_run
 from sqlalchemy import Connection
 from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn
@@ -54,14 +54,6 @@ def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 
 def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.cur_symlinks_build_path("repo")
-
-
-def _get_pgdata_name(benchmark_name: str, scale_factor: float) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata"
-
-
-def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
-    return _get_pgdata_name(benchmark_name, scale_factor) + ".tgz"
 
 
 def _get_pgdata_tgz_symlink_path(

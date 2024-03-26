@@ -1,11 +1,9 @@
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 import pglast
 from sqlalchemy import Connection, Engine, text, create_engine
 from sqlalchemy.engine import CursorResult
 import psycopg
-
-from misc.utils import DBGymConfig
 
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"

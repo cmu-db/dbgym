@@ -9,9 +9,6 @@ from util.pg import *
 benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
 benchmark_tpch_logger.setLevel(logging.INFO)
 
-TPCH_SCHEMA_FNAME = "tpch_schema.sql"
-TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
-
 
 @click.group(name="tpch")
 @click.pass_obj
