@@ -102,7 +102,7 @@ class PostgresConn:
                 "--host",
                 self.postgres_host,
                 "--port",
-                str(self.postgres_port),
+                str(self.pgport),
                 "--dbname",
                 self.postgres_db,
             ].run(retcode=None)
@@ -289,7 +289,7 @@ class PostgresConn:
         ].run()
         # Imprint the required port.
         (
-            (local["echo"][f"port={self.postgres_port}"])
+            (local["echo"][f"port={self.pgport}"])
             >> f"{self.pgdata_dpath}/postgresql.conf"
         )()
 

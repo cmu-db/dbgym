@@ -17,7 +17,7 @@ from tune.protox.env.types import (
     HolonStateContainer,
     TargetResetConfig,
 )
-from tune.protox.env.util.postgres import PostgresConn
+from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
 

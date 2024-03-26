@@ -35,7 +35,7 @@ from tune.protox.env.util.execute import (
     _acquire_metrics_around_query,
     execute_variations,
 )
-from tune.protox.env.util.postgres import PostgresConn
+from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.util.workload_analysis import (
     extract_aliases,
