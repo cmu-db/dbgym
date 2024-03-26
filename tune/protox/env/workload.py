@@ -671,13 +671,13 @@ class Workload(object):
         if self.logger:
             self.logger.get_logger(__name__).info("Starting to run benchmark...")
 
-        # Purge results directory first.
-        assert "benchbase_path" in benchbase_config
-        bb_path = benchbase_config["benchbase_path"]
-        results = f"{bb_path}/results{pgconn.postgres_port}"
-        shutil.rmtree(results, ignore_errors=True)
-
         if self.benchbase:
+            # Purge results directory first.
+            assert "benchbase_path" in benchbase_config, f"benchbase_config ({benchbase_config}) does not have the key \"benchbase_path\""
+            bb_path = benchbase_config["benchbase_path"]
+            results = f"{bb_path}/results{pgconn.pgport}"
+            shutil.rmtree(results, ignore_errors=True)
+
             # Execute benchbase if specified.
             success = self._execute_benchbase(benchbase_config, results)
             # We can only create a state if we succeeded.
