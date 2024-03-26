@@ -129,7 +129,7 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    logdir: str, hpo_config: dict[str, Any]
+    logdir: str, pgport: int, hpo_config: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         hpo_config["trace"],
@@ -151,10 +151,8 @@ def _build_utilities(
     )
 
     pgconn = PostgresConn(
-        pgport=hpo_config["pgconn_info"]["pgport"],
-        pguser=hpo_config["pgconn_info"]["pguser"],
-        pgpass=hpo_config["pgconn_info"]["pgpass"],
-        pgdata_path=hpo_config["pgconn_info"]["pgdata_path"],
+        pgport=pgport,
+        pgdata_path=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
         pgbin_path=hpo_config["pgconn_info"]["pgbin_path"],
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
         connect_timeout=300,
@@ -496,7 +494,7 @@ def build_trial(
     port, signal = _get_signal(hpo_config["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(logdir, port, hpo_config)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(logdir, hpo_config)
+    logger, reward_utility, pgconn, workload = _build_utilities(logdir, port, hpo_config)
     holon_space, lsc = _build_actions(seed, hpo_config, workload, logger)
     obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
     target_reset, env = _build_env(

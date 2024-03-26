@@ -32,7 +32,7 @@ def coerce_params(space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str
                 "pgport": 5432,
                 "pguser": "admin",
                 "pgpass": "",
-                "pgdata_path": "/mnt/nvme0n1/wz2/noisepage/pgdata",
+                "pristine_pgdata_snapshot_path": "/mnt/nvme0n1/wz2/noisepage/pgdata",
                 "pgbin_path": "/mnt/nvme0n1/wz2/noisepage/",
             },
             "benchmark_config": benchmark_config,

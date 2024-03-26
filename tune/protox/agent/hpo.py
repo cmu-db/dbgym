@@ -20,11 +20,11 @@ from ray.air import RunConfig, FailureConfig
 
 from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_abspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedding_path = embedding_path
@@ -32,6 +32,7 @@ class AgentHPOArgs:
         self.benchbase_config_path = benchbase_config_path
         self.sysknobs_path = sysknobs_path
         self.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
+        self.pgbin_path = pgbin_path
         self.workload_path = workload_path
         self.seed = seed
         self.agent = agent
@@ -79,6 +80,12 @@ class AgentHPOArgs:
     default=None,
     type=Path,
     help=f"The path to the .tgz snapshot of the pgdata directory to use as a starting point for tuning. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
+@click.option(
+    "--pgbin-path",
+    default=None,
+    type=Path,
+    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
@@ -133,6 +140,7 @@ def hpo(
     benchbase_config_path,
     sysknobs_path,
     pristine_pgdata_snapshot_path,
+    pgbin_path,
     workload_path,
     seed,
     agent,
@@ -152,6 +160,8 @@ def hpo(
         benchbase_config_path = default_benchbase_config_path(benchmark_name)
     if pristine_pgdata_snapshot_path == None:
         pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
+    if pgbin_path == None:
+        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path == None:
         workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
 
@@ -161,10 +171,11 @@ def hpo(
     benchbase_config_path = conv_inputpath_to_abspath(dbgym_cfg, benchbase_config_path)
     sysknobs_path = conv_inputpath_to_abspath(dbgym_cfg, sysknobs_path)
     pristine_pgdata_snapshot_path = conv_inputpath_to_abspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    pgbin_path = conv_inputpath_to_abspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_abspath(dbgym_cfg, workload_path)
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -515,18 +526,14 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         "benchbase_config_path": hpo_args.benchbase_config_path,
     } if is_oltp else {}
 
-    pgport, pguser, pgpass = get_postgres_configs(dbgym_cfg)
     space = _build_space(
         sysknobs,
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
         embedding_paths,
         pgconn_info={
-            "pgport": pgport,
-            "pguser": pguser,
-            "pgpass": pgpass,
-            "pgdata_path": hpo_args.pg_data,
-            "pgbin_path": hpo_args.pg_bins,
+            "pristine_pgdata_snapshot_path": hpo_args.pristine_pgdata_snapshot_path,
+            "pgbin_path": hpo_args.pgbin_path,
         },
         benchbase_config=benchbase_config,
         duration=hpo_args.duration,
