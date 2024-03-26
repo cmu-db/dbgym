@@ -17,6 +17,7 @@ from gymnasium.wrappers import (  # type: ignore
 )
 from torch import nn
 
+from misc.utils import DBGymConfig
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -129,7 +130,7 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    logdir: str, pgport: int, hpo_config: dict[str, Any]
+    dbgym_cfg: DBGymConfig, logdir: str, pgport: int, hpo_config: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         hpo_config["trace"],
@@ -151,9 +152,10 @@ def _build_utilities(
     )
 
     pgconn = PostgresConn(
+        dbgym_cfg=dbgym_cfg,
         pgport=pgport,
-        pristine_pgdata_snapshot_path=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
-        pgbin_path=hpo_config["pgconn_info"]["pgbin_path"],
+        pristine_pgdata_snapshot_fpath=hpo_config["pgconn_info"]["pristine_pgdata_snapshot_path"],
+        pgbin_dpath=hpo_config["pgconn_info"]["pgbin_path"],
         postgres_logs_dir=Path(logdir) / hpo_config["output_log_path"] / "pg_logs",
         connect_timeout=300,
         logger=logger,
@@ -487,14 +489,14 @@ def _build_agent(
 
 
 def build_trial(
-    seed: int, logdir: str, hpo_config: dict[str, Any]
+    dbgym_cfg: DBGymConfig, seed: int, logdir: str, hpo_config: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_config["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(logdir, port, hpo_config)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(logdir, port, hpo_config)
+    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, hpo_config)
     holon_space, lsc = _build_actions(seed, hpo_config, workload, logger)
     obs_space = _build_obs_space(holon_space, lsc, hpo_config, seed)
     target_reset, env = _build_env(

@@ -355,9 +355,12 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
+    def __init__(self, dbgym_cfg: DBGymConfig) -> None:
+        self.dbgym_cfg = dbgym_cfg
+
     def setup(self, hpo_config: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
-        sys.path.append(os.path.expanduser(hpo_config["dbgym_dir"]))
+        sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
         torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
@@ -371,6 +374,7 @@ class TuneTrial:
 
         self.timeout = TuneTimeoutChecker(hpo_config["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
+            self.dbgym_cfg,
             seed=seed,
             logdir=self.logdir,
             hpo_config=hpo_config
@@ -441,26 +445,38 @@ class TuneTrial:
         if Path(self.signal).exists():
             os.remove(self.signal)
 
+# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_config`. This is because it's a pain to turn DBGymConfig
+#   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
+# Using a function to create a class is Ray's recommended way of doing this (see
+#   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
+# If you don't create the class with a function, it doesn't work due to how Ray serializes classes
+def create_tune_opt_class(dbgym_cfg_param):
+    global global_dbgym_cfg
+    global_dbgym_cfg = dbgym_cfg_param
 
-class TuneOpt(Trainable):
-    def setup(self, hpo_config: dict[str, Any]) -> None:
-        self.trial = TuneTrial()
-        self.trial.logdir = self.logdir # type: ignore
-        self.trial.setup(hpo_config)
+    class TuneOpt(Trainable):
+        dbgym_cfg = global_dbgym_cfg
 
-    def step(self) -> dict[Any, Any]:
-        return self.trial.step()
+        def setup(self, hpo_config: dict[str, Any]) -> None:
+            self.trial = TuneTrial(TuneOpt.dbgym_cfg)
+            self.trial.logdir = self.logdir # type: ignore
+            self.trial.setup(hpo_config)
 
-    def cleanup(self) -> None:
-        return self.trial.cleanup()
+        def step(self) -> dict[Any, Any]:
+            return self.trial.step()
 
-    def save_checkpoint(self, checkpoint_dir: str) -> None:
-        # We can't actually do anything about this right now.
-        pass
+        def cleanup(self) -> None:
+            return self.trial.cleanup()
 
-    def load_checkpoint(self, checkpoint_dir: Union[dict[Any, Any], None]) -> None:
-        # We can't actually do anything about this right now.
-        pass
+        def save_checkpoint(self, checkpoint_dir: str) -> None:
+            # We can't actually do anything about this right now.
+            pass
+
+        def load_checkpoint(self, checkpoint_dir: Union[dict[Any, Any], None]) -> None:
+            # We can't actually do anything about this right now.
+            pass
+    
+    return TuneOpt
 
 
 # This is used when you already have a good set of HPOs and just want to tune the DBMS
@@ -547,8 +563,6 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )
-    # Attach the dbgym directory.
-    space["dbgym_dir"] = dbgym_cfg.dbgym_repo_path
 
     restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
@@ -581,7 +595,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     )
 
     tuner = ray.tune.Tuner(
-        TuneOpt,
+        create_tune_opt_class(dbgym_cfg),
         tune_config=tune_config,
         run_config=run_config,
         param_space=space,
