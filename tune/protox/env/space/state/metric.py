@@ -10,6 +10,7 @@ from psycopg.rows import dict_row
 
 from misc.utils import DBGymConfig, open_and_save
 from tune.protox.env.space.state.space import StateSpace
+from util.pg import DBGYM_POSTGRES_DBNAME
 
 # Defines the relevant metrics that we care about from benchbase.
 # <filter_db>: whether to filter with the benchbase database.
@@ -181,8 +182,8 @@ class MetricStateSpace(StateSpace, spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == "benchbase"]
-                final_data = [d for d in final_data if d["datname"] == "benchbase"]
+                initial_data = [d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
+                final_data = [d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
             elif spec["per_table"]:
                 initial_data = sorted(
                     [d for d in initial_data if d["relname"] in self.tables],
@@ -253,8 +254,8 @@ class MetricStateSpace(StateSpace, spaces.Dict):
             initial_data = initial[key]
             final_data = final[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == "benchbase"]
-                final_data = [d for d in final_data if d["datname"] == "benchbase"]
+                initial_data = [d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
+                final_data = [d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
             elif spec["per_table"]:
                 initial_data = sorted(
                     [d for d in initial_data if d["relname"] in self.tables],
