@@ -74,9 +74,11 @@ default_embedding_path = (
     / "data"
     / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
 )
-default_hpoed_agent_params_path = (
-    lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
-    / f"hpoed_agent_params.yaml"
+default_hpoed_agent_config_path = (
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
+    / "dbgym_tune_protox_agent"
+    / "data"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.yaml"
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(

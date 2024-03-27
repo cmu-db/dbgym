@@ -4,7 +4,7 @@ import yaml
 from misc.utils import DBGymConfig, open_and_save
 
 
-def coerce_params(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str, Any]:
+def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_config: dict[str, Any]) -> dict[str, Any]:
     if "space_version" not in hpo_config:
         # This is an old version. Coerce the params file.
         new_config = {}

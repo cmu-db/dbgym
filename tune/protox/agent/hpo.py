@@ -20,7 +20,6 @@ from ray.tune import TuneConfig
 from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
-from tune.protox.agent.coerce_params import coerce_params
 from tune.protox.agent.build_trial import build_trial
 from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
 
@@ -186,12 +185,12 @@ def hpo(
 # The reason we put the paths inside the space is so that the tuner only receives the space .json file
 #   as a CLI arg and doesn't need any other CLI args. The hyperparameters are selected using the paths
 #   given here, so it doesn't make sense to specify them separately when tuning.
-def _build_space(
+def build_space(
     sysknobs: dict[str, Any],
     benchmark_config: dict[str, Any],
     pristine_pgdata_snapshot_path: Path,
     workload_path: Path,
-    embedding_path: list[str],
+    embedding_path: list[Path],
     pgconn_info: dict[str, str],
     benchbase_config: dict[str, Any]={},
     duration: int=30,
@@ -242,7 +241,7 @@ def _build_space(
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
         # Embeddings.
-        "embedding_path": tune.choice(embedding_path),
+        "embedding_path": tune.choice(map(str, embedding_path)),
         # LSC Parameters.
         # Note that the units for these are based on the embedding itself.
         "lsc": {
@@ -481,47 +480,6 @@ def create_tune_opt_class(dbgym_cfg_param):
     return TuneOpt
 
 
-# This is used when you already have a good set of HPOs and just want to tune the DBMS
-def tune_single_trial(dbgym_cfg: DBGymConfig, args: Any) -> None:
-    with open_and_save(dbgym_cfg, args.hpo_params_file, "r") as f:
-        hpo_config = json.load(f)
-
-    # Coerce using a dummy space.
-    hpo_config = coerce_params(dbgym_cfg, _build_space(
-        sysknobs={},
-        benchmark_config={},
-        data_snapshot="",
-        embedding_path=[],
-        pgconn_info={}
-    ), hpo_config)
-
-    # Assume we are executing from the root.
-    # TODO(phw2): get this from dbgym_cfg
-    hpo_config["dbgym_dir"] = os.getcwd()
-
-    # Get the duration.
-    assert "duration" in hpo_config
-
-    # Piggyback off the HPO magic.
-    t = TuneTrial()
-    # This is a hack.
-    t.logdir = Path("artifacts/") # type: ignore
-    t.logdir.mkdir(parents=True, exist_ok=True) # type: ignore
-    t.setup(hpo_config)
-    start = time.time()
-
-    data = []
-    while (time.time() - start) < hpo_config["duration"] * 3600:
-        data.append(t.step())
-
-        # Continuously write the file out.
-        pd.DataFrame(data).to_csv(args.output_step_data, index=False)
-
-    t.cleanup()
-    # Output the step data.
-    pd.DataFrame(data).to_csv(args.output_step_data, index=False)
-
-
 def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     with open_and_save(dbgym_cfg, hpo_args.sysknobs_path) as f:
         sysknobs = yaml.safe_load(f)["system_knobs"]
@@ -550,7 +508,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         "benchbase_config_path": hpo_args.benchbase_config_path,
     } if is_oltp else {}
 
-    space = _build_space(
+    space = build_space(
         sysknobs,
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
