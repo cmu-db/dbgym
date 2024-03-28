@@ -78,7 +78,7 @@ default_hpoed_agent_params_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_tune_protox_agent"
     / "data"
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.yaml"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -226,6 +226,9 @@ class DBGymConfig:
 
     def cur_task_runs_data_path(self, *dirs, mkdir=False) -> Path:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
+
+    def cur_task_runs_artifacts_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
 def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:

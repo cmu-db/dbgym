@@ -56,9 +56,9 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, workload_name: str, scale_
     assert "duration" in hpoed_params
 
     # Piggyback off the HPO magic.
-    t = TuneTrial()
+    t = TuneTrial(dbgym_cfg)
     # This is a hack.
-    t.logdir = Path("artifacts/") # type: ignore
+    t.logdir = Path(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)) # type: ignore
     t.logdir.mkdir(parents=True, exist_ok=True) # type: ignore
     t.setup(hpoed_params)
     start = time.time()
