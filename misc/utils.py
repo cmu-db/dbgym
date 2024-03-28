@@ -64,6 +64,8 @@ default_traindata_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
+    / "dbgym_tune_protox_embedding"
+    / "data"
     / traindata_fname(benchmark_name, workload_name, scale_factor)
 )
 default_embedding_path = (

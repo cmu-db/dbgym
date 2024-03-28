@@ -13,7 +13,7 @@ import torch
 import tqdm
 import yaml
 
-from misc.utils import open_and_save, save_file
+from misc.utils import DBGymConfig, open_and_save, save_file
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
     create_vae_model,
@@ -23,27 +23,30 @@ from tune.protox.embedding.train_all import (
 )
 from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
-from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
 from tune.protox.env.workload import Workload
+from tune.protox.embedding.train_args import (
+    EmbeddingAnalyzeArgs,
+    EmbeddingTrainGenericArgs,
+)
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"
 
 
-def compute_num_parts(num_samples):
+def compute_num_parts(num_samples: int):
     # TODO(phw2): in the future, implement running different parts in parallel, set OMP_NUM_THREADS accordingly, and investigate the effect of having more parts
     # TODO(phw2): if having more parts is effective, figure out a good way to specify num_parts (can it be determined automatically or should it be a CLI arg?)
     # TODO(phw2): does anything bad happen if num_parts doesn't evenly divide num_samples?
     return 1
 
 
-def redist_trained_models(dbgym_cfg, num_parts):
+def redist_trained_models(dbgym_cfg: DBGymConfig, num_parts: int):
     """
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     """
     inputs = [
-        f for f in dbgym_cfg.dbgym_this_run_path.glob("embeddings*") if os.path.isdir(f)
+        f for f in dbgym_cfg.cur_task_runs_data_path(mkdir=True).glob("embeddings*") if os.path.isdir(f)
     ]
 
     for part_i in range(num_parts):
@@ -54,7 +57,7 @@ def redist_trained_models(dbgym_cfg, num_parts):
         shutil.move(emb, _get_part_i_dpath(dbgym_cfg, part_i))
 
 
-def analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_args):
+def analyze_all_embeddings_parts(dbgym_cfg: DBGymConfig, num_parts: int, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
     """
     Analyze all part*/ dirs _in parallel_
     """
@@ -63,12 +66,12 @@ def analyze_all_embeddings_parts(dbgym_cfg, num_parts, generic_args, analyze_arg
         _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args)
     duration = time.time() - start_time
     with open(
-        os.path.join(dbgym_cfg.dbgym_this_run_path, "analyze_all_time.txt"), "w"
+        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "analyze_all_time.txt", "w"
     ) as f:
         f.write(f"{duration}")
 
 
-def _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args):
+def _analyze_embeddings_part(dbgym_cfg: DBGymConfig, part_i: int, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
     """
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     """
@@ -87,7 +90,7 @@ def _analyze_embeddings_part(dbgym_cfg, part_i, generic_args, analyze_args):
         f.write(f"{duration}")
 
 
-def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
+def _create_stats_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
     """
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -104,14 +107,16 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
         )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    models = itertools.chain(*[Path(part_dpath).rglob("config")])
+    models = itertools.chain(*[part_dpath.rglob("config")])
     models = [m for m in models]
+    print(f"models={models}")
     for model_config in tqdm.tqdm(models):
         if ((Path(model_config).parent) / "FAILED").exists():
             print("Detected failure in: ", model_config)
             continue
 
-        with open_and_save(dbgym_cfg, model_config, "r") as f:
+        # don't use open_and_save() because we generated model_config in this run
+        with open(model_config, "r") as f:
             config = json.load(f)
 
         # Create them here since these are constant for a given "model" configuration.
@@ -293,7 +298,7 @@ def _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
                 gc.collect()
 
 
-def _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
+def _create_ranges_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
     """
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -303,7 +308,7 @@ def _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
     paths = sorted(
         [
             f
-            for f in Path(part_dpath).rglob("embedder_*.pth")
+            for f in part_dpath.rglob("embedder_*.pth")
             if "optimizer" not in str(f)
         ]
     )
@@ -313,7 +318,7 @@ def _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args):
         )
 
 
-def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze_args):
+def _create_ranges_for_embedder(dbgym_cfg: DBGymConfig, embedder_fpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
     """
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     """
@@ -405,5 +410,5 @@ def _create_ranges_for_embedder(dbgym_cfg, embedder_fpath, generic_args, analyze
             base += output_scale
 
 
-def _get_part_i_dpath(dbgym_cfg, part_i) -> str:
-    return os.path.join(dbgym_cfg.dbgym_this_run_path, f"part{part_i}")
+def _get_part_i_dpath(dbgym_cfg: DBGymConfig, part_i: int) -> Path:
+    return dbgym_cfg.cur_task_runs_data_path(mkdir=True) / f"part{part_i}"

@@ -84,6 +84,7 @@ def select_best_embeddings(dbgym_cfg, generic_args, select_args):
 def _load_data(dbgym_cfg, select_args):
     data = []
     stats = [s for s in dbgym_cfg.dbgym_this_run_path.rglob(STATS_FNAME)]
+    print(f"stats={stats}")
     for stat in stats:
         if "curated" in str(stat):
             continue
@@ -132,13 +133,16 @@ def _load_data(dbgym_cfg, select_args):
 
         data.append(info)
 
+    print(f"data={data}")
     data = pd.DataFrame(data)
     data = data.loc[:, ~(data == data.iloc[0]).all()]
+
     if "output_scale" not in data:
         data["output_scale"] = output_scale
 
     if "bias_separation" not in data:
         data["bias_separation"] = bias_sep
+
     return data
 
 
