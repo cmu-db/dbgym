@@ -213,7 +213,7 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         # consequence of executing in the current environment.
         metric_files = [f for f in Path(data).rglob("*metrics.json")]
         if len(metric_files) == 1:
-            with open_and_save(metric_files[0], "r") as f:
+            with open_and_save(self.dbgym_cfg, metric_files[0], "r") as f:
                 metrics = json.load(f)
                 assert "flattened" in metrics
                 metrics.pop("flattened")

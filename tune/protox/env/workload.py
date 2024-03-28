@@ -572,7 +572,7 @@ class Workload(object):
                     [v.metric_data for _, v in qid_runtime_data.items()],
                 )
                 accum_stats = obs_space.merge_deltas(accum_data)
-                with open(self.dbgym_cfg, results_dir / "run.metrics.json", "w") as f:
+                with open(results_dir / "run.metrics.json", "w") as f:
                     # Flatten it.
                     def flatten(d: dict[str, Any]) -> dict[str, Any]:
                         flat: dict[str, Any] = {}
