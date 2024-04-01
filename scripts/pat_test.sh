@@ -13,7 +13,7 @@ python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor 0.01
 # embedding
 # python3 task.py --no-startup-check tune protox embedding datagen tpch queries_15721_15723 --scale-factor 0.01 --default-sample-limit 64 --file-limit 64 # short datagen for testing
 python3 task.py --no-startup-check tune protox embedding datagen tpch queries_15721_15723 --override-sample-limits "lineitem,32768" --scale-factor 0.01 # long datagen so that train doesn't crash
-python3 task.py --no-startup-check tune protox embedding train tpch queries_15721_15723 --scale-factor 0.01 --iterations-per-epoch 1 --num-samples 4 --train-max-concurrent 4
+python3 task.py --no-startup-check tune protox embedding train tpch queries_15721_15723 --scale-factor 0.01 --iterations-per-epoch 1 --num-points-to-sample 64 --num-samples 4 --train-max-concurrent 4
 
 # agent
 python3 task.py --no-startup-check tune protox agent hpo tpch queries_15721_15723 --scale-factor 0.01 --num-samples 2 --max-concurrent 2 --duration 0.001

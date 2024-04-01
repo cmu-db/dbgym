@@ -193,7 +193,7 @@ def _load_benchmark_into_pgdata(
 
 
 def _load_into_pgdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass):
-    sql_file_execute(conn, load_info.get_schema_fpath())
+    sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
 
     # truncate all tables first before even loading a single one
     for table, _ in load_info.get_tables_and_fpaths():
@@ -208,7 +208,7 @@ def _load_into_pgdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadI
 
     constraints_fpath = load_info.get_constraints_fpath()
     if constraints_fpath != None:
-        sql_file_execute(conn, constraints_fpath)
+        sql_file_execute(dbgym_cfg, conn, constraints_fpath)
 
 
 def start_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:

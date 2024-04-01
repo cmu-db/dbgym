@@ -24,6 +24,9 @@ from tune.protox.agent.build_trial import build_trial
 from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
 
 
+METRIC_NAME = "Best Metric"
+
+
 class AgentHPOArgs:
     def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
         self.benchmark_name = benchmark_name
@@ -536,14 +539,15 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         max_concurrent=hpo_args.max_concurrent
     )
 
+    mode = "max" if is_oltp else "min"
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
         num_samples=hpo_args.num_samples,
         max_concurrent_trials=hpo_args.max_concurrent,
         chdir_to_trial_dir=True,
-        metric="Best Metric",
-        mode="max" if is_oltp else "min",
+        metric=METRIC_NAME,
+        mode=mode,
     )
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -568,3 +572,5 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
             if results[i].error:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
+    best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
+    print(f"best_result={best_result}")
