@@ -16,7 +16,7 @@ from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, open_and_save, save_file, get_pgdata_tgz_name
 from util.shell import subprocess_run
 from sqlalchemy import Connection
-from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS
+from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
 
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
@@ -146,18 +146,18 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
     pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
     assert pgbin_symlink_dpath.exists()
-    pguser = DBGYM_POSTGRES_USER
-    pgpass = DBGYM_POSTGRES_PASS
+    dbgym_pguser = DBGYM_POSTGRES_USER
+    dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
     # create user
     save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
     subprocess_run(
-        f"./psql -c \"create user {pguser} with superuser password '{pgpass}'\" postgres -p {pgport} -h localhost",
+        f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
     subprocess_run(
-        f'./psql -c "grant pg_monitor to {pguser}" postgres -p {pgport} -h localhost',
+        f'./psql -c "grant pg_monitor to {dbgym_pguser}" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
         cwd=pgbin_symlink_dpath,
     )
 
@@ -166,14 +166,14 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
         dbgym_cfg.cur_source_path() / "shared_preload_libraries.sql"
     )
     subprocess_run(
-        f"./psql -f {shared_preload_libraries_fpath} postgres -p {pgport} -h localhost",
+        f"./psql -f {shared_preload_libraries_fpath} {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
 
     # create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
-        f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{pguser}'\" postgres -p {pgport} -h localhost",
+        f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{dbgym_pguser}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
 
@@ -220,17 +220,20 @@ def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path)
 
 
 def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path, is_start: bool) -> None:
-    # they should be absolute paths and should exist
+    # They should be absolute paths and should exist
     assert pgbin_dpath.is_absolute() and pgbin_dpath.exists()
     assert pgdata_dpath.is_absolute() and pgdata_dpath.exists()
-    # the inputs may be symlinks so we need to resolve them first
+    # The inputs may be symlinks so we need to resolve them first
     pgbin_real_dpath = pgbin_dpath.resolve()
     pgdata_dpath = pgdata_dpath.resolve()
     pgport = DEFAULT_POSTGRES_PORT
     save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
 
     if is_start:
-        # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-        subprocess.run(f"./pg_ctl -D \"{pgdata_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
+        # We use subprocess.run() because subprocess_run() never returns when running "pg_ctl start".
+        # The reason subprocess_run() never returns is because pg_ctl spawns a postgres process so .poll() always returns None.
+        # On the other hand, subprocess.run() does return normally, like calling `./pg_ctl` on the command line would do.
+        result = subprocess.run(f"./pg_ctl -D \"{pgdata_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
+        result.check_returncode()
     else:
         subprocess_run(f"./pg_ctl -D \"{pgdata_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)

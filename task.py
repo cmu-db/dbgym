@@ -100,6 +100,5 @@ if __name__ == "__main__":
     task.add_command(benchmark_group)
     task.add_command(config_group)
     task.add_command(dbms_group)
-    task.add_command(experiment_group)
     task.add_command(tune_group)
     task()

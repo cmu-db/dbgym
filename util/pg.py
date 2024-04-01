@@ -10,6 +10,7 @@ from misc.utils import DBGymConfig, open_and_save
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"
 DBGYM_POSTGRES_DBNAME = "dbgym"
+DEFAULT_POSTGRES_DBNAME = "postgres"
 DEFAULT_POSTGRES_PORT = 5432
 
 
