@@ -1,0 +1,284 @@
+{
+    "act": "mish",
+    "batch_size": 1024,
+    "bias_init": "zeros",
+    "deterministic": true,
+    "grad_clip_amount": 10,
+    "loss_fn": "vae_cat_loss",
+    "lr": 0.0074088574678249485,
+    "mean_output_act": "sigmoid",
+    "metric_loss_md": {
+        "addtl_bias_separation": 0.015,
+        "bias_separation": 0.01,
+        "cost_reduction_type": "quant_mult_cost_improvement",
+        "distance_fn": "hard,l1",
+        "distance_scale": "1",
+        "metric_loss": "l2_distance_loss",
+        "require_cost": true,
+        "output_scale": 0.025
+    },
+    "addtl_bias_separation": 0.015,
+    "bias_separation": 0.01,
+    "cost_reduction_type": "quant_mult_cost_improvement",
+    "distance_fn": "hard,l1",
+    "distance_scale": "1",
+    "metric_loss": "l2_distance_loss",
+    "require_cost": true,
+    "metric_loss_weight": 0,
+    "model": {
+        "hidden_sizes": [
+            256,
+            32
+        ],
+        "latent_dim": 32
+    },
+    "hidden_sizes": [
+        256,
+        32
+    ],
+    "latent_dim": 32,
+    "num_epochs": 20,
+    "output_scale": 0.025,
+    "save_every": 1,
+    "use_bias": true,
+    "weak_bias": true,
+    "weight_decay": 4.386747733710278e-06,
+    "weight_init": "orthogonal",
+    "weight_uniform": true,
+    "seed": 60813391,
+    "iterations_per_epoch": 1000,
+    "class_mapping": {
+        "0": {
+            "relname": "aka_name",
+            "ord_column": "person_id"
+        },
+        "1": {
+            "relname": "aka_name",
+            "ord_column": "name"
+        },
+        "2": {
+            "relname": "aka_title",
+            "ord_column": "movie_id"
+        },
+        "3": {
+            "relname": "cast_info",
+            "ord_column": "person_id"
+        },
+        "4": {
+            "relname": "cast_info",
+            "ord_column": "movie_id"
+        },
+        "5": {
+            "relname": "cast_info",
+            "ord_column": "person_role_id"
+        },
+        "6": {
+            "relname": "cast_info",
+            "ord_column": "note"
+        },
+        "7": {
+            "relname": "cast_info",
+            "ord_column": "role_id"
+        },
+        "8": {
+            "relname": "char_name",
+            "ord_column": "id"
+        },
+        "9": {
+            "relname": "char_name",
+            "ord_column": "name"
+        },
+        "10": {
+            "relname": "comp_cast_type",
+            "ord_column": "id"
+        },
+        "11": {
+            "relname": "comp_cast_type",
+            "ord_column": "kind"
+        },
+        "12": {
+            "relname": "company_name",
+            "ord_column": "id"
+        },
+        "13": {
+            "relname": "company_name",
+            "ord_column": "name"
+        },
+        "14": {
+            "relname": "company_name",
+            "ord_column": "country_code"
+        },
+        "15": {
+            "relname": "company_type",
+            "ord_column": "id"
+        },
+        "16": {
+            "relname": "company_type",
+            "ord_column": "kind"
+        },
+        "17": {
+            "relname": "complete_cast",
+            "ord_column": "movie_id"
+        },
+        "18": {
+            "relname": "complete_cast",
+            "ord_column": "subject_id"
+        },
+        "19": {
+            "relname": "complete_cast",
+            "ord_column": "status_id"
+        },
+        "20": {
+            "relname": "info_type",
+            "ord_column": "id"
+        },
+        "21": {
+            "relname": "info_type",
+            "ord_column": "info"
+        },
+        "22": {
+            "relname": "keyword",
+            "ord_column": "id"
+        },
+        "23": {
+            "relname": "keyword",
+            "ord_column": "keyword"
+        },
+        "24": {
+            "relname": "kind_type",
+            "ord_column": "id"
+        },
+        "25": {
+            "relname": "kind_type",
+            "ord_column": "kind"
+        },
+        "26": {
+            "relname": "link_type",
+            "ord_column": "id"
+        },
+        "27": {
+            "relname": "link_type",
+            "ord_column": "link"
+        },
+        "28": {
+            "relname": "movie_companies",
+            "ord_column": "movie_id"
+        },
+        "29": {
+            "relname": "movie_companies",
+            "ord_column": "company_id"
+        },
+        "30": {
+            "relname": "movie_companies",
+            "ord_column": "company_type_id"
+        },
+        "31": {
+            "relname": "movie_companies",
+            "ord_column": "note"
+        },
+        "32": {
+            "relname": "movie_info",
+            "ord_column": "movie_id"
+        },
+        "33": {
+            "relname": "movie_info",
+            "ord_column": "info_type_id"
+        },
+        "34": {
+            "relname": "movie_info",
+            "ord_column": "info"
+        },
+        "35": {
+            "relname": "movie_info",
+            "ord_column": "note"
+        },
+        "36": {
+            "relname": "movie_info_idx",
+            "ord_column": "movie_id"
+        },
+        "37": {
+            "relname": "movie_info_idx",
+            "ord_column": "info_type_id"
+        },
+        "38": {
+            "relname": "movie_info_idx",
+            "ord_column": "info"
+        },
+        "39": {
+            "relname": "movie_keyword",
+            "ord_column": "movie_id"
+        },
+        "40": {
+            "relname": "movie_keyword",
+            "ord_column": "keyword_id"
+        },
+        "41": {
+            "relname": "movie_link",
+            "ord_column": "movie_id"
+        },
+        "42": {
+            "relname": "movie_link",
+            "ord_column": "linked_movie_id"
+        },
+        "43": {
+            "relname": "movie_link",
+            "ord_column": "link_type_id"
+        },
+        "44": {
+            "relname": "name",
+            "ord_column": "id"
+        },
+        "45": {
+            "relname": "name",
+            "ord_column": "name"
+        },
+        "46": {
+            "relname": "name",
+            "ord_column": "gender"
+        },
+        "47": {
+            "relname": "name",
+            "ord_column": "name_pcode_cf"
+        },
+        "48": {
+            "relname": "person_info",
+            "ord_column": "person_id"
+        },
+        "49": {
+            "relname": "person_info",
+            "ord_column": "info_type_id"
+        },
+        "50": {
+            "relname": "person_info",
+            "ord_column": "note"
+        },
+        "51": {
+            "relname": "role_type",
+            "ord_column": "id"
+        },
+        "52": {
+            "relname": "role_type",
+            "ord_column": "role"
+        },
+        "53": {
+            "relname": "title",
+            "ord_column": "id"
+        },
+        "54": {
+            "relname": "title",
+            "ord_column": "title"
+        },
+        "55": {
+            "relname": "title",
+            "ord_column": "kind_id"
+        },
+        "56": {
+            "relname": "title",
+            "ord_column": "production_year"
+        },
+        "57": {
+            "relname": "title",
+            "ord_column": "episode_nr"
+        }
+    }
+}

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
+from misc.utils import open_and_save
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
 
 
@@ -19,10 +20,10 @@ class DotDict(dict):
 def select_best_embeddings(dbgym_cfg, generic_args, select_args):
     data = _load_data(dbgym_cfg, select_args)
 
-    if generic_args.dataset_path is not None and os.path.exists(
-        generic_args.dataset_path
+    if generic_args.traindata_path is not None and os.path.exists(
+        generic_args.traindata_path
     ):
-        raw_data = pd.read_parquet(generic_args.dataset_path)
+        raw_data = pd.read_parquet(generic_args.traindata_path)
         data = _attach(data, raw_data, select_args.idx_limit)
 
     data.to_csv(
@@ -83,6 +84,7 @@ def select_best_embeddings(dbgym_cfg, generic_args, select_args):
 def _load_data(dbgym_cfg, select_args):
     data = []
     stats = [s for s in dbgym_cfg.dbgym_this_run_path.rglob(STATS_FNAME)]
+    print(f"stats={stats}")
     for stat in stats:
         if "curated" in str(stat):
             continue
@@ -131,13 +133,16 @@ def _load_data(dbgym_cfg, select_args):
 
         data.append(info)
 
+    print(f"data={data}")
     data = pd.DataFrame(data)
     data = data.loc[:, ~(data == data.iloc[0]).all()]
+
     if "output_scale" not in data:
         data["output_scale"] = output_scale
 
     if "bias_separation" not in data:
         data["bias_separation"] = bias_sep
+
     return data
 
 

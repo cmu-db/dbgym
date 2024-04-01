@@ -1,3 +1,5 @@
+import gc
+import copy
 import json
 import logging
 import os
@@ -6,8 +8,9 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-
+from typing import Any, Callable, Optional, Tuple, Union
 import numpy as np
+import pandas as pd
 import ray
 import torch
 import torch.nn as nn
@@ -20,27 +23,165 @@ from ray.tune import TuneConfig, with_parameters, with_resources
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search import ConcurrencyLimiter
 from ray.tune.search.hyperopt import HyperOptSearch
+from sklearn.model_selection import train_test_split  # type: ignore
+from torch.utils.data import TensorDataset
+from typing_extensions import ParamSpec
 
-from misc.utils import open_and_save, restart_ray
-from tune.protox.embedding.loss import CostLoss, get_bias_fn
-from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
-from tune.protox.embedding.utils import (
-    f_unpack_dict,
-    fetch_index_parameters,
-    load_input_data,
-    parse_hyperopt_config,
+from misc.utils import DBGymConfig, open_and_save, restart_ray, save_file
+from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
+from tune.protox.embedding.train_args import (
+    EmbeddingTrainAllArgs,
+    EmbeddingTrainGenericArgs,
 )
-from tune.protox.embedding.vae import VAELoss, create_vae_model, gen_vae_collate
+from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
+from tune.protox.embedding.utils import f_unpack_dict, parse_hyperopt_config
+from tune.protox.embedding.vae import VAE, VAELoss, gen_vae_collate
+from tune.protox.env.space.primitive_space import IndexSpace
+from tune.protox.env.types import (
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableColTuple,
+)
+from tune.protox.env.workload import Workload
 
 
-def train_all_embeddings(dbgym_cfg, generic_args, train_args):
+def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
+    max_indexable = w.max_indexable()
+    max_cat_features = max(
+        ntables, max_indexable + 1
+    )  # +1 for the "null" per attribute list.
+    max_attrs = max_indexable + 1  # +1 to account for the table index.
+    return max_attrs, max_cat_features
+
+
+def fetch_index_parameters(
+    dbgym_cfg: DBGymConfig,
+    data: dict[str, Any],
+    workload_path: Path,
+) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
+    tables = data["tables"]
+    attributes = data["attributes"]
+    query_spec = data["query_spec"]
+    workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None)
+    modified_attrs = workload.column_usages()
+
+    space = IndexSpace(
+        tables,
+        max_num_columns=data["max_num_columns"],
+        max_indexable_attributes=workload.max_indexable(),
+        seed=0,
+        rel_metadata=modified_attrs,
+        attributes_overwrite=copy.deepcopy(modified_attrs),
+        tbl_include_subsets=TableAttrAccessSetsMap({}),
+        index_space_aux_type=False,
+        index_space_aux_include=False,
+        deterministic_policy=True,
+    )
+
+    max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
+        workload, len(tables)
+    )
+    return max_attrs, max_cat_features, modified_attrs, space.class_mapping
+
+
+def load_input_data(
+    dbgym_cfg: DBGymConfig, traindata_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
+) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
+    # Load the input data.
+    columns = []
+    columns += ["tbl_index", "idx_class"]
+    columns += [f"col{c}" for c in range(max_attrs - 1)]
+    if require_cost:
+        columns += COST_COLUMNS
+
+    save_file(dbgym_cfg, traindata_path)
+    df = pd.read_parquet(traindata_path, columns=columns)
+    num_classes: int = df.idx_class.max() + 1
+
+    # Get the y's and the x's.
+    targets = (COST_COLUMNS + ["idx_class"]) if require_cost else ["idx_class"]
+    y = df[targets].values
+    df.drop(columns=COST_COLUMNS + ["idx_class"], inplace=True, errors="ignore")
+    x = df.values
+    del df
+    gc.collect()
+    gc.collect()
+
+    if train_size == 1:
+        train_dataset = TensorDataset(torch.Tensor(x), torch.Tensor(y))
+        del x
+        gc.collect()
+        gc.collect()
+        return train_dataset, y, y[:, -1], None, num_classes
+
+    # Perform the train test split.
+    train_x, val_x, train_y, val_y = train_test_split(
+        x,
+        y,
+        test_size=1 - train_size,
+        train_size=train_size,
+        random_state=seed,
+        shuffle=True,
+        stratify=y[:, -1],
+    )
+    del x
+    del y
+    gc.collect()
+    gc.collect()
+
+    # Form the tensor datasets.
+    train_dataset = TensorDataset(torch.Tensor(train_x), torch.Tensor(train_y))
+    val_dataset = TensorDataset(torch.Tensor(val_x), torch.Tensor(val_y))
+    del val_x
+    del val_y
+    del train_x
+    gc.collect()
+    gc.collect()
+    logging.info("Train Dataset Size: %s", len(train_dataset))
+    return train_dataset, train_y, train_y[:, -1], val_dataset, num_classes
+
+
+def create_vae_model(
+    config: dict[str, Any], max_attrs: int, max_cat_features: int
+) -> VAE:
+    cat_input = max_attrs * max_cat_features
+
+    assert config["act"] in ["relu", "mish"]
+    assert config["mean_output_act"] in ["tanh_squash", "sigmoid"]
+
+    mean_output_act = {
+        "sigmoid": nn.Sigmoid,
+    }[config["mean_output_act"]]
+
+    torch.set_float32_matmul_precision("high")  # type: ignore
+    model = VAE(
+        max_categorical=max_cat_features,
+        input_dim=cat_input,
+        hidden_sizes=list(config["hidden_sizes"]),
+        latent_dim=config["latent_dim"],
+        act=nn.ReLU if config["act"] == "relu" else nn.Mish,
+        bias_init=config["bias_init"],
+        weight_init=config["weight_init"],
+        weight_uniform=config["weight_uniform"],
+        mean_output_act=mean_output_act,
+        output_scale=config.get("output_scale", 1.0),
+    )
+
+    return model
+
+
+def train_all_embeddings(
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingTrainGenericArgs,
+    train_all_args: EmbeddingTrainAllArgs,
+):
     """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
     """
     start_time = time.time()
 
-    with open_and_save(dbgym_cfg, train_args.hpo_space_path, "r") as f:
+    with open_and_save(dbgym_cfg, train_all_args.hpo_space_path, "r") as f:
         json_dict = json.load(f)
         space = parse_hyperopt_config(json_dict["config"])
 
@@ -48,7 +189,7 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
     restart_ray()
     ray.init(address="localhost:6379", log_to_driver=False)
 
-    scheduler = FIFOScheduler()
+    scheduler = FIFOScheduler()  # type: ignore
     # Search.
     search = HyperOptSearch(
         metric="loss",
@@ -57,12 +198,14 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
         n_initial_points=20,
         space=space,
     )
-    search = ConcurrencyLimiter(search, max_concurrent=train_args.train_max_concurrent)
+    limiter = ConcurrencyLimiter(
+        search, max_concurrent=train_all_args.train_max_concurrent
+    )
     tune_config = TuneConfig(
         scheduler=scheduler,
-        search_alg=search,
-        num_samples=train_args.num_samples,
-        max_concurrent_trials=train_args.train_max_concurrent,
+        search_alg=limiter,
+        num_samples=train_all_args.num_samples,
+        max_concurrent_trials=train_all_args.train_max_concurrent,
         chdir_to_trial_dir=True,
     )
 
@@ -82,7 +225,7 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
             _hpo_train,
             dbgym_cfg=dbgym_cfg,
             generic_args=generic_args,
-            train_args=train_args,
+            train_all_args=train_all_args,
         ),
         resources,
     )
@@ -112,11 +255,16 @@ def train_all_embeddings(dbgym_cfg, generic_args, train_args):
         f.write(f"{duration}")
 
 
-def _hpo_train(dbgym_cfg, config, generic_args, train_args):
+def _hpo_train(
+    config: dict[str, Any],
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingTrainGenericArgs,
+    train_all_args: EmbeddingTrainAllArgs,
+):
     sys.path.append(os.fspath(dbgym_cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
-    os.environ["OMP_NUM_THREADS"] = str(train_args.train_max_concurrent)
+    os.environ["OMP_NUM_THREADS"] = str(train_all_args.train_max_concurrent)
 
     config = f_unpack_dict(config)
     if config.get("use_bias", False):
@@ -135,64 +283,62 @@ def _hpo_train(dbgym_cfg, config, generic_args, train_args):
                 )
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
-    output_dir = dbgym_cfg.dbgym_this_run_path
-
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    trial_dir = output_dir / f"embeddings_{dtime}_{os.getpid()}"
-    trial_dir.mkdir(parents=True, exist_ok=False)
+    trial_dpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / f"embeddings_{dtime}_{os.getpid()}"
+    assert not trial_dpath.exists(), f"at this point, trial_dpath ({trial_dpath}) should not exist"
 
     # Seed
-    seed = np.random.randint(1, 1e8)
+    seed = np.random.randint(int(1), int(1e8))
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     config["seed"] = seed
-    config["iterations_per_epoch"] = train_args.iterations_per_epoch
+    config["iterations_per_epoch"] = train_all_args.iterations_per_epoch
 
     logging.info(config)
 
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(
         dbgym_cfg,
-        generic_args.benchmark_name,
         config,
-        generic_args.dataset_path,
-        trial_dir,
+        generic_args.traindata_path,
+        trial_dpath,
         generic_args.benchmark_config_path,
-        train_args.train_size,
+        train_all_args.train_size,
         generic_args.workload_path,
         dataloader_num_workers=0,
         disable_tqdm=True,
     )
 
     # Dump the config that we are executing.
-    with open(f"{trial_dir}/config", "w") as f:
+    with open(f"{trial_dpath}/config", "w") as f:
         f.write(json.dumps(config, indent=4))
 
     trainer.train(num_epochs=config["num_epochs"])
     if trainer.failed:
         # Trainer has failed.
-        with open(f"{trial_dir}/FAILED", "w") as f:
+        with open(f"{trial_dpath}/FAILED", "w") as f:
             if trainer.fail_msg is not None:
                 f.write(trainer.fail_msg)
 
         if trainer.fail_data is not None:
-            torch.save(trainer.fail_data, f"{trial_dir}/fail_data.pth")
+            torch.save(trainer.fail_data, f"{trial_dpath}/fail_data.pth")
         session.report({"loss": 1e8})
     else:
-        loss = epoch_end(trainer, force=True, suppress=True)["total_avg_loss"]
+        res_dict = epoch_end(trainer=trainer, force=True, suppress=True)
+        assert res_dict
+        loss = res_dict["total_avg_loss"]
         session.report({"loss": loss})
 
 
 def _build_trainer(
-    dbgym_cfg,
-    benchmark_name,
-    config,
-    input_path,
-    trial_dir,
-    benchmark_config_path,
-    train_size,
-    workload_path,
+    dbgym_cfg: DBGymConfig,
+    config: dict[str, Any],
+    traindata_path: Path,
+    trial_dpath: Path,
+    benchmark_config_path: Path,
+    train_size: int,
+    workload_path: Path,
     dataloader_num_workers=0,
     disable_tqdm=False,
 ):
@@ -202,8 +348,9 @@ def _build_trainer(
     # Load the benchmark configuration.
     with open_and_save(dbgym_cfg, benchmark_config_path, "r") as f:
         data = yaml.safe_load(f)
+        data = data[[k for k in data.keys()][0]]
         max_attrs, max_cat_features, _, class_mapping = fetch_index_parameters(
-            dbgym_cfg, benchmark_name, data, workload_path
+            dbgym_cfg, data, workload_path
         )
 
     config["class_mapping"] = {}
@@ -219,7 +366,7 @@ def _build_trainer(
     # Get the datasets.
     train_dataset, train_y, idx_class, val_dataset, num_classes = load_input_data(
         dbgym_cfg,
-        input_path,
+        traindata_path,
         train_size,
         max_attrs,
         config["metric_loss_md"].get("require_cost", False),
@@ -245,8 +392,6 @@ def _build_trainer(
     }
 
     metric_loss = CostLoss(config["metric_loss_md"])
-    # Default miner.
-    tminers = {}
 
     # Define the loss functions.
     loss_funcs = {
@@ -266,20 +411,23 @@ def _build_trainer(
 
     # Define the tester hook.
     record_keeper, _, _ = logging_presets.get_record_keeper(
-        f"{trial_dir}/logs", f"{trial_dir}/tboard"
+        trial_dpath / "logs", trial_dpath / "tboard"
     )
     hooks = logging_presets.get_hook_container(record_keeper)
-    model_folder = f"{trial_dir}/models"
+    model_folder = trial_dpath / "models"
 
     # Validation step loop.
+    assert val_dataset
     val_dl = torch.utils.data.DataLoader(
         val_dataset, batch_size=4096, collate_fn=collate_fn
     )
-    epoch_end = _construct_epoch_end(val_dl, config, hooks, model_folder)
+    epoch_end: Callable[..., Optional[dict[str, Any]]] = _construct_epoch_end(
+        val_dl, config, hooks, model_folder
+    )
 
-    def clip_grad():
+    def clip_grad() -> None:
         if config["grad_clip_amount"] is not None:
-            torch.nn.utils.clip_grad_norm_(
+            torch.nn.utils.clip_grad_norm_(  # type: ignore
                 model.parameters(), config["grad_clip_amount"]
             )
 
@@ -296,7 +444,7 @@ def _build_trainer(
             optimizers=optimizers,
             batch_size=config["batch_size"],
             loss_funcs=loss_funcs,
-            mining_funcs=tminers,
+            mining_funcs={},
             dataset=train_dataset,
             sampler=sampler,
             iterations_per_epoch=(
@@ -318,8 +466,20 @@ def _build_trainer(
     )
 
 
-def _construct_epoch_end(val_dl, config, hooks, model_folder):
-    def epoch_end(trainer, *args, **kwargs):
+P = ParamSpec("P")
+
+
+def _construct_epoch_end(
+    val_dl: torch.utils.data.DataLoader[Any],
+    config: dict[str, Any],
+    hooks: Any,
+    model_folder: Union[str, Path],
+) -> Callable[P, Optional[dict[str, Any]]]:
+    def epoch_end(*args: P.args, **kwargs: P.kwargs) -> Optional[dict[str, Any]]:
+        trainer = kwargs.get("trainer", None)
+        assert trainer
+        assert isinstance(trainer, VAETrainer)
+
         save_interval = config.get("save_every", 1)
         if (trainer.epoch - 1) % save_interval == 0:
             # Save.
@@ -327,8 +487,8 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
             mf.mkdir(parents=True, exist_ok=True)
             hooks.save_models(trainer, str(mf), str(trainer.epoch))
 
-        force = kwargs.get("force", False)
-        suppress = kwargs.get("suppress", False)
+        force = bool(kwargs.get("force", False))
+        suppress = bool(kwargs.get("suppress", False))
 
         if force:
             total_metric_loss = []
@@ -338,9 +498,9 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
                 trainer.switch_eval()
 
                 pbar = None if suppress else tqdm.tqdm(total=len(val_dl))
-                for i, curr_batch in enumerate(val_dl):
+                for i, curr_batch in enumerate(val_dl):  # type: ignore
                     # Get the losses.
-                    trainer.calculate_loss(curr_batch)
+                    trainer.calculate_loss(curr_batch)  # type: ignore
                     if isinstance(trainer.losses["metric_loss"], torch.Tensor):
                         total_metric_loss.append(trainer.losses["metric_loss"].item())
                     else:
@@ -364,5 +524,7 @@ def _construct_epoch_end(val_dl, config, hooks, model_folder):
                 "total_avg_loss": np.mean(total_metric_loss)
                 + np.mean(total_recon_loss),
             }
+
+        return None
 
     return epoch_end

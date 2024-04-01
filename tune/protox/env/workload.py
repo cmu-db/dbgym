@@ -1,76 +1,94 @@
+import math
 import copy
 import json
-import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
-
+from typing import Any, Optional, Tuple, Union, cast
+import tempfile
 import numpy as np
-import pglast
-import pglast.ast
+import pglast  # type: ignore
 from plumbum import local
 
-from misc.utils import open_and_save
-from tune.protox.env import is_binary_enum, is_knob_enum, regress_ams, regress_qid_knobs
-from tune.protox.env.space.utils import fetch_server_knobs
-from tune.protox.env.workload_utils import (
+from misc.utils import DBGymConfig, open_and_save
+from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
+from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.types import (
+    AttrTableListMap,
+    BestQueryRun,
+    HolonAction,
+    KnobSpaceAction,
+    QueryMap,
+    QueryRun,
+    QuerySpaceAction,
+    QuerySpaceKnobAction,
+    QuerySpec,
     QueryType,
-    acquire_metrics_around_query,
-    execute_serial_variations,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableAttrSetMap,
+    TableColTuple,
+)
+from tune.protox.env.util.execute import (
+    _acquire_metrics_around_query,
+    execute_variations,
+)
+from tune.protox.env.util.pg_conn import PostgresConn
+from tune.protox.env.util.reward import RewardUtility
+from tune.protox.env.util.workload_analysis import (
     extract_aliases,
     extract_columns,
     extract_sqltypes,
-    parse_access_method,
 )
 
 
 class Workload(object):
-    benchbase: bool = True
-    allow_per_query: bool = False
-    workload_eval_mode: str = "all"
-    workload_eval_inverse: bool = False
-    tbl_include_subsets_prune: bool = False
+    # Usually, we want to call open_and_save() when opening a file for reading
+    # However, when creating a Workload object for unittesting, we just want to call open()
+    def _open_for_reading(
+        self,
+        path,
+        mode="r",
+    ):
+        # when opening for writing we always use open() so we don't need this function, which is
+        # why we assert here
+        # I still chose to make mode an argument just to make the interface identical to open()/open_and_save()
+        assert mode == "r"
+        if self.dbgym_cfg != None:
+            return open_and_save(self.dbgym_cfg, path)
+        else:
+            return open(path)
 
-    early_workload_kill: bool = False
-    workload_timeout: float = 0
-    workload_timeout_penalty: float = 1.0
-
-    order: list[str] = None
-    queries: Dict[str, List[Tuple[QueryType, str]]] = None
-    queries_mix: Dict[str, float] = None
-    query_aliases: dict[str, List[str]] = None
-    tbl_queries_usage: dict[str, set[str]] = None
-    tbl_filter_queries_usage: dict[str, set[str]] = None
-
-    readonly_workload = False
-    # Map order[i] -> (per-query-knobs, metric)
-    best_observed = {}
-
-    logger = None
-
-    def _crunch(self, all_attributes, sqls, pid):
+    def _crunch(
+        self,
+        all_attributes: AttrTableListMap,
+        sqls: list[Tuple[str, Path, float]],
+        pid: Optional[int],
+        query_spec: QuerySpec,
+    ) -> None:
+        do_tbl_include_subsets_prune = query_spec["tbl_include_subsets_prune"]
         self.order = []
-        self.queries = {}
-        self.tbl_queries_usage = {}
-        self.tbl_filter_queries_usage = {}
+        self.queries = QueryMap({})
+        # Map table -> set(queries that use it)
+        self.tbl_queries_usage: dict[str, set[str]] = {}
+        # Map (table, column) -> set(queries that use it)
+        self.tbl_filter_queries_usage: dict[TableColTuple, set[str]] = {}
 
         # Build the SQL and table usage information.
         self.queries_mix = {}
         self.query_aliases = {}
-        self.query_usages = {t: [] for t in self.tables}
-        tbl_include_subsets = {tbl: set() for tbl in self.attributes.keys()}
-
-        self.tbl_wheres = {tbl: set() for tbl in self.attributes.keys()}
-
-        sql_mapping = {}
+        self.query_usages = TableAttrListMap({t: [] for t in self.tables})
+        tbl_include_subsets = TableAttrAccessSetsMap(
+            {tbl: set() for tbl in self.attributes.keys()}
+        )
         for stem, sql_file, ratio in sqls:
             assert stem not in self.queries
             self.order.append(stem)
             self.queries_mix[stem] = ratio
-            sql_mapping[stem] = sql_file
 
-            with open_and_save(self.dbgym_cfg, sql_file, "r") as q:
+            with self._open_for_reading(sql_file, "r") as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -84,7 +102,6 @@ class Workload(object):
 
                 # Extract aliases.
                 self.query_aliases[stem] = extract_aliases(stmts)
-
                 # Extract sql and query types.
                 self.queries[stem] = extract_sqltypes(stmts, pid)
 
@@ -95,80 +112,91 @@ class Workload(object):
                     self.tbl_queries_usage[tbl].add(stem)
 
                 for stmt in stmts:
+                    # Get all columns that appear in the predicates.
+                    # Get all columns that appear together (all_refs).
                     tbl_col_usages, all_refs = extract_columns(
                         stmt, self.tables, all_attributes, self.query_aliases[stem]
                     )
-                    tbl_col_usages = {
-                        t: [a for a in atts if a in self.attributes[t]]
-                        for t, atts in tbl_col_usages.items()
-                    }
+                    tbl_col_usages = TableAttrSetMap(
+                        {
+                            t: set([a for a in atts if a in self.attributes[t]])
+                            for t, atts in tbl_col_usages.items()
+                        }
+                    )
+
                     for tbl, atts in tbl_col_usages.items():
                         for att in atts:
+                            # Update the (tbl, col) query references.
                             if (tbl, att) not in self.tbl_filter_queries_usage:
-                                self.tbl_filter_queries_usage[(tbl, att)] = set()
-                            self.tbl_filter_queries_usage[(tbl, att)].add(stem)
+                                self.tbl_filter_queries_usage[
+                                    TableColTuple((tbl, att))
+                                ] = set()
+                            self.tbl_filter_queries_usage[
+                                TableColTuple((tbl, att))
+                            ].add(stem)
 
+                            # Update query_usages (reflects predicate usage).
                             if att not in self.query_usages[tbl]:
                                 self.query_usages[tbl].append(att)
 
-                        if len(atts) > 0:
-                            self.tbl_wheres[tbl].add(tuple(sorted(set(atts))))
-
-                    all_refs = set(all_refs)
-                    all_qref_sets = set([r[0] for r in all_refs])
+                    # Compute table -> unique set of columns used from that table
                     all_qref_sets = {
-                        k: tuple(sorted([r[1] for r in all_refs if r[0] == k]))
-                        for k in all_qref_sets
+                        k: tuple(sorted([r[1] for r in set(all_refs) if r[0] == k]))
+                        for k in set([r[0] for r in all_refs])
                     }
                     for k, s in all_qref_sets.items():
                         tbl_include_subsets[k].add(s)
 
-        for k, v in self.tbl_wheres.items():
-            self.tbl_wheres[k] = [
-                k
-                for k, kk in zip(
-                    v, [not any(set(v0) <= set(v1) for v1 in v if v0 != v1) for v0 in v]
-                )
-                if kk
-            ]
-
         # Do this so query_usages is actually in the right order.
-        self.query_usages = {
-            tbl: [a for a in atts if a in self.query_usages[tbl]]
-            for tbl, atts in self.attributes.items()
-        }
+        # Order based on the original attribute list.
+        self.query_usages = TableAttrListMap(
+            {
+                tbl: [a for a in atts if a in self.query_usages[tbl]]
+                for tbl, atts in self.attributes.items()
+            }
+        )
 
-        if self.tbl_include_subsets_prune:
+        if do_tbl_include_subsets_prune:
             self.tbl_include_subsets = {}
-            for k, v in tbl_include_subsets.items():
-                self.tbl_include_subsets[k] = [
-                    k
-                    for k, kk in zip(
-                        v,
+            # First prune any "fully enclosed".
+            for tbl, attrsets in tbl_include_subsets.items():
+                self.tbl_include_subsets[tbl] = set(
+                    tbl
+                    for tbl, not_enclosed in zip(
+                        attrsets,
                         [
-                            not any(set(v0) <= set(v1) for v1 in v if v0 != v1)
-                            for v0 in v
+                            # Basically:
+                            # for v0 in attrsets:
+                            #   v0_not_enclosed = True
+                            #   for v1 in attrsets:
+                            #     if v0 <= v1:
+                            #       v0_not_enclosed = False
+                            not any(set(v0) <= set(v1) for v1 in attrsets if v0 != v1)
+                            for v0 in attrsets
                         ],
                     )
-                    if kk
-                ]
+                    if not_enclosed
+                )
 
-            if self.tbl_fold_subsets:
-                tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
-                for tbl, subsets in tbl_include_subsets.items():
-                    subsets = sorted(subsets, key=lambda x: len(x))
-                    for _ in range(self.tbl_fold_iterations):
-                        for i in range(len(subsets)):
-                            s0 = set(subsets[i])
-                            for j in range(i + 1, len(subsets)):
-                                s1 = set(subsets[j])
-                                if len(s0 - s1) <= self.tbl_fold_delta:
-                                    subsets[i] = None
-                                    subsets[j] = tuple(
-                                        sorted(set(subsets[j]).union(s0))
-                                    )
-                        subsets = [s for s in subsets if s is not None]
-                        subsets = sorted(subsets, key=lambda x: len(x))
+            if query_spec["tbl_fold_subsets"]:
+                tis = copy.deepcopy(self.tbl_include_subsets)
+                for tbl, subsets in tis.items():
+                    # Sort by length...these are not fully enclosed.
+                    sorted_subsets = sorted(subsets, key=lambda x: len(x))
+                    for _ in range(query_spec["tbl_fold_iterations"]):
+                        for i in range(len(sorted_subsets)):
+                            s0 = set(sorted_subsets[i])
+                            for j in range(i + 1, len(sorted_subsets)):
+                                s1 = set(sorted_subsets[j])
+                                # If the difference is small enough, merge them.
+                                if len(s0 - s1) <= query_spec["tbl_fold_delta"]:
+                                    sorted_subsets[i] = tuple()
+                                    sorted_subsets[j] = tuple(sorted(s1.union(s0)))
+                        # Filter out the sets that no longer exist.
+                        sorted_subsets = sorted(
+                            [s for s in sorted_subsets if len(s) > 0],
+                            key=lambda x: len(x),
+                        )
                     self.tbl_include_subsets[tbl] = subsets
         else:
             self.tbl_include_subsets = tbl_include_subsets
@@ -184,42 +212,35 @@ class Workload(object):
 
     def __init__(
         self,
-        dbgym_cfg,
+        dbgym_cfg: DBGymConfig,
         tables: list[str],
-        attributes: dict[str, list[str]],
-        query_spec: dict,
+        attributes: TableAttrListMap,
+        query_spec: QuerySpec,
         workload_path: Path,
-        pid=None,
-        workload_eval_mode="all",
-        workload_eval_inverse=False,
-        workload_timeout=0,
-        workload_timeout_penalty=1.0,
-        logger=None,
-    ):
+        pid: Optional[int] = None,
+        workload_timeout: float = 0,
+        workload_timeout_penalty: float = 1.0,
+        logger: Optional[Logger] = None,
+    ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
-        self.workload_eval_mode = workload_eval_mode
-        self.workload_eval_inverse = workload_eval_inverse
+        self.workload_path = workload_path
         # Whether we should use benchbase or not.
         self.benchbase = query_spec["benchbase"]
-        self.allow_per_query = query_spec["allow_per_query"]
-        self.early_workload_kill = query_spec["early_workload_kill"]
+        self.oltp_workload = query_spec["oltp_workload"]
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
-        self.tbl_include_subsets_prune = query_spec.get(
-            "tbl_include_subsets_prune", False
-        )
+        self.logger = logger
+        if self.logger:
+            self.logger.get_logger(__name__).info(
+                f"Initialized with workload timeout {workload_timeout}"
+            )
 
-        self.tbl_fold_subsets = query_spec.get("tbl_fold_subsets", False)
-        self.tbl_fold_delta = query_spec.get("tbl_fold_delta", False)
-        self.tbl_fold_iterations = query_spec.get("tbl_fold_iterations", False)
-        logging.info(f"Initialized with workload timeout {workload_timeout}")
-
-        self.tables = tables
-        self.attributes = attributes
+        self.tables: list[str] = tables
+        self.attributes: TableAttrListMap = attributes
 
         # Mapping from attribute -> table that has it.
-        all_attributes = {}
+        all_attributes = AttrTableListMap({})
         for tbl, cols in self.attributes.items():
             for col in cols:
                 if col not in all_attributes:
@@ -228,132 +249,401 @@ class Workload(object):
 
         # Get the order in which we should execute in.
         sqls = []
-        workload_order_file = workload_path / "order.txt"
-        with open_and_save(self.dbgym_cfg, workload_order_file, "r") as f:
+        order_or_txn_fname = "txn.txt" if self.oltp_workload else "order.txt"
+        workload_order_or_txn_fpath = self.workload_path / order_or_txn_fname
+        with self._open_for_reading(workload_order_or_txn_fpath, "r") as f:
             lines = f.read().splitlines()
-            for line in lines:
-                contents = line.split(",")
-                if len(contents) == 2:
-                    key, sqlfile, weight = contents[0], contents[1], 1
-                elif len(contents) == 3:
-                    key, sqlfile, weight = contents[0], contents[1], float(contents[2])
-                else:
-                    raise RuntimeError(
-                        f"Invalid workload order.txt: {workload_order_file}"
+            sqls = [
+                (
+                    line.split(",")[0],
+                    self.workload_path / line.split(",")[1],
+                    1.0,
+                )
+                for line in lines
+            ]
+
+        # TODO(phw2): pass "query_transactional" somewhere other than query_spec, just like "query_order" is
+        if "query_transactional" in query_spec:
+            with self._open_for_reading(query_spec["query_transactional"], "r") as f:
+                lines = f.read().splitlines()
+                splits = [line.split(",") for line in lines]
+                sqls = [
+                    (
+                        split[0],
+                        self.workload_path / split[1],
+                        float(split[2]),
                     )
-                sqls.append((key, sqlfile, weight))
+                    for split in splits
+                ]
 
-        self._crunch(all_attributes, sqls, pid)
-
+        self._crunch(all_attributes, sqls, pid, query_spec)
         query_usages = copy.deepcopy(self.query_usages)
         tbl_include_subsets = copy.deepcopy(self.tbl_include_subsets)
 
+        # TODO(phw2): pass "execute_query_order" somewhere other than query_spec, just like "query_order" is
         if "execute_query_order" in query_spec:
-            # TODO(WAN): can this be folded into workload_path?
-            with open_and_save(
-                self.dbgym_cfg, query_spec["execute_query_order"], "r"
-            ) as f:
+            with open_and_save(dbgym_cfg, query_spec["execute_query_order"], "r") as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
                         line.split(",")[0],
                         Path(query_spec["execute_query_directory"])
                         / line.split(",")[1],
-                        1,
+                        1.0,
                     )
                     for line in lines
                 ]
 
             # Re-crunch with the new data.
-            self._crunch(all_attributes, sqls, pid)
+            self._crunch(all_attributes, sqls, pid, query_spec)
             self.query_usages = query_usages
             self.tbl_include_subsets = tbl_include_subsets
 
-    def process_column_usage(self):
-        return self.query_usages
-
-    def reset(
-        self,
-        env_spec=None,
-        connection=None,
-        reward_utility=None,
-        query_timeout=None,
-        accum_metric=None,
-    ):
-        if connection is not None and accum_metric is not None and self.allow_per_query:
-            # Construct an empty action.
-            action = (
-                env_spec.action_space.get_knob_space().get_state(None).copy(),
-                env_spec.action_space.get_index_space().null_action(),
-            )
-
-            # Replace per-query with the "known best".
-            for qid, (qid_set, _) in self.best_observed.items():
-                for knob, val in qid_set:
-                    action[0][knob.name()] = val
-            assert env_spec.action_space.contains(action)
-
-            results = f"{env_spec.benchbase_path}/results{env_spec.postgres_port}"
-            shutil.rmtree(results, ignore_errors=True)
-
-            # Determine whether the "known best" is good or not.
-            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
-                env_spec,
-                results,
-                connection,
-                action,
-                query_timeout,
-                reset_eval=True,
-                reset_accum_metric=accum_metric,
-            )
-            assert success
-
-            # Forcefully reconstruct based on the output.
-            args = {
-                "connection": connection,
-                "results": results,
-                "action": mutilated if mutilated is not None else action,
-            }
-            state = env_spec.observation_space.construct_offline(**args)
-            metric, _ = reward_utility(
-                result_dir=results, update=False, did_error=False
-            )
-            env_spec.action_space.get_knob_space().advance(
-                args["action"][0], connection=connection, workload=self
-            )
-            logging.debug(
-                f"[permute_via_reset]: {env_spec.action_space.get_knob_space().get_state(None)}"
-            )
-            return state, metric
-
-        return None, None
-
-    def set_workload_timeout(self, metric):
+    def set_workload_timeout(self, metric: float) -> None:
         if self.workload_timeout == 0:
             self.workload_timeout = metric
         else:
             self.workload_timeout = min(self.workload_timeout, metric)
-        logging.info(f"Workload timeout set to: {self.workload_timeout}")
 
-    def check_queries_for_table(self, table):
+        if self.logger:
+            self.logger.get_logger(__name__).info(
+                f"Workload timeout set to: {self.workload_timeout}"
+            )
+
+    def queries_for_table(self, table: str) -> list[str]:
         return [q for q in self.order if q in self.tbl_queries_usage[table]]
 
-    def check_queries_for_table_col(self, table, col):
+    def queries_for_table_col(self, table: str, col: str) -> list[str]:
         if (table, col) not in self.tbl_filter_queries_usage:
             return []
         return [
-            q for q in self.order if q in self.tbl_filter_queries_usage[(table, col)]
+            q
+            for q in self.order
+            if q in self.tbl_filter_queries_usage[TableColTuple((table, col))]
         ]
 
-    def _execute_benchbase(self, env_spec, results):
-        with local.cwd(f"{env_spec.benchbase_path}"):
+    def column_usages(self) -> TableAttrListMap:
+        return copy.deepcopy(self.query_usages)
+
+    def max_indexable(self) -> int:
+        return max([len(cols) for _, cols in self.query_usages.items()])
+
+    @time_record("execute")
+    def _execute_workload(
+        self,
+        pgconn: PostgresConn,
+        actions: list[HolonAction] = [],
+        actions_names: list[str] = [],
+        results: Optional[Union[str, Path]] = None,
+        obs_space: Optional[StateSpace] = None,
+        action_space: Optional[HolonSpace] = None,
+        reset_metrics: Optional[dict[str, BestQueryRun]] = None,
+        override_workload_timeout: Optional[float] = None,
+        pqt: Optional[int] = None,
+        workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
+        disable_pg_hint: bool = False,
+        blocklist: list[str] = [],
+        first: bool = False,
+    ) -> Union[float, Tuple[bool, bool, dict[str, Any]]]:
+        workload_timeout = (
+            self.workload_timeout
+            if not override_workload_timeout
+            else override_workload_timeout
+        )
+        assert len(actions) == len(actions_names)
+
+        # Do we need metrics.
+        need_metric = False if not obs_space else obs_space.require_metrics()
+
+        sysknobs = KnobSpaceAction({})
+        ql_knobs = []
+        if len(actions) > 0:
+            assert action_space
+
+            sysknobs = cast(
+                KnobSpaceAction,
+                [
+                    v
+                    for t, v in action_space.split_action(actions[0])
+                    if isinstance(t, LatentKnobSpace)
+                ][0],
+            )
+            ql_knobs = cast(
+                list[Tuple[LatentQuerySpace, QuerySpaceAction]],
+                [
+                    [
+                        (t, v)
+                        for t, v in action_space.split_action(action)
+                        if isinstance(t, LatentQuerySpace)
+                    ][0]
+                    for action in actions
+                ],
+            )
+
+        # Figure out workload to execute.
+        if workload_qdir is not None and workload_qdir[0] is not None:
+            # Load actual queries to execute.
+            workload_dir, workload_qlist = workload_qdir
+            with self._open_for_reading(workload_qlist, "r") as f:
+                psql_order = [
+                    (f"Q{i+1}", Path(workload_dir) / l.strip())
+                    for i, l in enumerate(f.readlines())
+                ]
+
+            actual_order = [p[0] for p in psql_order]
+            actual_sql_files = {k: str(v) for (k, v) in psql_order}
+            actual_queries = {}
+            for qid, qpat in psql_order:
+                with self._open_for_reading(qpat, "r") as f:
+                    query = f.read()
+                actual_queries[qid] = [(QueryType.SELECT, query)]
+        else:
+            actual_order = self.order
+            actual_sql_files = self.sql_files
+            actual_queries = self.queries
+
+        # Now let us start executing.
+        workload_time = 0.0
+        time_left = workload_timeout
+        qid_runtime_data = {}
+        stop_running = False
+
+        for execute_idx, qid in enumerate(actual_order):
+            if stop_running:
+                break
+
+            queries = actual_queries[qid]
+            if any([b in actual_sql_files[qid] for b in blocklist]):
+                # Skip any query in blocklist.
+                continue
+
+            for sql_type, query in queries:
+                assert sql_type != QueryType.UNKNOWN
+                if sql_type != QueryType.SELECT:
+                    assert sql_type != QueryType.INS_UPD_DEL
+                    pgconn.conn().execute(query)
+                    continue
+
+                if disable_pg_hint:
+                    assert len(ql_knobs) == 1
+                    ql_knob = ql_knobs[0]
+                    qid_knobs = {
+                        ql_knob[0].knobs[k]: ql_knob[1][k]
+                        for k in ql_knob[1].keys()
+                        if f"{qid}_" in k
+                    }
+
+                    # Alter the session first.
+                    disable = ";".join(
+                        [
+                            f"SET {knob.knob_name} = OFF"
+                            for knob, value in qid_knobs.items()
+                            if value == 0
+                        ]
+                    )
+                    pgconn.conn().execute(disable)
+
+                    qid_runtime, _, _, _ = _acquire_metrics_around_query(
+                        self.logger,
+                        f"{qid}",
+                        pgconn.conn(),
+                        query,
+                        pqt=time_left,
+                        obs_space=None,
+                    )
+
+                    undo_disable = ";".join(
+                        [
+                            f"SET {knob.knob_name} = ON"
+                            for knob, value in qid_knobs.items()
+                            if value == 0
+                        ]
+                    )
+                    pgconn.conn().execute(undo_disable)
+
+                else:
+                    # De-duplicate the runs.
+                    runs: list[QueryRun] = []
+                    zruns: list[QueryRun] = [
+                        QueryRun(
+                            act_name,
+                            f"{act_name}_{qid}",
+                            QuerySpaceKnobAction(
+                                {
+                                    ql_knob[0].knobs[k]: ql_knob[1][k]
+                                    for k in ql_knob[1].keys()
+                                    if f"{qid}_" in k
+                                }
+                            ),
+                        )
+                        for ql_knob, act_name in zip(ql_knobs, actions_names)
+                    ]
+                    for r in zruns:
+                        if r[2] not in [rr[2] for rr in runs]:
+                            runs.append(r)
+
+                    target_pqt = pqt if pqt else workload_timeout
+                    skip_execute = False
+                    if (
+                        reset_metrics is not None
+                        and qid in reset_metrics
+                        and not reset_metrics[qid].timeout
+                    ):
+                        # If we have a reset metric, use it's timeout and convert to seconds.
+                        truntime = reset_metrics[qid].runtime
+                        assert truntime is not None
+                        target_pqt = math.ceil(truntime / 1.0e6)
+
+                        # If we've seen this exact before, skip it.
+                        rmetrics = reset_metrics[qid]
+                        skip_execute = (
+                            (rmetrics.query_run is not None)
+                            and (rmetrics.query_run.qknobs is not None)
+                            and (rmetrics.query_run.qknobs == runs[-1].qknobs)
+                        )
+
+                    if not skip_execute:
+                        best_run: BestQueryRun = execute_variations(
+                            connection=pgconn.conn(),
+                            runs=runs,
+                            query=query,
+                            pqt=min(target_pqt, workload_timeout - workload_time + 1),
+                            logger=self.logger,
+                            sysknobs=sysknobs,
+                            obs_space=obs_space,
+                        )
+                    else:
+                        assert reset_metrics
+                        best_run = reset_metrics[qid]
+
+                    if reset_metrics is not None and qid in reset_metrics:
+                        # Old one is actually better so let's use that.
+                        rmetric = reset_metrics[qid]
+                        if best_run.timeout or (
+                            best_run.runtime
+                            and rmetric.runtime
+                            and rmetric.runtime < best_run.runtime
+                        ):
+                            best_run = rmetric
+
+                    assert best_run.runtime
+                    qid_runtime_data[qid] = best_run
+                    qid_runtime = best_run.runtime
+
+                time_left -= qid_runtime / 1e6
+                workload_time += qid_runtime / 1e6
+                if time_left < 0:
+                    stop_running = True
+                    break
+
+        # Undo any necessary state changes.
+        for qqid_index in range(execute_idx, len(actual_order)):
+            queries = self.queries[qid]
+            for sql_type, query in queries:
+                assert sql_type != QueryType.UNKNOWN
+                if sql_type != QueryType.SELECT:
+                    assert sql_type != QueryType.INS_UPD_DEL
+                    pgconn.conn().execute(query)
+
+        if results is not None:
+            # Make the result directory.
+            results_dir = Path(results)
+            if not results_dir.exists():
+                results_dir.mkdir(parents=True, exist_ok=True)
+
+            with open(results_dir / "run.plans", "w") as f:
+                # Output the explain data.
+                for qid, run in qid_runtime_data.items():
+                    if run.explain_data is not None:
+                        assert run.query_run and run.query_run.qknobs is not None
+                        pqkk = [
+                            (knob.name(), val)
+                            for knob, val in run.query_run.qknobs.items()
+                        ]
+                        f.write(f"{qid}\n{run.query_run.prefix}: {pqkk}\n")
+                        f.write(json.dumps(run.explain_data))
+                        f.write("\n\n")
+
+            if obs_space and obs_space.require_metrics():
+                # Create the metrics.
+                # Log the metrics data as a flattened.
+                accum_data = cast(
+                    list[dict[str, Any]],
+                    [v.metric_data for _, v in qid_runtime_data.items()],
+                )
+                accum_stats = obs_space.merge_deltas(accum_data)
+                with open(results_dir / "run.metrics.json", "w") as f:
+                    # Flatten it.
+                    def flatten(d: dict[str, Any]) -> dict[str, Any]:
+                        flat: dict[str, Any] = {}
+                        for k, v in d.items():
+                            if isinstance(v, dict):
+                                flat[k] = flatten(v)
+                            elif isinstance(v, np.ndarray):
+                                flat[k] = float(v[0])
+                            elif isinstance(v, np.ScalarType):
+                                if isinstance(v, str):
+                                    flat[k] = v
+                                else:
+                                    flat[k] = float(cast(float, v))
+                            else:
+                                flat[k] = v
+                        return flat
+
+                    output = flatten(accum_stats)
+                    output["flattened"] = True
+                    f.write(json.dumps(output, indent=4))
+
+            with open(results_dir / "run.raw.csv", "w") as f:
+                # Write the raw query data.
+                f.write(
+                    "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
+                )
+
+                start = 0.0
+                for i, qid in enumerate(self.order):
+                    if qid in qid_runtime_data:
+                        data = qid_runtime_data[qid]
+                        assert data and data.runtime and data.query_run
+                        rtime = data.runtime
+                        pfx = data.query_run.prefix
+                        f.write(f"{i+1},{qid},{start},{rtime},0,{pfx}\n")
+                        start += rtime / 1e6
+
+                # Write a penalty term if needed.
+                penalty = 0.0
+                if stop_running and self.workload_timeout_penalty > 1:
+                    # Get the penalty.
+                    penalty = (
+                        workload_timeout * self.workload_timeout_penalty - workload_time
+                    )
+                    penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
+                elif stop_running and not first:
+                    # Always degrade it a little if we've timed out.
+                    penalty = 3.0e6
+
+                if penalty > 0:
+                    f.write(f"{len(self.order)},P,{time.time()},{penalty},0,PENALTY\n")
+
+            # Get all the timeouts.
+            timeouts = [v.timeout for _, v in qid_runtime_data.items()]
+            return True, (any(timeouts) or stop_running), qid_runtime_data
+
+        return workload_time
+
+    @time_record("execute")
+    def _execute_benchbase(
+        self, benchbase_config: dict[str, Any], results: Union[str, Path]
+    ) -> bool:
+        bb_path = benchbase_config["benchbase_path"]
+        with local.cwd(bb_path):
             code, _, _ = local["java"][
                 "-jar",
                 "benchbase.jar",
                 "-b",
-                env_spec.benchmark_name,
+                benchbase_config["benchmark"],
                 "-c",
-                env_spec.benchbase_config_path,
+                benchbase_config["benchbase_config_path"],
                 "-d",
                 results,
                 "--execute=true",
@@ -363,670 +653,62 @@ class Workload(object):
                 return False
         return True
 
-    def _execute_workload(
-        self,
-        connection,
-        workload_timeout,
-        ql_knobs={},
-        output_file=None,
-        workload_qdir=None,
-        env_spec=None,
-        disable_pg_hint=False,
-        blocklist=[],
-    ):
-        # Get the knobs.
-        real_knobs = {}
-        if env_spec is not None:
-            real_knobs = fetch_server_knobs(
-                connection,
-                tables=env_spec.action_space.get_knob_space().tables,
-                knobs=env_spec.action_space.get_knob_space().knobs,
-            )
-
-        workload_time = 0
-        time_left = workload_timeout
-
-        if workload_qdir is not None and workload_qdir[0] is not None:
-            workload_qdir, workload_qlist = workload_qdir
-            with open_and_save(self.dbgym_cfg, workload_qlist, "r") as f:
-                psql_order = [
-                    (f"Q{i+1}", workload_qdir / l.strip())
-                    for i, l in enumerate(f.readlines())
-                ]
-
-            actual_order = [p[0] for p in psql_order]
-            actual_sql_files = {k: str(v) for (k, v) in psql_order}
-            actual_queries = {}
-            for qid, qpat in psql_order:
-                with open_and_save(self.dbgym_cfg, qpat, "r") as f:
-                    query = f.read()
-                actual_queries[qid] = [(QueryType.SELECT, query)]
-        else:
-            actual_order = self.order
-            actual_sql_files = self.sql_files
-            actual_queries = self.queries
-
-        for qid in actual_order:
-            queries = actual_queries[qid]
-            if any([b in actual_sql_files[qid] for b in blocklist]):
-                continue
-
-            for sql_type, query in queries:
-                assert sql_type != QueryType.UNKNOWN
-                if sql_type != QueryType.SELECT:
-                    assert sql_type != QueryType.INS_UPD_DEL
-                    connection.execute(query)
-                    continue
-
-                if time_left > 0:
-                    # Relevant qid knobs.
-                    qid_knobs = [
-                        ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
-                    ]
-
-                    undo_disable = None
-                    if disable_pg_hint:
-                        # Alter the session first.
-                        disable = ";".join(
-                            [
-                                f"SET {knob.knob_name} = OFF"
-                                for (knob, value) in qid_knobs
-                                if value == 0
-                            ]
-                        )
-                        connection.execute(disable)
-
-                        undo_disable = ";".join(
-                            [
-                                f"SET {knob.knob_name} = ON"
-                                for (knob, value) in qid_knobs
-                                if value == 0
-                            ]
-                        )
-                    else:
-                        query = (
-                            "/*+ "
-                            + " ".join(
-                                [
-                                    knob.resolve_per_query_knob(
-                                        value, all_knobs=real_knobs
-                                    )
-                                    for (knob, value) in qid_knobs
-                                ]
-                            )
-                            + " */"
-                            + query
-                        )
-
-                    if output_file is not None:
-                        query = "EXPLAIN (ANALYZE, TIMING OFF) " + query
-
-                    _, qid_runtime, query_timeout, explain = (
-                        acquire_metrics_around_query(
-                            "", None, connection, qid, query, time_left, metrics=False
-                        )
-                    )
-
-                    if disable_pg_hint:
-                        # Now undo the session.
-                        connection.execute(undo_disable)
-
-                    time_left -= qid_runtime / 1e6
-                    workload_time += qid_runtime / 1e6
-
-                    if output_file is not None and explain is not None:
-                        pqkk = [(knob.name(), val) for (knob, val) in qid_knobs]
-                        output_file.write(f"{qid}\n")
-                        output_file.write(f"PerQuery: {pqkk}\n")
-                        output_file.write("\n".join(explain))
-                        output_file.write("\n")
-                        output_file.write("\n")
-        return workload_time
-
-    def _execute_psycopg(
-        self,
-        env_spec,
-        results,
-        connection,
-        action,
-        query_timeout,
-        reset_eval=False,
-        reset_accum_metric=None,
-        baseline=False,
-    ):
-        # Values of knobs that were really utilized.
-        ks = env_spec.action_space.get_knob_space()
-        real_knobs = fetch_server_knobs(
-            connection, tables=ks.tables if ks else [], knobs=ks.knobs if ks else {}
-        )
-        # Prior knob stae.
-        all_knobs = ks.get_state(None) if ks else {}
-        # Current action's per-query knobs.
-        ql_knobs = (
-            env_spec.action_space.get_query_level_knobs(action)
-            if action is not None
-            else {}
-        )
-
-        # Setup the mutilated action.
-        mutilated = None
-        need_metric = env_spec.observation_space.metrics()
-
-        query_explain_data = []
-        qid_runtime_data = {}
-        running_time = 0
-        stop_running = False
-        for qid_index, qid in enumerate(self.order):
-            if stop_running:
-                # Break out if we should stop running.
-                # Revert the queries that we don't know about...
-
-                # This should be back to the "previous might be good" -- or the selected one at least...
-                # Previous might not actually be good -- but better than an unknown current one that we
-                # have no intuition about i guess...
-                for qqid_index in range(qid_index, len(self.order)):
-                    # Relevant qid knobs.
-                    qid = self.order[qqid_index]
-                    qid_knobs = [
-                        ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
-                    ]
-                    qid_global = [
-                        (knob, all_knobs[knob.name()]) for (knob, _) in qid_knobs
-                    ]
-                    for knob, val in qid_global:
-                        action[env_spec.action_space.knob_space_ind][knob.name()] = val
-                    mutilated = action
-
-                    queries = self.queries[qid]
-                    for sql_type, query in queries:
-                        assert sql_type != QueryType.UNKNOWN
-                        if sql_type != QueryType.SELECT:
-                            assert sql_type != QueryType.INS_UPD_DEL
-                            connection.execute(query)
-                break
-
-            # Relevant qid knobs.
-            qid_knobs = [
-                ql_knobs[knob] for knob in ql_knobs.keys() if f"{qid}_" in knob
-            ]
-            inverse_knobs = [
-                (knob, knob.invert(val))
-                for knobname, (knob, val) in ql_knobs.items()
-                if f"{qid}_" in knobname
-            ]
-            # Rebuild the previous global per-query knob setting.
-            qid_global = [(knob, all_knobs[knob.name()]) for (knob, _) in qid_knobs]
-
-            queries = self.queries[qid]
-            qid_runtime = 0
-            for qidx, (sql_type, query) in enumerate(queries):
-                assert sql_type != QueryType.UNKNOWN
-                if sql_type != QueryType.SELECT:
-                    assert sql_type != QueryType.INS_UPD_DEL
-                    connection.execute(query)
-                    continue
-
-                # Construct the baseline! by regressing it into knob form.
-                ams, explain = self._parse_single_access_method(
-                    connection, qid, ignore=True
-                )
-                qid_default = regress_qid_knobs(qid_knobs, real_knobs, ams, explain)
-
-                # Start time.
-                start_time = time.time()
-
-                # Construct runs.
-                runs = []
-                if not reset_eval:
-                    if (
-                        self.workload_eval_mode in ["prev_dual", "all", "all_enum"]
-                        and len(qid_global) > 0
-                    ):
-                        # If reset_eval, then we basically want to evaluate with what we are tracking.
-                        # In the reset_eval case, tracking is the previous known-best!
-                        runs.append(("PrevDual", qid_global))
-
-                    if self.workload_eval_mode in [
-                        "global_dual",
-                        "all",
-                        "all_enum",
-                    ] or (
-                        self.workload_eval_mode == "prev_dual" and len(qid_global) == 0
-                    ):
-                        if len(runs) == 0 or [v[1] for v in qid_global] != [
-                            v[1] for v in qid_default
-                        ]:
-                            # Run only if the knobs don't match prev dual.
-                            runs.append(("GlobalDual", qid_default))
-
-                    if (
-                        self.workload_eval_mode == "all_enum"
-                        and len(qid_knobs) > 0
-                        and any([is_knob_enum(k) for k, _ in qid_knobs])
-                    ):
-                        # Run the "complete" binary version.
-                        top_enums = []
-                        bottom_enums = []
-                        for k, v in qid_knobs:
-                            if not is_knob_enum(k):
-                                top_enums.append((k, v))
-                                bottom_enums.append((k, v))
-                            elif is_binary_enum(k):
-                                top_enums.append((k, 1))
-                                bottom_enums.append((k, 0))
-                            else:
-                                top_enums.append((k, int(k.sample_uniform())))
-                                bottom_enums.append((k, int(k.sample_uniform())))
-                        runs.append(("TopEnum", top_enums))
-                        runs.append(("BottomEnum", bottom_enums))
-
-                    if self.workload_eval_mode == "default":
-                        # No flags.
-                        runs.append(("Default", []))
-
-                if len(qid_knobs) > 0:
-                    # This with a sleight of hand is always the action under investigation.
-                    runs.append(("PerQuery", qid_knobs))
-                    if self.workload_eval_inverse and not reset_eval:
-                        runs.append(("PerQueryInverse", inverse_knobs))
-                elif len(runs) == 0:
-                    runs.append(("GlobalDual", qid_default))
-
-                assert len(runs) > 0
-
-                if (
-                    reset_eval
-                    and [v[1] for v in qid_global] == [v[1] for v in qid_knobs]
-                    and qid in reset_accum_metric
-                ):
-                    # Case where the per-query and global match each other.
-                    assert qid in reset_accum_metric
-                    best_metric, best_time, best_query_timeout = reset_accum_metric[qid]
-                    runs_idx = ("PrevDual", qid_global, False)
-
-                    # Note that we skipped.
-                    logging.debug(f"reset_eval re-using prior computation for {qid}")
-                else:
-                    (
-                        best_metric,
-                        best_time,
-                        best_query_timeout,
-                        best_explain_data,
-                        runs_idx,
-                    ) = execute_serial_variations(
-                        env_spec=env_spec,
-                        connection=connection,
-                        query_timeout=min(
-                            query_timeout, self.workload_timeout - running_time + 1
-                        ),
-                        logger=self.logger,
-                        qid=qid,
-                        query=query,
-                        runs=runs,
-                        real_knobs=real_knobs,
-                    )
-
-                if not reset_eval and best_explain_data is not None:
-                    query_explain_data.append(
-                        (qid, runs_idx[0], runs_idx[1], best_explain_data)
-                    )
-
-                # Compare against the old if we have a record available.
-                # Note that PerQuery refers to the best observed record -- PrevDual is best of state.
-                if (
-                    reset_eval
-                    and runs_idx[0] == "PerQuery"
-                    and qid in reset_accum_metric
-                ):
-                    # Note this is a little awkward if we're doing "best-of" ness.
-                    # Old record is PrevDual which is the state being restored.
-                    # PerQuery in action refers to the best observed that is being tested.
-
-                    # Preventing old record from drifting and pre-maturely timing out -- we only run the PerQuery
-                    # and see how well it compares to (saved) PrevDual. Hopefully the cache warm-ness doesn't burn
-                    # us too much here.
-
-                    # If the "new" timed out or if "old" is better, use the old metric.
-                    _, old_best_time, _ = reset_accum_metric[qid]
-                    if best_query_timeout or old_best_time < best_time:
-                        best_metric, best_time, best_query_timeout = reset_accum_metric[
-                            qid
-                        ]
-                        runs_idx = ("PrevDual", qid_global)
-
-                assert qid not in qid_runtime_data
-                assert best_metric is not None or (not need_metric)
-                assert runs_idx[0] in [
-                    "TopEnum",
-                    "BottomEnum",
-                    "Default",
-                    "PrevDual",
-                    "GlobalDual",
-                    "PerQuery",
-                    "PerQueryInverse",
-                ]
-                if reset_eval:
-                    assert runs_idx[0] in ["PrevDual", "PerQuery"]
-                qid_runtime_data[qid] = {
-                    "start": start_time,
-                    "runtime": best_time,
-                    "metric": best_metric,
-                    "query_timeout": best_query_timeout,
-                    "prefix": runs_idx[0],
-                }
-
-                if runs_idx[0] == "PrevDual" and not best_query_timeout:
-                    # Overwrite the action decision with the prior decision.
-                    for knob, val in qid_global:
-                        action[env_spec.action_space.knob_space_ind][knob.name()] = val
-                    mutilated = action
-
-                    if reset_eval:
-                        logging.debug(f"best_observe action deemed not valuable.")
-                elif runs_idx[0] == "GlobalDual" and not best_query_timeout:
-                    assert not reset_eval
-                    for knob, val in qid_default:
-                        action[env_spec.action_space.knob_space_ind][knob.name()] = val
-                    mutilated = action
-                elif runs_idx[0] == "PerQueryInverse" and not best_query_timeout:
-                    assert not reset_eval
-                    for knob, val in inverse_knobs:
-                        action[env_spec.action_space.knob_space_ind][knob.name()] = val
-                    mutilated = action
-                elif (
-                    runs_idx[0] in ["TopEnum", "BottomEnum"] and not best_query_timeout
-                ):
-                    assert not reset_eval
-                    enum_knobs = runs_idx[1]
-
-                    # Get the actual access method utilized.
-                    pqk_query = (
-                        "/*+ "
-                        + " ".join(
-                            [
-                                knob.resolve_per_query_knob(value, all_knobs=real_knobs)
-                                for (knob, value) in enum_knobs
-                            ]
-                        )
-                        + " */"
-                        + query
-                    )
-                    pqk_query = "EXPLAIN (FORMAT JSON) " + pqk_query
-                    ams, explain = self._parse_query_am(connection, pqk_query)
-                    # Regress the access methods.
-                    qid_enum = regress_ams(enum_knobs, ams, explain)
-
-                    for knob, val in qid_enum:
-                        action[env_spec.action_space.knob_space_ind][knob.name()] = val
-                    mutilated = action
-
-                if (
-                    qid not in self.best_observed
-                    or (
-                        best_time < self.best_observed[qid][1]
-                        and not best_query_timeout
-                    )
-                    or reset_eval
-                ):
-                    # Knobs that are actually set.
-                    qid_set = [
-                        (
-                            knob,
-                            action[env_spec.action_space.knob_space_ind][knob.name()],
-                        )
-                        for (knob, _) in qid_knobs
-                    ]
-                    self.best_observed[qid] = (qid_set, best_time)
-                    logging.debug(
-                        f"[best_observe] {qid}: {best_time / 1.0e6} ({reset_eval})"
-                    )
-
-                # Break if we've exceeded the minimum time.
-                # Note that runtime is in microseconds.
-                running_time += qid_runtime_data[qid]["runtime"] / 1.0e6
-                if (
-                    self.early_workload_kill
-                    and self.workload_timeout > 0
-                    and running_time > self.workload_timeout
-                ):
-                    logging.info("Aborting workload early.")
-                    # Don't penalize for now since it should anyways have negative reward.
-                    stop_running = True
-
-                    for qqidx in range(qidx + 1, len(queries)):
-                        # Finish the remaining maintenance queries.
-                        sql_type, query = queries[qqidx]
-                        assert sql_type != QueryType.UNKNOWN
-                        if sql_type != QueryType.SELECT:
-                            assert sql_type != QueryType.INS_UPD_DEL
-                            connection.execute(query)
-                    break
-
-        # Get the timeouts flag.
-        query_timeouts = [v["query_timeout"] for _, v in qid_runtime_data.items()]
-        # Get the accumulated metrics.
-        accum_metric = {
-            q: (v["metric"], v["runtime"], v["query_timeout"])
-            for q, v in qid_runtime_data.items()
-        }
-
-        results_dir = Path(results)
-        if not results_dir.exists():
-            results_dir.mkdir(parents=True, exist_ok=True)
-
-        with open(results_dir / "run.plans", "w") as f:
-            for qid, prefix, pqk, explain in query_explain_data:
-                pqkk = [(knob.name(), val) for (knob, val) in pqk]
-
-                f.write(f"{qid}\n")
-                f.write(f"{prefix}: {pqkk}\n")
-                f.write(json.dumps(explain))
-                f.write("\n")
-                f.write("\n")
-
-        if need_metric:
-            accum_data = [v["metric"] for _, v in qid_runtime_data.items()]
-            accum_stats = env_spec.observation_space.merge_data(accum_data)
-
-            with open(results_dir / "run.metrics.json", "w") as f:
-
-                def flatten(d):
-                    flat = {}
-                    for k, v in d.items():
-                        if isinstance(v, dict):
-                            flat[k] = flatten(v)
-                        elif isinstance(v, np.ndarray):
-                            flat[k] = float(v[0])
-                        elif isinstance(v, np.ScalarType):
-                            if isinstance(v, str):
-                                flat[k] = v
-                            else:
-                                flat[k] = float(v)
-                        else:
-                            flat[k] = v
-                    return flat
-
-                output = flatten(accum_stats)
-                output["flattened"] = True
-                f.write(json.dumps(output, indent=4))
-
-        with open(results_dir / "run.raw.csv", "w") as f:
-            f.write(
-                "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
-            )
-            for i, qid in enumerate(self.order):
-                if qid in qid_runtime_data:
-                    start = qid_runtime_data[qid]["start"]
-                    run = qid_runtime_data[qid]["runtime"]
-                    prefix = qid_runtime_data[qid]["prefix"]
-                    f.write(f"{i+1},{qid},{start},{run},0,{prefix}\n")
-
-            if stop_running and self.workload_timeout_penalty > 1:
-                # Get the penalty.
-                penalty = (
-                    self.workload_timeout * self.workload_timeout_penalty - running_time
-                )
-                if not baseline:
-                    # Always make it a bit worse...
-                    penalty = (penalty + 1.05) * 1e6
-                else:
-                    penalty = penalty * 1e6
-            elif stop_running:
-                if not baseline:
-                    # Always degrade it a little if we've timed out.
-                    penalty = 3e6
-                else:
-                    penalty = 0
-            else:
-                penalty = 0
-
-            if penalty > 0:
-                f.write(f"{len(self.order)},P,{time.time()},{penalty},0,PENALTY\n")
-
-        return True, mutilated, (any(query_timeouts) or stop_running), accum_metric
-
     def execute(
         self,
-        connection,
-        reward_utility,
-        env_spec,
-        query_timeout=None,
-        action=None,
-        current_state=None,
-        update=True,
-    ):
+        pgconn: PostgresConn,
+        reward_utility: RewardUtility,
+        obs_space: StateSpace,
+        action_space: HolonSpace,
+        actions: list[HolonAction],
+        actions_names: list[str],
+        benchbase_config: dict[str, Any],
+        pqt: Optional[int] = None,
+        reset_metrics: Optional[dict[str, BestQueryRun]] = None,
+        update: bool = True,
+        first: bool = False,
+    ) -> Tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
-        logging.info("Starting to run benchmark...")
+        if self.logger:
+            self.logger.get_logger(__name__).info("Starting to run benchmark...")
+
+        # Purge results directory first.
+        tmp_dir = tempfile.gettempdir()
+        results = f"{tmp_dir}/results{pgconn.pgport}"
+        shutil.rmtree(results, ignore_errors=True)
 
         if self.benchbase:
-            # Attach a timeout if necessary to prevent really bad OLAP configs from running.
-            if query_timeout is not None and query_timeout > 0:
-                connection.execute(
-                    f"ALTER SYSTEM SET statement_timeout = {query_timeout * 1000}"
-                )
-                connection.execute("SELECT pg_reload_conf()")
-
-            # Purge results directory first.
-            results = f"{env_spec.benchbase_path}/results{env_spec.postgres_port}"
-            shutil.rmtree(results, ignore_errors=True)
-
             # Execute benchbase if specified.
-            success = self._execute_benchbase(env_spec, results)
-            if success:
-                # We can only create a state if we succeeded.
-                args = {
-                    "connection": connection,
-                    "results": results,
-                    "action": action,
-                }
-                success = env_spec.observation_space.check_benchbase(**args)
-                if success:
-                    state = env_spec.observation_space.construct_offline(**args)
-                else:
-                    logging.error("Benchbase failed to produce a valid output result.")
-                    assert current_state is not None
-                    state = current_state
-            else:
-                assert current_state is not None
-                state = current_state
-
-            metric, reward = None, None
-            if reward_utility is not None:
-                metric, reward = reward_utility(
-                    result_dir=results, update=update, did_error=not success
-                )
-
-            if query_timeout is not None and query_timeout > 0:
-                connection.execute("ALTER SYSTEM SET statement_timeout = 0")
-                connection.execute("SELECT pg_reload_conf()")
-
-            # Benchbase can't mutilate.
-            mutilated = None
-            q_timeout = False
-            accum_metric = None
-        elif self.allow_per_query:
-            # Purge results directory first.
-            results = f"{env_spec.benchbase_path}/results{env_spec.postgres_port}"
-            shutil.rmtree(results, ignore_errors=True)
-            baseline = current_state is None
-
-            success, mutilated, q_timeout, accum_metric = self._execute_psycopg(
-                env_spec, results, connection, action, query_timeout, baseline=baseline
+            success = self._execute_benchbase(benchbase_config, results)
+            # We can only create a state if we succeeded.
+            success = obs_space.check_benchbase(self.dbgym_cfg, results)
+        else:
+            ret = self._execute_workload(
+                pgconn,
+                actions=actions,
+                actions_names=actions_names,
+                results=results,
+                obs_space=obs_space,
+                action_space=action_space,
+                reset_metrics=reset_metrics,
+                override_workload_timeout=self.workload_timeout,
+                pqt=pqt,
+                workload_qdir=None,
+                disable_pg_hint=False,
+                blocklist=[],
+                first=first,
             )
+            assert isinstance(ret, tuple)
+            success, q_timeout, query_metric_data = ret[0], ret[1], ret[2]
             assert success
 
-            args = {
-                "connection": connection,
-                "results": results,
-                "action": mutilated if mutilated is not None else action,
-            }
-            state = env_spec.observation_space.construct_offline(**args)
-            assert success, logging.error(
-                "Invalid benchbase results information created from per-query run."
+        metric, reward = None, None
+        if reward_utility is not None:
+            metric, reward = reward_utility(
+                result_dir=results, update=update, did_error=not success
             )
 
-            metric, reward = None, None
-            if reward_utility is not None:
-                metric, reward = reward_utility(
-                    result_dir=results, update=update, did_error=not success
-                )
-        else:
-            assert False, "Currently don't support not running with benchbase."
-
-        logging.info(
-            f"Benchmark iteration with metric {metric} (reward: {reward}) (q_timeout: {q_timeout})"
-        )
-        return (
-            success,
-            metric,
-            reward,
-            results,
-            state,
-            mutilated,
-            q_timeout,
-            accum_metric,
-        )
-
-    def _parse_query_am(self, connection, query):
-        data = [r for r in connection.execute(query)][0][0]
-        data = data[0]
-        return parse_access_method(data), data
-
-    def _parse_single_access_method(self, connection, qid, ignore=False):
-        qams = {}
-        explain = None
-        queries = self.queries[qid]
-        for sql_type, query in queries:
-            if sql_type != QueryType.SELECT:
-                assert sql_type != QueryType.INS_UPD_DEL
-                if not ignore:
-                    connection.execute(query)
-                continue
-
-            explain = "EXPLAIN (FORMAT JSON) " + query
-            qams_delta, explain = self._parse_query_am(connection, explain)
-            qams.update(qams_delta)
-        return qams, explain
-
-    def parse_all_access_methods(self, connection):
-        q_ams = {}
-        for qid in self.order:
-            q_ams[qid] = self._parse_single_access_method(connection, qid)[0]
-        return q_ams
-
-    def save_state(self):
-        kv = {}
-        for attr in dir(self):
-            if (
-                attr == "logger"
-                or attr.startswith("_")
-                or callable(getattr(self, attr))
-            ):
-                continue
-            kv[attr] = getattr(self, attr)
-        return kv
-
-    def load_state(self, d):
-        for attr in dir(self):
-            if attr in d:
-                setattr(self, attr, d[attr])
+        if self.logger:
+            self.logger.get_logger(__name__).info(
+                f"Benchmark iteration with metric {metric} (reward: {reward}) (q_timeout: {q_timeout})"
+            )
+        return success, metric, reward, results, q_timeout, query_metric_data

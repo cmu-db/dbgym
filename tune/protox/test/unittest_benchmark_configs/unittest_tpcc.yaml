@@ -1,0 +1,162 @@
+tpcc:
+  query_spec:
+    benchbase: True
+    oltp_workload: True
+    tbl_include_subsets_prune: True
+    tbl_fold_subsets: False
+    tbl_fold_delta: 1
+    tbl_fold_iterations: 1
+
+  max_num_columns: 21
+  tables:
+    - warehouse
+    - district
+    - customer
+    - history
+    - oorder
+    - order_line
+    - new_order
+    - stock
+    - item
+
+  attributes:
+    warehouse:
+      - w_id
+      - w_ytd
+      - w_tax
+      - w_name
+      - w_street_1
+      - w_street_2
+      - w_city
+      - w_state
+      - w_zip
+    item:
+      - i_id
+      - i_name
+      - i_price
+      - i_data
+      - i_im_id
+    stock:
+      - s_w_id
+      - s_i_id
+      - s_quantity
+      - s_ytd
+      - s_order_cnt
+      - s_remote_cnt
+      - s_data
+      - s_dist_01
+      - s_dist_02
+      - s_dist_03
+      - s_dist_04
+      - s_dist_05
+      - s_dist_06
+      - s_dist_07
+      - s_dist_08
+      - s_dist_09
+      - s_dist_10
+    district:
+      - d_w_id
+      - d_id
+      - d_ytd
+      - d_tax
+      - d_next_o_id
+      - d_name
+      - d_street_1
+      - d_street_2
+      - d_city
+      - d_state
+      - d_zip
+    customer:
+      - c_w_id
+      - c_d_id
+      - c_id
+      - c_discount
+      - c_credit
+      - c_last
+      - c_first
+      - c_credit_lim
+      - c_balance
+      - c_ytd_payment
+      - c_payment_cnt
+      - c_delivery_cnt
+      - c_street_1
+      - c_street_2
+      - c_city
+      - c_state
+      - c_zip
+      - c_phone
+      - c_since
+      - c_middle
+      - c_data
+    history:
+      - h_c_id
+      - h_c_d_id
+      - h_c_w_id
+      - h_d_id
+      - h_w_id
+      - h_date
+      - h_amount
+      - h_data
+    oorder:
+      - o_w_id
+      - o_d_id
+      - o_id
+      - o_c_id
+      - o_carrier_id
+      - o_ol_cnt
+      - o_all_local
+      - o_entry_d
+    new_order:
+      - no_w_id
+      - no_d_id
+      - no_o_id
+    order_line:
+      - ol_w_id
+      - ol_d_id
+      - ol_o_id
+      - ol_number
+      - ol_i_id
+      - ol_delivery_d
+      - ol_amount
+      - ol_supply_w_id
+      - ol_quantity
+      - ol_dist_info
+
+  # Additional table level knobs.
+  # Format:
+  #   <tbl_name>:
+  #     <Knob Specification 0>
+  #     <Knob Specification 1>
+  #     ...
+  table_level_knobs:
+    warehouse:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    district:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    customer:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    history:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    oorder:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    order_line:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    new_order:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    stock:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+    item:
+      fillfactor: {type: "integer", min: 10, max: 100, quantize: 9, log_scale: 0, unit_scale: 0, unit: 0, round: True}
+
+  # Per-query knobs.
+  # Format:
+  #   <benchbase TransactionType.name>:
+  #     <Knob Specification 0>
+  #     ...
+  per_query_knobs: {}
+  per_query_scan_method: False
+  per_query_select_parallel: False
+  index_space_aux_type: False
+  index_space_aux_include: False
+  per_query_knob_gen: {}
+  per_query_knobs: {}

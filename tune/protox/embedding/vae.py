@@ -1,15 +1,18 @@
-import math
+from typing import Any, Callable, Optional, Tuple, Type, Union, cast
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from pytorch_metric_learning import losses, reducers
-from pytorch_metric_learning.utils import common_functions as c_f
+from pytorch_metric_learning import losses, reducers  # type: ignore
+from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
 
 
-def gen_vae_collate(max_categorical, infer=False):
-    def vae_collate(batch, device="auto"):
+def gen_vae_collate(
+    max_categorical: int, infer: bool = False
+) -> Callable[[list[Any]], Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]]:
+    def vae_collate(
+        batch: list[Any],
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         if infer:
             x = torch.as_tensor(batch).type(torch.int64)
         else:
@@ -17,28 +20,32 @@ def gen_vae_collate(max_categorical, infer=False):
             x = torch.stack([e[0] for e in batch]).type(torch.int64)
 
             y_shape = batch[0][1].shape[0]
-            y = torch.stack([e[1] for e in batch]).view((x.shape[0], y_shape))
+            ret_y = torch.stack([e[1] for e in batch]).view((x.shape[0], y_shape))
 
         # One-hot all the X's.
         scatter_dim = len(x.size())
         x_tensor = x.view(*x.size(), -1)
-        x = torch.zeros(*x.size(), max_categorical, dtype=x.dtype)
-        x = (
-            x.scatter_(scatter_dim, x_tensor, 1)
-            .view(x.shape[0], -1)
+        zero_x = torch.zeros(*x.size(), max_categorical, dtype=x.dtype)
+        ret_x: torch.Tensor = (
+            zero_x.scatter_(scatter_dim, x_tensor, 1)
+            .view(zero_x.shape[0], -1)
             .type(torch.float32)
         )
 
         if infer:
-            return x
+            return ret_x
         else:
-            return x, y
+            return ret_x, ret_y
 
     return vae_collate
 
 
-def acquire_loss_function(loss_type, max_attrs, max_categorical):
-    def vae_cat_loss(preds, data, labels):
+def acquire_loss_function(
+    loss_type: str, max_attrs: int, max_categorical: int
+) -> Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]:
+    def vae_cat_loss(
+        preds: torch.Tensor, data: torch.Tensor, labels: torch.Tensor
+    ) -> torch.Tensor:
         if len(labels.shape) == 2:
             labels = labels[:, -1].flatten()
 
@@ -74,50 +81,32 @@ def acquire_loss_function(loss_type, max_attrs, max_categorical):
     return loss_fn
 
 
-def create_vae_model(config, max_attrs, max_cat_features):
-    cat_input = max_attrs * max_cat_features
-
-    assert config["act"] in ["relu", "mish"]
-    assert config["mean_output_act"] in ["tanh_squash", "sigmoid"]
-
-    mean_output_act = {
-        "sigmoid": nn.Sigmoid,
-    }[config["mean_output_act"]]
-
-    torch.set_float32_matmul_precision("high")
-    model = VAE(
-        max_categorical=max_cat_features,
-        input_dim=cat_input,
-        hidden_sizes=list(config["hidden_sizes"]),
-        latent_dim=config["latent_dim"],
-        act=nn.ReLU if config["act"] == "relu" else nn.Mish,
-        bias_init=config["bias_init"],
-        weight_init=config["weight_init"],
-        weight_uniform=config["weight_uniform"],
-        mean_output_act=mean_output_act,
-        output_scale=config.get("output_scale", 1.0),
-    )
-
-    return model
-
-
-class VAEReducer(reducers.MultipleReducers):
-    def __init__(self, *args, **kwargs):
+class VAEReducer(reducers.MultipleReducers):  # type: ignore
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         reducer = {
             "recon_loss": reducers.MeanReducer(),
             "elbo": reducers.MeanReducer(),
         }
         super().__init__(reducer, *args, **kwargs)
 
-    def sub_loss_reduction(self, sub_losses, embeddings=None, labels=None):
+    def sub_loss_reduction(
+        self, sub_losses: list[Any], embeddings: Any = None, labels: Any = None
+    ) -> Any:
         assert "elbo" in self.reducers
         for i, k in enumerate(self.reducers.keys()):
             if k == "elbo":
                 return sub_losses[i]
 
 
-class VAELoss(losses.BaseMetricLossFunction):
-    def __init__(self, loss_fn, max_attrs, max_categorical, *args, **kwargs):
+class VAELoss(losses.BaseMetricLossFunction):  # type: ignore
+    def __init__(
+        self,
+        loss_fn: str,
+        max_attrs: int,
+        max_categorical: int,
+        *args: Any,
+        **kwargs: Any
+    ):
         super().__init__(reducer=VAEReducer(), *args, **kwargs)
         self.loss_fn = acquire_loss_function(loss_fn, max_attrs, max_categorical)
 
@@ -128,13 +117,13 @@ class VAELoss(losses.BaseMetricLossFunction):
 
     def forward(
         self,
-        embeddings,
-        labels=None,
-        indices_tuple=None,
-        ref_emb=None,
-        ref_labels=None,
-        is_eval=False,
-    ):
+        embeddings: torch.Tensor,
+        labels: Any = None,
+        indices_tuple: Any = None,
+        ref_emb: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        ref_labels: Any = None,
+        is_eval: bool = False,
+    ) -> Any:
         """
         Args:
             embeddings: tensor of size (batch_size, embedding_size)
@@ -155,11 +144,20 @@ class VAELoss(losses.BaseMetricLossFunction):
         self.add_embedding_regularization_to_loss_dict(loss_dict, embeddings)
         return self.reducer(loss_dict, embeddings, labels)
 
-    def compute_loss(self, preds, unused0, unused1, data, *args, **kwargs):
+    def compute_loss(
+        self,
+        preds: torch.Tensor,
+        unused0: Any,
+        unused1: Any,
+        tdata: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        *args: Any,
+        **kwargs: Any
+    ) -> Any:
         is_eval = kwargs.get("is_eval", False)
         eval_fn = self.eval_loss_fn if is_eval else self.loss_fn
 
-        data, labels = data
+        assert tdata
+        data, labels = tdata
         recon_loss = eval_fn(preds, data, labels)
 
         # ELBO:
@@ -179,18 +177,24 @@ class VAELoss(losses.BaseMetricLossFunction):
         }
         return self.last_loss_dict
 
-    def _sub_loss_names(self):
+    def _sub_loss_names(self) -> list[str]:
         return ["recon_loss", "elbo"]
 
 
 class Network(nn.Module):
-    def __init__(self, input_dim, hidden_sizes, output_dim, act):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_sizes: list[int],
+        output_dim: int,
+        act: Callable[[], nn.Module],
+    ) -> None:
         super(Network, self).__init__()
 
         # Parametrize each standard deviation separately.
         dims = [input_dim] + hidden_sizes + [output_dim]
 
-        layers = []
+        layers: list[nn.Module] = []
         for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
@@ -199,19 +203,26 @@ class Network(nn.Module):
             layers = layers[:-1]
         self.module = nn.Sequential(*layers)
 
-    def forward(self, x):
-        return self.module(x)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return cast(torch.Tensor, self.module(x))
 
 
 # Define the encoder
 class Encoder(nn.Module):
-    def __init__(self, input_dim, hidden_sizes, latent_dim, act, mean_output_act=None):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_sizes: list[int],
+        latent_dim: int,
+        act: Type[nn.Module],
+        mean_output_act: Optional[Type[nn.Module]] = None,
+    ):
         super(Encoder, self).__init__()
 
         # Parametrize each standard deviation separately.
         dims = [input_dim] + hidden_sizes + [latent_dim]
 
-        layers = []
+        layers: list[nn.Module] = []
         for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
@@ -225,7 +236,7 @@ class Encoder(nn.Module):
         else:
             self.mean_output_act = mean_output_act()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         assert len(x.shape) == 2
         mu = self.module(x)
 
@@ -233,16 +244,22 @@ class Encoder(nn.Module):
         if self.mean_output_act is not None:
             mu = self.mean_output_act(mu)
 
-        return mu
+        return cast(torch.Tensor, mu)
 
 
 # Define the decoder
 class Decoder(nn.Module):
-    def __init__(self, latent_dim, hidden_sizes, input_dim, act):
+    def __init__(
+        self,
+        latent_dim: int,
+        hidden_sizes: list[int],
+        input_dim: int,
+        act: Type[nn.Module],
+    ):
         super(Decoder, self).__init__()
 
         dims = [latent_dim] + [l for l in hidden_sizes] + [input_dim]
-        layers = []
+        layers: list[nn.Module] = []
         for d1, d2 in zip(dims[:-1], dims[1:]):
             layers.append(nn.Linear(d1, d2))
             if act is not None:
@@ -251,13 +268,19 @@ class Decoder(nn.Module):
             layers = layers[:-1]
         self.module = nn.Sequential(*layers)
 
-    def forward(self, z):
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
         x_hat = self.module(z)
-        return x_hat
+        return cast(torch.Tensor, x_hat)
 
 
-def init_modules(encoder, decoder, bias_init, weight_init, weight_uniform):
-    def init(layer):
+def init_modules(
+    encoder: Encoder,
+    decoder: Decoder,
+    bias_init: str,
+    weight_init: str,
+    weight_uniform: bool,
+) -> None:
+    def init(layer: nn.Module) -> None:
         if isinstance(layer, nn.Linear):
             if bias_init == "zeros":
                 torch.nn.init.zeros_(layer.bias)
@@ -266,16 +289,19 @@ def init_modules(encoder, decoder, bias_init, weight_init, weight_uniform):
                 torch.nn.init.constant_(layer.bias, cons)
 
             if weight_init != "default":
-                init_fn = {
-                    ("xavier", True): torch.nn.init.xavier_uniform_,
-                    ("xavier", False): torch.nn.init.xavier_normal_,
-                    ("kaiming", True): torch.nn.init.kaiming_uniform_,
-                    ("kaiming", False): torch.nn.init.kaiming_normal_,
-                    ("spectral", True): torch.nn.utils.spectral_norm,
-                    ("spectral", False): torch.nn.utils.spectral_norm,
-                    ("orthogonal", True): torch.nn.init.orthogonal_,
-                    ("orthogonal", False): torch.nn.init.orthogonal_,
-                }[(weight_init, weight_uniform)]
+                init_fn: Callable[[Union[nn.Module, torch.Tensor]], None] = cast(
+                    Callable[[Union[nn.Module, torch.Tensor]], None],
+                    {
+                        ("xavier", True): torch.nn.init.xavier_uniform_,
+                        ("xavier", False): torch.nn.init.xavier_normal_,
+                        ("kaiming", True): torch.nn.init.kaiming_uniform_,
+                        ("kaiming", False): torch.nn.init.kaiming_normal_,
+                        ("spectral", True): torch.nn.utils.spectral_norm,
+                        ("spectral", False): torch.nn.utils.spectral_norm,
+                        ("orthogonal", True): torch.nn.init.orthogonal_,
+                        ("orthogonal", False): torch.nn.init.orthogonal_,
+                    }[(weight_init, weight_uniform)],
+                )
 
                 if weight_init == "spectral":
                     init_fn(layer)
@@ -292,39 +318,62 @@ def init_modules(encoder, decoder, bias_init, weight_init, weight_uniform):
 class VAE(nn.Module):
     def __init__(
         self,
-        max_categorical,
-        input_dim,
-        hidden_sizes,
-        latent_dim,
-        act,
-        bias_init="default",
-        weight_init="default",
-        weight_uniform=None,
-        mean_output_act=None,
-        output_scale=1.0,
-    ):
+        max_categorical: int,
+        input_dim: int,
+        hidden_sizes: list[int],
+        latent_dim: int,
+        act: Type[nn.Module],
+        bias_init: str = "default",
+        weight_init: str = "default",
+        weight_uniform: bool = False,
+        mean_output_act: Optional[Type[nn.Module]] = None,
+        output_scale: float = 1.0,
+    ) -> None:
         super(VAE, self).__init__()
         self.encoder = Encoder(
             input_dim, hidden_sizes, latent_dim, act, mean_output_act=mean_output_act
         )
-        self.decoder = Decoder(latent_dim, reversed(hidden_sizes), input_dim, act)
+        self.decoder = Decoder(latent_dim, list(reversed(hidden_sizes)), input_dim, act)
         init_modules(self.encoder, self.decoder, bias_init, weight_init, weight_uniform)
 
         self.input_dim = input_dim
         self.max_categorical = max_categorical
-        self._collate = None
+        self._collate: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
         self.output_scale = output_scale
 
-    def get_collate(self):
+    def get_collate(self) -> Callable[[torch.Tensor], torch.Tensor]:
         if self._collate is None:
-            self._collate = gen_vae_collate(self.max_categorical, infer=True)
+            # In infer mode, we def know it'll only return 1 argument.
+            self._collate = cast(
+                Callable[[torch.Tensor], torch.Tensor],
+                gen_vae_collate(self.max_categorical, infer=True),
+            )
         return self._collate
 
-    def forward(self, x, bias=None):
-        return self.latents(x, bias=bias, require_full=True)
+    def forward(
+        self,
+        x: torch.Tensor,
+        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor, bool], Tuple[torch.Tensor, bool]]:
+        return self._compute(x, bias=bias, require_full=True)
 
-    def latents(self, x, bias=None, require_full=False):
-        latents = self.encoder(x)
+    def latents(
+        self,
+        x: torch.Tensor,
+        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
+        require_full: bool = False,
+    ) -> Tuple[torch.Tensor, bool]:
+        rets = self._compute(x, bias=bias, require_full=False)
+        assert len(rets) == 2
+        return rets[0], rets[1]
+
+    def _compute(
+        self,
+        x: torch.Tensor,
+        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
+        require_full: bool = False,
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor, bool], Tuple[torch.Tensor, bool]]:
+        latents: torch.Tensor = self.encoder(x)
         latents = latents * self.output_scale
 
         if bias is not None:
@@ -340,11 +389,11 @@ class VAE(nn.Module):
                 else:
                     latents = torch.clamp(latents, 0, bias[1])
 
-        error = (latents.isnan() | latents.isinf()).any()
+        lerror = bool((latents.isnan() | latents.isinf()).any())
 
         if require_full:
-            decoded = self.decoder(latents)
-            error = error or (decoded.isnan() | decoded.isinf()).any()
-            return latents, decoded, error
+            decoded: torch.Tensor = self.decoder(latents)
+            derror = bool((decoded.isnan() | decoded.isinf()).any())
+            return latents, decoded, (lerror or derror)
 
-        return latents, error
+        return latents, lerror

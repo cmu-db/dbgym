@@ -4,7 +4,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-
 import click
 import yaml
 
@@ -20,25 +19,34 @@ PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 
 
-# This is a function because both DBGymConfig and the default path globalvars use it
+# Helper functions that both this file and other files use
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
+
+def get_scale_factor_string(scale_factor: float | str) -> str:
+    if scale_factor == SCALE_FACTOR_PLACEHOLDER:
+        return scale_factor
+    else:
+        return str(scale_factor).replace(".", "point")
+    
+def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata.tgz"
 
 
 # Other parameters
 BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
 WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
+SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
 
 # Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
-DEFAULT_PROTOX_CONFIG_RELPATH = PROTOX_AGENT_RELPATH / "default_protox_config.yaml"
-DEFAULT_WOLP_PARAMS_RELPATH = PROTOX_WOLP_RELPATH / "default_wolp_params.yaml"
-default_benchmark_config_relpath = (
+DEFAULT_SYSKNOBS_RELPATH = PROTOX_AGENT_RELPATH / "default_sysknobs.yaml"
+default_benchmark_config_path = (
     lambda benchmark_name: PROTOX_RELPATH
     / f"default_{benchmark_name}_benchmark_config.yaml"
 )
-default_benchbase_config_relpath = (
+default_benchbase_config_path = (
     lambda benchmark_name: PROTOX_RELPATH
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
@@ -49,21 +57,30 @@ default_benchbase_config_relpath = (
 #   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
-default_dataset_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+traindata_fname = (
+    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
+)
+default_traindata_path = (
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding_traindata.parquet"
+    / "dbgym_tune_protox_embedding"
+    / "data"
+    / traindata_fname(benchmark_name, workload_name, scale_factor)
 )
 default_embedding_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"benchmark_{benchmark_name}-workload_{workload_name}_embedding"
+    / "dbgym_tune_protox_embedding"
+    / "data"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
 )
 default_hpoed_agent_params_path = (
-    lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
-    / f"hpoed_agent_params.yaml"
+    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
+    / "dbgym_tune_protox_agent"
+    / "data"
+    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -73,13 +90,19 @@ default_workload_path = (
     / "data"
     / f"workload_{workload_name}"
 )
-default_pgdata_snapshot_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+default_pristine_pgdata_snapshot_path = (
+    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / f"dbgym_dbms_postgres"
     / "data"
-    / f"benchmark_{benchmark_name}-workload_{workload_name}.tgz"
+    / get_pgdata_tgz_name(benchmark_name, scale_factor)
+)
+default_pgbin_path = (
+    lambda workspace_path: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_dbms_postgres" / "build" / "repo" / "boot"/ "build" / "postgres" / "bin"
 )
 
 
@@ -137,6 +160,14 @@ class DBGymConfig:
             self.dbgym_workspace_path
         )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
+        # tmp is a workspace for this run only
+        # one use for it is to place the unzipped pgdata
+        # there's no need to save the actual pgdata dir in run_*/ because we just save a symlink to
+        #   the .tgz file we unzipped
+        self.dbgym_tmp_path = self.dbgym_workspace_path / "tmp"
+        if self.dbgym_tmp_path.exists():
+            shutil.rmtree(self.dbgym_tmp_path)
+        self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.
         self.dbgym_this_run_path = (
@@ -144,6 +175,11 @@ class DBGymConfig:
         )
         # exist_ok is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+
+    def __del__(self):
+        pass # DEBUG(phw2)
+        # if self.dbgym_tmp_path.exists():
+        #     shutil.rmtree(self.dbgym_tmp_path)
 
     # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
@@ -193,26 +229,34 @@ class DBGymConfig:
     def cur_task_runs_data_path(self, *dirs, mkdir=False) -> Path:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
+    def cur_task_runs_artifacts_path(self, *dirs, mkdir=False) -> Path:
+        return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
-def conv_inputpath_to_abspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
+
+def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
     """
-    Convert any user inputted path to an absolute path
+    Convert any user inputted path to a real, absolute path
     For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
     Relative paths are relative to the base dbgym repo dir
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     """
-    # expanduser() is always "safe" to call
-    inputpath = os.path.expanduser(inputpath)
-    # the reason we don't call os.path.abspath() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
+    # for simplicity we only process Path objects
+    realabspath = Path(inputpath)
+    # expanduser() is always "ok" to call first
+    realabspath = realabspath.expanduser()
+    # the reason we don't call Path.absolute() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
     #   which is not necessary where cwd() points at the time of calling this function
-    if os.path.isabs(inputpath):
-        inputpath = os.path.normpath(inputpath)
-    else:
-        inputpath = os.path.normpath(os.path.join(dbgym_cfg.dbgym_repo_path, inputpath))
-    # as mentioned in the function doc, we always return a Path object
-    return Path(inputpath)
+    if not realabspath.is_absolute():
+        realabspath = dbgym_cfg.dbgym_repo_path / realabspath
+    # resolve has two uses: normalize the path (remove ..) and resolve symlinks
+    # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
+    #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
+    realabspath = realabspath.resolve()
+    assert realabspath.is_absolute(), f"after being processed, realabspath ({realabspath}) is still not absolute"
+    assert realabspath.exists(), f"after being processed, realabspath ({realabspath}) is still a non-existent path"
+    return realabspath
 
 
 def is_base_git_dir(cwd) -> bool:
@@ -264,11 +308,10 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
 
 def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     """
-    Open a file or symlink and "save" it to [workspace]/task_runs/run_*/.
-        If you open a symlink, it'll save the real file the link points to rather than the link itself.
+    Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
-    Note that open() only opens files, not symlinks, so the interface is not exactly the same. Opening symlinks is
-        crucial because it means we can change symlink files in [workspace]/data/ instead of changing config files
+    This file does not work if open_fpath is a symlink, to make its interface identical to that of open().
+        Make sure to resolve all symlinks with conv_inputpath_to_realabspath().
     See the comment of save_file() for what "saving" means
     If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
         This shouldn't be too hard to remember because this function crashes if open_fpath doesn't exist,
@@ -284,7 +327,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     assert os.path.isabs(
         open_fpath
     ), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
-    open_fpath = os.path.realpath(open_fpath)  # traverse symlinks
+    assert not os.path.islink(open_fpath), f"open_fpath ({open_fpath}) should not be a symlink"
     assert os.path.exists(open_fpath), f"open_fpath ({open_fpath}) does not exist"
     # open_and_save *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
     #   a file though. we sometimes save a directory (see save_file() for details)
@@ -297,8 +340,8 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
     return open(open_fpath, mode=mode)
 
 
-# TODO(phw2): after merging agent-train, refactor some parts to use save_file() instead of open_and_save()
-def save_file(cfg: DBGymConfig, fpath: os.PathLike):
+# TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
+def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -308,41 +351,42 @@ def save_file(cfg: DBGymConfig, fpath: os.PathLike):
         In these cases we create a symlink so we have full provenance for how the dependency was created
     """
     # process fpath and ensure that it's a file at the end
-    fpath = conv_inputpath_to_abspath(cfg, fpath)
+    fpath = conv_inputpath_to_realabspath(dbgym_cfg, fpath)
     fpath = os.path.realpath(fpath)  # traverse symlinks
+    assert not os.path.islink(fpath), f"fpath ({fpath}) should not be a symlink"
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
     assert not is_child_path(
-        fpath, cfg.dbgym_this_run_path
-    ), f"fpath ({fpath}) was generated in this task run ({cfg.dbgym_this_run_path}). You do not need to save it"
+        fpath, dbgym_cfg.dbgym_this_run_path
+    ), f"fpath ({fpath}) was generated in this task run ({dbgym_cfg.dbgym_this_run_path}). You do not need to save it"
 
     # save _something_ to dbgym_this_run_path
     # save a symlink if the opened file was generated by a run. this is for two reasons:
     #   1. files or dirs generated by a run are supposed to be immutable so saving a symlink is safe
     #   2. files or dirs generated by a run may be very large (up to 100s of GBs) so we don't want to copy them
-    if is_child_path(fpath, cfg.dbgym_runs_path):
+    if is_child_path(fpath, dbgym_cfg.dbgym_runs_path):
         # get paths we'll need later.
         parent_dpath = os.path.dirname(fpath)
         assert not os.path.samefile(
-            parent_dpath, cfg.dbgym_runs_path
-        ), f"fpath ({fpath}) should be inside a run_*/ dir instead of directly in cfg.dbgym_runs_path ({cfg.dbgym_runs_path})"
+            parent_dpath, dbgym_cfg.dbgym_runs_path
+        ), f"fpath ({fpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
         assert not os.path.samefile(
-            parent_dir(parent_dpath), cfg.dbgym_runs_path
-        ), f"fpath ({fpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({cfg.dbgym_runs_path})"
+            parent_dir(parent_dpath), dbgym_cfg.dbgym_runs_path
+        ), f"fpath ({fpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
         assert not os.path.samefile(
-            parent_dir(parent_dir(parent_dpath)), cfg.dbgym_runs_path
-        ), f"fpath ({fpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({cfg.dbgym_runs_path})"
+            parent_dir(parent_dir(parent_dpath)), dbgym_cfg.dbgym_runs_path
+        ), f"fpath ({fpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
         # org_dpath is the run_*/[codebase]/[organization]/ dir that fpath is in
         org_dpath = parent_dpath
         while not os.path.samefile(
-            parent_dir(parent_dir(parent_dir(org_dpath))), cfg.dbgym_runs_path
+            parent_dir(parent_dir(parent_dir(org_dpath))), dbgym_cfg.dbgym_runs_path
         ):
             org_dpath = parent_dir(org_dpath)
         org_dname = dir_basename(org_dpath)
         codebase_dpath = parent_dir(org_dpath)
         codebase_dname = dir_basename(codebase_dpath)
         this_run_save_dpath = os.path.join(
-            cfg.dbgym_this_run_path, codebase_dname, org_dname
+            dbgym_cfg.dbgym_this_run_path, codebase_dname, org_dname
         )
         os.makedirs(this_run_save_dpath, exist_ok=True)
 
@@ -368,9 +412,15 @@ def save_file(cfg: DBGymConfig, fpath: os.PathLike):
             # this existence check is for if you call save_file() on a file in the same directory twice
             if not os.path.exists(symlink_dpath):
                 os.symlink(base_dpath, symlink_dpath)
-    # save a copy if it wasn't generated by a run
+    # if it wasn't generated by a run
     else:
+        # since we don't know where the file is at all, the location is "unknown" and the org is "all"
+        this_run_save_dpath = os.path.join(
+            dbgym_cfg.dbgym_this_run_path, "unknown", "all"
+        )
+        os.makedirs(this_run_save_dpath, exist_ok=True)
         fname = os.path.basename(fpath)
+        # in this case, we want to copy instead of symlinking since it might disappear in the future
         copy_fpath = os.path.join(this_run_save_dpath, fname)
         shutil.copy(fpath, copy_fpath)
 
@@ -385,7 +435,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     Will override the old symlink if there is one
     This is called so that [workspace]/data/ always contains the latest generated version of a file
     """
-    result_path = conv_inputpath_to_abspath(dbgym_cfg, result_path)
+    result_path = conv_inputpath_to_realabspath(dbgym_cfg, result_path)
     assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_path)
 

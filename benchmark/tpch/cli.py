@@ -1,18 +1,13 @@
 import logging
-from pathlib import Path
 
 import click
-from sqlalchemy import create_engine
 
 from misc.utils import DBGymConfig
 from util.shell import subprocess_run
-from util.sql import *
+from util.pg import *
 
 benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
 benchmark_tpch_logger.setLevel(logging.INFO)
-
-TPCH_SCHEMA_FNAME = "tpch_schema.sql"
-TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
 
 
 @click.group(name="tpch")

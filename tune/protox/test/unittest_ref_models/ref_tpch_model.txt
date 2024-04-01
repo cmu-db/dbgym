@@ -1,0 +1,203 @@
+{
+    "act": "mish",
+    "batch_size": 2048,
+    "bias_init": "default",
+    "grad_clip_amount": 5,
+    "loss_fn": "vae_cat_loss",
+    "lr": 0.009162564891815383,
+    "mean_output_act": "sigmoid",
+    "metric_loss_md": {
+        "addtl_bias_separation": 0.0,
+        "bias_separation": 0.025,
+        "cost_reduction_type": "quant_mult_cost_improvement",
+        "distance_fn": "hard,l1",
+        "distance_scale": "1",
+        "metric_loss": "l2_distance_loss",
+        "require_cost": true,
+        "output_scale": 0.025
+    },
+    "addtl_bias_separation": 0.0,
+    "bias_separation": 0.025,
+    "cost_reduction_type": "quant_mult_cost_improvement",
+    "distance_fn": "hard,l1",
+    "distance_scale": "1",
+    "metric_loss": "l2_distance_loss",
+    "require_cost": true,
+    "metric_loss_weight": 0,
+    "model": {
+        "hidden_sizes": [
+            256,
+            64
+        ],
+        "latent_dim": 32
+    },
+    "hidden_sizes": [
+        256,
+        64
+    ],
+    "latent_dim": 32,
+    "num_epochs": 20,
+    "output_scale": 0.025,
+    "save_every": 1,
+    "use_bias": true,
+    "weak_bias": false,
+    "weight_decay": 2.0396990348242052e-06,
+    "weight_init": "orthogonal",
+    "weight_uniform": false,
+    "seed": 47665045,
+    "iterations_per_epoch": 1000,
+    "class_mapping": {
+        "0": {
+            "relname": "part",
+            "ord_column": "p_partkey"
+        },
+        "1": {
+            "relname": "part",
+            "ord_column": "p_name"
+        },
+        "2": {
+            "relname": "part",
+            "ord_column": "p_brand"
+        },
+        "3": {
+            "relname": "part",
+            "ord_column": "p_type"
+        },
+        "4": {
+            "relname": "part",
+            "ord_column": "p_size"
+        },
+        "5": {
+            "relname": "part",
+            "ord_column": "p_container"
+        },
+        "6": {
+            "relname": "partsupp",
+            "ord_column": "ps_partkey"
+        },
+        "7": {
+            "relname": "partsupp",
+            "ord_column": "ps_suppkey"
+        },
+        "8": {
+            "relname": "partsupp",
+            "ord_column": "ps_availqty"
+        },
+        "9": {
+            "relname": "partsupp",
+            "ord_column": "ps_supplycost"
+        },
+        "10": {
+            "relname": "lineitem",
+            "ord_column": "l_orderkey"
+        },
+        "11": {
+            "relname": "lineitem",
+            "ord_column": "l_partkey"
+        },
+        "12": {
+            "relname": "lineitem",
+            "ord_column": "l_suppkey"
+        },
+        "13": {
+            "relname": "lineitem",
+            "ord_column": "l_quantity"
+        },
+        "14": {
+            "relname": "lineitem",
+            "ord_column": "l_discount"
+        },
+        "15": {
+            "relname": "lineitem",
+            "ord_column": "l_returnflag"
+        },
+        "16": {
+            "relname": "lineitem",
+            "ord_column": "l_shipdate"
+        },
+        "17": {
+            "relname": "lineitem",
+            "ord_column": "l_commitdate"
+        },
+        "18": {
+            "relname": "lineitem",
+            "ord_column": "l_receiptdate"
+        },
+        "19": {
+            "relname": "lineitem",
+            "ord_column": "l_shipinstruct"
+        },
+        "20": {
+            "relname": "lineitem",
+            "ord_column": "l_shipmode"
+        },
+        "21": {
+            "relname": "orders",
+            "ord_column": "o_orderkey"
+        },
+        "22": {
+            "relname": "orders",
+            "ord_column": "o_custkey"
+        },
+        "23": {
+            "relname": "orders",
+            "ord_column": "o_orderstatus"
+        },
+        "24": {
+            "relname": "orders",
+            "ord_column": "o_orderdate"
+        },
+        "25": {
+            "relname": "supplier",
+            "ord_column": "s_suppkey"
+        },
+        "26": {
+            "relname": "supplier",
+            "ord_column": "s_nationkey"
+        },
+        "27": {
+            "relname": "supplier",
+            "ord_column": "s_comment"
+        },
+        "28": {
+            "relname": "customer",
+            "ord_column": "c_custkey"
+        },
+        "29": {
+            "relname": "customer",
+            "ord_column": "c_nationkey"
+        },
+        "30": {
+            "relname": "customer",
+            "ord_column": "c_phone"
+        },
+        "31": {
+            "relname": "customer",
+            "ord_column": "c_acctbal"
+        },
+        "32": {
+            "relname": "customer",
+            "ord_column": "c_mktsegment"
+        },
+        "33": {
+            "relname": "nation",
+            "ord_column": "n_nationkey"
+        },
+        "34": {
+            "relname": "nation",
+            "ord_column": "n_name"
+        },
+        "35": {
+            "relname": "nation",
+            "ord_column": "n_regionkey"
+        },
+        "36": {
+            "relname": "region",
+            "ord_column": "r_regionkey"
+        },
+        "37": {
+            "relname": "region",
+            "ord_column": "r_name"
+        }
+    }
+}

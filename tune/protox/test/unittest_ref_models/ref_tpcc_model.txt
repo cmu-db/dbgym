@@ -1,0 +1,136 @@
+{
+    "act": "mish",
+    "batch_size": 512,
+    "bias_init": "zeros",
+    "deterministic": true,
+    "grad_clip_amount": 1,
+    "loss_fn": "vae_cat_loss",
+    "lr": 0.007334573982804172,
+    "mean_output_act": "sigmoid",
+    "metric_loss_md": {
+        "addtl_bias_separation": 0.0,
+        "bias_separation": 0.025,
+        "cost_reduction_type": "quant_mult_cost_improvement",
+        "distance_fn": "hard,l1",
+        "distance_scale": "1",
+        "metric_loss": "l2_distance_loss",
+        "require_cost": true,
+        "output_scale": 0.025
+    },
+    "addtl_bias_separation": 0.0,
+    "bias_separation": 0.025,
+    "cost_reduction_type": "quant_mult_cost_improvement",
+    "distance_fn": "hard,l1",
+    "distance_scale": "1",
+    "metric_loss": "l2_distance_loss",
+    "require_cost": true,
+    "metric_loss_weight": 0,
+    "model": {
+        "hidden_sizes": [
+            64,
+            64
+        ],
+        "latent_dim": 32
+    },
+    "hidden_sizes": [
+        64,
+        64
+    ],
+    "latent_dim": 32,
+    "num_epochs": 20,
+    "output_scale": 0.025,
+    "save_every": 1,
+    "use_bias": true,
+    "weak_bias": false,
+    "weight_decay": 6.442398529660073e-06,
+    "weight_init": "xavier",
+    "weight_uniform": false,
+    "seed": 31872891,
+    "iterations_per_epoch": 1000,
+    "class_mapping": {
+        "0": {
+            "relname": "warehouse",
+            "ord_column": "w_id"
+        },
+        "1": {
+            "relname": "district",
+            "ord_column": "d_w_id"
+        },
+        "2": {
+            "relname": "district",
+            "ord_column": "d_id"
+        },
+        "3": {
+            "relname": "customer",
+            "ord_column": "c_w_id"
+        },
+        "4": {
+            "relname": "customer",
+            "ord_column": "c_d_id"
+        },
+        "5": {
+            "relname": "customer",
+            "ord_column": "c_id"
+        },
+        "6": {
+            "relname": "customer",
+            "ord_column": "c_last"
+        },
+        "7": {
+            "relname": "oorder",
+            "ord_column": "o_w_id"
+        },
+        "8": {
+            "relname": "oorder",
+            "ord_column": "o_d_id"
+        },
+        "9": {
+            "relname": "oorder",
+            "ord_column": "o_id"
+        },
+        "10": {
+            "relname": "oorder",
+            "ord_column": "o_c_id"
+        },
+        "11": {
+            "relname": "order_line",
+            "ord_column": "ol_w_id"
+        },
+        "12": {
+            "relname": "order_line",
+            "ord_column": "ol_d_id"
+        },
+        "13": {
+            "relname": "order_line",
+            "ord_column": "ol_o_id"
+        },
+        "14": {
+            "relname": "order_line",
+            "ord_column": "ol_i_id"
+        },
+        "15": {
+            "relname": "new_order",
+            "ord_column": "no_w_id"
+        },
+        "16": {
+            "relname": "new_order",
+            "ord_column": "no_d_id"
+        },
+        "17": {
+            "relname": "stock",
+            "ord_column": "s_w_id"
+        },
+        "18": {
+            "relname": "stock",
+            "ord_column": "s_i_id"
+        },
+        "19": {
+            "relname": "stock",
+            "ord_column": "s_quantity"
+        },
+        "20": {
+            "relname": "item",
+            "ord_column": "i_id"
+        }
+    }
+}

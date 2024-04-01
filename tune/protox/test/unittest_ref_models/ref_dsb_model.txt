@@ -1,0 +1,595 @@
+{
+    "act": "mish",
+    "batch_size": 1024,
+    "bias_init": "default",
+    "grad_clip_amount": 10,
+    "loss_fn": "vae_cat_loss",
+    "lr": 0.008418399527260454,
+    "mean_output_act": "sigmoid",
+    "metric_loss_md": {
+        "addtl_bias_separation": 0.045,
+        "bias_separation": 0.005,
+        "cost_reduction_type": "quant_mult_cost_improvement",
+        "distance_fn": "hard,l1",
+        "distance_scale": "1",
+        "metric_loss": "l2_distance_loss",
+        "require_cost": true,
+        "output_scale": 0.049999999999999996
+    },
+    "addtl_bias_separation": 0.045,
+    "bias_separation": 0.005,
+    "cost_reduction_type": "quant_mult_cost_improvement",
+    "distance_fn": "hard,l1",
+    "distance_scale": "1",
+    "metric_loss": "l2_distance_loss",
+    "require_cost": true,
+    "metric_loss_weight": 0,
+    "model": {
+        "hidden_sizes": [
+            256,
+            128
+        ],
+        "latent_dim": 64
+    },
+    "hidden_sizes": [
+        256,
+        128
+    ],
+    "latent_dim": 64,
+    "num_epochs": 30,
+    "output_scale": 0.049999999999999996,
+    "save_every": 1,
+    "use_bias": true,
+    "weak_bias": true,
+    "weight_decay": 9.45101322547238e-06,
+    "weight_init": "xavier",
+    "weight_uniform": true,
+    "seed": 84575163,
+    "iterations_per_epoch": 1000,
+    "class_mapping": {
+        "0": {
+            "relname": "customer_address",
+            "ord_column": "ca_address_sk"
+        },
+        "1": {
+            "relname": "customer_address",
+            "ord_column": "ca_city"
+        },
+        "2": {
+            "relname": "customer_address",
+            "ord_column": "ca_county"
+        },
+        "3": {
+            "relname": "customer_address",
+            "ord_column": "ca_state"
+        },
+        "4": {
+            "relname": "customer_address",
+            "ord_column": "ca_zip"
+        },
+        "5": {
+            "relname": "customer_address",
+            "ord_column": "ca_country"
+        },
+        "6": {
+            "relname": "customer_address",
+            "ord_column": "ca_gmt_offset"
+        },
+        "7": {
+            "relname": "customer_demographics",
+            "ord_column": "cd_demo_sk"
+        },
+        "8": {
+            "relname": "customer_demographics",
+            "ord_column": "cd_gender"
+        },
+        "9": {
+            "relname": "customer_demographics",
+            "ord_column": "cd_marital_status"
+        },
+        "10": {
+            "relname": "customer_demographics",
+            "ord_column": "cd_education_status"
+        },
+        "11": {
+            "relname": "customer_demographics",
+            "ord_column": "cd_dep_count"
+        },
+        "12": {
+            "relname": "date_dim",
+            "ord_column": "d_date_sk"
+        },
+        "13": {
+            "relname": "date_dim",
+            "ord_column": "d_date"
+        },
+        "14": {
+            "relname": "date_dim",
+            "ord_column": "d_month_seq"
+        },
+        "15": {
+            "relname": "date_dim",
+            "ord_column": "d_week_seq"
+        },
+        "16": {
+            "relname": "date_dim",
+            "ord_column": "d_year"
+        },
+        "17": {
+            "relname": "date_dim",
+            "ord_column": "d_dow"
+        },
+        "18": {
+            "relname": "date_dim",
+            "ord_column": "d_moy"
+        },
+        "19": {
+            "relname": "date_dim",
+            "ord_column": "d_dom"
+        },
+        "20": {
+            "relname": "warehouse",
+            "ord_column": "w_warehouse_sk"
+        },
+        "21": {
+            "relname": "warehouse",
+            "ord_column": "w_state"
+        },
+        "22": {
+            "relname": "warehouse",
+            "ord_column": "w_gmt_offset"
+        },
+        "23": {
+            "relname": "ship_mode",
+            "ord_column": "sm_ship_mode_sk"
+        },
+        "24": {
+            "relname": "ship_mode",
+            "ord_column": "sm_type"
+        },
+        "25": {
+            "relname": "reason",
+            "ord_column": "r_reason_sk"
+        },
+        "26": {
+            "relname": "income_band",
+            "ord_column": "ib_income_band_sk"
+        },
+        "27": {
+            "relname": "income_band",
+            "ord_column": "ib_lower_bound"
+        },
+        "28": {
+            "relname": "income_band",
+            "ord_column": "ib_upper_bound"
+        },
+        "29": {
+            "relname": "item",
+            "ord_column": "i_item_sk"
+        },
+        "30": {
+            "relname": "item",
+            "ord_column": "i_current_price"
+        },
+        "31": {
+            "relname": "item",
+            "ord_column": "i_brand_id"
+        },
+        "32": {
+            "relname": "item",
+            "ord_column": "i_class_id"
+        },
+        "33": {
+            "relname": "item",
+            "ord_column": "i_class"
+        },
+        "34": {
+            "relname": "item",
+            "ord_column": "i_category_id"
+        },
+        "35": {
+            "relname": "item",
+            "ord_column": "i_category"
+        },
+        "36": {
+            "relname": "item",
+            "ord_column": "i_manufact_id"
+        },
+        "37": {
+            "relname": "item",
+            "ord_column": "i_color"
+        },
+        "38": {
+            "relname": "item",
+            "ord_column": "i_manager_id"
+        },
+        "39": {
+            "relname": "store",
+            "ord_column": "s_store_sk"
+        },
+        "40": {
+            "relname": "store",
+            "ord_column": "s_county"
+        },
+        "41": {
+            "relname": "store",
+            "ord_column": "s_state"
+        },
+        "42": {
+            "relname": "store",
+            "ord_column": "s_zip"
+        },
+        "43": {
+            "relname": "call_center",
+            "ord_column": "cc_call_center_sk"
+        },
+        "44": {
+            "relname": "call_center",
+            "ord_column": "cc_class"
+        },
+        "45": {
+            "relname": "customer",
+            "ord_column": "c_customer_sk"
+        },
+        "46": {
+            "relname": "customer",
+            "ord_column": "c_current_cdemo_sk"
+        },
+        "47": {
+            "relname": "customer",
+            "ord_column": "c_current_hdemo_sk"
+        },
+        "48": {
+            "relname": "customer",
+            "ord_column": "c_current_addr_sk"
+        },
+        "49": {
+            "relname": "customer",
+            "ord_column": "c_first_shipto_date_sk"
+        },
+        "50": {
+            "relname": "customer",
+            "ord_column": "c_first_sales_date_sk"
+        },
+        "51": {
+            "relname": "customer",
+            "ord_column": "c_birth_month"
+        },
+        "52": {
+            "relname": "customer",
+            "ord_column": "c_birth_year"
+        },
+        "53": {
+            "relname": "web_site",
+            "ord_column": "web_site_sk"
+        },
+        "54": {
+            "relname": "web_site",
+            "ord_column": "web_gmt_offset"
+        },
+        "55": {
+            "relname": "store_returns",
+            "ord_column": "sr_returned_date_sk"
+        },
+        "56": {
+            "relname": "store_returns",
+            "ord_column": "sr_item_sk"
+        },
+        "57": {
+            "relname": "store_returns",
+            "ord_column": "sr_customer_sk"
+        },
+        "58": {
+            "relname": "store_returns",
+            "ord_column": "sr_cdemo_sk"
+        },
+        "59": {
+            "relname": "store_returns",
+            "ord_column": "sr_store_sk"
+        },
+        "60": {
+            "relname": "store_returns",
+            "ord_column": "sr_reason_sk"
+        },
+        "61": {
+            "relname": "store_returns",
+            "ord_column": "sr_ticket_number"
+        },
+        "62": {
+            "relname": "store_returns",
+            "ord_column": "sr_return_quantity"
+        },
+        "63": {
+            "relname": "store_returns",
+            "ord_column": "sr_return_amt"
+        },
+        "64": {
+            "relname": "household_demographics",
+            "ord_column": "hd_demo_sk"
+        },
+        "65": {
+            "relname": "household_demographics",
+            "ord_column": "hd_income_band_sk"
+        },
+        "66": {
+            "relname": "household_demographics",
+            "ord_column": "hd_buy_potential"
+        },
+        "67": {
+            "relname": "household_demographics",
+            "ord_column": "hd_dep_count"
+        },
+        "68": {
+            "relname": "web_page",
+            "ord_column": "wp_web_page_sk"
+        },
+        "69": {
+            "relname": "promotion",
+            "ord_column": "p_promo_sk"
+        },
+        "70": {
+            "relname": "promotion",
+            "ord_column": "p_channel_email"
+        },
+        "71": {
+            "relname": "promotion",
+            "ord_column": "p_channel_tv"
+        },
+        "72": {
+            "relname": "promotion",
+            "ord_column": "p_channel_radio"
+        },
+        "73": {
+            "relname": "promotion",
+            "ord_column": "p_channel_press"
+        },
+        "74": {
+            "relname": "promotion",
+            "ord_column": "p_channel_event"
+        },
+        "75": {
+            "relname": "catalog_page",
+            "ord_column": "cp_catalog_page_sk"
+        },
+        "76": {
+            "relname": "inventory",
+            "ord_column": "inv_date_sk"
+        },
+        "77": {
+            "relname": "inventory",
+            "ord_column": "inv_item_sk"
+        },
+        "78": {
+            "relname": "inventory",
+            "ord_column": "inv_warehouse_sk"
+        },
+        "79": {
+            "relname": "inventory",
+            "ord_column": "inv_quantity_on_hand"
+        },
+        "80": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_returned_date_sk"
+        },
+        "81": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_item_sk"
+        },
+        "82": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_returning_customer_sk"
+        },
+        "83": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_returning_addr_sk"
+        },
+        "84": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_call_center_sk"
+        },
+        "85": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_reason_sk"
+        },
+        "86": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_order_number"
+        },
+        "87": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_return_quantity"
+        },
+        "88": {
+            "relname": "catalog_returns",
+            "ord_column": "cr_return_amount"
+        },
+        "89": {
+            "relname": "web_sales",
+            "ord_column": "ws_sold_date_sk"
+        },
+        "90": {
+            "relname": "web_sales",
+            "ord_column": "ws_ship_date_sk"
+        },
+        "91": {
+            "relname": "web_sales",
+            "ord_column": "ws_item_sk"
+        },
+        "92": {
+            "relname": "web_sales",
+            "ord_column": "ws_bill_customer_sk"
+        },
+        "93": {
+            "relname": "web_sales",
+            "ord_column": "ws_bill_addr_sk"
+        },
+        "94": {
+            "relname": "web_sales",
+            "ord_column": "ws_ship_addr_sk"
+        },
+        "95": {
+            "relname": "web_sales",
+            "ord_column": "ws_web_page_sk"
+        },
+        "96": {
+            "relname": "web_sales",
+            "ord_column": "ws_web_site_sk"
+        },
+        "97": {
+            "relname": "web_sales",
+            "ord_column": "ws_warehouse_sk"
+        },
+        "98": {
+            "relname": "web_sales",
+            "ord_column": "ws_promo_sk"
+        },
+        "99": {
+            "relname": "web_sales",
+            "ord_column": "ws_order_number"
+        },
+        "100": {
+            "relname": "web_sales",
+            "ord_column": "ws_wholesale_cost"
+        },
+        "101": {
+            "relname": "web_sales",
+            "ord_column": "ws_list_price"
+        },
+        "102": {
+            "relname": "web_sales",
+            "ord_column": "ws_sales_price"
+        },
+        "103": {
+            "relname": "web_sales",
+            "ord_column": "ws_ext_discount_amt"
+        },
+        "104": {
+            "relname": "web_sales",
+            "ord_column": "ws_net_profit"
+        },
+        "105": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_sold_date_sk"
+        },
+        "106": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_ship_date_sk"
+        },
+        "107": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_bill_customer_sk"
+        },
+        "108": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_bill_cdemo_sk"
+        },
+        "109": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_ship_customer_sk"
+        },
+        "110": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_call_center_sk"
+        },
+        "111": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_catalog_page_sk"
+        },
+        "112": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_ship_mode_sk"
+        },
+        "113": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_warehouse_sk"
+        },
+        "114": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_item_sk"
+        },
+        "115": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_promo_sk"
+        },
+        "116": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_order_number"
+        },
+        "117": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_quantity"
+        },
+        "118": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_wholesale_cost"
+        },
+        "119": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_list_price"
+        },
+        "120": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_sales_price"
+        },
+        "121": {
+            "relname": "catalog_sales",
+            "ord_column": "cs_ext_discount_amt"
+        },
+        "122": {
+            "relname": "store_sales",
+            "ord_column": "ss_sold_date_sk"
+        },
+        "123": {
+            "relname": "store_sales",
+            "ord_column": "ss_item_sk"
+        },
+        "124": {
+            "relname": "store_sales",
+            "ord_column": "ss_customer_sk"
+        },
+        "125": {
+            "relname": "store_sales",
+            "ord_column": "ss_cdemo_sk"
+        },
+        "126": {
+            "relname": "store_sales",
+            "ord_column": "ss_hdemo_sk"
+        },
+        "127": {
+            "relname": "store_sales",
+            "ord_column": "ss_addr_sk"
+        },
+        "128": {
+            "relname": "store_sales",
+            "ord_column": "ss_store_sk"
+        },
+        "129": {
+            "relname": "store_sales",
+            "ord_column": "ss_promo_sk"
+        },
+        "130": {
+            "relname": "store_sales",
+            "ord_column": "ss_ticket_number"
+        },
+        "131": {
+            "relname": "store_sales",
+            "ord_column": "ss_quantity"
+        },
+        "132": {
+            "relname": "store_sales",
+            "ord_column": "ss_wholesale_cost"
+        },
+        "133": {
+            "relname": "store_sales",
+            "ord_column": "ss_list_price"
+        },
+        "134": {
+            "relname": "store_sales",
+            "ord_column": "ss_sales_price"
+        },
+        "135": {
+            "relname": "store_sales",
+            "ord_column": "ss_net_profit"
+        }
+    }
+}
