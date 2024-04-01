@@ -6,7 +6,6 @@ import yaml
 
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
-from experiment.cli import experiment_group
 from misc.utils import DBGymConfig
 from tune.cli import tune_group
 

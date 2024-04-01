@@ -117,7 +117,7 @@ class AgentHPOArgs:
     "--early-kill", is_flag=True, help="Whether the tuner times out its steps."
 )
 @click.option(
-    "--duration", default=0.01, type=float, help="The total number of hours to run for."
+    "--duration", default=30, type=float, help="The total number of hours to run for."
 )
 @click.option(
     "--workload-timeout",
