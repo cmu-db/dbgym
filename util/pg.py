@@ -31,8 +31,8 @@ def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> List[str]:
         return pglast.split(queries)
 
 
-def sql_file_execute(conn: Connection, filepath: Path) -> None:
-    for sql in sql_file_queries(filepath):
+def sql_file_execute(dbgym_cfg: DBGymConfig, conn: Connection, filepath: Path) -> None:
+    for sql in sql_file_queries(dbgym_cfg, filepath):
         conn_execute(conn, sql)
 
 
