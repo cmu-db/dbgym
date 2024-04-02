@@ -10,11 +10,11 @@ from misc.utils import (
     DEFAULT_HPO_SPACE_RELPATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
-    SCALE_FACTOR_PLACEHOLDER,
     conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
+    workload_name_fn,
 )
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
@@ -61,7 +61,7 @@ from tune.protox.embedding.train_args import (
     "--traindata-path",
     default=None,
     type=Path,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -191,7 +191,7 @@ def train(
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if traindata_path == None:
         traindata_path = default_traindata_path(
-            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)

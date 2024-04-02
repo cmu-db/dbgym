@@ -62,32 +62,32 @@ default_benchbase_config_path = (
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
 traindata_fname = (
-    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
 default_traindata_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / traindata_fname(benchmark_name, workload_name, scale_factor)
+    / traindata_fname(benchmark_name, workload_name)
 )
 default_embedder_dname = (
-    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedder"
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
 )
 default_embedder_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / default_embedder_dname(benchmark_name, workload_name, scale_factor)
+    / default_embedder_dname(benchmark_name, workload_name)
 )
 default_hpoed_agent_params_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_tune_protox_agent"
     / "data"
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
+    / f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
 )
 workload_name_fn = (
     lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"

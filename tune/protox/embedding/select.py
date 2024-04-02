@@ -77,7 +77,7 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
             )
 
             if loop_i == 0:
-                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name, generic_args.scale_factor))
+                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name))
 
             info_txt.write(f"model{idx}/embedder.pth\n")
             idx += 1

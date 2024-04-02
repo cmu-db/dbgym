@@ -17,5 +17,5 @@ python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-fa
 python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --scale-factor 10 --train-max-concurrent 10
 
 # agent
-python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4
+python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --duration 4 --early-kill
 python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR
