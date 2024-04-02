@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 
 import click
 
@@ -30,7 +32,7 @@ def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float):
 @click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
 @click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
 @click.option(
-    "--seed-subset",
+    "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
     default="all",
 )
@@ -40,13 +42,17 @@ def tpch_workload(
     dbgym_cfg: DBGymConfig,
     seed_start: int,
     seed_end: int,
-    seed_subset: str,
+    query_subset: str,
     scale_factor: float,
 ):
     assert seed_start <= seed_end, f'seed_start ({seed_start}) must be <= seed_end ({seed_end})'
     _clone(dbgym_cfg)
-    _generate_queries(dbgym_cfg, seed_start, seed_end)
-    _generate_workload(dbgym_cfg, seed_start, seed_end, seed_subset, scale_factor)
+    _generate_queries(dbgym_cfg, seed_start, seed_end, scale_factor)
+    _generate_workload(dbgym_cfg, seed_start, seed_end, query_subset, scale_factor)
+
+
+def _get_queries_dname(seed: int, scale_factor: float) -> str:
+    return f"queries_{seed}_sf{get_scale_factor_string(scale_factor)}"
 
 
 def _clone(dbgym_cfg: DBGymConfig):
@@ -66,7 +72,7 @@ def _clone(dbgym_cfg: DBGymConfig):
     benchmark_tpch_logger.info(f"Cloned: {symlink_dir}")
 
 
-def _generate_queries(dbgym_cfg, seed_start, seed_end):
+def _generate_queries(dbgym_cfg: DBGymConfig, seed_start: int, seed_end: int, scale_factor: float):
     build_path = dbgym_cfg.cur_symlinks_build_path()
     assert build_path.exists()
 
@@ -75,15 +81,15 @@ def _generate_queries(dbgym_cfg, seed_start, seed_end):
         f"Generating queries: {data_path} [{seed_start}, {seed_end}]"
     )
     for seed in range(seed_start, seed_end + 1):
-        symlinked_seed = data_path / f"queries_{seed}"
+        symlinked_seed = data_path / _get_queries_dname(seed, scale_factor)
         if symlinked_seed.exists():
             continue
 
-        real_dir = dbgym_cfg.cur_task_runs_data_path(f"queries_{seed}", mkdir=True)
+        real_dir = dbgym_cfg.cur_task_runs_data_path(_get_queries_dname(seed, scale_factor), mkdir=True)
         for i in range(1, 22 + 1):
             target_sql = (real_dir / f"{i}.sql").resolve()
             subprocess_run(
-                f"DSS_QUERY=./queries ./qgen {i} -r {seed} > {target_sql}",
+                f"DSS_QUERY=./queries ./qgen {i} -r {seed} -s {scale_factor} > {target_sql}",
                 cwd=build_path / "tpch-kit" / "dbgen",
                 verbose=False,
             )
@@ -118,36 +124,36 @@ def _generate_workload(
     dbgym_cfg: DBGymConfig,
     seed_start: int,
     seed_end: int,
-    seed_subset: str,
+    query_subset: str,
     scale_factor: float,
 ):
-    data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
-    workload_path = data_path / workload_name
-    if workload_path.exists():
-        benchmark_tpch_logger.error(f"Workload directory exists: {workload_path}")
-        raise RuntimeError(f"Workload directory exists: {workload_path}")
+    symlink_data_dir = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_symlink_path = symlink_data_dir / workload_name
 
-    benchmark_tpch_logger.info(f"Generating: {workload_path}")
+    benchmark_tpch_logger.info(f"Generating: {workload_symlink_path}")
     real_dir = dbgym_cfg.cur_task_runs_data_path(
         workload_name, mkdir=True
     )
 
     queries = None
-    if seed_subset == "all":
+    if query_subset == "all":
         queries = [f"{i}" for i in range(1, 22 + 1)]
-    elif seed_subset == "even":
+    elif query_subset == "even":
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 0]
-    elif seed_subset == "odd":
+    elif query_subset == "odd":
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 1]
 
     with open(real_dir / "order.txt", "w") as f:
         for seed in range(seed_start, seed_end + 1):
             for qnum in queries:
-                sqlfile = data_path / f"queries_{seed}" / f"{qnum}.sql"
+                sqlfile = symlink_data_dir / _get_queries_dname(seed, scale_factor) / f"{qnum}.sql"
                 assert sqlfile.exists()
                 output = ",".join([f"S{seed}-Q{qnum}", str(sqlfile)])
                 print(output, file=f)
                 # TODO(WAN): add option to deep-copy the workload.
-    subprocess_run(f"ln -s {real_dir} {data_path}")
-    benchmark_tpch_logger.info(f"Generated: {workload_path}")
+    
+    if workload_symlink_path.exists():
+        os.remove(workload_symlink_path)
+    subprocess_run(f"ln -s {real_dir} {workload_symlink_path}")
+    benchmark_tpch_logger.info(f"Generated: {workload_symlink_path}")

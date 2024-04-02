@@ -90,7 +90,7 @@ default_hpoed_agent_params_path = (
     / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
 )
 workload_name_fn = (
-    lambda scale_factor, seed_start, seed_end, seed_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{seed_subset}"
+    lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -98,7 +98,7 @@ default_workload_path = (
     )
     / f"dbgym_benchmark_{benchmark_name}"
     / "data"
-    / f"workload_{workload_name}"
+    / workload_name
 )
 default_pristine_pgdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(

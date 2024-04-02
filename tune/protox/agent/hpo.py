@@ -54,7 +54,7 @@ class AgentHPOArgs:
 @click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
 @click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
 @click.option(
-    "--seed-subset",
+    "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
     default="all",
 )
@@ -145,7 +145,7 @@ def hpo(
     benchmark_name,
     seed_start,
     seed_end,
-    seed_subset,
+    query_subset,
     scale_factor,
     embedder_path,
     benchmark_config_path,
@@ -164,7 +164,7 @@ def hpo(
     query_timeout,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if embedder_path == None:
         embedder_path = default_embedder_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
     if benchmark_config_path == None:

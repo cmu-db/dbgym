@@ -17,7 +17,7 @@ from tune.protox.agent.hpo import TuneTrial, build_space
 @click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
 @click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
 @click.option(
-    "--seed-subset",
+    "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
     default="all",
 )
@@ -32,9 +32,9 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     type=Path,
     help=f"The path to best params found by the agent HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
 )
-def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, seed_subset: str, scale_factor: float, hpoed_agent_params_path: Path) -> None:
+def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
 
