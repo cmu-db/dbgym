@@ -28,7 +28,7 @@ class PostgresConn:
         dbgym_cfg: DBGymConfig,
         pgport: int,
         pristine_pgdata_snapshot_fpath: Path,
-        pgbin_dpath: Union[str, Path],
+        pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
         logger: Logger,
@@ -37,7 +37,7 @@ class PostgresConn:
         Path(postgres_logs_dir).mkdir(parents=True, exist_ok=True)
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
-        self.pgbin_dpath = pgbin_dpath
+        self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
         self.log_step = 0
@@ -89,7 +89,7 @@ class PostgresConn:
 
         while True:
             self.logger.get_logger(__name__).debug("Shutting down postgres...")
-            _, stdout, stderr = local[f"{self.pgbin_dpath}/pg_ctl"][
+            _, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "stop", "--wait", "-t", "180", "-D", self.pgdata_dpath
             ].run(retcode=None)
             time.sleep(1)
@@ -98,7 +98,7 @@ class PostgresConn:
             )
 
             # Wait until pg_isready fails.
-            retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 "localhost",
                 "--port",
@@ -153,7 +153,7 @@ class PostgresConn:
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
-            retcode, stdout, stderr = local[f"{self.pgbin_dpath}/pg_ctl"][
+            retcode, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "-D",
                 self.pgdata_dpath,
                 "--wait",
@@ -187,7 +187,7 @@ class PostgresConn:
                 )
                 return False
 
-            retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 "localhost",
                 "--port",

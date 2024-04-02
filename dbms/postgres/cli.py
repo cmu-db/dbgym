@@ -13,7 +13,7 @@ import shutil
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, open_and_save, save_file, get_pgdata_tgz_name
+from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER
 from util.shell import subprocess_run
 from sqlalchemy import Connection
 from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
@@ -45,8 +45,17 @@ def postgres_build(dbgym_cfg: DBGymConfig):
 @click.pass_obj
 @click.argument("benchmark_name", type=str)
 @click.option("--scale-factor", type=float, default=1)
-def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float):
-    _create_pgdata(dbgym_cfg, benchmark_name, scale_factor)
+@click.option("--pgbin-path", type=Path, default=None, help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.")
+def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path):
+    # Set args to defaults programmatically (do this before doing anything else in the function)
+    if pgbin_path == None:
+        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+
+    # Convert all input paths to absolute paths
+    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
+
+    # Create pgdata
+    _create_pgdata(dbgym_cfg, benchmark_name, scale_factor, pgbin_path)
 
 
 def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
@@ -85,7 +94,7 @@ def _build_repo(dbgym_cfg: DBGymConfig):
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float):
+def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path) -> None:
     """
     I chose *not* for this function to skip by default if pgdata_tgz_symlink_path already exists. This
       is because, while the generated data is deterministic given benchmark_name and scale_factor, any
@@ -99,23 +108,20 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
     pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
 
     # initdb
-    pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
-    assert pgbin_symlink_dpath.exists()
     # save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run
-    save_file(dbgym_cfg, pgbin_symlink_dpath / "initdb")
-    subprocess_run(f'./initdb -D "{pgdata_dpath}"', cwd=pgbin_symlink_dpath)
+    save_file(dbgym_cfg, pgbin_path / "initdb")
+    subprocess_run(f'./initdb -D "{pgdata_dpath}"', cwd=pgbin_path)
 
     # start postgres (all other pgdata setup requires postgres to be started)
     # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
-    save_file(dbgym_cfg, pgbin_symlink_dpath / "pg_ctl")
-    start_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_dpath)
+    start_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
     # setup
     _generic_pgdata_setup(dbgym_cfg)
     _load_benchmark_into_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
     # stop postgres so that we don't "leak" processes
-    stop_postgres(dbgym_cfg, pgbin_symlink_dpath, pgdata_dpath)
+    stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
     # create .tgz file
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
@@ -211,20 +217,20 @@ def _load_into_pgdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadI
         sql_file_execute(dbgym_cfg, conn, constraints_fpath)
 
 
-def start_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:
-    _start_or_stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath, True)
+def start_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, pgdata_dpath: Path) -> None:
+    _start_or_stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath, True)
 
 
-def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path) -> None:
-    _start_or_stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath, False)
+def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, pgdata_dpath: Path) -> None:
+    _start_or_stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath, False)
 
 
-def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_dpath: Path, pgdata_dpath: Path, is_start: bool) -> None:
+def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, pgdata_dpath: Path, is_start: bool) -> None:
     # They should be absolute paths and should exist
-    assert pgbin_dpath.is_absolute() and pgbin_dpath.exists()
+    assert pgbin_path.is_absolute() and pgbin_path.exists()
     assert pgdata_dpath.is_absolute() and pgdata_dpath.exists()
     # The inputs may be symlinks so we need to resolve them first
-    pgbin_real_dpath = pgbin_dpath.resolve()
+    pgbin_real_dpath = pgbin_path.resolve()
     pgdata_dpath = pgdata_dpath.resolve()
     pgport = DEFAULT_POSTGRES_PORT
     save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")

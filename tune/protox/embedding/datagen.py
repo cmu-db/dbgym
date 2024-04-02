@@ -57,6 +57,7 @@ from util.shell import subprocess_run
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
+@click.option("--pgbin-path", type=Path, default=None, help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.")
 # TODO(phw2): need to run pgtune before gathering data
 @click.option(
     "--pristine-pgdata-snapshot-path",
@@ -129,6 +130,7 @@ def datagen(
     benchmark_name,
     workload_name,
     scale_factor,
+    pgbin_path,
     pristine_pgdata_snapshot_path,
     benchmark_config_path,
     workload_path,
@@ -158,6 +160,8 @@ def datagen(
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
+    if pgbin_path == None:
+        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if pristine_pgdata_snapshot_path == None:
         pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
@@ -170,6 +174,7 @@ def datagen(
     # Convert all input paths to absolute paths
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
     benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
 
     # process the "data structure" args
@@ -208,14 +213,14 @@ def datagen(
     # run all steps
     start_time = time.time()
     pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pristine_pgdata_snapshot_path)
-    pgbin_dpath = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
-    start_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
+    pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    start_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{duration}")
-    stop_postgres(dbgym_cfg, pgbin_dpath, pgdata_dpath)
+    stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
 
 def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
