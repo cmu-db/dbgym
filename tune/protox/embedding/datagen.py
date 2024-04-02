@@ -29,7 +29,7 @@ from misc.utils import (
     link_result,
     open_and_save,
     save_file,
-    workload_dname_fn,
+    workload_name_fn,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
@@ -166,7 +166,7 @@ def datagen(
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
-    workload_name = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if workload_path == None:

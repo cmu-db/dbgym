@@ -89,7 +89,7 @@ default_hpoed_agent_params_path = (
     / "data"
     / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
 )
-workload_dname_fn = (
+workload_name_fn = (
     lambda scale_factor, seed_start, seed_end, seed_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{seed_subset}"
 )
 default_workload_path = (

@@ -2,7 +2,7 @@ import logging
 
 import click
 
-from misc.utils import DBGymConfig, get_scale_factor_string, workload_dname_fn
+from misc.utils import DBGymConfig, get_scale_factor_string, workload_name_fn
 from util.shell import subprocess_run
 from util.pg import *
 
@@ -27,8 +27,8 @@ def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float):
 
 
 @tpch_group.command(name="workload")
-@click.argument("seed-start", type=int, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
-@click.argument("seed-end", type=int, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.argument("seed-start", type=int)
+@click.argument("seed-end", type=int)
 @click.option(
     "--seed-subset",
     type=click.Choice(["all", "even", "odd"]),
@@ -122,15 +122,15 @@ def _generate_workload(
     scale_factor: float,
 ):
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    workload_dname = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
-    workload_path = data_path / workload_dname
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_path = data_path / workload_name
     if workload_path.exists():
         benchmark_tpch_logger.error(f"Workload directory exists: {workload_path}")
         raise RuntimeError(f"Workload directory exists: {workload_path}")
 
     benchmark_tpch_logger.info(f"Generating: {workload_path}")
     real_dir = dbgym_cfg.cur_task_runs_data_path(
-        workload_dname, mkdir=True
+        workload_name, mkdir=True
     )
 
     queries = None

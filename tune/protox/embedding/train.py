@@ -188,7 +188,7 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
     if traindata_path == None:
         traindata_path = default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor

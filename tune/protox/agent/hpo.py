@@ -21,7 +21,7 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_dname_fn
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn
 
 
 METRIC_NAME = "Best Metric"
@@ -164,7 +164,7 @@ def hpo(
     query_timeout,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, seed_subset)
     if embedder_path == None:
         embedder_path = default_embedder_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
     if benchmark_config_path == None:
