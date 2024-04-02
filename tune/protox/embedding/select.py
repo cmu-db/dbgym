@@ -18,7 +18,7 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def select_best_embedders(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGenericArgs, select_args: EmbeddingSelectArgs) -> None:
+def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGenericArgs, select_args: EmbeddingSelectArgs) -> None:
     data = _load_data(dbgym_cfg, select_args)
 
     if generic_args.traindata_path is not None and os.path.exists(
@@ -69,6 +69,10 @@ def select_best_embedders(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGe
             shutil.copy(
                 Path(tup.root) / "config",
                 curated_dpath / f"model{idx}" / "config",
+            )
+            shutil.move(
+                curated_dpath / f"model{idx}" / f"embedder_{epoch}.pth",
+                curated_dpath / f"model{idx}" / "embedder.pth",
             )
 
             info_txt.write(f"model{idx}/embedder.pth\n")
