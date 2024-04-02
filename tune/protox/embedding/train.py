@@ -39,7 +39,13 @@ from tune.protox.embedding.train_args import (
 
 # generic args
 @click.argument("benchmark-name", type=str)
-@click.argument("workload-name", type=str)
+@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-subset",
+    type=click.Choice(["all", "even", "odd"]),
+    default="all",
+)
 @click.option(
     "--scale-factor",
     default=1.0,
@@ -150,7 +156,9 @@ from tune.protox.embedding.train_args import (
 def train(
     dbgym_cfg,
     benchmark_name,
-    workload_name,
+    seed_start,
+    seed_end,
+    seed_subset,
     scale_factor,
     benchmark_config_path,
     traindata_path,
@@ -180,6 +188,7 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
+    workload_name = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
     if traindata_path == None:
         traindata_path = default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor

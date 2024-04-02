@@ -3,8 +3,8 @@
 set -euxo pipefail
 
 # benchmark
-python3 task.py --no-startup-check benchmark tpch generate-data 0.01
-python3 task.py --no-startup-check benchmark tpch generate-workload queries_15721_15723 15721 15723
+python3 task.py --no-startup-check benchmark tpch data 0.01
+python3 task.py --no-startup-check benchmark tpch workload 15721 15721 --scale-factor 0.01
 
 # postgres
 python3 task.py --no-startup-check dbms postgres build

@@ -2,7 +2,7 @@ import logging
 
 import click
 
-from misc.utils import DBGymConfig, get_scale_factor_string
+from misc.utils import DBGymConfig, get_scale_factor_string, workload_dname_fn
 from util.shell import subprocess_run
 from util.pg import *
 
@@ -16,36 +16,37 @@ def tpch_group(dbgym_cfg: DBGymConfig):
     dbgym_cfg.append_group("tpch")
 
 
-@tpch_group.command(name="generate-data")
+@tpch_group.command(name="data")
 @click.argument("scale-factor", type=float)
 @click.pass_obj
 # The reason generate-data is separate from create-pgdata is because generate-data is generic
 #   to all DBMSs while create-pgdata is specific to Postgres.
-def tpch_generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
+def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float):
     _clone(dbgym_cfg)
     _generate_data(dbgym_cfg, scale_factor)
 
 
-@tpch_group.command(name="generate-workload")
-@click.argument("workload-name", type=str)
-@click.argument("seed-start", type=int)
-@click.argument("seed-end", type=int)
+@tpch_group.command(name="workload")
+@click.argument("seed-start", type=int, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.argument("seed-end", type=int, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
 @click.option(
-    "--generate_type",
-    type=click.Choice(["sequential", "even", "odd"]),
+    "--seed-subset",
+    type=click.Choice(["all", "even", "odd"]),
     default="sequential",
 )
+@click.option("--scale-factor", type=float, default=1)
 @click.pass_obj
-def tpch_generate_workload(
+def tpch_workload(
     dbgym_cfg: DBGymConfig,
-    workload_name: str,
     seed_start: int,
     seed_end: int,
-    generate_type: str,
+    seed_subset: str,
+    scale_factor: float,
 ):
+    assert seed_start <= seed_end, f'seed_start ({seed_start}) must be <= seed_end ({seed_end})'
     _clone(dbgym_cfg)
     _generate_queries(dbgym_cfg, seed_start, seed_end)
-    _generate_workload(dbgym_cfg, workload_name, seed_start, seed_end, generate_type)
+    _generate_workload(dbgym_cfg, seed_start, seed_end, seed_subset, scale_factor)
 
 
 def _clone(dbgym_cfg: DBGymConfig):
@@ -115,28 +116,29 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
 
 def _generate_workload(
     dbgym_cfg: DBGymConfig,
-    workload_name: str,
     seed_start: int,
     seed_end: int,
-    generate_type: str,
+    seed_subset: str,
+    scale_factor: float,
 ):
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    workload_path = data_path / f"workload_{workload_name}"
+    workload_dname = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
+    workload_path = data_path / workload_dname
     if workload_path.exists():
         benchmark_tpch_logger.error(f"Workload directory exists: {workload_path}")
         raise RuntimeError(f"Workload directory exists: {workload_path}")
 
     benchmark_tpch_logger.info(f"Generating: {workload_path}")
     real_dir = dbgym_cfg.cur_task_runs_data_path(
-        f"workload_{workload_name}", mkdir=True
+        workload_dname, mkdir=True
     )
 
     queries = None
-    if generate_type == "sequential":
+    if seed_subset == "all":
         queries = [f"{i}" for i in range(1, 22 + 1)]
-    elif generate_type == "even":
+    elif seed_subset == "even":
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 0]
-    elif generate_type == "odd":
+    elif seed_subset == "odd":
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 1]
 
     with open(real_dir / "order.txt", "w") as f:

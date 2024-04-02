@@ -29,6 +29,7 @@ from misc.utils import (
     link_result,
     open_and_save,
     save_file,
+    workload_dname_fn,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
@@ -51,7 +52,13 @@ from util.shell import subprocess_run
 
 # generic args
 @click.argument("benchmark-name")
-@click.argument("workload-name")
+@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-subset",
+    type=click.Choice(["all", "even", "odd"]),
+    default="all",
+)
 @click.option(
     "--scale-factor",
     default=1.0,
@@ -128,7 +135,9 @@ from util.shell import subprocess_run
 def datagen(
     dbgym_cfg,
     benchmark_name,
-    workload_name,
+    seed_start,
+    seed_end,
+    seed_subset,
     scale_factor,
     pgbin_path,
     pristine_pgdata_snapshot_path,
@@ -151,9 +160,13 @@ def datagen(
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     """
+    # check args
+    assert seed_start <= seed_end, f'seed_start ({seed_start}) must be <= seed_end ({seed_end})'
+
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
+    workload_name = workload_dname_fn(scale_factor, seed_start, seed_end, seed_subset)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if workload_path == None:
