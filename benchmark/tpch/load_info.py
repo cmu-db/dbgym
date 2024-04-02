@@ -1,4 +1,5 @@
 from dbms.load_info_base_class import LoadInfoBaseClass
+from misc.utils import get_scale_factor_string
 
 
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
@@ -41,7 +42,7 @@ class TpchLoadInfo(LoadInfoBaseClass):
         data_root_dpath = (
             dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
         )
-        tables_dpath = data_root_dpath / f"tables_sf{scale_factor}"
+        tables_dpath = data_root_dpath / f"tables_sf{get_scale_factor_string(scale_factor)}"
         assert (
             tables_dpath.exists()
         ), f"tables_dpath ({tables_dpath}) does not exist. Make sure you have generated the TPC-H data"

@@ -24,10 +24,14 @@ def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
+    assert type(scale_factor) is float or type(scale_factor) is str
     if scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
     else:
-        return str(scale_factor).replace(".", "point")
+        if float(int(scale_factor)) == scale_factor:
+            return str(int(scale_factor))
+        else:
+            return str(scale_factor).replace(".", "point")
     
 def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata.tgz"
