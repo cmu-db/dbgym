@@ -27,12 +27,12 @@ def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float):
 
 
 @tpch_group.command(name="workload")
-@click.argument("seed-start", type=int)
-@click.argument("seed-end", type=int)
+@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
 @click.option(
     "--seed-subset",
     type=click.Choice(["all", "even", "odd"]),
-    default="sequential",
+    default="all",
 )
 @click.option("--scale-factor", type=float, default=1)
 @click.pass_obj
