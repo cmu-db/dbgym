@@ -44,7 +44,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, workload_name: str, scale_
         benchmark_config={},
         pristine_pgdata_snapshot_path=Path(),
         workload_path=Path(),
-        embedding_path=[],
+        embedder_path=[],
         pgconn_info={}
     ), hpoed_params)
 

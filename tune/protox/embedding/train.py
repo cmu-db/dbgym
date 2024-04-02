@@ -207,7 +207,7 @@ def train(
     ))
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark_name, benchmark_config_path, traindata_path, seed, workload_path
+        benchmark_name, workload_name, scale_factor, benchmark_config_path, traindata_path, seed, workload_path
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,

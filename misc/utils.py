@@ -68,13 +68,16 @@ default_traindata_path = (
     / "data"
     / traindata_fname(benchmark_name, workload_name, scale_factor)
 )
-default_embedding_path = (
+default_embedder_dname = (
+    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedder"
+)
+default_embedder_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
+    / default_embedder_dname(benchmark_name, workload_name, scale_factor)
 )
 default_hpoed_agent_params_path = (
     lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
@@ -425,9 +428,8 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
         shutil.copy(fpath, copy_fpath)
 
 
-# TODO(phw2): make link_result respect the codebase dir
-# TODO(phw2): after that, refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_path):
+# TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
+def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> None:
     """
     result_path must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
@@ -439,12 +441,15 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_path)
 
-    if os.path.isfile(result_path):
-        result_name = os.path.basename(result_path)
-    elif os.path.isdir(result_path):
-        result_name = dir_basename(result_path)
+    if custom_result_name != None:
+        result_name = custom_result_name
     else:
-        raise NotImplementedError
+        if os.path.isfile(result_path):
+            result_name = os.path.basename(result_path)
+        elif os.path.isdir(result_path):
+            result_name = dir_basename(result_path)
+        else:
+            raise AssertionError("result_path must be either a file or dir")
     symlink_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True) / result_name
 
     if os.path.exists(symlink_path):

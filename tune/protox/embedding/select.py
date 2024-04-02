@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, link_result, default_embedder_dname
 from tune.protox.embedding.train_args import EmbeddingTrainGenericArgs, EmbeddingSelectArgs
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
 
@@ -61,19 +61,23 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
         idx = select_args.flatten_idx
         info_txt = open(curated_dpath / "info.txt", "w")
 
-        for tup in df.itertuples():
+        for loop_i, tup in enumerate(df.itertuples()):
             epoch = int(str(tup.path).split("epoch")[-1])
+            model_dpath = curated_dpath / f"model{idx}"
             shutil.copytree(
-                tup.path, curated_dpath / f"model{idx}"
+                tup.path, model_dpath
             )
             shutil.copy(
                 Path(tup.root) / "config",
-                curated_dpath / f"model{idx}" / "config",
+                model_dpath / "config",
             )
             shutil.move(
-                curated_dpath / f"model{idx}" / f"embedder_{epoch}.pth",
-                curated_dpath / f"model{idx}" / "embedder.pth",
+                model_dpath / f"embedder_{epoch}.pth",
+                model_dpath / "embedder.pth",
             )
+
+            if loop_i == 0:
+                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name, generic_args.scale_factor))
 
             info_txt.write(f"model{idx}/embedder.pth\n")
             idx += 1

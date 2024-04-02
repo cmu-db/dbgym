@@ -72,7 +72,7 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
                     "index_subset", True
                 ),
             },
-            "embedding_path": hpoed_params["vae_metadata"]["embedding_path"],
+            "embedder_path": hpoed_params["vae_metadata"]["embedder_path"],
         }
 
         for s in space.keys():
