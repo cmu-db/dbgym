@@ -2,9 +2,11 @@ class EmbeddingTrainGenericArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
     def __init__(
-        self, benchmark_name, benchmark_config_path, traindata_path, seed, workload_path
+        self, benchmark_name, workload_name, scale_factor, benchmark_config_path, traindata_path, seed, workload_path
     ):
         self.benchmark_name = benchmark_name
+        self.workload_name = workload_name
+        self.scale_factor = scale_factor
         self.benchmark_config_path = benchmark_config_path
         self.traindata_path = traindata_path
         self.seed = seed

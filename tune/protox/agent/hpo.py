@@ -21,17 +21,17 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
 
 
 METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
-        self.embedding_path = embedding_path
+        self.embedder_path = embedder_path
         self.benchmark_config_path = benchmark_config_path
         self.benchbase_config_path = benchbase_config_path
         self.sysknobs_path = sysknobs_path
@@ -60,7 +60,7 @@ class AgentHPOArgs:
 @click.option(
     "--embedding-path",
     default=None,
-    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
+    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
@@ -139,7 +139,7 @@ def hpo(
     benchmark_name,
     workload_name,
     scale_factor,
-    embedding_path,
+    embedder_path,
     benchmark_config_path,
     benchbase_config_path,
     sysknobs_path,
@@ -156,8 +156,8 @@ def hpo(
     query_timeout,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    if embedding_path == None:
-        embedding_path = default_embedding_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
+    if embedder_path == None:
+        embedder_path = default_embedder_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if benchbase_config_path == None:
@@ -172,7 +172,7 @@ def hpo(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    embedding_path = conv_inputpath_to_realabspath(dbgym_cfg, embedding_path)
+    embedder_path = conv_inputpath_to_realabspath(dbgym_cfg, embedder_path)
     benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
     sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
@@ -181,7 +181,7 @@ def hpo(
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -193,7 +193,7 @@ def build_space(
     benchmark_config: dict[str, Any],
     pristine_pgdata_snapshot_path: Path,
     workload_path: Path,
-    embedding_path: list[Path],
+    embedder_path: list[Path],
     pgconn_info: dict[str, str],
     benchbase_config: dict[str, Any]={},
     duration: int=30,
@@ -244,7 +244,7 @@ def build_space(
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
         # Embeddings.
-        "embedding_path": tune.choice(map(str, embedding_path)),
+        "embedder_path": tune.choice(map(str, embedder_path)),
         # LSC Parameters.
         # Note that the units for these are based on the embedding itself.
         "lsc": {
@@ -494,8 +494,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchmark_config = benchmark_config[benchmark]
         benchmark_config["benchmark"] = benchmark
 
-    # TODO(phw2): read the dir hpo_args.embedding_path and get a list of embeddings
-    embedding_path = [hpo_args.embedding_path]
+    # TODO(phw2): read the dir hpo_args.embedder_path and get a list of embeddings
+    embedder_path = [hpo_args.embedder_path]
     # TODO(phw2): make workload and query timeout params lists instead of just ints
     workload_timeouts = [hpo_args.workload_timeout]
     query_timeouts = [hpo_args.query_timeout]
@@ -516,7 +516,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchmark_config,
         hpo_args.pristine_pgdata_snapshot_path,
         hpo_args.workload_path,
-        embedding_path,
+        embedder_path,
         pgconn_info={
             "pristine_pgdata_snapshot_path": hpo_args.pristine_pgdata_snapshot_path,
             "pgbin_path": hpo_args.pgbin_path,
