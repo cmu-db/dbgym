@@ -18,5 +18,5 @@ python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-fa
 python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2
 
 # agent
-python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --duration 0.1 --early-kill
+python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --duration 0.01
 python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR

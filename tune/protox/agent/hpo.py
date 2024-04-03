@@ -28,7 +28,7 @@ METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -42,7 +42,6 @@ class AgentHPOArgs:
         self.agent = agent
         self.max_concurrent = max_concurrent
         self.num_samples = num_samples
-        self.early_kill = early_kill
         self.duration = duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
@@ -123,9 +122,6 @@ class AgentHPOArgs:
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
 @click.option(
-    "--early-kill", is_flag=True, help="Whether the tuner times out its steps."
-)
-@click.option(
     "--duration", default=30, type=float, help="The total number of hours to run for."
 )
 @click.option(
@@ -158,7 +154,6 @@ def hpo(
     agent,
     max_concurrent,
     num_samples,
-    early_kill,
     duration,
     workload_timeout,
     query_timeout,
@@ -190,7 +185,7 @@ def hpo(
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 

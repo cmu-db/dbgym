@@ -390,7 +390,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                         # We've killed the index operation.
                         or "operational" in stderr
                     )
-                    attempt_checkpoint(self.pgconn.connection)
+                    attempt_checkpoint(self.pgconn.get_connstr())
                 return False
 
             assert ret == 0, print(stderr)

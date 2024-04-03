@@ -61,6 +61,8 @@ default_benchbase_config_path = (
 #   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
+# Details
+#  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
 traindata_fname = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )

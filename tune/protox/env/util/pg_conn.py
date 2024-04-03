@@ -57,13 +57,13 @@ class PostgresConn:
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def _get_connstr(self):
+    def get_connstr(self):
         return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
     def conn(self) -> psycopg.Connection[Any]:
         if self._conn is None:
             self._conn = psycopg.connect(
-                self._get_connstr(), autocommit=True, prepare_threshold=None
+                self.get_connstr(), autocommit=True, prepare_threshold=None
             )
         return self._conn
 
@@ -240,7 +240,7 @@ class PostgresConn:
         conn.execute("SET statement_timeout = 300000")
 
         try:
-            timer = threading.Timer(300.0, cancel_fn, args=(self._get_connstr(),))
+            timer = threading.Timer(300.0, cancel_fn, args=(self.get_connstr(),))
             timer.start()
 
             conn.execute(sql)
