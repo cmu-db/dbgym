@@ -1,13 +1,13 @@
 import logging
 from pathlib import Path
-
+import os
 import click
 import yaml
 
+from misc.utils import DBGymConfig
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
 from experiment.cli import experiment_group
-from misc.utils import DBGymConfig
 from tune.cli import tune_group
 
 # TODO(phw2): save commit, git diff, and run command
@@ -91,6 +91,27 @@ def config_standardize(dbgym_cfg):
     Path(config_path).write_text(new_yaml)
 
     task_logger.info(f"Updated: {Path(config_path)}")
+
+
+@config_group.command("clean")
+@click.pass_obj
+@click.option(
+    "--mode",
+    type=click.Choice(["safe", "aggressive"]),
+    default="safe",
+    help="The mode to clean the workspace (default=\"safe\"). \"aggressive\" means \"only keep run_*/ folders referenced by a file in symlinks/\". \"safe\" means \"in addition to that, recursively keep any run_*/ folders referenced by any symlinks in run_*/ folders we are keeping.\""
+)
+def clean_workspace(dbgym_cfg: DBGymConfig, mode: str):
+    # This queue holds the symlinks that are left to be processed
+    symlink_paths_to_process = []
+
+    # Initialize paths to process
+    for root_pathstr, _, file_names in os.walk(dbgym_cfg.dbgym_symlinks_path):
+        root_path = Path(root_pathstr)
+        for file_name in file_names:
+            file_path = root_path / file_name
+            if file_path.is_symlink():
+                symlink_paths_to_process.append(file_path)
 
 
 if __name__ == "__main__":
