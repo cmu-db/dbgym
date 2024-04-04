@@ -28,6 +28,7 @@ class PostgresConn:
         dbgym_cfg: DBGymConfig,
         pgport: int,
         pristine_pgdata_snapshot_fpath: Path,
+        pgdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
@@ -52,8 +53,11 @@ class PostgresConn:
         #   state of the database as it is being tuned. It is generated while tuning and is
         #   discarded once tuning is completed.
         self.checkpoint_pgdata_snapshot_fpath = dbgym_cfg.dbgym_tmp_path / "checkpoint_pgdata.tgz"
+        # pgdata_parent_dpath is the parent directory of the pgdata that is *actively being tuned*.
+        #   Setting this lets us control the hardware device pgdata is built on (e.g. HDD vs. SSD).
+        self.pgdata_parent_dpath = pgdata_parent_dpath
         # pgdata_dpath is the pgdata that is *actively being tuned*
-        self.pgdata_dpath = dbgym_cfg.dbgym_tmp_path / f"pgdata{self.pgport}"
+        self.pgdata_dpath = self.pgdata_parent_dpath / f"pgdata{self.pgport}"
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 

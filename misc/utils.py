@@ -22,6 +22,8 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 # Helper functions that both this file and other files use
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
+def get_tmp_path_from_workspace_path(workspace_path):
+    return workspace_path / "tmp"
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
     assert type(scale_factor) is float or type(scale_factor) is str
@@ -110,6 +112,11 @@ default_pristine_pgdata_snapshot_path = (
     / "data"
     / get_pgdata_tgz_name(benchmark_name, scale_factor)
 )
+default_pgdata_parent_dpath = (
+    lambda workspace_path: get_tmp_path_from_workspace_path(
+        workspace_path
+    )
+)
 default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(
         workspace_path
@@ -176,7 +183,7 @@ class DBGymConfig:
         # one use for it is to place the unzipped pgdata
         # there's no need to save the actual pgdata dir in run_*/ because we just save a symlink to
         #   the .tgz file we unzipped
-        self.dbgym_tmp_path = self.dbgym_workspace_path / "tmp"
+        self.dbgym_tmp_path = get_tmp_path_from_workspace_path(self.dbgym_workspace_path)
         if self.dbgym_tmp_path.exists():
             shutil.rmtree(self.dbgym_tmp_path)
         self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)

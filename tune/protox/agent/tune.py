@@ -49,7 +49,6 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpoed_params = coerce_config(dbgym_cfg, build_space(
         sysknobs={},
         benchmark_config={},
-        pristine_pgdata_snapshot_path=Path(),
         workload_path=Path(),
         embedder_path=[],
         pgconn_info={}
