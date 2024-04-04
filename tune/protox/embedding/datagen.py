@@ -13,6 +13,7 @@ import pandas as pd
 import yaml
 from sklearn.preprocessing import quantile_transform
 import shutil
+import ssd_checker
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
@@ -30,6 +31,7 @@ from misc.utils import (
     open_and_save,
     save_file,
     workload_name_fn,
+    default_pgdata_parent_dpath,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
@@ -71,6 +73,18 @@ from util.shell import subprocess_run
     default=None,
     type=Path,
     help=f"The path to the .tgz snapshot of the pgdata directory to build an embedding space over. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
+@click.option(
+    "--intended-pgdata-hardware",
+    type=click.Choice(["hdd", "ssd"]),
+    default="hdd",
+    help=f"The intended hardware pgdata should be on. Used as a sanity check for --pgdata-parent-dpath.",
+)
+@click.option(
+    "--pgdata-parent-dpath",
+    default=None,
+    type=Path,
+    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchmark-config-path",
@@ -141,6 +155,8 @@ def datagen(
     scale_factor,
     pgbin_path,
     pristine_pgdata_snapshot_path,
+    intended_pgdata_hardware,
+    pgdata_parent_dpath,
     benchmark_config_path,
     workload_path,
     seed,
@@ -179,6 +195,8 @@ def datagen(
         pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
+    if pgdata_parent_dpath == None:
+        pgdata_parent_dpath = default_pgdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
@@ -189,8 +207,17 @@ def datagen(
     benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
 
-    # process the "data structure" args
+    # Check assertions on args
+    if intended_pgdata_hardware == "hdd":
+        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
+    elif intended_pgdata_hardware == "ssd":
+        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+    else:
+        assert False
+
+    # Process the "data structure" args
     leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
     # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
     # I felt this was better than introducing a new delimiter which might conflict with the name of a table
@@ -208,10 +235,10 @@ def datagen(
             limit = int(override_sample_limits_str_split[i + 1])
             override_sample_limits[tbl] = limit
 
-    # group args together to reduce the # of parameters we pass into functions
+    # Group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path,
+        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -225,7 +252,7 @@ def datagen(
 
     # run all steps
     start_time = time.time()
-    pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pristine_pgdata_snapshot_path)
+    pgdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pristine_pgdata_snapshot_path, generic_args.pgdata_parent_dpath)
     pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     start_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
@@ -236,13 +263,15 @@ def datagen(
     stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
 
-def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path) -> Path:
-    # it should be an absolute path and it should exist
+def untar_snapshot(dbgym_cfg: DBGymConfig, pgdata_snapshot_fpath: Path, pgdata_parent_dpath: Path) -> Path:
+    # It should be an absolute path and it should exist
     assert pgdata_snapshot_fpath.is_absolute() and pgdata_snapshot_fpath.exists(), f"untar_snapshot(): pgdata_snapshot_fpath ({pgdata_snapshot_fpath}) either doesn't exist or is not absolute"
-    # it may be a symlink so we need to resolve them first
+    # It may be a symlink so we need to resolve them first
     pgdata_snapshot_real_fpath = pgdata_snapshot_fpath.resolve()
     save_file(dbgym_cfg, pgdata_snapshot_real_fpath)
-    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    pgdata_dpath = pgdata_parent_dpath / "pgdata"
+    # Make the parent dir and the pgdata dir. Note how we require that pgdata_dpath does not exist while it's ok if the parent does.
+    pgdata_parent_dpath.mkdir(parents=True, exist_ok=True)
     if pgdata_dpath.exists():
         shutil.rmtree(pgdata_dpath)
     pgdata_dpath.mkdir(parents=False, exist_ok=False)
@@ -257,7 +286,7 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path):
+    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.scale_factor = scale_factor
@@ -265,6 +294,7 @@ class EmbeddingDatagenGenericArgs:
         self.seed = seed
         self.workload_path = workload_path
         self.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
+        self.pgdata_parent_dpath = pgdata_parent_dpath
 
 
 class EmbeddingDirGenArgs:
