@@ -404,8 +404,9 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def close(self) -> None:
         self.pgconn.shutdown_postgres()
-        # Even though these files get deleted because tmp/ gets deleted,
-        #   we'll just delete them here anyways because why not
+        # This file may not be in in [workspace]/tmp/, so it's important to delete it
         local["rm"]["-rf", self.pgconn.pgdata_dpath].run()
-        local["rm"]["-rf", self.pgconn.checkpoint_pgdata_snapshot_fpath].run()
-        local["rm"]["-rf", f"{self.pgconn.checkpoint_pgdata_snapshot_fpath}.tmp"].run()
+        # Even though these files get deleted because [workspace]/tmp/ gets deleted,
+        #   we'll just delete them here anyways because why not
+        local["rm"]["-f", self.pgconn.checkpoint_pgdata_snapshot_fpath].run()
+        local["rm"]["-f", f"{self.pgconn.checkpoint_pgdata_snapshot_fpath}.tmp"].run()
