@@ -417,7 +417,7 @@ class Workload(object):
                 # Skip any query in blocklist.
                 continue
 
-            for sql_type, query in queries:
+            for qidx, (sql_type, query) in enumerate(queries):
                 assert sql_type != QueryType.UNKNOWN
                 if sql_type != QueryType.SELECT:
                     assert sql_type != QueryType.INS_UPD_DEL
@@ -533,6 +533,12 @@ class Workload(object):
                 time_left -= qid_runtime / 1e6
                 workload_time += qid_runtime / 1e6
                 if time_left < 0:
+                    # We need to undo any potential statements after the timed out query.
+                    for st, rq in queries[qidx+1:]:
+                        if st != QueryType.SELECT:
+                            assert st != QueryType.INS_UPD_DEL
+                            pgconn.conn().execute(rq)
+
                     stop_running = True
                     break
 
