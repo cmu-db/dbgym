@@ -14,7 +14,7 @@ python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCA
 
 # embedding
 python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-factor $SCALE_FACTOR --override-sample-limits "lineitem,32768"
-python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --scale-factor 10 --train-max-concurrent 10
+python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --train-max-concurrent 10
 
 # agent
 python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --duration 4
