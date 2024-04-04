@@ -1,7 +1,7 @@
 __pycache__/
 .conda/
 .idea/
-test_clean_file_structure/
+test_clean_scratchspace/
 
 workspace/
 default_*_benchbase_config_*.xml
