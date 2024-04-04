@@ -25,14 +25,25 @@ class StructureStateSpace(StateSpace, spaces.Dict):
         self,
         action_space: HolonSpace,
         spaces: Mapping[str, spaces.Space[Any]],
+        normalize: bool,
         seed: int,
     ) -> None:
         self.action_space = action_space
+        self.normalize = normalize
 
-        self.internal_spaces: Dict[str, gym.spaces.Space[Any]] = {
-            k: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
-            for k, s in action_space.get_spaces()
-        }
+        if self.normalize:
+            self.internal_spaces: Dict[str, gym.spaces.Space[Any]] = {
+                k: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
+                for k, s in action_space.get_spaces()
+            }
+        else:
+            self.internal_spaces = {
+                k: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
+                if s.uses_embed() else s
+                for k, s in action_space.get_spaces()
+
+            }
+
         self.internal_spaces.update(spaces)
         super().__init__(self.internal_spaces, seed)
 
@@ -63,21 +74,25 @@ class StructureStateSpace(StateSpace, spaces.Dict):
             assert isinstance(knobs, LatentKnobSpace)
             assert check_subspace(knobs, knob_state)
 
-            knob_state = np.array(
-                knobs.to_latent([knob_state]),
-                dtype=np.float32,
-            )[0]
-
+            if self.normalize:
+                knob_state = np.array(
+                    knobs.to_latent([knob_state]),
+                    dtype=np.float32,
+                )[0]
             assert self.internal_spaces["knobs"].contains(knob_state)
 
         if ql_state is not None:
             query = self.action_space.get_query_space()
             assert isinstance(query, LatentQuerySpace)
             assert check_subspace(query, ql_state)
-            query_state = np.array(
-                query.to_latent([ql_state]),
-                dtype=np.float32,
-            )[0]
+
+            if self.normalize:
+                query_state = np.array(
+                    query.to_latent([ql_state]),
+                    dtype=np.float32,
+                )[0]
+            else:
+                query_state = ql_state
 
         # Handle indexes.
         indexes_ = [v[1] for v in splits if isinstance(v[0], LatentIndexSpace)]

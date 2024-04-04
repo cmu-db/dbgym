@@ -282,6 +282,14 @@ def _build_obs_space(
         return LSCStructureStateSpace(
             lsc=lsc,
             action_space=action_space,
+            normalize=False,
+            seed=seed,
+        )
+    elif hpoed_params["metric_state"] == "structure_normalize":
+        return LSCStructureStateSpace(
+            lsc=lsc,
+            action_space=action_space,
+            normalize=True,
             seed=seed,
         )
     else:

@@ -1,0 +1,16 @@
+name: Example CI
+
+on:
+  push: {}
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Run a script
+      run: echo Hello, world!

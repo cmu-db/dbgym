@@ -43,6 +43,9 @@ class LatentKnobSpace(KnobSpace):
     def critic_dim(self) -> int:
         return self.latent_dim()
 
+    def uses_embed(self) -> bool:
+        return False
+
     def transform_noise(
         self, subproto: ProtoAction, noise: Optional[torch.Tensor] = None
     ) -> ProtoAction:

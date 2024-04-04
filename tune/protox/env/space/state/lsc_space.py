@@ -16,10 +16,11 @@ class LSCStructureStateSpace(StructureStateSpace):
         self,
         lsc: LSC,
         action_space: HolonSpace,
+        normalize: bool,
         seed: int,
     ) -> None:
         spaces = {"lsc": Box(low=-1, high=1.0)}
-        super().__init__(action_space, spaces, seed)
+        super().__init__(action_space, spaces, normalize, seed)
         self.lsc = lsc
 
     def construct_offline(

@@ -77,6 +77,9 @@ class LatentIndexSpace(IndexSpace):
 
         return index_dim
 
+    def uses_embed(self) -> bool:
+        return True
+
     def transform_noise(
         self, subproto: ProtoAction, noise: Optional[torch.Tensor] = None
     ) -> ProtoAction:

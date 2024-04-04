@@ -22,6 +22,9 @@ class LatentQuerySpace(LatentKnobSpace, QuerySpace):
         self.logger = logger
         self.name = "query"
 
+    def uses_embed(self) -> bool:
+        return False
+
     def generate_state_container(
         self,
         prev_state: Optional[QuerySpaceContainer],
