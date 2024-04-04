@@ -362,15 +362,18 @@ class PostgresEnv(gym.Env[Any, Any]):
         def attempt_checkpoint(conn_str: str) -> None:
             # CHECKPOINT to prevent the DBMS from entering a super slow shutdown
             # if a shift_state has failed.
-            try:
-                with psycopg.connect(
-                    conn_str, autocommit=True, prepare_threshold=None
-                ) as conn:
-                    conn.execute("CHECKPOINT")
-            except psycopg.OperationalError as e:
-                if self.logger:
-                    self.logger.get_logger(__name__).debug(f"[attempt_checkpoint]: {e}")
-                time.sleep(5)
+            while True:
+                try:
+                    with psycopg.connect(
+                        conn_str, autocommit=True, prepare_threshold=None
+                    ) as conn:
+                        conn.execute("CHECKPOINT")
+
+                    break
+                except psycopg.OperationalError as e:
+                    if self.logger:
+                        self.logger.get_logger(__name__).debug(f"[attempt_checkpoint]: {e}")
+                    time.sleep(5)
 
         shift_start = time.time()
         # First enforce the SQL command changes.
