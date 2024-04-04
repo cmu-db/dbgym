@@ -536,6 +536,7 @@ class Workload(object):
                     # We need to undo any potential statements after the timed out query.
                     for st, rq in queries[qidx+1:]:
                         if st != QueryType.SELECT:
+                            # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. If we do have INS_UPD_DEL queries, our "undo" logic will likely have to change.
                             assert st != QueryType.INS_UPD_DEL
                             pgconn.conn().execute(rq)
 
