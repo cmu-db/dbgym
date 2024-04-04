@@ -94,7 +94,3 @@ class WorkloadTests(unittest.TestCase):
 
         w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_tpcc.yaml", Path("tune/protox/tests/unittest_tpcc_dir"))
         self.assertEqual(i.class_mapping, ref)
-
-
-if __name__ == "__main__":
-    unittest.main()
