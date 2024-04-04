@@ -420,6 +420,7 @@ class Workload(object):
             for qidx, (sql_type, query) in enumerate(queries):
                 assert sql_type != QueryType.UNKNOWN
                 if sql_type != QueryType.SELECT:
+                    # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. 
                     assert sql_type != QueryType.INS_UPD_DEL
                     pgconn.conn().execute(query)
                     continue
