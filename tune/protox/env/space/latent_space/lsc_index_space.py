@@ -62,6 +62,9 @@ class LSCIndexSpace(LatentIndexSpace):
         assert lsc is not None
         self.lsc = lsc
 
+    def uses_embed(self) -> bool:
+        return True
+
     def pad_center_latent(
         self, subproto: ProtoAction, lscs: torch.Tensor
     ) -> ProtoAction:
