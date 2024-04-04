@@ -1,7 +1,6 @@
 name: Example CI
 
 on:
-  pull_request:
   push:
 
 jobs:
