@@ -24,6 +24,7 @@ cd ../
 # we need -L to follow links
 curl -L https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_1.tar.gz -o REL15_1_5_1.tar.gz
 tar -xzf REL15_1_5_1.tar.gz
+rm REL15_1_5_1.tar.gz
 cd ./pg_hint_plan-REL15_1_5_1
 PATH="${REPO_REAL_DPATH}/boot/build/postgres/bin:$PATH" make
 PATH="${REPO_REAL_DPATH}/boot/build/postgres/bin:$PATH" make install

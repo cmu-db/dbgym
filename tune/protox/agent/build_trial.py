@@ -155,7 +155,8 @@ def _build_utilities(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
         pristine_pgdata_snapshot_fpath=Path(hpoed_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
-        pgbin_dpath=Path(hpoed_params["pgconn_info"]["pgbin_path"]),
+        pgdata_parent_dpath=Path(hpoed_params["pgconn_info"]["pgdata_parent_dpath"]),
+        pgbin_path=Path(hpoed_params["pgconn_info"]["pgbin_path"]),
         postgres_logs_dir=Path(logdir) / hpoed_params["output_log_path"] / "pg_logs",
         connect_timeout=300,
         logger=logger,
@@ -190,7 +191,7 @@ def _build_actions(
         latent=True,
     )
 
-    with open_and_save(dbgym_cfg, Path(hpoed_params["embedding_path"]) / "config") as f:
+    with open_and_save(dbgym_cfg, Path(hpoed_params["embedder_path"]) / "config") as f:
         vae_config = json.load(f)
 
         assert vae_config["mean_output_act"] == "sigmoid"
@@ -203,7 +204,7 @@ def _build_actions(
             workload, len(hpoed_params["benchmark_config"]["tables"])
         )
         vae = create_vae_model(vae_config, max_attrs, max_cat_features)
-        embedder_fpath = Path(hpoed_params["embedding_path"]) / "embedder.pth"
+        embedder_fpath = Path(hpoed_params["embedder_path"]) / "embedder.pth"
         save_file(dbgym_cfg, embedder_fpath)
         vae.load_state_dict(torch.load(embedder_fpath))
 

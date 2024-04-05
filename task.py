@@ -4,7 +4,7 @@ import click
 from misc.utils import DBGymConfig
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
-from experiment.cli import experiment_group
+from misc.utils import DBGymConfig
 from tune.cli import tune_group
 from manage.cli import manage_group
 
@@ -29,6 +29,5 @@ if __name__ == "__main__":
     task.add_command(benchmark_group)
     task.add_command(manage_group)
     task.add_command(dbms_group)
-    task.add_command(experiment_group)
     task.add_command(tune_group)
     task()

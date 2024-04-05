@@ -10,6 +10,7 @@ from misc.utils import DBGymConfig, open_and_save
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"
 DBGYM_POSTGRES_DBNAME = "dbgym"
+DEFAULT_POSTGRES_DBNAME = "postgres"
 DEFAULT_POSTGRES_PORT = 5432
 
 
@@ -30,8 +31,8 @@ def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> List[str]:
         return pglast.split(queries)
 
 
-def sql_file_execute(conn: Connection, filepath: Path) -> None:
-    for sql in sql_file_queries(filepath):
+def sql_file_execute(dbgym_cfg: DBGymConfig, conn: Connection, filepath: Path) -> None:
+    for sql in sql_file_queries(dbgym_cfg, filepath):
         conn_execute(conn, sql)
 
 
