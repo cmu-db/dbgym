@@ -3,7 +3,7 @@ import click
 import yaml
 import logging
 from pathlib import Path
-from misc.utils import DBGymConfig, is_child_path, parent_dir
+from misc.utils import DBGymConfig, is_child_path, parent_dpath_of_path
 import os
 
 from misc.utils import get_symlinks_path_from_workspace_path
@@ -135,7 +135,7 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
 
             # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
             task_run_child_fordpath = None
-            if os.path.samefile(parent_dir(real_fordpath), dbgym_cfg.dbgym_runs_path):
+            if os.path.samefile(parent_dpath_of_path(real_fordpath), dbgym_cfg.dbgym_runs_path):
                 # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
                 #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
                 #   the structure somehow, it's just a good idea not to delete it.
@@ -145,8 +145,8 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
                 #   However, as with above, we won't just nuke files if the workspace doesn't follow this rule for
                 #   some reason.
                 task_run_child_fordpath = real_fordpath
-                while not os.path.samefile(parent_dir(parent_dir(task_run_child_fordpath)), dbgym_cfg.dbgym_runs_path):
-                    task_run_child_fordpath = parent_dir(task_run_child_fordpath)
+                while not os.path.samefile(parent_dpath_of_path(parent_dpath_of_path(task_run_child_fordpath)), dbgym_cfg.dbgym_runs_path):
+                    task_run_child_fordpath = parent_dpath_of_path(task_run_child_fordpath)
             assert task_run_child_fordpath != None
             task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
                 

@@ -276,21 +276,31 @@ def is_base_git_dir(cwd) -> bool:
         return False
 
 
-def parent_dir(dpath: os.PathLike) -> os.PathLike:
-    """
-    Return a path of the parent directory of a directory path
-    Note that os.path.dirname() does not always return the parent directory (it only does when the path doesn't end with a '/')
-    """
-    assert os.path.isdir(dpath) and os.path.isabs(dpath)
-    return os.path.abspath(os.path.join(dpath, os.pardir))
+def is_fully_resolved(path: Path) -> bool:
+    assert isinstance(path, Path)
+    resolved_path = path.resolve()
+    # Converting them to strings is the most unambiguously strict way of checking equality.
+    # Stuff like Path.__eq__() or os.path.samefile() might be more lenient.
+    return str(resolved_path) == str(path)
 
 
-def dir_basename(dpath: os.PathLike) -> str:
+def parent_dpath_of_path(dpath: Path) -> Path:
     """
-    Return the directory name of a directory path
-    Note that os.path.basename() does not always return the directory name (it only does when the path doesn't end with a '/')
+    This function only calls Path.parent, but in a safer way.
     """
-    assert os.path.isdir(dpath) and os.path.isabs(dpath)
+    assert isinstance(dpath, Path)
+    assert is_fully_resolved(dpath), f"dpath must be fully resolved because Path.parent has weird behavior on non-resolved paths (see https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.parent)"
+    parent_dpath = dpath.parent
+    assert isinstance(parent_dpath, Path)
+    return parent_dpath
+
+
+def basename_of_path(dpath: Path) -> str:
+    """
+    This function only calls Path.name, but in a safer way.
+    """
+    assert isinstance(dpath, Path)
+    assert is_fully_resolved(dpath), f"dpath must be fully resolved because Path.name has weird behavior on non-resolved paths (like giving \"..\" if the path ends with a \"..\")"
     dpath_dirname, dpath_basename = os.path.split(dpath)
     # this means the path ended with a '/' so all os.path.split() does is get rid of the slash
     if dpath_basename == "":
@@ -313,7 +323,7 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
         )
 
 
-def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
+def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r") -> None:
     """
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
@@ -331,9 +341,9 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
         - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked.
     """
     # process/validate open_fpath
-    assert os.path.isabs(
+    assert is_fully_resolved(
         open_fpath
-    ), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
+    ), f"open_and_save(): open_fpath ({open_fpath}) should be a fully resolved path"
     assert not os.path.islink(open_fpath), f"open_fpath ({open_fpath}) should not be a symlink"
     assert os.path.exists(open_fpath), f"open_fpath ({open_fpath}) does not exist"
     # open_and_save *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
@@ -348,7 +358,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
 
 
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
+def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> None:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -360,6 +370,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
     # process fpath and ensure that it's a file at the end
     fpath = conv_inputpath_to_realabspath(dbgym_cfg, fpath)
     fpath = os.path.realpath(fpath)  # traverse symlinks
+    assert is_fully_resolved(
+        fpath
+    ), f"fpath ({fpath}) should be a fully resolved path"
     assert not os.path.islink(fpath), f"fpath ({fpath}) should not be a symlink"
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
@@ -378,20 +391,20 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
             parent_dpath, dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
         assert not os.path.samefile(
-            parent_dir(parent_dpath), dbgym_cfg.dbgym_runs_path
+            parent_dpath_of_path(parent_dpath), dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
         assert not os.path.samefile(
-            parent_dir(parent_dir(parent_dpath)), dbgym_cfg.dbgym_runs_path
+            parent_dpath_of_path(parent_dpath_of_path(parent_dpath)), dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
         # org_dpath is the run_*/[codebase]/[organization]/ dir that fpath is in
         org_dpath = parent_dpath
         while not os.path.samefile(
-            parent_dir(parent_dir(parent_dir(org_dpath))), dbgym_cfg.dbgym_runs_path
+            parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))), dbgym_cfg.dbgym_runs_path
         ):
-            org_dpath = parent_dir(org_dpath)
-        org_dname = dir_basename(org_dpath)
-        codebase_dpath = parent_dir(org_dpath)
-        codebase_dname = dir_basename(codebase_dpath)
+            org_dpath = parent_dpath_of_path(org_dpath)
+        org_dname = basename_of_path(org_dpath)
+        codebase_dpath = parent_dpath_of_path(org_dpath)
+        codebase_dname = basename_of_path(codebase_dpath)
         this_run_save_dpath = os.path.join(
             dbgym_cfg.dbgym_this_run_path, codebase_dname, org_dname
         )
@@ -410,11 +423,11 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
         else:
             # set base_dpath such that its parent is org_dpath
             base_dpath = parent_dpath
-            while not os.path.samefile(parent_dir(base_dpath), org_dpath):
-                base_dpath = parent_dir(base_dpath)
+            while not os.path.samefile(parent_dpath_of_path(base_dpath), org_dpath):
+                base_dpath = parent_dpath_of_path(base_dpath)
 
             # create symlink
-            open_base_dname = dir_basename(base_dpath)
+            open_base_dname = basename_of_path(base_dpath)
             symlink_dpath = os.path.join(this_run_save_dpath, open_base_dname)
             # this existence check is for if you call save_file() on a file in the same directory twice
             if not os.path.exists(symlink_dpath):
@@ -434,7 +447,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
 
 # TODO(phw2): make link_result respect the codebase dir
 # TODO(phw2): after that, refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_path):
+def link_result(dbgym_cfg: DBGymConfig, result_path: Path) -> None:
     """
     result_path must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
@@ -442,6 +455,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     Will override the old symlink if there is one
     This is called so that [workspace]/data/ always contains the latest generated version of a file
     """
+    assert is_fully_resolved(result_path), f"result_path ({result_path}) should be a fully resolved path"
     result_path = conv_inputpath_to_realabspath(dbgym_cfg, result_path)
     assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_path)
@@ -449,13 +463,13 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     if os.path.isfile(result_path):
         result_name = os.path.basename(result_path)
     elif os.path.isdir(result_path):
-        result_name = dir_basename(result_path)
+        result_name = basename_of_path(result_path)
     else:
         raise NotImplementedError
     symlink_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True) / result_name
 
-    if os.path.exists(symlink_path):
-        os.remove(symlink_path)
+    if symlink_path.exists():
+        symlink_path.remove()
     os.symlink(result_path, symlink_path)
 
 

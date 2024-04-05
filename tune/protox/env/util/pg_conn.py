@@ -18,7 +18,7 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, parent_dir
+from misc.utils import DBGymConfig, parent_dpath_of_path
 from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
 
 
@@ -138,7 +138,7 @@ class PostgresConn:
                 #   still have the previous checkpoint available to us
                 f"{self.checkpoint_pgdata_snapshot_fpath}.tmp",
                 "-C",
-                parent_dir(self.pgdata_dpath),
+                parent_dpath_of_path(self.pgdata_dpath),
                 self.pgdata_dpath,
             ].run()
 
