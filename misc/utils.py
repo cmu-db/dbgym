@@ -23,6 +23,9 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
 
+def get_runs_path_from_workspace_path(workspace_path):
+    return workspace_path / "task_runs"
+
 def get_scale_factor_string(scale_factor: float | str) -> str:
     if scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
@@ -299,11 +302,15 @@ def dir_basename(dpath: os.PathLike) -> str:
 def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
     """
     Checks whether child_path refers to a file/dir/link that is a child of the dir referred to by parent_dpath
+    If the two paths are equal, this function returns FALSE
     """
     assert os.path.isdir(parent_dpath)
-    return os.path.samefile(
-        os.path.commonpath([parent_dpath, child_path]), parent_dpath
-    )
+    if os.path.samefile(child_path, parent_dpath):
+        return False
+    else:
+        return os.path.samefile(
+            os.path.commonpath([parent_dpath, child_path]), parent_dpath
+        )
 
 
 def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):

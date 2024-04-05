@@ -4,10 +4,21 @@ import os
 import shutil
 import copy
 
+from misc.utils import get_symlinks_path_from_workspace_path, get_runs_path_from_workspace_path
+from manage.cli import clean_workspace
+
+
+class MockDBGymConfig:
+    def __init__(self, scratchspace_path: Path):
+        self.dbgym_workspace_path = scratchspace_path
+        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(scratchspace_path)
+        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
+
+
 class CleanTests(unittest.TestCase):
     '''
     I deemed "clean" important enough to write unittests before because I'm really paranoid
-    about losing files that took 30 hours to build.
+      about losing files that took 30 hours to build.
     '''
     @staticmethod
     def create_structure(base_path: Path, structure: dict) -> None:
@@ -61,6 +72,10 @@ class CleanTests(unittest.TestCase):
 
     @staticmethod
     def make_workspace_structure(symlinks_structure: dict, task_runs_structure: dict) -> dict:
+        '''
+        This function exists so that it's easier to refactor the tests in case we ever change
+          how the workspace is organized.
+        '''
         return {
             "symlinks": symlinks_structure,
             "task_runs": task_runs_structure,
@@ -136,18 +151,18 @@ class CleanTests(unittest.TestCase):
         self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure))
 
     def test_no_links_in_symlinks(self):
-        structure = {
-            "dir1": {
-                "file1.txt": ("file",),  # Empty tuple indicates an empty file
-                "dir2": {
-                    "file2.txt": ("file",)
-                }
-            },
-            "dir3": {},
-            "link_to_dir1": ("symlink", "dir1")
+        starting_symlinks_structure = {}
+        starting_task_runs_structure = {
+            "run_0": {}
         }
-        CleanTests.create_structure(self.scratchspace_path, structure)
-        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, structure))
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {}
+        ending_task_runs_structure = {}
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), "safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
 
 if __name__ == '__main__':
