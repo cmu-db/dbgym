@@ -2,10 +2,15 @@ from pathlib import Path
 import unittest
 import os
 import shutil
+import copy
 
 class CleanTests(unittest.TestCase):
+    '''
+    I deemed "clean" important enough to write unittests before because I'm really paranoid
+    about losing files that took 30 hours to build.
+    '''
     @staticmethod
-    def create_structure(base_path: Path, structure: dict):
+    def create_structure(base_path: Path, structure: dict) -> None:
         for path, content in structure.items():
             full_path: Path = base_path / path
             
@@ -22,6 +27,45 @@ class CleanTests(unittest.TestCase):
             else:
                 raise ValueError(f"Unsupported type for path ({path}): {content}")
     
+    @staticmethod
+    def verify_structure(base_path: Path, structure: dict) -> bool:
+        base_path = Path(base_path)
+        
+        # Check for the presence of each item specified in the structure
+        for name, item in structure.items():
+            current_path = base_path / name
+            if isinstance(item, dict):  # Directory expected
+                if not current_path.is_dir():
+                    return False
+                if not CleanTests.verify_structure(current_path, item):
+                    return False
+            elif isinstance(item, tuple) and item[0] == "file":
+                if not current_path.is_file():
+                    return False
+            elif isinstance(item, tuple) and item[0] == "symlink":
+                if not current_path.is_symlink():
+                    return False
+                expected_target = base_path / item[1]
+                if not current_path.resolve().samefile(expected_target):
+                    return False
+            else:
+                return False
+            
+        # Check for any extra files or directories not described by the structure
+        expected_names = set(structure.keys())
+        actual_names = {entry.name for entry in base_path.iterdir()}
+        if not expected_names.issuperset(actual_names):
+            return False
+
+        return True
+
+    @staticmethod
+    def make_workspace_structure(symlinks_structure: dict, task_runs_structure: dict) -> dict:
+        return {
+            "symlinks": symlinks_structure,
+            "task_runs": task_runs_structure,
+        }
+        
     @classmethod
     def setUpClass(cls):
         cls.scratchspace_path = Path.cwd() / "manage/tests/test_clean_scratchspace/"
@@ -35,10 +79,10 @@ class CleanTests(unittest.TestCase):
         # if self.scratchspace_path.exists():
         #     shutil.rmtree(self.scratchspace_path)
 
-    def test_test(self):
+    def test_structure_helpers(self):
         structure = {
             "dir1": {
-                "file1.txt": ("file",),  # Now just an empty string to indicate an empty file
+                "file1.txt": ("file",),
                 "dir2": {
                     "file2.txt": ("file",)
                 }
@@ -47,3 +91,64 @@ class CleanTests(unittest.TestCase):
             "link_to_dir1": ("symlink", "dir1")
         }
         CleanTests.create_structure(self.scratchspace_path, structure)
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, structure))
+
+        extra_dir_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, extra_dir_structure))
+        extra_dir_structure["dir4"] = {}
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, extra_dir_structure))
+
+        missing_dir_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, missing_dir_structure))
+        del missing_dir_structure["dir1"]
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, missing_dir_structure))
+
+        extra_file_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, extra_file_structure))
+        extra_file_structure["file3.txt"] = ("file",)
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, extra_file_structure))
+
+        missing_file_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, missing_file_structure))
+        del missing_file_structure["dir1"]["file1.txt"]
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, missing_file_structure))
+
+        extra_link_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, extra_link_structure))
+        extra_link_structure["link_to_dir3"] = ("symlink", "dir3")
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, extra_link_structure))
+
+        missing_link_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, missing_link_structure))
+        del missing_link_structure["link_to_dir1"]
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, missing_link_structure))
+
+        wrong_link_structure = copy.deepcopy(structure)
+        # The "assertTrue, modify, assertFalse" patterns makes sure it was the modification that broke it
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure))
+        wrong_link_structure["link_to_dir1"] = ("symlink", "dir3")
+        self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure))
+
+    def test_no_links_in_symlinks(self):
+        structure = {
+            "dir1": {
+                "file1.txt": ("file",),  # Empty tuple indicates an empty file
+                "dir2": {
+                    "file2.txt": ("file",)
+                }
+            },
+            "dir3": {},
+            "link_to_dir1": ("symlink", "dir1")
+        }
+        CleanTests.create_structure(self.scratchspace_path, structure)
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, structure))
+
+
+if __name__ == '__main__':
+    unittest.main()
