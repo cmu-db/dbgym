@@ -27,13 +27,13 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
             "duration": hpoed_params["mythril_args"]["duration"],
             "workload_timeout": hpoed_params["mythril_args"]["workload_timeout"],
             "query_timeout": hpoed_params["mythril_args"]["timeout"],
-            "pristine_pgdata_snapshot_path": hpoed_params["mythril_args"]["pristine_pgdata_snapshot_path"],
             "output_log_path": "artifacts",
             "pgconn_info": {
                 "pgport": 5432,
                 "pguser": "admin",
                 "pgpass": "",
                 "pristine_pgdata_snapshot_path": "/mnt/nvme0n1/wz2/noisepage/pgdata",
+                "pgdata_parent_dpath": "/mnt/nvme0n1/wz2/noisepage/",
                 "pgbin_path": "/mnt/nvme0n1/wz2/noisepage/",
             },
             "benchmark_config": benchmark_config,
@@ -72,7 +72,7 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
                     "index_subset", True
                 ),
             },
-            "embedding_path": hpoed_params["vae_metadata"]["embedding_path"],
+            "embedder_path": hpoed_params["vae_metadata"]["embedder_path"],
         }
 
         for s in space.keys():

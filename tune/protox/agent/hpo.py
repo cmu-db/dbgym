@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Union
 import random
 import click
+import ssd_checker
 import ray
 from ray.tune import Trainable
 from ray.tune.schedulers import FIFOScheduler
@@ -21,25 +22,28 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedding_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path
+from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
+
+
+METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
-        self.embedding_path = embedding_path
+        self.embedder_path = embedder_path
         self.benchmark_config_path = benchmark_config_path
         self.benchbase_config_path = benchbase_config_path
         self.sysknobs_path = sysknobs_path
         self.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
+        self.pgdata_parent_dpath = pgdata_parent_dpath
         self.pgbin_path = pgbin_path
         self.workload_path = workload_path
         self.seed = seed
         self.agent = agent
         self.max_concurrent = max_concurrent
         self.num_samples = num_samples
-        self.early_kill = early_kill
         self.duration = duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
@@ -48,16 +52,22 @@ class AgentHPOArgs:
 @click.command()
 @click.pass_obj
 @click.argument("benchmark-name")
-@click.argument("workload-name")
+@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--query-subset",
+    type=click.Choice(["all", "even", "odd"]),
+    default="all",
+)
 @click.option(
     "--scale-factor",
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
-    "--embedding-path",
+    "--embedder-path",
     default=None,
-    help=f"The path to the directory that contains an `embedding.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedding_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}",
+    help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
@@ -83,6 +93,24 @@ class AgentHPOArgs:
     help=f"The path to the .tgz snapshot of the pgdata directory to use as a starting point for tuning. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
+    "--pristine-pgdata-snapshot-path",
+    default=None,
+    type=Path,
+    help=f"The path to the .tgz snapshot of the pgdata directory to use as a starting point for tuning. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
+@click.option(
+    "--intended-pgdata-hardware",
+    type=click.Choice(["hdd", "ssd"]),
+    default="hdd",
+    help=f"The intended hardware pgdata should be on. Used as a sanity check for --pgdata-parent-dpath.",
+)
+@click.option(
+    "--pgdata-parent-dpath",
+    default=None,
+    type=Path,
+    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+)
+@click.option(
     "--pgbin-path",
     default=None,
     type=Path,
@@ -92,7 +120,7 @@ class AgentHPOArgs:
     "--workload-path",
     default=None,
     type=Path,
-    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -114,10 +142,7 @@ class AgentHPOArgs:
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
 @click.option(
-    "--early-kill", is_flag=True, help="Whether the tuner times out its steps."
-)
-@click.option(
-    "--duration", default=0.01, type=float, help="The total number of hours to run for."
+    "--duration", default=30, type=float, help="The total number of hours to run for."
 )
 @click.option(
     "--workload-timeout",
@@ -134,33 +159,39 @@ class AgentHPOArgs:
 def hpo(
     dbgym_cfg,
     benchmark_name,
-    workload_name,
+    seed_start,
+    seed_end,
+    query_subset,
     scale_factor,
-    embedding_path,
+    embedder_path,
     benchmark_config_path,
     benchbase_config_path,
     sysknobs_path,
     pristine_pgdata_snapshot_path,
+    intended_pgdata_hardware,
+    pgdata_parent_dpath,
     pgbin_path,
     workload_path,
     seed,
     agent,
     max_concurrent,
     num_samples,
-    early_kill,
     duration,
     workload_timeout,
     query_timeout,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    if embedding_path == None:
-        embedding_path = default_embedding_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, scale_factor)
+    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    if embedder_path == None:
+        embedder_path = default_embedder_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if benchbase_config_path == None:
         benchbase_config_path = default_benchbase_config_path(benchmark_name)
     if pristine_pgdata_snapshot_path == None:
         pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
+    if pgdata_parent_dpath == None:
+        pgdata_parent_dpath = default_pgdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
     if pgbin_path == None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path == None:
@@ -169,16 +200,25 @@ def hpo(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    embedding_path = conv_inputpath_to_realabspath(dbgym_cfg, embedding_path)
+    embedder_path = conv_inputpath_to_realabspath(dbgym_cfg, embedder_path)
     benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
     sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
     pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
+    pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
 
+    # Check assertions on args
+    if intended_pgdata_hardware == "hdd":
+        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
+    elif intended_pgdata_hardware == "ssd":
+        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+    else:
+        assert False
+
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedding_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, early_kill, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -188,9 +228,8 @@ def hpo(
 def build_space(
     sysknobs: dict[str, Any],
     benchmark_config: dict[str, Any],
-    pristine_pgdata_snapshot_path: Path,
     workload_path: Path,
-    embedding_path: list[Path],
+    embedder_path: list[Path],
     pgconn_info: dict[str, str],
     benchbase_config: dict[str, Any]={},
     duration: int=30,
@@ -210,7 +249,6 @@ def build_space(
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
         # Paths.
-        "pristine_pgdata_snapshot_path": str(pristine_pgdata_snapshot_path),
         "workload_path": str(workload_path),
         "output_log_path": "artifacts/",
         "pgconn_info": pgconn_info,
@@ -239,7 +277,7 @@ def build_space(
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
         # Embeddings.
-        "embedding_path": tune.choice(map(str, embedding_path)),
+        "embedder_path": tune.choice(map(str, embedder_path)),
         # LSC Parameters.
         # Note that the units for these are based on the embedding itself.
         "lsc": {
@@ -489,8 +527,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchmark_config = benchmark_config[benchmark]
         benchmark_config["benchmark"] = benchmark
 
-    # TODO(phw2): read the dir hpo_args.embedding_path and get a list of embeddings
-    embedding_path = [hpo_args.embedding_path]
+    # TODO(phw2): read the dir hpo_args.embedder_path and get a list of embeddings
+    embedder_path = [hpo_args.embedder_path]
     # TODO(phw2): make workload and query timeout params lists instead of just ints
     workload_timeouts = [hpo_args.workload_timeout]
     query_timeouts = [hpo_args.query_timeout]
@@ -509,11 +547,11 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     space = build_space(
         sysknobs,
         benchmark_config,
-        hpo_args.pristine_pgdata_snapshot_path,
         hpo_args.workload_path,
-        embedding_path,
+        embedder_path,
         pgconn_info={
             "pristine_pgdata_snapshot_path": hpo_args.pristine_pgdata_snapshot_path,
+            "pgdata_parent_dpath": hpo_args.pgdata_parent_dpath,
             "pgbin_path": hpo_args.pgbin_path,
         },
         benchbase_config=benchbase_config,
@@ -534,14 +572,15 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         max_concurrent=hpo_args.max_concurrent
     )
 
+    mode = "max" if is_oltp else "min"
     tune_config = TuneConfig(
         scheduler=scheduler,
         search_alg=search,
         num_samples=hpo_args.num_samples,
         max_concurrent_trials=hpo_args.max_concurrent,
         chdir_to_trial_dir=True,
-        metric="Best Metric",
-        mode="max" if is_oltp else "min",
+        metric=METRIC_NAME,
+        mode=mode,
     )
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -566,3 +605,5 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
             if results[i].error:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
+    best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
+    print(f"best_result={best_result}")

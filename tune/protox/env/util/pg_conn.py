@@ -28,7 +28,8 @@ class PostgresConn:
         dbgym_cfg: DBGymConfig,
         pgport: int,
         pristine_pgdata_snapshot_fpath: Path,
-        pgbin_dpath: Union[str, Path],
+        pgdata_parent_dpath: Path,
+        pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
         logger: Logger,
@@ -37,7 +38,7 @@ class PostgresConn:
         Path(postgres_logs_dir).mkdir(parents=True, exist_ok=True)
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
-        self.pgbin_dpath = pgbin_dpath
+        self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
         self.log_step = 0
@@ -52,18 +53,21 @@ class PostgresConn:
         #   state of the database as it is being tuned. It is generated while tuning and is
         #   discarded once tuning is completed.
         self.checkpoint_pgdata_snapshot_fpath = dbgym_cfg.dbgym_tmp_path / "checkpoint_pgdata.tgz"
+        # pgdata_parent_dpath is the parent directory of the pgdata that is *actively being tuned*.
+        #   Setting this lets us control the hardware device pgdata is built on (e.g. HDD vs. SSD).
+        self.pgdata_parent_dpath = pgdata_parent_dpath
         # pgdata_dpath is the pgdata that is *actively being tuned*
-        self.pgdata_dpath = dbgym_cfg.dbgym_tmp_path / f"pgdata{self.pgport}"
+        self.pgdata_dpath = self.pgdata_parent_dpath / f"pgdata{self.pgport}"
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def _get_connstr(self):
+    def get_connstr(self):
         return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
     def conn(self) -> psycopg.Connection[Any]:
         if self._conn is None:
             self._conn = psycopg.connect(
-                self._get_connstr(), autocommit=True, prepare_threshold=None
+                self.get_connstr(), autocommit=True, prepare_threshold=None
             )
         return self._conn
 
@@ -89,7 +93,7 @@ class PostgresConn:
 
         while True:
             self.logger.get_logger(__name__).debug("Shutting down postgres...")
-            _, stdout, stderr = local[f"{self.pgbin_dpath}/pg_ctl"][
+            _, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "stop", "--wait", "-t", "180", "-D", self.pgdata_dpath
             ].run(retcode=None)
             time.sleep(1)
@@ -98,7 +102,7 @@ class PostgresConn:
             )
 
             # Wait until pg_isready fails.
-            retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 "localhost",
                 "--port",
@@ -153,7 +157,7 @@ class PostgresConn:
         attempts = 0
         while not pid_lock.exists():
             # Try starting up.
-            retcode, stdout, stderr = local[f"{self.pgbin_dpath}/pg_ctl"][
+            retcode, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "-D",
                 self.pgdata_dpath,
                 "--wait",
@@ -187,7 +191,7 @@ class PostgresConn:
                 )
                 return False
 
-            retcode, _, _ = local[f"{self.pgbin_dpath}/pg_isready"][
+            retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
                 "--host",
                 "localhost",
                 "--port",
@@ -240,7 +244,7 @@ class PostgresConn:
         conn.execute("SET statement_timeout = 300000")
 
         try:
-            timer = threading.Timer(300.0, cancel_fn, args=(self._get_connstr(),))
+            timer = threading.Timer(300.0, cancel_fn, args=(self.get_connstr(),))
             timer.start()
 
             conn.execute(sql)

@@ -22,12 +22,18 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 # Helper functions that both this file and other files use
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
+def get_tmp_path_from_workspace_path(workspace_path):
+    return workspace_path / "tmp"
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
+    assert type(scale_factor) is float or type(scale_factor) is str
     if scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
     else:
-        return str(scale_factor).replace(".", "point")
+        if float(int(scale_factor)) == scale_factor:
+            return str(int(scale_factor))
+        else:
+            return str(scale_factor).replace(".", "point")
     
 def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata.tgz"
@@ -57,30 +63,38 @@ default_benchbase_config_path = (
 #   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
+# Details
+#  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
 traindata_fname = (
-    lambda benchmark_name, workload_name, scale_factor: f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding_traindata.parquet"
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
 default_traindata_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / traindata_fname(benchmark_name, workload_name, scale_factor)
+    / traindata_fname(benchmark_name, workload_name)
 )
-default_embedding_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(
+default_embedder_dname = (
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
+)
+default_embedder_path = (
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_embedding"
+    / default_embedder_dname(benchmark_name, workload_name)
 )
 default_hpoed_agent_params_path = (
-    lambda workspace_path, benchmark_name, workload_name, scale_factor: get_symlinks_path_from_workspace_path(workspace_path)
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_tune_protox_agent"
     / "data"
-    / f"{benchmark_name}_{workload_name}_sf{get_scale_factor_string(scale_factor)}_hpoed_agent_params.json"
+    / f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
+)
+workload_name_fn = (
+    lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -88,7 +102,7 @@ default_workload_path = (
     )
     / f"dbgym_benchmark_{benchmark_name}"
     / "data"
-    / f"workload_{workload_name}"
+    / workload_name
 )
 default_pristine_pgdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
@@ -97,6 +111,11 @@ default_pristine_pgdata_snapshot_path = (
     / f"dbgym_dbms_postgres"
     / "data"
     / get_pgdata_tgz_name(benchmark_name, scale_factor)
+)
+default_pgdata_parent_dpath = (
+    lambda workspace_path: get_tmp_path_from_workspace_path(
+        workspace_path
+    )
 )
 default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(
@@ -164,7 +183,7 @@ class DBGymConfig:
         # one use for it is to place the unzipped pgdata
         # there's no need to save the actual pgdata dir in run_*/ because we just save a symlink to
         #   the .tgz file we unzipped
-        self.dbgym_tmp_path = self.dbgym_workspace_path / "tmp"
+        self.dbgym_tmp_path = get_tmp_path_from_workspace_path(self.dbgym_workspace_path)
         if self.dbgym_tmp_path.exists():
             shutil.rmtree(self.dbgym_tmp_path)
         self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
@@ -177,9 +196,8 @@ class DBGymConfig:
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
     def __del__(self):
-        pass # DEBUG(phw2)
-        # if self.dbgym_tmp_path.exists():
-        #     shutil.rmtree(self.dbgym_tmp_path)
+        if self.dbgym_tmp_path.exists():
+            shutil.rmtree(self.dbgym_tmp_path)
 
     # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
@@ -394,9 +412,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
         if os.path.samefile(parent_dpath, org_dpath):
             fname = os.path.basename(fpath)
             symlink_fpath = os.path.join(this_run_save_dpath, fname)
-            # this existence check is for if you call save_file() on the same file twice
-            if not os.path.exists(symlink_fpath):
-                os.symlink(fpath, symlink_fpath)
+            try_create_symlink(fpath, symlink_fpath)
         # else, we know the fpath file is _not_ directly inside org_dpath dir
         # we go as far back as we can while still staying in org_dpath and symlink that "base" dir
         # this is because lots of runs create dirs within org_dpath and it's just a waste of space to symlink every individual file
@@ -409,9 +425,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
             # create symlink
             open_base_dname = dir_basename(base_dpath)
             symlink_dpath = os.path.join(this_run_save_dpath, open_base_dname)
-            # this existence check is for if you call save_file() on a file in the same directory twice
-            if not os.path.exists(symlink_dpath):
-                os.symlink(base_dpath, symlink_dpath)
+            try_create_symlink(base_dpath, symlink_dpath)
     # if it wasn't generated by a run
     else:
         # since we don't know where the file is at all, the location is "unknown" and the org is "all"
@@ -425,9 +439,8 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
         shutil.copy(fpath, copy_fpath)
 
 
-# TODO(phw2): make link_result respect the codebase dir
-# TODO(phw2): after that, refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_path):
+# TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
+def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> None:
     """
     result_path must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
@@ -439,17 +452,47 @@ def link_result(dbgym_cfg: DBGymConfig, result_path):
     assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_path)
 
-    if os.path.isfile(result_path):
-        result_name = os.path.basename(result_path)
-    elif os.path.isdir(result_path):
-        result_name = dir_basename(result_path)
+    if custom_result_name != None:
+        result_name = custom_result_name
     else:
-        raise NotImplementedError
+        if os.path.isfile(result_path):
+            result_name = os.path.basename(result_path)
+        elif os.path.isdir(result_path):
+            result_name = dir_basename(result_path)
+        else:
+            raise AssertionError("result_path must be either a file or dir")
     symlink_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True) / result_name
 
-    if os.path.exists(symlink_path):
-        os.remove(symlink_path)
-    os.symlink(result_path, symlink_path)
+    # Remove the old symlink ("old" meaning created in an earlier run) if there is one
+    # Note that in a multi-threaded setting, this might remove one created by a process in the same run,
+    #   meaning it's not "old" by our definition of "old". However, we'll always end up with a symlink
+    #   file of the current run regardless of the order of threads.
+    try_remove_file(symlink_path)
+    try_create_symlink(result_path, symlink_path)
+
+
+def try_create_symlink(src_path: Path, dst_path: Path) -> None:
+    '''
+    Our functions that create symlinks might be called by multiple processes at once
+    during HPO. Thus, this is a thread-safe way to create a symlink.
+    '''
+    try:
+        os.symlink(src_path, dst_path)
+    except FileExistsError:
+        # it's ok if it exists
+        pass
+
+
+def try_remove_file(path: Path) -> None:
+    '''
+    Our functions that remove files might be called by multiple processes at once
+    during HPO. Thus, this is a thread-safe way to remove a file.
+    '''
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        # it's ok if it doesn't exist
+        pass
 
 
 def restart_ray():
