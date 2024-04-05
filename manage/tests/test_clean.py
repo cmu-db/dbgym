@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import unittest
 import os
@@ -6,6 +7,11 @@ import copy
 
 from misc.utils import get_symlinks_path_from_workspace_path, get_runs_path_from_workspace_path
 from manage.cli import clean_workspace
+
+
+# This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
+#   does not go through the `if __name__ == "__main__"` codepath.
+logging.basicConfig(level=logging.DEBUG)
 
 
 class MockDBGymConfig:
@@ -39,6 +45,7 @@ class CleanTests(unittest.TestCase):
                 else:
                     raise ValueError(f"Unsupported type for path ({path}): {content}")
         
+        root_path.mkdir(parents=True, exist_ok=True)
         create_structure_internal(root_path, root_path, structure)
         
     @staticmethod
@@ -47,31 +54,42 @@ class CleanTests(unittest.TestCase):
             # Check for the presence of each item specified in the structure
             for name, item in structure.items():
                 new_cur_path = cur_path / name
-                if isinstance(item, dict):  # Directory expected
+                if not new_cur_path.exists():
+                    logging.debug(f"{new_cur_path} does not exist")
+                    return False
+                elif isinstance(item, dict):
                     if not new_cur_path.is_dir():
+                        logging.debug(f"expected {new_cur_path} to be a directory")
                         return False
                     if not verify_structure_internal(root_path, new_cur_path, item):
                         return False
                 elif isinstance(item, tuple) and item[0] == "file":
                     if not new_cur_path.is_file():
+                        logging.debug(f"expected {new_cur_path} to be a regular file")
                         return False
                 elif isinstance(item, tuple) and item[0] == "symlink":
                     if not new_cur_path.is_symlink():
+                        logging.debug(f"expected {new_cur_path} to be a symlink")
                         return False
                     expected_target = root_path / item[1]
                     if not new_cur_path.resolve().samefile(expected_target):
+                        logging.debug(f"expected {new_cur_path} to link to {expected_target}, but it links to {new_cur_path.resolve()}")
                         return False
                 else:
-                    return False
+                    assert False, "structure misconfigured"
                 
             # Check for any extra files or directories not described by the structure
             expected_names = set(structure.keys())
             actual_names = {entry.name for entry in cur_path.iterdir()}
             if not expected_names.issuperset(actual_names):
+                logging.debug(f"expected_names={expected_names}, actual_names={actual_names}")
                 return False
 
             return True
 
+        if not root_path.exists():
+            logging.debug(f"{root_path} does not exist")
+            return False
         return verify_structure_internal(root_path, root_path, structure)
 
     @staticmethod
@@ -94,9 +112,10 @@ class CleanTests(unittest.TestCase):
             shutil.rmtree(self.scratchspace_path)
 
     def tearDown(self):
-        pass
+        # DEBUG(phw2)
         # if self.scratchspace_path.exists():
         #     shutil.rmtree(self.scratchspace_path)
+        pass
 
     def test_structure_helpers(self):
         structure = {
@@ -157,9 +176,41 @@ class CleanTests(unittest.TestCase):
         wrong_link_structure["link_to_dir1"] = ("symlink", "dir3")
         self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure))
 
-    # TODO(phw2): test empty workspace
+    def test_nonexistent_workspace(self):
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+    
+    def test_no_symlinks_dir_and_no_task_runs_dir(self):
+        starting_structure = {}
+        ending_structure = {}
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+    
+    def test_no_symlinks_dir_and_yes_task_runs_dir(self):
+        starting_structure = {
+            "task_runs": {
+                "file1.txt": ("file",)
+            }
+        }
+        ending_structure = {
+            "task_runs": {}
+        }
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+    
+    def test_yes_symlinks_dir_and_no_task_runs_dir(self):
+        starting_structure = {
+            "symlinks": {}
+        }
+        ending_structure = {
+            "symlinks": {}
+        }
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    def test_no_links_and_no_runs(self):
+    def test_no_symlinks_in_dir_and_no_task_runs_in_dir(self):
         starting_symlinks_structure = {}
         starting_task_runs_structure = {}
         starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
@@ -202,8 +253,8 @@ class CleanTests(unittest.TestCase):
         ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        # clean_workspace(MockDBGymConfig(self.scratchspace_path))
-        # self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
     
     # link to dir directly in task runs
 
