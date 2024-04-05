@@ -122,3 +122,4 @@ virtualenv==20.25.0
 Werkzeug==3.0.1
 wrapt==1.14.1
 zipp==3.17.0
+ssd_checker==1.0.3
