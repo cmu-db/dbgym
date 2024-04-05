@@ -11,7 +11,8 @@ from manage.cli import clean_workspace
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
-logging.basicConfig(level=logging.INFO)
+# Make it DEBUG to see logs from verify_structure(). Make it INFO to not see logs.
+logging.basicConfig(level=logging.DEBUG)
 
 
 class MockDBGymConfig:
@@ -55,7 +56,7 @@ class CleanTests(unittest.TestCase):
             for name, item in structure.items():
                 new_cur_path = cur_path / name
                 if not new_cur_path.exists():
-                    logging.debug(f"{new_cur_path} does not exist")
+                    logging.debug(f"{new_cur_path} does not exist. If it's a symlink, it means it either doesn't exist or it's a broken symlink.")
                     return False
                 elif isinstance(item, dict):
                     if not new_cur_path.is_dir():
@@ -249,6 +250,30 @@ class CleanTests(unittest.TestCase):
         }
         ending_task_runs_structure = {
             "file1.txt": ("file",)
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_link_to_dir_directly_in_task_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",)
+            }
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",)
+            }
         }
         ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 

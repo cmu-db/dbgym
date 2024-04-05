@@ -4,6 +4,7 @@ import yaml
 import logging
 from pathlib import Path
 from misc.utils import DBGymConfig, is_child_path, parent_dpath_of_path
+from itertools import chain
 import os
 
 from misc.utils import get_symlinks_path_from_workspace_path
@@ -103,10 +104,13 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
 
     # 1. Initialize paths to process
     if dbgym_cfg.dbgym_symlinks_path.exists():
-        for root_pathstr, _, file_names in os.walk(dbgym_cfg.dbgym_symlinks_path):
+        print("a")
+        for root_pathstr, dir_names, file_names in os.walk(dbgym_cfg.dbgym_symlinks_path):
             root_path = Path(root_pathstr)
-            for file_name in file_names:
+            # symlinks can either be files or directories, so we go through both dir_names and file_names
+            for file_name in chain(dir_names, file_names):
                 file_path = root_path / file_name
+                print(f"file_path={file_path}")
                 if file_path.is_symlink():
                     symlink_fpaths_to_process.append(file_path)
 
@@ -118,7 +122,9 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
     task_run_child_fordpaths_to_keep = set()
 
     if dbgym_cfg.dbgym_runs_path.exists():
+        print("c")
         while symlink_fpaths_to_process:
+            print("d")
             symlink_fpath: Path = symlink_fpaths_to_process.pop()
             assert symlink_fpath.is_symlink()
             real_fordpath = symlink_fpath.resolve()
@@ -155,6 +161,7 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
     
     # 3. Go through all children of task_runs/*, deleting any that we weren't told to keep
     # It's true that symlinks might link outside of task_runs/*. We'll just not care about those
+    print(f"task_run_child_fordpaths_to_keep={task_run_child_fordpaths_to_keep}")
     if dbgym_cfg.dbgym_runs_path.exists():
         for child_fordpath in dbgym_cfg.dbgym_runs_path.iterdir():
             if child_fordpath not in task_run_child_fordpaths_to_keep:
