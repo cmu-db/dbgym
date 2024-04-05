@@ -21,54 +21,58 @@ class CleanTests(unittest.TestCase):
       about losing files that took 30 hours to build.
     '''
     @staticmethod
-    def create_structure(base_path: Path, structure: dict) -> None:
-        for path, content in structure.items():
-            full_path: Path = base_path / path
-            
-            if isinstance(content, dict):  # Directory
-                full_path.mkdir(parents=True, exist_ok=True)
-                CleanTests.create_structure(full_path, content)
-            elif isinstance(content, tuple) and content[0] == "file":
-                assert len(content) == 1
-                full_path.touch()
-            elif isinstance(content, tuple) and content[0] == "symlink":
-                assert len(content) == 2
-                target_path = base_path / content[1]
-                os.symlink(target_path, full_path)
-            else:
-                raise ValueError(f"Unsupported type for path ({path}): {content}")
-    
-    @staticmethod
-    def verify_structure(base_path: Path, structure: dict) -> bool:
-        base_path = Path(base_path)
+    def create_structure(root_path: Path, structure: dict) -> None:
+        def create_structure_internal(root_path: Path, cur_path: Path, structure: dict) -> None:
+            for path, content in structure.items():
+                full_path: Path = cur_path / path
+                
+                if isinstance(content, dict):  # Directory
+                    full_path.mkdir(parents=True, exist_ok=True)
+                    create_structure_internal(root_path, full_path, content)
+                elif isinstance(content, tuple) and content[0] == "file":
+                    assert len(content) == 1
+                    full_path.touch()
+                elif isinstance(content, tuple) and content[0] == "symlink":
+                    assert len(content) == 2
+                    target_path = root_path / content[1]
+                    os.symlink(target_path, full_path)
+                else:
+                    raise ValueError(f"Unsupported type for path ({path}): {content}")
         
-        # Check for the presence of each item specified in the structure
-        for name, item in structure.items():
-            current_path = base_path / name
-            if isinstance(item, dict):  # Directory expected
-                if not current_path.is_dir():
+        create_structure_internal(root_path, root_path, structure)
+        
+    @staticmethod
+    def verify_structure(root_path: Path, structure: dict) -> bool:
+        def verify_structure_internal(root_path: Path, cur_path: Path, structure: dict) -> bool:
+            # Check for the presence of each item specified in the structure
+            for name, item in structure.items():
+                new_cur_path = cur_path / name
+                if isinstance(item, dict):  # Directory expected
+                    if not new_cur_path.is_dir():
+                        return False
+                    if not verify_structure_internal(root_path, new_cur_path, item):
+                        return False
+                elif isinstance(item, tuple) and item[0] == "file":
+                    if not new_cur_path.is_file():
+                        return False
+                elif isinstance(item, tuple) and item[0] == "symlink":
+                    if not new_cur_path.is_symlink():
+                        return False
+                    expected_target = root_path / item[1]
+                    if not new_cur_path.resolve().samefile(expected_target):
+                        return False
+                else:
                     return False
-                if not CleanTests.verify_structure(current_path, item):
-                    return False
-            elif isinstance(item, tuple) and item[0] == "file":
-                if not current_path.is_file():
-                    return False
-            elif isinstance(item, tuple) and item[0] == "symlink":
-                if not current_path.is_symlink():
-                    return False
-                expected_target = base_path / item[1]
-                if not current_path.resolve().samefile(expected_target):
-                    return False
-            else:
+                
+            # Check for any extra files or directories not described by the structure
+            expected_names = set(structure.keys())
+            actual_names = {entry.name for entry in cur_path.iterdir()}
+            if not expected_names.issuperset(actual_names):
                 return False
-            
-        # Check for any extra files or directories not described by the structure
-        expected_names = set(structure.keys())
-        actual_names = {entry.name for entry in base_path.iterdir()}
-        if not expected_names.issuperset(actual_names):
-            return False
 
-        return True
+            return True
+
+        return verify_structure_internal(root_path, root_path, structure)
 
     @staticmethod
     def make_workspace_structure(symlinks_structure: dict, task_runs_structure: dict) -> dict:
@@ -102,8 +106,11 @@ class CleanTests(unittest.TestCase):
                     "file2.txt": ("file",)
                 }
             },
-            "dir3": {},
-            "link_to_dir1": ("symlink", "dir1")
+            "dir3": {
+                "nested_link_to_dir1": ("symlink", "dir1")
+            },
+            "link_to_dir1": ("symlink", "dir1"),
+            "link_to_file2": ("symlink", "dir1/dir2/file2.txt")
         }
         CleanTests.create_structure(self.scratchspace_path, structure)
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, structure))
@@ -150,6 +157,20 @@ class CleanTests(unittest.TestCase):
         wrong_link_structure["link_to_dir1"] = ("symlink", "dir3")
         self.assertFalse(CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure))
 
+    # TODO(phw2): test empty workspace
+
+    def test_no_links_and_no_runs(self):
+        starting_symlinks_structure = {}
+        starting_task_runs_structure = {}
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {}
+        ending_task_runs_structure = {}
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
     def test_no_links_in_symlinks(self):
         starting_symlinks_structure = {}
         starting_task_runs_structure = {
@@ -161,8 +182,28 @@ class CleanTests(unittest.TestCase):
         ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), "safe")
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_link_to_file_directly_in_task_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/file1.txt")
+        }
+        starting_task_runs_structure = {
+            "file1.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/file1.txt")
+        }
+        ending_task_runs_structure = {
+            "file1.txt": ("file",)
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        # clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        # self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
 
 if __name__ == '__main__':

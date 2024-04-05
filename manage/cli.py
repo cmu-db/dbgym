@@ -90,7 +90,14 @@ def manage_clean(dbgym_cfg: DBGymConfig, mode: str):
     clean_workspace(dbgym_cfg.dbgym_workspace_path, mode)
 
 
-def clean_workspace(dbgym_cfg: DBGymConfig, mode: str) -> None:
+def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
+    '''
+    Clean all [workspace]/task_runs/run_*/ directories that are not referenced by any "active symlinks".
+    If mode is "aggressive", "active symlinks" means *only* the symlinks directly in [workspace]/symlinks/.
+    If mode is "safe", "active symlinks" means the symlinks directly in [workspace]/symlinks/ as well as
+      any symlinks referenced in task_runs/run_*/ directories we have already decided to keep.
+    '''
+
     # This stack holds the symlinks that are left to be processed
     symlink_fpaths_to_process = []
 
@@ -113,34 +120,44 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str) -> None:
         assert symlink_fpath.is_symlink()
         real_fordpath = symlink_fpath.resolve()
 
-        if is_child_path(real_fordpath, dbgym_cfg.dbgym_runs_path):
-            assert not os.path.samefile(real_fordpath, dbgym_cfg.dbgym_runs_path)
+        # If the file doesn't exist, we'll just ignore it.
+        if not real_fordpath.exists():
+            continue
+        # We're only trying to figure out which direct children of task_runs/ to save. If the file isn't
+        #   even a descendant, we don't care about it.
+        if not is_child_path(real_fordpath, dbgym_cfg.dbgym_runs_path):
+            continue
 
-            # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
-            task_run_child_fordpath = None
-            if os.path.samefile(parent_dir(real_fordpath), dbgym_cfg.dbgym_runs_path):
-                # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
-                #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
-                #   the structure somehow, it's just a good idea not to delete it.
-                task_run_child_fordpath = real_fordpath
-            else:
-                # Technically, it's not allowed to symlink to any files not in task_runs/run_*/[codebase]/[organization]/.
-                #   However, as with above, we won't just nuke files if the workspace doesn't follow this rule for
-                #   some reason.
-                task_run_child_fordpath = real_fordpath
-                while not os.path.samefile(parent_dir(parent_dir(task_run_child_fordpath)), dbgym_cfg.dbgym_runs_path):
-                    task_run_child_fordpath = parent_dir(task_run_child_fordpath)
-            assert task_run_child_fordpath != None
-            task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
+        assert not os.path.samefile(real_fordpath, dbgym_cfg.dbgym_runs_path)
+
+        # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
+        task_run_child_fordpath = None
+        if os.path.samefile(parent_dir(real_fordpath), dbgym_cfg.dbgym_runs_path):
+            # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
+            #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
+            #   the structure somehow, it's just a good idea not to delete it.
+            task_run_child_fordpath = real_fordpath
+        else:
+            # Technically, it's not allowed to symlink to any files not in task_runs/run_*/[codebase]/[organization]/.
+            #   However, as with above, we won't just nuke files if the workspace doesn't follow this rule for
+            #   some reason.
+            task_run_child_fordpath = real_fordpath
+            while not os.path.samefile(parent_dir(parent_dir(task_run_child_fordpath)), dbgym_cfg.dbgym_runs_path):
+                task_run_child_fordpath = parent_dir(task_run_child_fordpath)
+        assert task_run_child_fordpath != None
+        task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
             
-            # If on safe mode, add symlinks inside the task_run_child_fordpath to be processed
-            # TODO(phw2)
+        # If on safe mode, add symlinks inside the task_run_child_fordpath to be processed
+        # TODO(phw2)
     
     # Go through all children of task_runs/*, deleting any that we weren't told to keep
     # It's true that symlinks might link outside of task_runs/*. We'll just not care about those
     for child_fordpath in dbgym_cfg.dbgym_runs_path.iterdir():
         if child_fordpath not in task_run_child_fordpaths_to_keep:
-            shutil.rmtree(child_fordpath)
+            if child_fordpath.is_dir():
+                shutil.rmtree(child_fordpath)
+            else:
+                os.remove(child_fordpath)
 
 
 manage_group.add_command(manage_show)
