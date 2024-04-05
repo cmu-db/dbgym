@@ -204,6 +204,32 @@ class CleanTests(unittest.TestCase):
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         # clean_workspace(MockDBGymConfig(self.scratchspace_path))
         # self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+    
+    # link to dir directly in task runs
+
+    # link to file in run_*/
+
+    # link to dir in run_*/
+
+    # link to file in dir in run_*/
+
+    # if safe mode and symlink directly in task runs, account for that symlink as well
+
+    # if safe mode, follows symlinks in task runs
+
+    # if aggressive mode, doesn't follow symlinks in task runs
+
+    # don't loop infinitely if there are task_run non-self cycles
+
+    # don't loop infinitely if there are task_run self-cycles (symlink in task run that refers to the same task run)
+
+    # don't loop infinitely if there are symlink non-self cycles
+
+    # don't loop infinitely if there are symlink self cycles (symlink that refers to itself)
+
+    # links to non-existent files are ok
+
+    # links to files outside task_runs are ok, and stuff outside task_runs doesn't get deleted
 
 
 if __name__ == '__main__':
