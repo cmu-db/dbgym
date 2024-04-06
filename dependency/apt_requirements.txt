@@ -4,3 +4,4 @@ flex
 libreadline-dev
 rpm
 zlib1g-dev
+cbindgen

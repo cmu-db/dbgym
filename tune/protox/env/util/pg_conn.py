@@ -208,11 +208,25 @@ class PostgresConn:
                 "Waiting for postgres to bootup but it is not..."
             )
 
-        # Move the temporary over since we know the temporary can load.
+        # Set up Boot if we're told to do so
+        self._set_up_boot()
+
+        # Move the temporary over since we now know the temporary can load.
         if save_checkpoint:
             shutil.move(f"{self.pgdata_dpath}.tgz.tmp", f"{self.pgdata_dpath}.tgz")
 
         return True
+
+    def _set_up_boot(self):
+        '''
+        Sets up Boot on the currently running Postgres instances.
+        Uses instance vars of PostgresConn for configuration
+        '''
+        self.logger.get_logger(__name__).debug("Setting up boot")
+        self.psql("DROP EXTENSION IF EXISTS bytejack")
+        self.psql("CREATE EXTENSION IF NOT EXISTS bytejack")
+        self.psql("SET bytejack.enable=TRUE")
+        self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
     def psql(self, sql: str) -> Tuple[int, Optional[str]]:
