@@ -5,7 +5,7 @@ import os
 import shutil
 import copy
 
-from misc.utils import get_symlinks_path_from_workspace_path, get_runs_path_from_workspace_path
+from misc.utils import get_symlinks_path_from_workspace_path, get_runs_path_from_workspace_path, path_exists_dont_follow_symlinks
 from manage.cli import clean_workspace
 
 
@@ -55,7 +55,7 @@ class CleanTests(unittest.TestCase):
             # Check for the presence of each item specified in the structure
             for name, item in structure.items():
                 new_cur_path = cur_path / name
-                if not new_cur_path.exists(follow_symlinks=False):
+                if not path_exists_dont_follow_symlinks(new_cur_path):
                     logging.debug(f"{new_cur_path} does not exist")
                     return False
                 elif isinstance(item, dict):
@@ -72,10 +72,12 @@ class CleanTests(unittest.TestCase):
                     if not new_cur_path.is_symlink():
                         logging.debug(f"expected {new_cur_path} to be a symlink")
                         return False
-                    expected_target = root_path / item[1]
-                    if not new_cur_path.resolve().samefile(expected_target):
-                        logging.debug(f"expected {new_cur_path} to link to {expected_target}, but it links to {new_cur_path.resolve()}")
-                        return False
+                    # If item[1] is None, this indicates that we expect the symlink to be broken
+                    if item[1] != None:
+                        expected_target = root_path / item[1]
+                        if not new_cur_path.resolve().samefile(expected_target):
+                            logging.debug(f"expected {new_cur_path} to link to {expected_target}, but it links to {new_cur_path.resolve()}")
+                            return False
                 else:
                     assert False, "structure misconfigured"
                 
@@ -463,7 +465,7 @@ class CleanTests(unittest.TestCase):
         }
         ending_task_runs_structure = {
             "dir1": {
-                "symlink2": ("symlink", "task_runs/file1.txt")
+                "symlink2": ("symlink", None)
             },
         }
         ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
