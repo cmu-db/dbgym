@@ -27,7 +27,6 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
             "duration": hpoed_params["mythril_args"]["duration"],
             "workload_timeout": hpoed_params["mythril_args"]["workload_timeout"],
             "query_timeout": hpoed_params["mythril_args"]["timeout"],
-            "output_log_path": "artifacts",
             "pgconn_info": {
                 "pgport": 5432,
                 "pguser": "admin",
