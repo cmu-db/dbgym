@@ -1,4 +1,5 @@
 import shutil
+from typing import List
 import click
 import yaml
 import logging
@@ -98,19 +99,21 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
     If mode is "safe", "active symlinks" means the symlinks directly in [workspace]/symlinks/ as well as
       any symlinks referenced in task_runs/run_*/ directories we have already decided to keep.
     '''
+    def add_symlinks_in_dpath(symlinks_stack: List[Path], root_dpath: Path) -> None:
+        for root_pathstr, dir_names, file_names in os.walk(root_dpath):
+            root_path = Path(root_pathstr)
+            # symlinks can either be files or directories, so we go through both dir_names and file_names
+            for file_name in chain(dir_names, file_names):
+                file_path = root_path / file_name
+                if file_path.is_symlink():
+                    symlinks_stack.append(file_path)
 
     # This stack holds the symlinks that are left to be processed
     symlink_fpaths_to_process = []
 
     # 1. Initialize paths to process
     if dbgym_cfg.dbgym_symlinks_path.exists():
-        for root_pathstr, dir_names, file_names in os.walk(dbgym_cfg.dbgym_symlinks_path):
-            root_path = Path(root_pathstr)
-            # symlinks can either be files or directories, so we go through both dir_names and file_names
-            for file_name in chain(dir_names, file_names):
-                file_path = root_path / file_name
-                if file_path.is_symlink():
-                    symlink_fpaths_to_process.append(file_path)
+        add_symlinks_in_dpath(symlink_fpaths_to_process, dbgym_cfg.dbgym_symlinks_path)
 
     # 2. Go through symlinks, figuring out which "children of task runs" to keep
     # Based on the rules of the framework, "children of task runs" should be run_*/ directories.
@@ -125,6 +128,7 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
             symlink_fpath: Path = symlink_fpaths_to_process.pop()
             assert symlink_fpath.is_symlink()
             real_fordpath = symlink_fpath.resolve()
+            assert str(real_fordpath) == str(os.readlink(symlink_fpath)), f"symlink_fpath ({symlink_fpath}) seems to point to *another* symlink. This is difficult to handle and has no practical use, so it is currently disallowed. Please resolve this situation manually."
 
             # If the file doesn't exist, we'll just ignore it.
             if not real_fordpath.exists():
@@ -155,6 +159,9 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
             task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
                 
             # If on safe mode, add symlinks inside the task_run_child_fordpath to be processed
+            if mode == "safe":
+                add_symlinks_in_dpath(symlink_fpaths_to_process, task_run_child_fordpath)
+
             # TODO(phw2)
     
     # 3. Go through all children of task_runs/*, deleting any that we weren't told to keep

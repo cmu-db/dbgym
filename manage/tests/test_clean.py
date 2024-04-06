@@ -312,12 +312,52 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    # link to file in run_*/
+    def test_link_to_dir_in_dir_in_task_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/dir2")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "dir2": {
+                    "file1.txt": ("file",)
+                },
+                "file2.txt": ("file",)
+            },
+            "dir3": {
+                "file3.txt": ("file",)
+            }
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/dir2")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "dir2": {
+                    "file1.txt": ("file",)
+                },
+                "file2.txt": ("file",)
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
-    # link to dir in run_*/
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    # link to file in dir in run_*/
+    def test_link_to_link_crashes(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/symlink2")
+        }
+        starting_task_runs_structure = {
+            "symlink2": ("symlink", "task_runs/file1.txt"),
+            "file1.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
 
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        with self.assertRaises(AssertionError):
+            clean_workspace(MockDBGymConfig(self.scratchspace_path))
     # if safe mode and symlink directly in task runs, account for that symlink as well
 
     # if safe mode, follows symlinks in task runs
