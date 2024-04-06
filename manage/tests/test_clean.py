@@ -55,8 +55,8 @@ class CleanTests(unittest.TestCase):
             # Check for the presence of each item specified in the structure
             for name, item in structure.items():
                 new_cur_path = cur_path / name
-                if not new_cur_path.exists():
-                    logging.debug(f"{new_cur_path} does not exist. If it's a symlink, it means it either doesn't exist or it's a broken symlink.")
+                if not new_cur_path.exists(follow_symlinks=False):
+                    logging.debug(f"{new_cur_path} does not exist")
                     return False
                 elif isinstance(item, dict):
                     if not new_cur_path.is_dir():
@@ -358,9 +358,119 @@ class CleanTests(unittest.TestCase):
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         with self.assertRaises(AssertionError):
             clean_workspace(MockDBGymConfig(self.scratchspace_path))
-    # if safe mode and symlink directly in task runs, account for that symlink as well
 
-    # if safe mode, follows symlinks in task runs
+    def test_safe_mode_link_to_dir_with_link(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/file1.txt")
+            },
+            "file1.txt": ("file",),
+            "file2.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/file1.txt")
+            },
+            "file1.txt": ("file",),
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_safe_mode_link_to_file_in_dir_with_link(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/file2.txt")
+            },
+            "file2.txt": ("file",),
+            "file3.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/file2.txt")
+            },
+            "file2.txt": ("file",),
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_safe_mode_link_to_link_to_file_in_dir_in_task_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/dir2/file2.txt")
+            },
+            "dir2": {
+                "file2.txt": ("file",),
+            },
+            "file3.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/dir2/file2.txt")
+            },
+            "dir2": {
+                "file2.txt": ("file",),
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_aggressive_mode_link_to_dir_with_link(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/file1.txt")
+            },
+            "file1.txt": ("file",),
+            "file2.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/file1.txt")
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
     # if aggressive mode, doesn't follow symlinks in task runs
 
