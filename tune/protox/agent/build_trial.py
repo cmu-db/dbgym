@@ -135,9 +135,9 @@ def _build_utilities(
     logger = Logger(
         hpoed_params["trace"],
         hpoed_params["verbose"],
-        Path(logdir) / hpoed_params["output_log_path"],
-        Path(logdir) / hpoed_params["output_log_path"] / "repository",
-        Path(logdir) / hpoed_params["output_log_path"] / "tboard",
+        Path(logdir),
+        Path(logdir) / "repository",
+        Path(logdir) / "tboard",
     )
 
     reward_utility = RewardUtility(
@@ -157,7 +157,7 @@ def _build_utilities(
         pristine_pgdata_snapshot_fpath=Path(hpoed_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
         pgdata_parent_dpath=Path(hpoed_params["pgconn_info"]["pgdata_parent_dpath"]),
         pgbin_path=Path(hpoed_params["pgconn_info"]["pgbin_path"]),
-        postgres_logs_dir=Path(logdir) / hpoed_params["output_log_path"] / "pg_logs",
+        postgres_logs_dir=Path(logdir) / "pg_logs",
         connect_timeout=300,
         logger=logger,
     )

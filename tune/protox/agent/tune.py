@@ -55,8 +55,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     ), hpoed_params)
 
     # Assume we are executing from the root.
-    # TODO(phw2): get this from dbgym_cfg
-    hpoed_params["dbgym_dir"] = os.getcwd()
+    hpoed_params["dbgym_dir"] = dbgym_cfg.dbgym_repo_path
 
     # Get the duration.
     assert "duration" in hpoed_params
