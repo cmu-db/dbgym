@@ -242,7 +242,8 @@ class CleanTests(unittest.TestCase):
             "symlink1": ("symlink", "task_runs/file1.txt")
         }
         starting_task_runs_structure = {
-            "file1.txt": ("file",)
+            "file1.txt": ("file",),
+            "file2.txt": ("file",)
         }
         starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
         ending_symlinks_structure = {
@@ -264,6 +265,9 @@ class CleanTests(unittest.TestCase):
         starting_task_runs_structure = {
             "dir1": {
                 "file1.txt": ("file",)
+            },
+            "dir2": {
+                "file2.txt": ("file",)
             }
         }
         starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
@@ -280,8 +284,33 @@ class CleanTests(unittest.TestCase):
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
-    
-    # link to dir directly in task runs
+
+    def test_link_to_file_in_dir_in_task_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",)
+            },
+            "dir2": {
+                "file2.txt": ("file",)
+            }
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",)
+            }
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
     # link to file in run_*/
 
