@@ -236,6 +236,7 @@ def build_space(
     seed: int=0,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
+    boot_enabled: bool = False,
 ) -> dict[str, Any]:
 
     return {
@@ -244,42 +245,47 @@ def build_space(
         "verbose": True,
         "trace": True,
         "seed": seed,
+
         # Timeouts.
         "duration": duration,
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
+
         # Paths.
         "workload_path": str(workload_path),
         "output_log_path": "artifacts/",
         "pgconn_info": pgconn_info,
         "benchmark_config": benchmark_config,
         "benchbase_config": benchbase_config,
-        # Horizon before resetting.
-        "horizon": 5,
-        # Workload Eval.
-        "workload_eval_mode": tune.choice(["global_dual", "prev_dual", "all"]),
-        "workload_eval_inverse": tune.choice([False, True]),
-        "workload_eval_reset": tune.choice([False, True]),
-        # Reward.
-        "reward": tune.choice(["multiplier", "relative", "cdb_delta"]),
-        "reward_scaler": tune.choice([1, 2, 5, 10]),
-        "workload_timeout_penalty": tune.choice([1, 2, 4]),
-        # State.
-        "metric_state": tune.choice(["metric", "structure", "structure_normalize"]),
-        "maximize_state": not benchmark_config.get("oltp_workload", False),
-        # Whether to normalize state or not.
-        "normalize_state": tune.sample_from(
-            lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True
-        ),
-        # Whether to normalize reward or not.
-        "normalize_reward": tune.choice([False, True]),
+        # Embeddings.
+        "embedder_path": tune.choice(map(str, embedder_path)),
+
         # Default quantization factor to use.
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
-        # Embeddings.
-        "embedder_path": tune.choice(map(str, embedder_path)),
-        # LSC Parameters.
-        # Note that the units for these are based on the embedding itself.
+
+        # Horizon before resetting.
+        "horizon": 5,
+
+        # Workload Eval.
+        "workload_eval_mode": tune.choice(["all", "all_enum"]),
+        "workload_eval_inverse": tune.choice([False, True]),
+        "workload_eval_reset": True,
+
+        # Reward.
+        "reward": tune.choice(["multiplier", "relative"]),
+        "reward_scaler": tune.choice([1, 2, 10]),
+        "workload_timeout_penalty": 1,
+        "normalize_reward": tune.choice([False, True]),
+
+        # State.
+        "metric_state": tune.choice(([] if boot_enabled else ["metric"]) + ["structure", "structure_normalize"]),
+        "maximize_state": not benchmark_config.get("oltp_workload", False),
+        # Whether to normalize state or not.
+        "normalize_state": tune.sample_from(lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True),
+
+        # LSC Parameters. The units for these are based on the embedding itself.
+        # TODO(): Set these parameters based on the workload/embedding structure itself.
         "lsc": {
             "enabled": False,
             # These are the initial low-bias, comma separated by the horizon step.
@@ -293,72 +299,58 @@ def build_space(
             # How many episodes to start.
             "shift_after": 3,
         },
+
         # RL Agent Parameters.
         # Number of warmup steps.
         "learning_starts": 0,
         # Learning rate.
-        "learning_rate": tune.choice([1e-3, 8e-4, 6e-4, 3e-4, 5e-5, 3e-5, 1e-5]),
-        "critic_lr_scale": tune.choice([1.0, 2.5, 5.0, 7.5, 10.0]),
-        "policy_l2_reg": tune.choice([0.0, 0.01, 0.03, 0.05]),
+        "learning_rate": tune.choice([1e-3, 6e-4, 3e-5]),
+        "critic_lr_scale": tune.choice([1.0, 2.5, 5.0]),
+        "policy_l2_reg": tune.choice([0.01, 0.05]),
         # Discount.
-        "gamma": tune.choice([0, 0.9, 0.95, 0.995, 1.0]),
+        "gamma": tune.choice([0, 0.9, 0.95]),
         # Polyak averaging rate.
-        "tau": tune.choice([1.0, 0.99, 0.995]),
+        "tau": tune.choice([0.995, 1.0]),
         # Replay Buffer Size.
         "buffer_size": 1_000_000,
         # Batch size.
-        "batch_size": tune.choice([8, 16, 32, 64]),
+        "batch_size": tune.choice([16, 32]),
         # Gradient Clipping.
         "grad_clip": tune.choice([1.0, 5.0, 10.0]),
         # Gradient steps per sample.
         "gradient_steps": tune.choice([1, 2, 4]),
-        # Target noise.
-        "target_noise": {
-            "target_noise_clip": tune.choice([0, 0.05, 0.1, 0.15]),
-            "target_policy_noise": tune.sample_from(
-                lambda spc: 0.1
-                if spc["config"]["target_noise"]["target_noise_clip"] == 0
-                else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
-            ),
-        },
+
         # Training steps.
         "train_freq_unit": tune.choice(["step", "episode"]),
-        "train_freq_frequency": tune.sample_from(
-            lambda spc: 1
-            if spc["config"]["train_freq_unit"] == "episode"
-            else int(np.random.choice([1, 2]))
-        ),
+        "train_freq_frequency": 1,
+
+        # Target noise.
+        "target_noise": {
+            "target_noise_clip": tune.choice([0.05, 0.1, 0.15]),
+            "target_policy_noise": tune.choice([0.15, 0.2]),
+        },
         # Noise parameters.
         "noise_parameters": {
             "noise_type": tune.choice(["normal", "ou"]),
-            "noise_sigma": tune.choice([0.01, 0.05, 0.1, 0.15, 0.2]),
+            "noise_sigma": tune.choice([0.05, 0.1, 0.15]),
         },
         "scale_noise_perturb": True,
+
         # Neighbor parameters.
         "neighbor_parameters": {
-            "knob_num_nearest": tune.choice([100, 200]),
-            "knob_span": tune.choice([1, 2]),
+            "knob_num_nearest": tune.choice([10, 100]),
+            "knob_span": tune.choice([1, 3]),
             "index_num_samples": 1,
-            "index_rules": tune.choice([False, True]),
+            # Use index rules whenever we aren't optimizing OLTP.
+            "index_rules": not benchmark_config.get("oltp_workload", False),
         },
         # Networks.
         "weight_init": tune.choice(["xavier_normal", "xavier_uniform", "orthogonal"]),
         "bias_zero": tune.choice([False, True]),
         "policy_weight_adjustment": tune.choice([1, 100]),
         "activation_fn": tune.choice(["gelu", "mish"]),
-        "pi_arch": tune.choice(["128", "256", "128,128", "256,256", "512", "256,512"]),
-        "qf_arch": tune.choice(
-            [
-                "256,64",
-                "256,256",
-                "256,128,128",
-                "256,64,64",
-                "512",
-                "512,256",
-                "1024",
-                "1024,256",
-            ]
-        ),
+        "pi_arch": tune.choice(["128,128", "256,256", "512,512"]),
+        "qf_arch": tune.choice(["256", "512", "1024"]),
     }
 
 
