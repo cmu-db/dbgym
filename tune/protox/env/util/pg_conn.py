@@ -224,14 +224,14 @@ class PostgresConn:
         Uses instance vars of PostgresConn for configuration
         '''
         self.logger.get_logger(__name__).debug("Setting up boot")
-        self.psql("DROP EXTENSION IF EXISTS bytejack")
-        self.psql("CREATE EXTENSION IF NOT EXISTS bytejack")
-        self.psql("SELECT bytejack_connect()")
-        self.psql("SELECT bytejack_cache_clear()")
-        self.psql("SET bytejack.enable=TRUE")
-        self.psql("SET bytejack.intercept_explain_analyze=true")
-        self.psql("SET bytejack.intelligent_cache=true")
-        self.psql("SET bytejack.early_stop=true")
+        self.conn().execute("DROP EXTENSION IF EXISTS bytejack")
+        self.conn().execute("CREATE EXTENSION IF NOT EXISTS bytejack")
+        self.conn().execute("SELECT bytejack_connect()")
+        self.conn().execute("SELECT bytejack_cache_clear()")
+        self.conn().execute("SET bytejack.enable=true")
+        self.conn().execute("SET bytejack.intercept_explain_analyze=true")
+        self.conn().execute("SET bytejack.intelligent_cache=true")
+        self.conn().execute("SET bytejack.early_stop=true")
         self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
