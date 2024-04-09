@@ -9,11 +9,11 @@ import os
 import subprocess
 from pathlib import Path
 import click
-import shutil
+import ssd_checker
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER
+from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath
 from util.shell import subprocess_run
 from sqlalchemy import Connection
 from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
@@ -46,16 +46,39 @@ def postgres_build(dbgym_cfg: DBGymConfig):
 @click.argument("benchmark_name", type=str)
 @click.option("--scale-factor", type=float, default=1)
 @click.option("--pgbin-path", type=Path, default=None, help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.")
-def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path):
+@click.option(
+    "--intended-pgdata-hardware",
+    type=click.Choice(["hdd", "ssd"]),
+    default="hdd",
+    help=f"The intended hardware pgdata should be on. Used as a sanity check for --pgdata-parent-dpath.",
+)
+@click.option(
+    "--pgdata-parent-dpath",
+    default=None,
+    type=Path,
+    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+)
+def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path, intended_pgdata_hardware: str, pgdata_parent_dpath: Path):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path == None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    if pgdata_parent_dpath == None:
+        pgdata_parent_dpath = default_pgdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
 
     # Convert all input paths to absolute paths
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
+    pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
+
+    # Check assertions on args
+    if intended_pgdata_hardware == "hdd":
+        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
+    elif intended_pgdata_hardware == "ssd":
+        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+    else:
+        assert False
 
     # Create pgdata
-    _create_pgdata(dbgym_cfg, benchmark_name, scale_factor, pgbin_path)
+    _create_pgdata(dbgym_cfg, benchmark_name, scale_factor, pgbin_path, pgdata_parent_dpath)
 
 
 def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
@@ -94,7 +117,7 @@ def _build_repo(dbgym_cfg: DBGymConfig):
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
-def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path) -> None:
+def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path, pgdata_parent_dpath: Path) -> None:
     """
     I chose *not* for this function to skip by default if pgdata_tgz_symlink_path already exists. This
       is because, while the generated data is deterministic given benchmark_name and scale_factor, any
@@ -105,7 +128,7 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
 
     # Create a temporary dir for this pgdata
     # It's ok for the pgdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place
-    pgdata_dpath = dbgym_cfg.dbgym_tmp_path / "pgdata"
+    pgdata_dpath = pgdata_parent_dpath / "pgdata"
 
     # initdb
     # save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run
