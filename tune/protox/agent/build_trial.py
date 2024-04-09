@@ -17,7 +17,7 @@ from gymnasium.wrappers import (  # type: ignore
 )
 from torch import nn
 
-from misc.utils import DBGymConfig, open_and_save, save_file
+from misc.utils import DBGymConfig, open_and_save, make_redis_started, save_file
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -150,6 +150,10 @@ def _build_utilities(
         reward_scaler=hpoed_params["reward_scaler"],
         logger=logger,
     )
+
+    # PostgresConn.start_with_changes() assumes that Redis is running
+    # TODO(phw2): only start redis if we're using Boot
+    make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
     pgconn = PostgresConn(
         dbgym_cfg=dbgym_cfg,

@@ -560,8 +560,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         query_timeouts=query_timeouts,
     )
 
-    restart_ray(dbgym_cfg.root_yaml["boot_redis_port"])
-    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['boot_redis_port']}", log_to_driver=False)
+    restart_ray(dbgym_cfg.root_yaml["ray_gcs_port"])
+    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False)
 
     # Scheduler.
     scheduler = FIFOScheduler() # type: ignore

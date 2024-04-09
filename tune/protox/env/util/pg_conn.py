@@ -18,7 +18,7 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, parent_dir, restart_redis
+from misc.utils import DBGymConfig, parent_dir
 from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
 
 
@@ -209,6 +209,7 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
+        # TODO(phw2): only turn it on if we're told to
         self._set_up_boot()
 
         # Move the temporary over since we now know the temporary can load.
@@ -223,7 +224,6 @@ class PostgresConn:
         Uses instance vars of PostgresConn for configuration
         '''
         self.logger.get_logger(__name__).debug("Setting up boot")
-        restart_redis(self.dbgym_cfg.root_yaml["boot_redis_port"])
         self.psql("DROP EXTENSION IF EXISTS bytejack")
         self.psql("CREATE EXTENSION IF NOT EXISTS bytejack")
         self.psql("SELECT bytejack_connect()")

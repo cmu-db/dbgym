@@ -1,1 +1,1 @@
-ALTER SYSTEM SET shared_preload_libraries = 'pg_prewarm,bytejack';
+ALTER SYSTEM SET shared_preload_libraries = 'bytejack';

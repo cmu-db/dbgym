@@ -6,6 +6,9 @@ from datetime import datetime
 from pathlib import Path
 import click
 import yaml
+import redis
+
+from util.shell import subprocess_run
 
 # Relpaths of different folders in the codebase
 TUNE_RELPATH = Path("tune")
@@ -500,19 +503,32 @@ def restart_ray(redis_port: int):
     Stop and start Ray.
     This is good to do between each stage to avoid bugs from carrying over across stages
     """
-    os.system("ray stop -f")
+    subprocess_run("ray stop -f")
     ncpu = os.cpu_count()
     # --disable-usage-stats avoids a Y/N prompt
-    os.system(
+    subprocess_run(
         f"OMP_NUM_THREADS={ncpu} ray start --head --port={redis_port} --num-cpus={ncpu} --disable-usage-stats"
     )
 
 
-def restart_redis(port: int):
+def make_redis_started(port: int):
     """
-    Stop and start Redis.
+    Start Redis if it's not already started.
     Note that Ray uses Redis but does *not* use this function. It starts Redis on its own.
     One current use for this function to start/stop Redis for Boot.
     """
-    os.system(f"redis-cli -p {port} shutdown")
-    os.system(f"redis-server --port {port}")
+    try:
+        r = redis.Redis(port=port)
+        r.ping()
+        # This means Redis is running, so we do nothing
+        do_start_redis = False
+    except (redis.ConnectionError, redis.TimeoutError):
+        # This means Redis is not running, so we start it
+        do_start_redis = True
+    
+    # I'm starting Redis outside of except so that errors in r.ping get propagated correctly
+    if do_start_redis:
+        subprocess_run(f"redis-server --port {port} --daemonize yes")
+        # When you start Redis in daemon mode, it won't let you know if it's started, so we ping again to check
+        r = redis.Redis(port=port)
+        r.ping()

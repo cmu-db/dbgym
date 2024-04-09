@@ -10,7 +10,7 @@ python3 task.py --no-startup-check benchmark tpch workload --scale-factor $SCALE
 
 # postgres
 python3 task.py --no-startup-check dbms postgres build
-python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR
+python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware ssd --pgdata-parent-dpath /mnt/nvme1n1/phw2/dbgym_tmp/
 
 # embedding
 python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-factor $SCALE_FACTOR --override-sample-limits "lineitem,32768" --intended-pgdata-hardware ssd --pgdata-parent-dpath /mnt/nvme1n1/phw2/dbgym_tmp/
