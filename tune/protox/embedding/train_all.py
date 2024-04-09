@@ -187,7 +187,7 @@ def train_all_embeddings(
 
     # Connect to cluster or die.
     restart_ray()
-    ray.init(address="localhost:6379", log_to_driver=False)
+    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['boot_redis_port']}", log_to_driver=False)
 
     scheduler = FIFOScheduler()  # type: ignore
     # Search.

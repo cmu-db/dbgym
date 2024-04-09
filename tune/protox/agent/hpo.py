@@ -108,7 +108,7 @@ class AgentHPOArgs:
     "--pgdata-parent-dpath",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
@@ -120,7 +120,7 @@ class AgentHPOArgs:
     "--workload-path",
     default=None,
     type=Path,
-    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -560,8 +560,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         query_timeouts=query_timeouts,
     )
 
-    restart_ray()
-    ray.init(address="localhost:6379", log_to_driver=False)
+    restart_ray(dbgym_cfg.root_yaml["boot_redis_port"])
+    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['boot_redis_port']}", log_to_driver=False)
 
     # Scheduler.
     scheduler = FIFOScheduler() # type: ignore

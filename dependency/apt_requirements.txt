@@ -5,3 +5,5 @@ libreadline-dev
 rpm
 zlib1g-dev
 cbindgen
+redis-server
+redis-tools

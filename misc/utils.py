@@ -495,7 +495,7 @@ def try_remove_file(path: Path) -> None:
         pass
 
 
-def restart_ray():
+def restart_ray(redis_port: int):
     """
     Stop and start Ray.
     This is good to do between each stage to avoid bugs from carrying over across stages
@@ -504,5 +504,15 @@ def restart_ray():
     ncpu = os.cpu_count()
     # --disable-usage-stats avoids a Y/N prompt
     os.system(
-        f"OMP_NUM_THREADS={ncpu} ray start --head --num-cpus={ncpu} --disable-usage-stats"
+        f"OMP_NUM_THREADS={ncpu} ray start --head --port={redis_port} --num-cpus={ncpu} --disable-usage-stats"
     )
+
+
+def restart_redis(port: int):
+    """
+    Stop and start Redis.
+    Note that Ray uses Redis but does *not* use this function. It starts Redis on its own.
+    One current use for this function to start/stop Redis for Boot.
+    """
+    os.system(f"redis-cli -p {port} shutdown")
+    os.system(f"redis-server --port {port}")
