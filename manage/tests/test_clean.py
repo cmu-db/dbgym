@@ -474,19 +474,46 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    # if aggressive mode, doesn't follow symlinks in task runs
+    # TODO(phw2)
+    def test_dont_loop_infinitely_if_there_are_cycles_between_dirs_in_runs(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "task_runs/file1.txt")
+            },
+            "file1.txt": ("file",),
+            "file2.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", None)
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
-    # don't loop infinitely if there are task_run non-self cycles
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
     # don't loop infinitely if there are task_run self-cycles (symlink in task run that refers to the same task run)
 
-    # don't loop infinitely if there are symlink non-self cycles
+    # don't loop infinitely if there are task_run non-self cycles
 
     # don't loop infinitely if there are symlink self cycles (symlink that refers to itself)
 
+    # don't loop infinitely if there are symlink non-self cycles
+
     # links to non-existent files are ok
 
-    # links to files outside task_runs are ok, and stuff outside task_runs doesn't get deleted
+    # links to files outside task_runs are ok
+
+    # stuff outside task_runs doesn't get deleted
 
 
 if __name__ == '__main__':
