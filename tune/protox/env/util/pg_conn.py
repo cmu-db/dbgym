@@ -18,7 +18,7 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, parent_dir
+from misc.utils import DBGymConfig, link_result, parent_dir
 from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
 
 
@@ -128,8 +128,12 @@ class PostgresConn:
         # Install the new configuration changes.
         if conf_changes is not None:
             conf_changes.append("shared_preload_libraries='pg_hint_plan'")
-            with open(f"{self.pgdata_dpath}/postgresql.auto.conf", "w") as f:
+            pgdata_auto_conf_path = self.pgdata_dpath / "postgresql.auto.conf"
+            with open(pgdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
+            save_auto_conf_path = self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True) / "postgresql.auto.conf"         
+            local["cp"][pgdata_auto_conf_path, save_auto_conf_path].run()
+            link_result(self.dbgym_cfg, save_auto_conf_path)
 
         # Start postgres instance.
         self.shutdown_postgres()
@@ -223,6 +227,8 @@ class PostgresConn:
         Sets up Boot on the currently running Postgres instances.
         Uses instance vars of PostgresConn for configuration
         '''
+        # If any of these commands fail, they'll throw a Python exception
+        # Thus, if none of them throw an exception, we know they passed
         self.logger.get_logger(__name__).debug("Setting up boot")
         self.conn().execute("DROP EXTENSION IF EXISTS bytejack")
         self.conn().execute("CREATE EXTENSION IF NOT EXISTS bytejack")
