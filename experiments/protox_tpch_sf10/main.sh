@@ -6,8 +6,9 @@ SCALE_FACTOR=10
 INTENDED_PGDATA_HARDWARE=hdd
 PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
 
-# # space for testing
-# exit 0
+# space for testing
+python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR
+exit 0
 
 # benchmark
 python3 task.py --no-startup-check benchmark tpch data $SCALE_FACTOR

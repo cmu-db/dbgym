@@ -192,8 +192,8 @@ def hpo(
     duration,
     workload_timeout,
     query_timeout,
-    enable_boot_during_hpo,
-    boot_config_fpath,
+    enable_boot_during_hpo: bool,
+    boot_config_fpath: Path,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
