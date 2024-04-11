@@ -446,10 +446,11 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
 
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> None:
+def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> Path:
     """
     result_path must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
+    Returns the symlink path.
     Create a symlink of the same name to result_path inside [workspace]/data/
     Will override the old symlink if there is one
     This is called so that [workspace]/data/ always contains the latest generated version of a file
@@ -475,6 +476,8 @@ def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: s
     #   file of the current run regardless of the order of threads.
     try_remove_file(symlink_path)
     try_create_symlink(result_path, symlink_path)
+
+    return symlink_path
 
 
 def try_create_symlink(src_path: Path, dst_path: Path) -> None:

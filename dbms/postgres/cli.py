@@ -6,6 +6,7 @@ util.pg provides helpers used by *both* of the above files (as well as other fil
 '''
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 import click
@@ -90,30 +91,22 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.cur_symlinks_build_path("repo")
 
 
-def _get_pgdata_tgz_symlink_path(
-    dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
-) -> Path:
-    # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
-    return dbgym_cfg.cur_symlinks_data_path(".", mkdir=True) / get_pgdata_tgz_name(
-        benchmark_name, scale_factor
-    )
-
-
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
-    repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
-    if not rebuild and repo_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping _build_repo: {repo_symlink_dpath}")
+    expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
+    if not rebuild and expected_repo_symlink_dpath.exists():
+        dbms_postgres_logger.info(f"Skipping _build_repo: {expected_repo_symlink_dpath}")
         return
 
-    dbms_postgres_logger.info(f"Setting up repo in {repo_symlink_dpath}")
+    dbms_postgres_logger.info(f"Setting up repo in {expected_repo_symlink_dpath}")
     repo_real_dpath = dbgym_cfg.cur_task_runs_build_path("repo", mkdir=True)
     subprocess_run(
         f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_cfg.cur_source_path()
     )
 
     # only link at the end so that the link only ever points to a complete repo
-    link_result(dbgym_cfg, repo_real_dpath)
-    dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
+    repo_symlink_dpath = link_result(dbgym_cfg, repo_real_dpath)
+    assert os.path.samefile(expected_repo_symlink_dpath, repo_symlink_dpath)
+    dbms_postgres_logger.info(f"Set up repo in {expected_repo_symlink_dpath}")
 
 
 def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path, pgdata_parent_dpath: Path) -> None:
@@ -125,48 +118,39 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
       _create_pgdata() not propagate to [pgdata].tgz by default.
     """
 
-    # Create a temporary dir for this pgdata
-    # It's ok for the pgdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place
-    pgdata_dpath = pgdata_parent_dpath / "pgdata"
+    # It's ok for the pgdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place.
+    pgdata_dpath = pgdata_parent_dpath / "pgdata_being_created"
+    # We might be reusing the same pgdata_parent_dpath, so delete pgdata_dpath if it already exists
+    if pgdata_dpath.exists():
+        shutil.rmtree(pgdata_dpath)
 
-    # initdb
-    # save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run
+    # Call initdb.
+    # Save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run.
     save_file(dbgym_cfg, pgbin_path / "initdb")
     subprocess_run(f'./initdb -D "{pgdata_dpath}"', cwd=pgbin_path)
 
-    # start postgres (all other pgdata setup requires postgres to be started)
-    # note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead
+    # Start Postgres (all other pgdata setup requires postgres to be started).
+    # Note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead.
     start_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
-    # setup
+    # Set up Postgres.
     _generic_pgdata_setup(dbgym_cfg)
     _load_benchmark_into_pgdata(dbgym_cfg, benchmark_name, scale_factor)
 
-    # stop postgres so that we don't "leak" processes
+    # Stop Postgres so that we don't "leak" processes.
     stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
-    # create .tgz file
-    # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
+    # Create .tgz file.
+    # Note that you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir.
     pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
         ".", mkdir=True
     ) / get_pgdata_tgz_name(benchmark_name, scale_factor)
-    # we need to cd into pgdata_dpath so that the tar file does not contain folders for the whole path of pgdata_dpath
+    # We need to cd into pgdata_dpath so that the tar file does not contain folders for the whole path of pgdata_dpath.
     subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_dpath)
 
-    # create symlink
-    # only link at the end so that the link only ever points to a complete pgdata
-    pgdata_tgz_symlink_path = _get_pgdata_tgz_symlink_path(
-        dbgym_cfg, benchmark_name, scale_factor
-    )
-    if pgdata_tgz_symlink_path.exists():
-        os.remove(pgdata_tgz_symlink_path)
-    subprocess_run(
-        f"ln -s {pgdata_tgz_real_fpath} {dbgym_cfg.cur_symlinks_data_path(mkdir=True)}"
-    )
-    assert (
-        pgdata_tgz_symlink_path.exists()
-    )  # basically asserts that pgdata_tgz_symlink_path matches dbgym_cfg.cur_symlinks_data_path(mkdir=True) / "[pgdata].tgz"
-
+    # Create symlink.
+    # Only link at the end so that the link only ever points to a complete pgdata.
+    pgdata_tgz_symlink_path = link_result(dbgym_cfg, pgdata_tgz_real_fpath)
     dbms_postgres_logger.info(f"Created pgdata in {pgdata_tgz_symlink_path}")
 
 
