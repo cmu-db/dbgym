@@ -13,10 +13,10 @@ import ssd_checker
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath
+from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath
 from util.shell import subprocess_run
 from sqlalchemy import Connection
-from util.pg import SHARED_PRELOAD_LIBRARIES_TO_USE, conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
+from util.pg import SHARED_PRELOAD_LIBRARIES, conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
 
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
@@ -34,8 +34,9 @@ def postgres_group(dbgym_cfg: DBGymConfig):
     help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create pgdata.",
 )
 @click.pass_obj
-def postgres_build(dbgym_cfg: DBGymConfig):
-    _build_repo(dbgym_cfg)
+@click.option("--rebuild", is_flag=True, help="Include this flag to rebuild Postgres even if it already exists.")
+def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool):
+    _build_repo(dbgym_cfg, rebuild)
 
 
 @postgres_group.command(
@@ -98,9 +99,9 @@ def _get_pgdata_tgz_symlink_path(
     )
 
 
-def _build_repo(dbgym_cfg: DBGymConfig):
+def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
     repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
-    if repo_symlink_dpath.exists():
+    if not rebuild and repo_symlink_dpath.exists():
         dbms_postgres_logger.info(f"Skipping _build_repo: {repo_symlink_dpath}")
         return
 
@@ -111,9 +112,7 @@ def _build_repo(dbgym_cfg: DBGymConfig):
     )
 
     # only link at the end so that the link only ever points to a complete repo
-    subprocess_run(
-        f"ln -s {repo_real_dpath} {dbgym_cfg.cur_symlinks_build_path(mkdir=True)}"
-    )
+    link_result(dbgym_cfg, repo_real_dpath)
     dbms_postgres_logger.info(f"Set up repo in {repo_symlink_dpath}")
 
 
@@ -192,7 +191,8 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
 
     # Load shared preload libraries
     subprocess_run(
-        f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES_TO_USE}';\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
+        # You have to use TO instead of = if you want to set multiple libraries
+        f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO '{SHARED_PRELOAD_LIBRARIES}';\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
 

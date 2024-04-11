@@ -20,7 +20,7 @@ import yaml
 
 from tune.protox.env.logger import Logger, time_record
 from misc.utils import DBGymConfig, link_result, parent_dir
-from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES_TO_USE
+from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES
 
 
 class PostgresConn:
@@ -33,7 +33,7 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
-        use_boot_during_hpo: bool,
+        enable_boot_during_hpo: bool,
         boot_config_fpath: Path,
         logger: Logger,
     ) -> None:
@@ -44,7 +44,7 @@ class PostgresConn:
         self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
-        self.use_boot_during_hpo = use_boot_during_hpo
+        self.enable_boot_during_hpo = enable_boot_during_hpo
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
         self.logger = logger
@@ -132,7 +132,7 @@ class PostgresConn:
         '''
         # Install the new configuration changes.
         if conf_changes is not None:
-            conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES_TO_USE}'")
+            conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'")
             pgdata_auto_conf_path = self.pgdata_dpath / "postgresql.auto.conf"
             with open(pgdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
@@ -218,9 +218,9 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
-        if self.use_boot_during_hpo:
-            # I'm choosing to only load the file if use_boot_during_hpo is on, so we
-            # don't crash if use_boot_during_hpo is off and the file doesn't exist.
+        if self.enable_boot_during_hpo:
+            # I'm choosing to only load the file if enable_boot_during_hpo is on, so we
+            # don't crash if enable_boot_during_hpo is off and the file doesn't exist.
             boot_config = yaml.safe_load(self.boot_config_fpath)
             self._set_up_boot(
                 boot_config["intelligent_cache"],

@@ -29,7 +29,7 @@ METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, use_boot_during_hpo, boot_config_fpath):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -47,7 +47,7 @@ class AgentHPOArgs:
         self.duration = duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
-        self.use_boot_during_hpo = use_boot_during_hpo
+        self.enable_boot_during_hpo = enable_boot_during_hpo
         self.boot_config_fpath = boot_config_fpath
 
 
@@ -192,7 +192,7 @@ def hpo(
     duration,
     workload_timeout,
     query_timeout,
-    use_boot_during_hpo,
+    enable_boot_during_hpo,
     boot_config_fpath,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
@@ -234,7 +234,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, use_boot_during_hpo, boot_config_fpath)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -250,7 +250,7 @@ def build_space(
     benchbase_config: dict[str, Any]={},
     duration: int=30,
     seed: int=0,
-    use_boot_during_hpo: bool=False,
+    enable_boot_during_hpo: bool=False,
     boot_config_fpath: Path=None,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
@@ -262,7 +262,7 @@ def build_space(
         "verbose": True,
         "trace": True,
         "seed": seed,
-        "use_boot_during_hpo": use_boot_during_hpo,
+        "enable_boot_during_hpo": enable_boot_during_hpo,
         "boot_config_fpath": boot_config_fpath,
         # Timeouts.
         "duration": duration,
@@ -576,7 +576,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchbase_config=benchbase_config,
         duration=hpo_args.duration,
         seed=hpo_args.seed,
-        use_boot_during_hpo=hpo_args.use_boot_during_hpo,
+        enable_boot_during_hpo=hpo_args.enable_boot_during_hpo,
         boot_config_fpath=hpo_args.boot_config_fpath,
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
