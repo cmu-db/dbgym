@@ -19,7 +19,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 import yaml
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, link_result, parent_dir
+from misc.utils import DBGymConfig, link_result, open_and_save, parent_dir
 from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES
 
 
@@ -224,7 +224,9 @@ class PostgresConn:
         if self.enable_boot_during_hpo:
             # I'm choosing to only load the file if enable_boot_during_hpo is on, so we
             # don't crash if enable_boot_during_hpo is off and the file doesn't exist.
-            boot_config = yaml.safe_load(self.boot_config_fpath)
+            with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
+                boot_config = yaml.safe_load(f)
+                
             self._set_up_boot(
                 boot_config["intelligent_cache"],
                 boot_config["early_stop"],
