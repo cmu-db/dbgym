@@ -10,12 +10,14 @@ import redis
 
 from util.shell import subprocess_run
 
-# Relpaths of different folders in the codebase
-TUNE_RELPATH = Path("tune")
-PROTOX_RELPATH = TUNE_RELPATH / "protox"
-PROTOX_EMBEDDING_RELPATH = PROTOX_RELPATH / "embedding"
-PROTOX_AGENT_RELPATH = PROTOX_RELPATH / "agent"
-PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
+# Relative paths of different folders in the codebase
+DBMS_PATH = Path("dbms")
+POSTGRES_PATH = DBMS_PATH / "postgres"
+TUNE_PATH = Path("tune")
+PROTOX_PATH = TUNE_PATH / "protox"
+PROTOX_EMBEDDING_PATH = PROTOX_PATH / "embedding"
+PROTOX_AGENT_PATH = PROTOX_PATH / "agent"
+PROTOX_WOLP_PATH = PROTOX_AGENT_PATH / "wolp"
 
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
@@ -47,16 +49,17 @@ BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
 WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
 
-# Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
+# Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
-DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
-DEFAULT_SYSKNOBS_RELPATH = PROTOX_AGENT_RELPATH / "default_sysknobs.yaml"
+DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
+DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
+DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
 default_benchmark_config_path = (
-    lambda benchmark_name: PROTOX_RELPATH
+    lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchmark_config.yaml"
 )
 default_benchbase_config_path = (
-    lambda benchmark_name: PROTOX_RELPATH
+    lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
 
