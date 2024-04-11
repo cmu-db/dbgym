@@ -32,6 +32,7 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
+        use_boot_during_hpo: bool,
         logger: Logger,
     ) -> None:
 
@@ -41,6 +42,7 @@ class PostgresConn:
         self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
+        self.use_boot_during_hpo = use_boot_during_hpo
         self.log_step = 0
         self.logger = logger
 
@@ -213,8 +215,8 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
-        # TODO(phw2): only turn it on if we're told to
-        self._set_up_boot()
+        if self.use_boot_during_hpo:
+            self._set_up_boot()
 
         # Move the temporary over since we now know the temporary can load.
         if save_checkpoint:

@@ -6,9 +6,9 @@ SCALE_FACTOR=0.01
 INTENDED_PGDATA_HARDWARE=ssd
 PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
 
-# space for testing
-python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
-exit 0
+# # space for testing
+# python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
+# exit 0
 
 # benchmark
 python3 task.py --no-startup-check benchmark tpch data $SCALE_FACTOR
@@ -17,6 +17,8 @@ python3 task.py --no-startup-check benchmark tpch workload --scale-factor $SCALE
 # postgres
 python3 task.py --no-startup-check dbms postgres build
 python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
+
+exit 0
 
 # embedding
 # python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-factor $SCALE_FACTOR --default-sample-limit 64 --file-limit 64 --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH # short datagen for testing
