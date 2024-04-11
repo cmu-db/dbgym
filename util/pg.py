@@ -12,6 +12,7 @@ DBGYM_POSTGRES_PASS = "dbgym_pass"
 DBGYM_POSTGRES_DBNAME = "dbgym"
 DEFAULT_POSTGRES_DBNAME = "postgres"
 DEFAULT_POSTGRES_PORT = 5432
+SHARED_PRELOAD_LIBRARIES_TO_USE = "bytejack,pg_plan_hint"
 
 
 def conn_execute(conn: Connection, sql: str) -> CursorResult:
