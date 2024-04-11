@@ -16,7 +16,7 @@ from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath
 from util.shell import subprocess_run
 from sqlalchemy import Connection
-from util.pg import conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
+from util.pg import SHARED_PRELOAD_LIBRARIES_TO_USE, conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
 
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
@@ -179,7 +179,7 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
-    # create user
+    # Create user
     save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
     subprocess_run(
         f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
@@ -190,16 +190,13 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
         cwd=pgbin_symlink_dpath,
     )
 
-    # load shared preload libraries
-    shared_preload_libraries_fpath = (
-        dbgym_cfg.cur_source_path() / "shared_preload_libraries.sql"
-    )
+    # Load shared preload libraries
     subprocess_run(
-        f"./psql -f {shared_preload_libraries_fpath} {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
+        f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES_TO_USE}';\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_symlink_dpath,
     )
 
-    # create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
+    # Create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
         f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{dbgym_pguser}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",

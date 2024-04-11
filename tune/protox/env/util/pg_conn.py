@@ -19,7 +19,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from tune.protox.env.logger import Logger, time_record
 from misc.utils import DBGymConfig, link_result, parent_dir
-from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
+from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES_TO_USE
 
 
 class PostgresConn:
@@ -127,7 +127,7 @@ class PostgresConn:
         '''
         # Install the new configuration changes.
         if conf_changes is not None:
-            conf_changes.append("shared_preload_libraries='pg_hint_plan'")
+            conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES_TO_USE}'")
             pgdata_auto_conf_path = self.pgdata_dpath / "postgresql.auto.conf"
             with open(pgdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
