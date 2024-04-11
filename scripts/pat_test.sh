@@ -3,8 +3,8 @@
 set -euxo pipefail
 
 SCALE_FACTOR=0.01
-INTENDED_PGDATA_HARDWARE=hdd
-PGDATA_PARENT_DPATH=/home/patrickwang/dbgym_tmp/
+INTENDED_PGDATA_HARDWARE=ssd
+PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
 
 # space for testing
 python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
