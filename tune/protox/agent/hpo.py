@@ -22,14 +22,14 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
 
 
 METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, use_boot_during_hpo, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, use_boot_during_hpo, boot_config_fpath):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -40,7 +40,6 @@ class AgentHPOArgs:
         self.pgdata_parent_dpath = pgdata_parent_dpath
         self.pgbin_path = pgbin_path
         self.workload_path = workload_path
-        self.use_boot_during_hpo = use_boot_during_hpo
         self.seed = seed
         self.agent = agent
         self.max_concurrent = max_concurrent
@@ -48,6 +47,8 @@ class AgentHPOArgs:
         self.duration = duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
+        self.use_boot_during_hpo = use_boot_during_hpo
+        self.boot_config_fpath = boot_config_fpath
 
 
 @click.command()
@@ -84,7 +85,7 @@ class AgentHPOArgs:
 )
 @click.option(
     "--sysknobs-path",
-    default=DEFAULT_SYSKNOBS_RELPATH,
+    default=DEFAULT_SYSKNOBS_PATH,
     help=f"The path to the file configuring the space of system knobs the tuner can tune.",
 )
 @click.option(
@@ -124,11 +125,6 @@ class AgentHPOArgs:
     help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
-    "--use-boot-during-hpo",
-    is_flag=True,
-    help="Whether to use the Boot query accelerator during the HPO process. Deciding to use Boot during HPO is separate from deciding to use Boot during tuning.",
-)
-@click.option(
     "--seed",
     default=None,
     type=int,
@@ -162,6 +158,17 @@ class AgentHPOArgs:
     type=int,
     help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
 )
+@click.option(
+    "--enable-boot-during-hpo",
+    is_flag=True,
+    help="Whether to enable the Boot query accelerator during the HPO process. Deciding to use Boot during HPO is separate from deciding to use Boot during tuning.",
+)
+@click.option(
+    "--boot-config-fpath",
+    default=DEFAULT_BOOT_CONFIG_FPATH,
+    type=Path,
+    help="The path to the file configuring Boot.",
+)
 def hpo(
     dbgym_cfg,
     benchmark_name,
@@ -178,7 +185,6 @@ def hpo(
     pgdata_parent_dpath,
     pgbin_path,
     workload_path,
-    use_boot_during_hpo,
     seed,
     agent,
     max_concurrent,
@@ -186,6 +192,8 @@ def hpo(
     duration,
     workload_timeout,
     query_timeout,
+    use_boot_during_hpo,
+    boot_config_fpath,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
@@ -215,6 +223,7 @@ def hpo(
     pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
+    boot_config_fpath = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath)
 
     # Check assertions on args
     if intended_pgdata_hardware == "hdd":
@@ -225,7 +234,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, use_boot_during_hpo, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, use_boot_during_hpo, boot_config_fpath)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 

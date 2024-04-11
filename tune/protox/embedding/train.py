@@ -7,7 +7,7 @@ import torch
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
-    DEFAULT_HPO_SPACE_RELPATH,
+    DEFAULT_HPO_SPACE_PATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     conv_inputpath_to_realabspath,
@@ -73,7 +73,7 @@ from tune.protox.embedding.train_args import (
 # train args
 @click.option(
     "--hpo-space-path",
-    default=DEFAULT_HPO_SPACE_RELPATH,
+    default=DEFAULT_HPO_SPACE_PATH,
     type=str,
     help="The path to the .json file defining the search space for hyperparameter optimization (HPO).",
 )
