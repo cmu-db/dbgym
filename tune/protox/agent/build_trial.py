@@ -163,6 +163,7 @@ def _build_utilities(
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         postgres_logs_dir=Path(logdir) / "pg_logs",
         use_boot_during_hpo=hpo_params["use_boot_during_hpo"],
+        boot_config_fpath=hpo_params["boot_config_fpath"],
         connect_timeout=300,
         logger=logger,
     )

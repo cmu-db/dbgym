@@ -251,6 +251,7 @@ def build_space(
     duration: int=30,
     seed: int=0,
     use_boot_during_hpo: bool=False,
+    boot_config_fpath: Path=None,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
 ) -> dict[str, Any]:
@@ -262,6 +263,7 @@ def build_space(
         "trace": True,
         "seed": seed,
         "use_boot_during_hpo": use_boot_during_hpo,
+        "boot_config_fpath": boot_config_fpath,
         # Timeouts.
         "duration": duration,
         "workload_timeout": tune.choice(workload_timeouts),
@@ -575,6 +577,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         duration=hpo_args.duration,
         seed=hpo_args.seed,
         use_boot_during_hpo=hpo_args.use_boot_during_hpo,
+        boot_config_fpath=hpo_args.boot_config_fpath,
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )

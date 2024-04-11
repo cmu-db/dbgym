@@ -16,6 +16,7 @@ import psutil
 import psycopg
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
+import yaml
 
 from tune.protox.env.logger import Logger, time_record
 from misc.utils import DBGymConfig, link_result, parent_dir
@@ -33,6 +34,7 @@ class PostgresConn:
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
         use_boot_during_hpo: bool,
+        boot_config_fpath: Path,
         logger: Logger,
     ) -> None:
 
@@ -43,6 +45,7 @@ class PostgresConn:
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
         self.use_boot_during_hpo = use_boot_during_hpo
+        self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
         self.logger = logger
 
@@ -216,7 +219,19 @@ class PostgresConn:
 
         # Set up Boot if we're told to do so
         if self.use_boot_during_hpo:
-            self._set_up_boot()
+            # I'm choosing to only load the file if use_boot_during_hpo is on, so we
+            # don't crash if use_boot_during_hpo is off and the file doesn't exist.
+            boot_config = yaml.safe_load(self.boot_config_fpath)
+            self._set_up_boot(
+                boot_config["intelligent_cache"],
+                boot_config["early_stop"],
+                boot_config["seq_sample"],
+                boot_config["seq_sample_pct"],
+                boot_config["seq_sample_seed"],
+                boot_config["mu_hyp_opt"],
+                boot_config["mu_hyp_time"],
+                boot_config["mu_hyp_stdev"],
+            )
 
         # Move the temporary over since we now know the temporary can load.
         if save_checkpoint:
@@ -224,10 +239,15 @@ class PostgresConn:
 
         return True
 
-    def _set_up_boot(self):
+    def _set_up_boot(self, intelligent_cache: bool, early_stop: bool, seq_sample: bool, seq_sample_pct: int, seq_sample_seed: int, mu_hyp_opt: float, mu_hyp_time: int, mu_hyp_stdev: float):
         '''
         Sets up Boot on the currently running Postgres instances.
-        Uses instance vars of PostgresConn for configuration
+        Uses instance vars of PostgresConn for configuration.
+        I chose to not encode any "default values" in this function. This is so that all values
+            are explicitly included in the config file. This way, we can know what Boot config
+            was used in a given experiment by looking only at the config file. If we did encode
+            "default values" in the function, we would need to know the state of the code at the
+            time of the experiment, which is very difficult in the general case.
         '''
         # If any of these commands fail, they'll throw a Python exception
         # Thus, if none of them throw an exception, we know they passed
@@ -238,8 +258,14 @@ class PostgresConn:
         self.conn().execute("SELECT bytejack_cache_clear()")
         self.conn().execute("SET bytejack.enable=true")
         self.conn().execute("SET bytejack.intercept_explain_analyze=true")
-        self.conn().execute("SET bytejack.intelligent_cache=true")
-        self.conn().execute("SET bytejack.early_stop=true")
+        self.conn().execute(f"SET bytejack.intelligent_cache={intelligent_cache}")
+        self.conn().execute(f"SET bytejack.early_stop={early_stop}")
+        self.conn().execute(f"SET bytejack.seq_sample={seq_sample}")
+        self.conn().execute(f"SET bytejack.seq_sample_pct={seq_sample_pct}")
+        self.conn().execute(f"SET bytejack.seq_sample_seed={seq_sample_seed}")
+        self.conn().execute(f"SET bytejack.mu_hyp_opt={mu_hyp_opt}")
+        self.conn().execute(f"SET bytejack.mu_hyp_time={mu_hyp_time}")
+        self.conn().execute(f"SET bytejack.mu_hyp_stdev={mu_hyp_stdev}")
         self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
