@@ -190,11 +190,13 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     )
 
     # Load shared preload libraries
-    subprocess_run(
-        # You have to use TO instead of = if you want to set multiple libraries
-        f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO '{SHARED_PRELOAD_LIBRARIES}';\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_symlink_dpath,
-    )
+    if SHARED_PRELOAD_LIBRARIES:
+        subprocess_run(
+            # You have to use TO and you can't put single quotes around the libraries (https://postgrespro.com/list/thread-id/2580120)
+            # The method I wrote here works for both one library and multiple libraries
+            f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
+            cwd=pgbin_symlink_dpath,
+        )
 
     # Create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark

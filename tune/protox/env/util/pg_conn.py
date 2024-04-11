@@ -132,7 +132,10 @@ class PostgresConn:
         '''
         # Install the new configuration changes.
         if conf_changes is not None:
-            conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'")
+            if SHARED_PRELOAD_LIBRARIES:
+                # This way of doing it works for both single or multiple libraries. An example of a way
+                # that *doesn't* work is `f"shared_preload_libraries='"{SHARED_PRELOAD_LIBRARIES}"'"`
+                conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'")
             pgdata_auto_conf_path = self.pgdata_dpath / "postgresql.auto.conf"
             with open(pgdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
