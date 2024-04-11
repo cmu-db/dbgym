@@ -412,28 +412,28 @@ class TuneTrial:
     def __init__(self, dbgym_cfg: DBGymConfig) -> None:
         self.dbgym_cfg = dbgym_cfg
 
-    def setup(self, hpoed_params: dict[str, Any]) -> None:
+    def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
         torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
-            hpoed_params["seed"]
-            if hpoed_params["seed"] != -1
+            hpo_params["seed"]
+            if hpo_params["seed"] != -1
             else np.random.randint(np.iinfo(np.int32).max)
         )
         np.random.seed(seed)
         torch.manual_seed(seed)
         assert hasattr(self, "logdir")
 
-        self.timeout = TuneTimeoutChecker(hpoed_params["duration"])
+        self.timeout = TuneTimeoutChecker(hpo_params["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
             logdir=self.logdir,
-            hpoed_params=hpoed_params
+            hpo_params=hpo_params
         )
-        self.logger.get_logger(None).info("%s", hpoed_params)
+        self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
@@ -499,7 +499,7 @@ class TuneTrial:
         if Path(self.signal).exists():
             os.remove(self.signal)
 
-# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpoed_params`. This is because it's a pain to turn DBGymConfig
+# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_params`. This is because it's a pain to turn DBGymConfig
 #   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
 # Using a function to create a class is Ray's recommended way of doing this (see
 #   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
@@ -511,10 +511,10 @@ def create_tune_opt_class(dbgym_cfg_param):
     class TuneOpt(Trainable):
         dbgym_cfg = global_dbgym_cfg
 
-        def setup(self, hpoed_params: dict[str, Any]) -> None:
+        def setup(self, hpo_params: dict[str, Any]) -> None:
             self.trial = TuneTrial(TuneOpt.dbgym_cfg)
             self.trial.logdir = self.logdir # type: ignore
-            self.trial.setup(hpoed_params)
+            self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:
             return self.trial.step()
