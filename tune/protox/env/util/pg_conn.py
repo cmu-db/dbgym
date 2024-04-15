@@ -33,7 +33,7 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
-        enable_boot_during_hpo: bool,
+        enable_boot: bool,
         boot_config_fpath: Path,
         logger: Logger,
     ) -> None:
@@ -44,7 +44,7 @@ class PostgresConn:
         self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
-        self.enable_boot_during_hpo = enable_boot_during_hpo
+        self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
         self.logger = logger
@@ -221,9 +221,9 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
-        if self.enable_boot_during_hpo:
-            # I'm choosing to only load the file if enable_boot_during_hpo is on, so we
-            # don't crash if enable_boot_during_hpo is off and the file doesn't exist.
+        if self.enable_boot:
+            # I'm choosing to only load the file if enable_boot is on, so we
+            # don't crash if enable_boot is off and the file doesn't exist.
             with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
                 

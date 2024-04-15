@@ -130,7 +130,7 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, logdir: str, pgport: int, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, logdir: str, pgport: int, is_hpo: bool, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         hpo_params["trace"],
@@ -151,9 +151,11 @@ def _build_utilities(
         logger=logger,
     )
 
-    # PostgresConn.start_with_changes() assumes that Redis is running
-    # TODO(phw2): only start redis if we're using Boot
-    make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
+    # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
+    #   we start Redis here if necessary.
+    enable_boot = hpo_params["enable_boot_during_hpo"] if is_hpo else hpo_params["enable_boot_during_tune"]
+    if enable_boot:
+        make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
     pgconn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
@@ -162,7 +164,7 @@ def _build_utilities(
         pgdata_parent_dpath=Path(hpo_params["pgconn_info"]["pgdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         postgres_logs_dir=Path(logdir) / "pg_logs",
-        enable_boot_during_hpo=hpo_params["enable_boot_during_hpo"],
+        enable_boot=enable_boot,
         boot_config_fpath=hpo_params["boot_config_fpath"],
         connect_timeout=300,
         logger=logger,
@@ -510,14 +512,14 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, logdir: str, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, seed: int, logdir: str, is_hpo: bool, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(logdir, port, hpo_params)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, hpo_params)
+    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, is_hpo, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
     obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(

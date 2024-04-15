@@ -3,11 +3,11 @@
 set -euxo pipefail
 
 SCALE_FACTOR=10
-INTENDED_PGDATA_HARDWARE=hdd
-PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
+INTENDED_PGDATA_HARDWARE=ssd
+PGDATA_PARENT_DPATH=/mnt/nvme1n1/phw2/dbgym_tmp/
 
 # space for testing
-python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR
+python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR --enable-boot-during-tune
 exit 0
 
 # benchmark
@@ -23,5 +23,5 @@ python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-fa
 python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --train-max-concurrent 10
 
 # agent
-python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --duration 4 --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
+python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --duration 4 --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH --enable-boot-during-hpo
 python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR

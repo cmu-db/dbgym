@@ -411,8 +411,13 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig) -> None:
+    def __init__(self, dbgym_cfg: DBGymConfig, is_hpo: bool) -> None:
+        '''
+        We use this object for both HPO and tune. It behaves *slightly* differently
+        depending on what it's used for, which is why we have an is_hpo param.
+        '''
         self.dbgym_cfg = dbgym_cfg
+        self.is_hpo = is_hpo
 
     def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
@@ -433,6 +438,7 @@ class TuneTrial:
             self.dbgym_cfg,
             seed=seed,
             logdir=self.logdir,
+            is_hpo=self.is_hpo,
             hpo_params=hpo_params
         )
         self.logger.get_logger(None).info("%s", hpo_params)
@@ -514,7 +520,7 @@ def create_tune_opt_class(dbgym_cfg_param):
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
-            self.trial = TuneTrial(TuneOpt.dbgym_cfg)
+            self.trial = TuneTrial(TuneOpt.dbgym_cfg, True)
             self.trial.logdir = self.logdir # type: ignore
             self.trial.setup(hpo_params)
 
