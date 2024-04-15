@@ -75,18 +75,18 @@ def _acquire_metrics_around_query(
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
-    pqt: float = 0.0,
+    query_timeout: float = 0.0,
     obs_space: Optional[StateSpace] = None,
 ) -> Tuple[float, bool, Any, Any]:
     _force_statement_timeout(connection, 0)
     if obs_space and obs_space.require_metrics():
         initial_metrics = obs_space.construct_online(connection)
 
-    if pqt > 0:
-        _force_statement_timeout(connection, pqt * 1000)
+    if query_timeout > 0:
+        _force_statement_timeout(connection, query_timeout * 1000)
 
     qid_runtime, did_timeout, explain_data = _time_query(
-        logger, prefix, connection, query, pqt
+        logger, prefix, connection, query, query_timeout
     )
 
     # Wipe the statement timeout.
@@ -105,14 +105,14 @@ def execute_variations(
     connection: psycopg.Connection[Any],
     runs: list[QueryRun],
     query: str,
-    pqt: float = 0,
+    query_timeout: float = 0,
     logger: Optional[Logger] = None,
     sysknobs: Optional[KnobSpaceAction] = None,
     obs_space: Optional[StateSpace] = None,
 ) -> BestQueryRun:
 
     # Initial timeout.
-    timeout_limit = pqt
+    timeout_limit = query_timeout
     # Best run invocation.
     best_qr = BestQueryRun(None, None, True, None, None)
 
@@ -145,7 +145,7 @@ def execute_variations(
             prefix=qr.prefix_qid,
             connection=connection,
             query=pqk_query,
-            pqt=timeout_limit,
+            query_timeout=timeout_limit,
             obs_space=obs_space,
         )
 

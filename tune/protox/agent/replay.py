@@ -57,7 +57,7 @@ def gogo(args):
 
     if args.alternate:
         horizon = args.horizon
-        per_query_timeout = args.pqt
+        per_query_timeout = args.query_timeout
     else:
         with open(f"{args.input}/stdout", "r") as f:
             config = f.readlines()[0]
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     parser.add_argument("--simulated", action="store_true")
     parser.add_argument("--maximal-only", action="store_true")
     parser.add_argument("--alternate", action="store_true", default=False)
-    parser.add_argument("--pqt", type=int, default=0)
+    parser.add_argument("--query_timeout", type=int, default=0)
     parser.add_argument("--horizon", type=int, default=0)
     parser.add_argument("--cutoff", type=float, default=0)
     parser.add_argument("--blocklist", default="")

@@ -114,7 +114,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         workload_eval_mode: str,
         workload_eval_inverse: bool,
         workload_eval_reset: bool,
-        pqt: int,
+        query_timeout: int,
         benchbase_config: dict[str, Any],
         env: gym.Env[Any, Any],
         logger: Optional[Logger],
@@ -136,7 +136,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
         self.workload_eval_reset = workload_eval_reset
-        self.pqt = pqt
+        self.query_timeout = query_timeout
         self.benchbase_config = benchbase_config
         self.best_observed: dict[str, BestQueryRun] = {}
         self.logger = logger
@@ -337,7 +337,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 actions=[r[1] for r in runs],
                 actions_names=[r[0] for r in runs],
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
+                query_timeout=self.query_timeout,
                 reset_metrics=kwargs["options"]["query_metric_data"],
                 update=False,
                 first=False,

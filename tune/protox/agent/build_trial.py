@@ -318,7 +318,7 @@ def _build_env(
         horizon=hpoed_params["horizon"],
         reward_utility=reward_utility,
         pgconn=pgconn,
-        pqt=hpoed_params["query_timeout"],
+        query_timeout=hpoed_params["query_timeout"],
         benchbase_config=hpoed_params["benchbase_config"],
         logger=logger,
         replay=False,
@@ -336,7 +336,7 @@ def _build_env(
                 workload_eval_inverse=hpoed_params["workload_eval_inverse"],
                 workload_eval_reset=hpoed_params["workload_eval_reset"],
                 benchbase_config=hpoed_params["benchbase_config"],
-                pqt=hpoed_params["query_timeout"],
+                query_timeout=hpoed_params["query_timeout"],
                 env=env,
                 logger=logger,
             )

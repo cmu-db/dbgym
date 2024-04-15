@@ -339,7 +339,7 @@ class Workload(object):
         action_space: Optional[HolonSpace] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         override_workload_timeout: Optional[float] = None,
-        pqt: Optional[int] = None,
+        query_timeout: Optional[int] = None,
         workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
         disable_pg_hint: bool = False,
         blocklist: list[str] = [],
@@ -449,7 +449,7 @@ class Workload(object):
                         f"{qid}",
                         pgconn.conn(),
                         query,
-                        pqt=time_left,
+                        query_timeout=time_left,
                         obs_space=None,
                     )
 
@@ -483,7 +483,7 @@ class Workload(object):
                         if r[2] not in [rr[2] for rr in runs]:
                             runs.append(r)
 
-                    target_pqt = pqt if pqt else workload_timeout
+                    target_pqt = query_timeout if query_timeout else workload_timeout
                     skip_execute = False
                     if (
                         reset_metrics is not None
@@ -508,7 +508,7 @@ class Workload(object):
                             connection=pgconn.conn(),
                             runs=runs,
                             query=query,
-                            pqt=min(target_pqt, workload_timeout - workload_time + 1),
+                            query_timeout=min(target_pqt, workload_timeout - workload_time + 1),
                             logger=self.logger,
                             sysknobs=sysknobs,
                             obs_space=obs_space,
@@ -670,7 +670,7 @@ class Workload(object):
         actions: list[HolonAction],
         actions_names: list[str],
         benchbase_config: dict[str, Any],
-        pqt: Optional[int] = None,
+        query_timeout: Optional[int] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         update: bool = True,
         first: bool = False,
@@ -699,7 +699,7 @@ class Workload(object):
                 action_space=action_space,
                 reset_metrics=reset_metrics,
                 override_workload_timeout=self.workload_timeout,
-                pqt=pqt,
+                query_timeout=query_timeout,
                 workload_qdir=None,
                 disable_pg_hint=False,
                 blocklist=[],

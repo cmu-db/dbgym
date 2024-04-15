@@ -33,7 +33,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         horizon: int,
         reward_utility: RewardUtility,
         pgconn: PostgresConn,
-        pqt: int,
+        query_timeout: int,
         benchbase_config: dict[str, Any],
         logger: Optional[Logger] = None,
         replay: bool = False,
@@ -51,7 +51,7 @@ class PostgresEnv(gym.Env[Any, Any]):
 
         self.benchbase_config = benchbase_config
         self.pgconn = pgconn
-        self.pqt = pqt
+        self.query_timeout = query_timeout
 
         self.current_state: Optional[Any] = None
         self.baseline_metric: Optional[float] = None
@@ -163,7 +163,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 actions=[default_action],
                 actions_names=["GlobalDual"],
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
+                query_timeout=self.query_timeout,
                 update=False,
                 first=True,
             )
@@ -262,7 +262,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 obs_space=self.observation_space,
                 action_space=self.action_space,
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
+                query_timeout=self.query_timeout,
                 actions=[a[1] for a in actions],
                 actions_names=[a[0] for a in actions],
                 update=True,
