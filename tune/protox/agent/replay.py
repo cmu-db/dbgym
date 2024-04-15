@@ -1,26 +1,44 @@
 import datetime
 import logging
-import time
+import click
 import yaml
-import os
-import json
 import pandas as pd
 import tqdm
 import argparse
-import gymnasium as gym
 from pathlib import Path
 from dateutil.parser import parse
 
 import sys
+
+from misc.utils import DBGymConfig
 sys.path.append("/home/wz2/mythril")
 
 from envs.spec import Spec
-from envs.pg_env import PostgresEnv
+from tune.protox.env.pg_env import PostgresEnv
 
 class DotDict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+@click.command()
+@click.pass_obj
+@click.argument("benchmark-name")
+@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
+@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--query-subset",
+    type=click.Choice(["all", "even", "odd"]),
+    default="all",
+)
+@click.option(
+    "--scale-factor",
+    default=1.0,
+    help=f"The scale factor used when generating the data of the benchmark.",
+)
+def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float) -> None:
+    pass
 
 
 def gogo(args):
