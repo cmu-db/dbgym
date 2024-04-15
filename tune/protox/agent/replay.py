@@ -77,8 +77,8 @@ def gogo(args):
     with open(f"{args.input}/{filename}", "r") as f:
         for line in f:
             if not start_found:
-                if "Baseilne Metric" in line:
-                    start_time = parse(line.split("INFO:")[-1].split(" Baseilne Metric")[0])
+                if "Baseline Metric" in line:
+                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0])
                     start_found = True
             else:
                 if "mv" in line and "repository" in line:
@@ -136,7 +136,7 @@ def gogo(args):
     num_lines = 0
     with open(f"{args.input}/{filename}", "r") as f:
         for line in f:
-            if "Baseilne Metric" in line:
+            if "Baseline Metric" in line:
                 num_lines += 1
             elif "mv" in line and "repository" in line:
                 num_lines += 1
@@ -182,9 +182,9 @@ def gogo(args):
         for line in f:
             # Keep going until we've found the start.
             if not start_found:
-                if "Baseilne Metric" in line:
+                if "Baseline Metric" in line:
                     start_found = True
-                    start_time = parse(line.split("INFO:")[-1].split(" Baseilne Metric")[0])
+                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0])
                     pbar.update(1)
                 continue
 
