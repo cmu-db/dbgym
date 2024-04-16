@@ -42,6 +42,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpoed_agent_params_path = conv_inputpath_to_realabspath(dbgym_cfg, hpoed_agent_params_path)
 
     # Tune
+    print(f"type(hpoed_agent_params_path)={type(hpoed_agent_params_path)}")
     with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
         hpoed_params = json.load(f)
 
@@ -82,4 +83,3 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     # Link the tuning steps data (more details than step data).
     tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, False)
     link_result(dbgym_cfg, dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps"), custom_result_name=tuning_steps_link_dname)
-    assert False, "b"
