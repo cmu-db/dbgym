@@ -23,7 +23,7 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
+from misc.utils import DBGymConfig, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
 
 
 METRIC_NAME = "Best Metric"
@@ -600,4 +600,4 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         assert False, print("Encountered exceptions!")
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
     best_params_fpath = Path(best_result.path) / "params.json"
-    print(f"best_params_fpath={best_params_fpath}")
+    link_result(dbgym_cfg, best_params_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name))
