@@ -5,7 +5,7 @@ import time
 import click
 import pandas as pd
 
-from misc.utils import WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn
+from misc.utils import WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
 from tune.protox.agent.coerce_config import coerce_config
 from tune.protox.agent.hpo import TuneTrial, build_space
 
@@ -80,4 +80,5 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
     # Link the tuning steps data (more details than step data).
-    link_result(dbgym_cfg, )
+    tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, False)
+    link_result(dbgym_cfg, dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps"), custom_result_name=tuning_steps_link_dname)
