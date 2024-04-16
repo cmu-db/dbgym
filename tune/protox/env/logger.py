@@ -11,6 +11,8 @@ from plumbum import local
 from torch.utils.tensorboard import SummaryWriter  # type: ignore
 from typing_extensions import ParamSpec
 
+from misc.utils import DBGymConfig
+
 P = ParamSpec("P")
 T = TypeVar("T")
 
@@ -53,24 +55,23 @@ class Encoder(json.JSONEncoder):
 class Logger(object):
     def __init__(
         self,
+        dbgym_cfg: DBGymConfig,
         trace: bool,
         verbose: bool,
-        output_log_path: str,
-        tuning_steps_dpath: str,
-        tensorboard_path: str,
     ) -> None:
+        self.log_dpath = dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
         self.trace = trace
         self.verbose = verbose
-        self.tuning_steps_dpath = tuning_steps_dpath
-        Path(tuning_steps_dpath).mkdir(parents=True, exist_ok=True)
+        self.tensorboard_dpath = self.log_dpath / "tboard"
+        self.tuning_steps_dpath = self.log_dpath / "tuning_steps"
+        self.tuning_steps_dpath.mkdir(parents=True, exist_ok=True)
 
         level = logging.INFO if not self.verbose else logging.DEBUG
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
         logging.basicConfig(format=formatter, level=level, force=True)
 
         # Setup the file logger.
-        Path(output_log_path).mkdir(parents=True, exist_ok=True)
-        file_logger = logging.FileHandler("{}/output.log".format(output_log_path))
+        file_logger = logging.FileHandler(self.log_dpath / "output.log")
         file_logger.setFormatter(logging.Formatter(formatter))
         file_logger.setLevel(level)
         logging.getLogger().addHandler(file_logger)
@@ -78,8 +79,8 @@ class Logger(object):
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None
         if self.trace:
-            Path(tensorboard_path).mkdir(parents=True, exist_ok=True)
-            self.writer = SummaryWriter(tensorboard_path)  # type: ignore
+            self.tensorboard_dpath.mkdir(parents=True, exist_ok=True)
+            self.writer = SummaryWriter(self.tensorboard_dpath)  # type: ignore
 
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}

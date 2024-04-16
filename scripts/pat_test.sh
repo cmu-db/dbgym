@@ -4,6 +4,10 @@ set -euxo pipefail
 
 SCALE_FACTOR=0.01
 
+# testing
+python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --duration 0.01  --intended-pgdata-hardware ssd --pgdata-parent-dpath /mnt/nvme1n1/phw2/dbgym_tmp/
+exit 0
+
 # benchmark
 python3 task.py --no-startup-check benchmark tpch data $SCALE_FACTOR
 python3 task.py --no-startup-check benchmark tpch workload --scale-factor $SCALE_FACTOR

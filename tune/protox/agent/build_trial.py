@@ -133,11 +133,9 @@ def _build_utilities(
     dbgym_cfg: DBGymConfig, pgport: int, hpoed_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
+        dbgym_cfg,
         hpoed_params["trace"],
         hpoed_params["verbose"],
-        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"],
-        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"] / "tuning_steps",
-        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"] / "tboard",
     )
 
     reward_utility = RewardUtility(

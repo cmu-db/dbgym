@@ -253,7 +253,6 @@ def build_space(
 
         # Paths.
         "workload_path": str(workload_path),
-        "output_log_path": "artifacts/",
         "pgconn_info": pgconn_info,
         "benchmark_config": benchmark_config,
         "benchbase_config": benchbase_config,

@@ -163,7 +163,7 @@ class PostgresConn:
                 "-t",
                 "180",
                 "-l",
-                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log"
+                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log",
                 "start",
             ].run(retcode=None)
 
