@@ -136,7 +136,7 @@ def _build_utilities(
         hpoed_params["trace"],
         hpoed_params["verbose"],
         Path(logdir) / hpoed_params["output_log_path"],
-        Path(logdir) / hpoed_params["output_log_path"] / "repository",
+        Path(logdir) / hpoed_params["output_log_path"] / "tuning_steps",
         Path(logdir) / hpoed_params["output_log_path"] / "tboard",
     )
 

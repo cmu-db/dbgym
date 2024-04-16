@@ -81,7 +81,7 @@ def gogo(args):
                     start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0])
                     start_found = True
             else:
-                if "mv" in line and "repository" in line:
+                if "mv" in line and "tuning_steps" in line:
                     repo = eval(line.split("Running ")[-1])[-1]
                     last_folder = repo.split("/")[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0])
@@ -114,7 +114,7 @@ def gogo(args):
         spec.workload.reset()
 
     # Get the minimum reward.
-    runs = [Path(args.input) / "repository" / fold / "run.raw.csv" for fold in folders]
+    runs = [Path(args.input) / "tuning_steps" / fold / "run.raw.csv" for fold in folders]
     runs = [pd.read_csv(run) for run in runs]
     rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == per_query_timeout) for run in runs]
     rewards = sorted(rewards, key=lambda x: x[0])
@@ -138,7 +138,7 @@ def gogo(args):
         for line in f:
             if "Baseline Metric" in line:
                 num_lines += 1
-            elif "mv" in line and "repository" in line:
+            elif "mv" in line and "tuning_steps" in line:
                 num_lines += 1
 
     def run_sample(action, timeout):
@@ -193,11 +193,11 @@ def gogo(args):
                 selected_action_knobs = env.action_space.get_knob_space().from_jsonable(act[0])[0]
                 noop_index = "NOOP" in act[1][0]
 
-            elif (maximal and ("mv" in line and "repository" in line)):
+            elif (maximal and ("mv" in line and "tuning_steps" in line)):
                 maximal_repo = line
 
-            elif (maximal and "Found new maximal state with" in line) or (not maximal and ("mv" in line and "repository" in line)):
-                if "mv" in line and "repository" in line:
+            elif (maximal and "Found new maximal state with" in line) or (not maximal and ("mv" in line and "tuning_steps" in line)):
+                if "mv" in line and "tuning_steps" in line:
                     repo = eval(line.split("Running ")[-1])[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0])
                 elif "Found new maximal state with" in line:
