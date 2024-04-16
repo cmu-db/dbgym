@@ -399,13 +399,11 @@ class TuneTrial:
         )
         np.random.seed(seed)
         torch.manual_seed(seed)
-        assert hasattr(self, "logdir")
 
         self.timeout = TuneTimeoutChecker(hpoed_params["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
-            logdir=self.logdir,
             hpoed_params=hpoed_params
         )
         self.logger.get_logger(None).info("%s", hpoed_params)
@@ -488,7 +486,6 @@ def create_tune_opt_class(dbgym_cfg_param):
 
         def setup(self, hpoed_params: dict[str, Any]) -> None:
             self.trial = TuneTrial(TuneOpt.dbgym_cfg)
-            self.trial.logdir = self.logdir # type: ignore
             self.trial.setup(hpoed_params)
 
         def step(self) -> dict[Any, Any]:

@@ -108,7 +108,7 @@ default_pristine_pgdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"dbgym_dbms_postgres"
+    / "dbgym_dbms_postgres"
     / "data"
     / get_pgdata_tgz_name(benchmark_name, scale_factor)
 )
@@ -121,7 +121,13 @@ default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / f"dbgym_dbms_postgres" / "build" / "repo" / "boot"/ "build" / "postgres" / "bin"
+    / "dbgym_dbms_postgres" / "build" / "repo" / "boot"/ "build" / "postgres" / "bin"
+)
+default_tuning_steps_dpath = (
+    lambda workspace_path, benchmark_name, workload_name, boot_enabled: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / "dbgym_tune_protox_agent" / "artifacts" / f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled else ''}_tuning_steps"
 )
 
 

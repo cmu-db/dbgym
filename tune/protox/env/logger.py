@@ -56,13 +56,13 @@ class Logger(object):
         trace: bool,
         verbose: bool,
         output_log_path: str,
-        tuning_steps_path: str,
+        tuning_steps_dpath: str,
         tensorboard_path: str,
     ) -> None:
         self.trace = trace
         self.verbose = verbose
-        self.tuning_steps_path = tuning_steps_path
-        Path(tuning_steps_path).mkdir(parents=True, exist_ok=True)
+        self.tuning_steps_dpath = tuning_steps_dpath
+        Path(tuning_steps_dpath).mkdir(parents=True, exist_ok=True)
 
         level = logging.INFO if not self.verbose else logging.DEBUG
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
@@ -95,21 +95,21 @@ class Logger(object):
         time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         time = name_override if name_override else time
         if info_dict["results"] is not None and Path(info_dict["results"]).exists():
-            local["mv"][info_dict["results"], f"{self.tuning_steps_path}/{time}"].run()
+            local["mv"][info_dict["results"], f"{self.tuning_steps_dpath}/{time}"].run()
         else:
-            Path(f"{self.tuning_steps_path}/{time}").mkdir(parents=True, exist_ok=True)
+            Path(f"{self.tuning_steps_dpath}/{time}").mkdir(parents=True, exist_ok=True)
 
         if info_dict["prior_pgconf"]:
             local["mv"][
-                info_dict["prior_pgconf"], f"{self.tuning_steps_path}/{time}/old_pg.conf"
+                info_dict["prior_pgconf"], f"{self.tuning_steps_dpath}/{time}/old_pg.conf"
             ].run()
 
         if info_dict["prior_state_container"]:
-            with open(f"{self.tuning_steps_path}/{time}/prior_state.txt", "w") as f:
+            with open(f"{self.tuning_steps_dpath}/{time}/prior_state.txt", "w") as f:
                 f.write(str(info_dict["prior_state_container"]))
 
         if info_dict["action_json"]:
-            with open(f"{self.tuning_steps_path}/{time}/action.txt", "w") as f:
+            with open(f"{self.tuning_steps_dpath}/{time}/action.txt", "w") as f:
                 f.write(info_dict["action_json"])
 
     def advance(self) -> None:

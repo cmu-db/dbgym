@@ -126,7 +126,7 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
     # create .tgz file
     # you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir
     pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
-        ".", mkdir=True
+        mkdir=True
     ) / get_pgdata_tgz_name(benchmark_name, scale_factor)
     # we need to cd into pgdata_dpath so that the tar file does not contain folders for the whole path of pgdata_dpath
     subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_dpath)

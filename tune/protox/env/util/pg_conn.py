@@ -30,16 +30,13 @@ class PostgresConn:
         pristine_pgdata_snapshot_fpath: Path,
         pgdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
-        postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
         logger: Logger,
     ) -> None:
 
-        Path(postgres_logs_dir).mkdir(parents=True, exist_ok=True)
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
         self.pgbin_path = pgbin_path
-        self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
         self.log_step = 0
         self.logger = logger
@@ -77,10 +74,12 @@ class PostgresConn:
             self._conn = None
 
     def move_log(self) -> None:
-        if Path(f"{self.postgres_logs_dir}/pg.log").exists():
+        pglog_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log"
+        pglog_this_step_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg.log.{self.log_step}"
+        if pglog_fpath.exists():
             shutil.move(
-                f"{self.postgres_logs_dir}/pg.log",
-                f"{self.postgres_logs_dir}/pg.log.{self.log_step}",
+                pglog_fpath,
+                pglog_this_step_fpath
             )
             self.log_step += 1
 
@@ -164,7 +163,7 @@ class PostgresConn:
                 "-t",
                 "180",
                 "-l",
-                f"{self.postgres_logs_dir}/pg.log",
+                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log"
                 "start",
             ].run(retcode=None)
 

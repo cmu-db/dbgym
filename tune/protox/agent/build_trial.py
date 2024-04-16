@@ -93,9 +93,9 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     raise IOError("No free ports to bind postgres to.")
 
 
-def _modify_benchbase_config(logdir: str, port: int, hpoed_params: dict[str, Any]) -> None:
+def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpoed_params: dict[str, Any]) -> None:
     if hpoed_params["benchmark_config"]["query_spec"]["oltp_workload"]:
-        conf_etree = ET.parse(Path(logdir) / "benchmark.xml")
+        conf_etree = ET.parse(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
         conf_etree.getroot().find("url").text = jdbc  # type: ignore
 
@@ -110,7 +110,7 @@ def _modify_benchbase_config(logdir: str, port: int, hpoed_params: dict[str, Any
                 conf_etree.getroot().find("works").find("work").find("time").text = str(oltp_config["oltp_duration"])  # type: ignore
             if works.find("warmup") is not None:  # type: ignore
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"])  # type: ignore
-        conf_etree.write(Path(logdir) / "benchmark.xml")
+        conf_etree.write(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
 
 
 def _gen_noise_scale(
@@ -130,14 +130,14 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, logdir: str, pgport: int, hpoed_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, pgport: int, hpoed_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         hpoed_params["trace"],
         hpoed_params["verbose"],
-        Path(logdir) / hpoed_params["output_log_path"],
-        Path(logdir) / hpoed_params["output_log_path"] / "tuning_steps",
-        Path(logdir) / hpoed_params["output_log_path"] / "tboard",
+        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"],
+        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"] / "tuning_steps",
+        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / hpoed_params["output_log_path"] / "tboard",
     )
 
     reward_utility = RewardUtility(
@@ -157,7 +157,6 @@ def _build_utilities(
         pristine_pgdata_snapshot_fpath=Path(hpoed_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
         pgdata_parent_dpath=Path(hpoed_params["pgconn_info"]["pgdata_parent_dpath"]),
         pgbin_path=Path(hpoed_params["pgconn_info"]["pgbin_path"]),
-        postgres_logs_dir=Path(logdir) / hpoed_params["output_log_path"] / "pg_logs",
         connect_timeout=300,
         logger=logger,
     )
@@ -504,14 +503,14 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, logdir: str, hpoed_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, seed: int, hpoed_params: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpoed_params["pgconn_info"]["pgbin_path"])
-    _modify_benchbase_config(logdir, port, hpoed_params)
+    _modify_benchbase_config(dbgym_cfg, port, hpoed_params)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, hpoed_params)
+    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, port, hpoed_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpoed_params, workload, logger)
     obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpoed_params, seed)
     target_reset, env = _build_env(
