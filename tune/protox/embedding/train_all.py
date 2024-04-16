@@ -212,11 +212,11 @@ def train_all_embeddings(
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_config = RunConfig(
         name=f"ProtoXEmbeddingHPO_{dtime}",
-        storage_path=None,
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
+        storage_path=dbgym_cfg.cur_task_runs_path("tune_ray_results", mkdir=True),
     )
 
     resources = {"cpu": 1}

@@ -1,3 +1,4 @@
+import shutil
 import sys
 import time
 import json
@@ -578,6 +579,10 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
+        # I call it hpo_ray_results because agent tuning also uses Ray and stores its results
+        #   in tune_ray_results. By making them separate, we avoid the possibility of
+        #   file collisions.
+        storage_path=dbgym_cfg.cur_task_runs_path("hpo_ray_results", mkdir=True),
     )
 
     tuner = ray.tune.Tuner(
@@ -594,4 +599,5 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
-    print(f"best_result={best_result}")
+    best_params_fpath = Path(best_result.path) / "params.json"
+    print(f"best_params_fpath={best_params_fpath}")
