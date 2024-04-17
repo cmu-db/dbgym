@@ -8,7 +8,7 @@ import argparse
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, workload_name_fn, default_tuning_steps_dpath
+from misc.utils import DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
 from tune.protox.env.pg_env import PostgresEnv
@@ -49,11 +49,57 @@ REPLAY_DATA_FNAME = "replay_data.csv"
     help="The path to the `tuning_steps` directory to be replayed."
 )
 @click.option(
+    "--workload-timeout",
+    default=DEFAULT_WORKLOAD_TIMEOUT,
+    type=int,
+    help="The timeout (in seconds) of a workload when replaying."
+)
+@click.option(
+    "--num-samples",
+    default=1,
+    type=int,
+    help="The number of times to run the workload for each DBMS config being evaluated."
+)
+@click.option(
+    "--threshold",
+    default=0,
+    type=float,
+    help="The minimum delta between the runtimes of consecutive DBMS configs to warrant a config being evaluated."
+)
+@click.option(
+    "--threshold-limit",
+    default=None,
+    type=float,
+    help="Only use threshold within threshold-limit hours from the start. None means \"always use threshold\"."
+)
+@click.option(
+    "--maximal",
+    is_flag=True,
+    help="If set to true, only evaluate configs that are strictly \"better\"."
+)
+@click.option(
     "--simulated",
     is_flag=True,
     help="Set to true to use the runtimes from the original tuning run instead of replaying the workload."
 )
-def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, simulated: bool) -> None:
+@click.option(
+    "--maximal-only",
+    is_flag=True,
+    help="If set to true, only evaluate the best config"
+)
+@click.option(
+    "--cutoff",
+    default=None,
+    type=float,
+    help="Only evaluate configs up to cutoff hours. None means \"evaluate all configs\"."
+)
+@click.option(
+    "--blocklist",
+    default=[],
+    type=list,
+    help="Ignore running queries in the blocklist."
+)
+def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if tuning_steps_dpath == None:
@@ -64,14 +110,12 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
 
     # Replay
     print(f"tuning_steps_dpath={tuning_steps_dpath}")
-    runs = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
-    print(f"runs={runs}")
-    for run in tqdm.tqdm([f for f in runs], leave=False):
-        print(f"Parsing {run.parent}")
-        # gogo(new_args)
+    tuning_step_dpaths = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
+    for tuning_step_dpath in tqdm.tqdm(tuning_step_dpaths, leave=False):
+        replay_step(dbgym_cfg, new_args)
 
 
-def gogo(args):
+def replay_step(dbgym_cfg: DBGymConfig, maximal):
     maximal = args.maximal
     maximal_only = args.maximal_only
     threshold = args.threshold

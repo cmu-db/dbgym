@@ -8,6 +8,9 @@ from typing import Tuple
 import click
 import yaml
 
+# Default values
+DEFAULT_WORKLOAD_TIMEOUT = 600
+
 # Relpaths of different folders in the codebase
 TUNE_RELPATH = Path("tune")
 PROTOX_RELPATH = TUNE_RELPATH / "protox"
