@@ -63,7 +63,9 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     tuning_steps_dpath = conv_inputpath_to_realabspath(dbgym_cfg, tuning_steps_dpath)
 
     # Replay
-    runs = sorted(tuning_steps_dpath.rglob("config.yaml"))
+    print(f"tuning_steps_dpath={tuning_steps_dpath}")
+    runs = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
+    print(f"runs={runs}")
     for run in tqdm.tqdm([f for f in runs], leave=False):
         print(f"Parsing {run.parent}")
         # gogo(new_args)
