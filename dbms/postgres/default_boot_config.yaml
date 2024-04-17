@@ -1,0 +1,11 @@
+# Macro accelerator
+intelligent_cache: true
+
+# Micro accelerator
+early_stop: true
+seq_sample: true
+seq_sample_pct: 50
+seq_sample_seed: 15721
+mu_hyp_opt: 0.01
+mu_hyp_time: 100000
+mu_hyp_stdev: 1.0
