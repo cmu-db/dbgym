@@ -5,7 +5,7 @@ import time
 import click
 import pandas as pd
 
-from misc.utils import WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
 from tune.protox.agent.coerce_config import coerce_config
 from tune.protox.agent.hpo import TuneTrial, build_space
 
@@ -37,7 +37,13 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     is_flag=True,
     help="Whether to enable the Boot query accelerator during the tuning process. Deciding to use Boot during tuning is separate from deciding to use Boot during HPO.",
 )
-def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool) -> None:
+@click.option(
+    "--tune-boot-config-fpath",
+    default=DEFAULT_BOOT_CONFIG_FPATH,
+    type=Path,
+    help="The path to the file configuring Boot when tuning. This may be a different Boot config than the one used for HPO.",
+)
+def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, tune_boot_config_fpath: Path) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
@@ -45,6 +51,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
 
     # Convert all input paths to absolute paths
     hpoed_agent_params_path = conv_inputpath_to_realabspath(dbgym_cfg, hpoed_agent_params_path)
+    tune_boot_config_fpath = conv_inputpath_to_realabspath(dbgym_cfg, tune_boot_config_fpath)
 
     # Tune
     with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
@@ -60,11 +67,12 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     ), hpoed_params)
 
     # Add configs to the hpoed_params that are allowed to differ between HPO and tuning.
-    # In general, for configs that can differ between HPO and tuning, I chose to append
-    #   "_during_hpo"/"_during_tune" to the end of them instead of naming them the same
+    # In general, for configs that can differ between HPO and tuning, I chose to name
+    #   them "*tune*" and "*hpo*" to the end of them instead of naming them the same
     #   and overriding the config during tuning. It's just much less confusing if we
     #   make sure to never override any configs in hpoed_params.
     hpoed_params["enable_boot_during_tune"] = enable_boot_during_tune
+    hpoed_params["tune_boot_config_fpath"] = tune_boot_config_fpath
 
     # Piggyback off the HPO magic.
     t = TuneTrial(dbgym_cfg, False)
