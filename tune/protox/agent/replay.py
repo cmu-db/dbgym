@@ -145,10 +145,11 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     horizon = hpo_params["horizon"]
     query_timeout = hpo_params["query_timeout"]
+    output_log_fpath = tuning_steps_dpath / "output.log"
 
+    # Go through output.log and find the tuning_steps/[time]/ folders, as well as the time of the last folder
     folders = []
     start_found = False
-    output_log_fpath = tuning_steps_dpath / "output.log"
     last_evaluation = None
     with open_and_save(dbgym_cfg, output_log_fpath) as f:
         for line in f:
@@ -157,7 +158,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0].split("[")[0])
                     start_found = True
             else:
-                if "mv" in line and "tuning_steps" in line:
+                if "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line:
                     repo = eval(line.split("Running ")[-1])[-1]
                     last_folder = repo.split("/")[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
