@@ -274,7 +274,7 @@ def _build_actions(
     return hspace, lsc
 
 
-def _build_obs_space(
+def _build_observation_space(
     dbgym_cfg: DBGymConfig, action_space: HolonSpace, lsc: LSC, hpo_params: dict[str, Any], seed: int
 ) -> StateSpace:
     if hpo_params["metric_state"] == "metric":
@@ -307,7 +307,7 @@ def _build_env(
     dbgym_cfg: DBGymConfig,
     hpo_params: dict[str, Any],
     pgconn: PostgresConn,
-    obs_space: StateSpace,
+    observation_space: StateSpace,
     holon_space: HolonSpace,
     lsc: LSC,
     workload: Workload,
@@ -318,7 +318,7 @@ def _build_env(
     env = gym.make(
         "Postgres-v0",
         dbgym_cfg=dbgym_cfg,
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=holon_space,
         workload=workload,
         horizon=hpo_params["horizon"],
@@ -378,7 +378,7 @@ def _build_env(
 def _build_agent(
     seed: int,
     hpo_params: dict[str, Any],
-    obs_space: StateSpace,
+    observation_space: StateSpace,
     action_space: HolonSpace,
     logger: Logger,
 ) -> Wolp:
@@ -386,10 +386,10 @@ def _build_agent(
     critic_action_dim = action_space.critic_dim()
 
     actor = Actor(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["pi_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -399,10 +399,10 @@ def _build_agent(
     )
 
     actor_target = Actor(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["pi_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -416,10 +416,10 @@ def _build_agent(
     )
 
     critic = ContinuousCritic(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["qf_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -428,10 +428,10 @@ def _build_agent(
     )
 
     critic_target = ContinuousCritic(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["qf_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -445,7 +445,7 @@ def _build_agent(
     )
 
     policy = WolpPolicy(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         actor=actor,
         actor_target=actor_target,
@@ -495,7 +495,7 @@ def _build_agent(
         policy=policy,
         replay_buffer=ReplayBuffer(
             buffer_size=hpo_params["buffer_size"],
-            obs_shape=[gym.spaces.utils.flatdim(obs_space)],
+            obs_shape=[gym.spaces.utils.flatdim(observation_space)],
             action_dim=critic_action_dim,
         ),
         learning_starts=hpo_params["learning_starts"],
@@ -519,12 +519,12 @@ def build_trial(
 
     logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
-    obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
+    observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
         hpo_params,
         pgconn,
-        obs_space,
+        observation_space,
         holon_space,
         lsc,
         workload,
@@ -532,5 +532,5 @@ def build_trial(
         logger,
     )
 
-    agent = _build_agent(seed, hpo_params, obs_space, holon_space, logger)
+    agent = _build_agent(seed, hpo_params, observation_space, holon_space, logger)
     return logger, target_reset, env, agent, signal

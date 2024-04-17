@@ -76,11 +76,11 @@ def _acquire_metrics_around_query(
     connection: psycopg.Connection[Any],
     query: str,
     query_timeout: float = 0.0,
-    obs_space: Optional[StateSpace] = None,
+    observation_space: Optional[StateSpace] = None,
 ) -> Tuple[float, bool, Any, Any]:
     _force_statement_timeout(connection, 0)
-    if obs_space and obs_space.require_metrics():
-        initial_metrics = obs_space.construct_online(connection)
+    if observation_space and observation_space.require_metrics():
+        initial_metrics = observation_space.construct_online(connection)
 
     if query_timeout > 0:
         _force_statement_timeout(connection, query_timeout * 1000)
@@ -91,9 +91,9 @@ def _acquire_metrics_around_query(
 
     # Wipe the statement timeout.
     _force_statement_timeout(connection, 0)
-    if obs_space and obs_space.require_metrics():
-        final_metrics = obs_space.construct_online(connection)
-        diff = obs_space.state_delta(initial_metrics, final_metrics)
+    if observation_space and observation_space.require_metrics():
+        final_metrics = observation_space.construct_online(connection)
+        diff = observation_space.state_delta(initial_metrics, final_metrics)
     else:
         diff = None
 
@@ -108,7 +108,7 @@ def execute_variations(
     query_timeout: float = 0,
     logger: Optional[Logger] = None,
     sysknobs: Optional[KnobSpaceAction] = None,
-    obs_space: Optional[StateSpace] = None,
+    observation_space: Optional[StateSpace] = None,
 ) -> BestQueryRun:
 
     # Initial timeout.
@@ -146,7 +146,7 @@ def execute_variations(
             connection=connection,
             query=pqk_query,
             query_timeout=timeout_limit,
-            obs_space=obs_space,
+            observation_space=observation_space,
         )
 
         if not did_timeout:

@@ -19,6 +19,7 @@ from dateutil.parser import parse
 from misc.utils import DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
+from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
 
 
@@ -143,8 +144,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
 
-    horizon = hpo_params["horizon"]
-    query_timeout = hpo_params["query_timeout"]
     output_log_fpath = tuning_steps_dpath / "output.log"
 
     # Go through output.log and find the tuning_steps/[time]/ folders, as well as the time of the last folder
@@ -166,31 +165,16 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     if replay_args.cutoff == None or (time_since_start - start_time).total_seconds() < replay_args.cutoff * 3600:
                         folders.append(last_folder)
 
-    print(f"folders={folders}")
-    print(f"last_evaluation={last_evaluation}")
+    # Only apply threshold if time is less than.
+    threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
 
+    # Build PostgresEnv
+    _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
+    postgres_env = agent_env.unwrapped
+    print(f"postgres_env={postgres_env}, type(postgres_env)={type(postgres_env)}")
     assert False, "done"
 
-    # Only apply threshold if time is less than.
-    threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600))
-
-    spec = Spec(
-        agent_type=None,
-        seed=0,
-        horizon=horizon,
-        config_path=f"{args.input}/config.yaml2",
-        benchmark_config_path=f"{args.input}/{args.benchmark}.yaml",
-        workload_timeout=0)
-
-    env = PostgresEnv(
-        spec,
-        horizon=horizon,
-        timeout=None,
-        reward_utility=None,
-        logger=None,
-        replay=True)
-
-    if not args.simulated:
+    if not replay_args.simulated:
         env.restore_pristine_snapshot()
         env.action_space.reset(**{"connection": env.connection, "workload": spec.workload})
         spec.workload.reset()
@@ -198,7 +182,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Get the minimum reward.
     runs = [Path(args.input) / "tuning_steps" / fold / "run.raw.csv" for fold in folders]
     runs = [pd.read_csv(run) for run in runs]
-    rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == query_timeout) for run in runs]
+    rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run in runs]
     rewards = sorted(rewards, key=lambda x: x[0])
     min_reward = min([r[0] for r in rewards])
     if maximal:
@@ -290,7 +274,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # Get the evaluation reward.
                 reward = pd.read_csv(f"{args.input}/{repo}/run.raw.csv")
                 assert len(reward.columns) == 6
-                has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == query_timeout
+                has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
                 reward = reward["Latency (microseconds)"].sum() / 1e6
                 assert reward > 0
 
@@ -359,7 +343,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     if (not has_timeout) or (max(run_samples) < timeout):
                         # Apply a tolerance..
                         # If we've timed out, only apply threshold only if we've found a strictly better config.
-                        apply_threshold = threshold if time_since_start < threshold_limit else 0
+                        apply_threshold = threshold if threshold_limit == None or time_since_start < threshold_limit else 0
                         cur_reward_max = reward - apply_threshold
 
                     if max(run_samples) < timeout:

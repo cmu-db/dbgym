@@ -158,7 +158,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             success, metric, _, results, _, query_metric_data = self.workload.execute(
                 pgconn=self.pgconn,
                 reward_utility=self.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 actions=[default_action],
                 actions_names=["GlobalDual"],
@@ -259,7 +259,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             ) = self.workload.execute(
                 pgconn=self.pgconn,
                 reward_utility=self.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 benchbase_config=self.benchbase_config,
                 query_timeout=self.query_timeout,

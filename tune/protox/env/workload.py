@@ -335,7 +335,7 @@ class Workload(object):
         actions: list[HolonAction] = [],
         actions_names: list[str] = [],
         results: Optional[Union[str, Path]] = None,
-        obs_space: Optional[StateSpace] = None,
+        observation_space: Optional[StateSpace] = None,
         action_space: Optional[HolonSpace] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         override_workload_timeout: Optional[float] = None,
@@ -353,7 +353,7 @@ class Workload(object):
         assert len(actions) == len(actions_names)
 
         # Do we need metrics.
-        need_metric = False if not obs_space else obs_space.require_metrics()
+        need_metric = False if not observation_space else observation_space.require_metrics()
 
         sysknobs = KnobSpaceAction({})
         ql_knobs = []
@@ -450,7 +450,7 @@ class Workload(object):
                         pgconn.conn(),
                         query,
                         query_timeout=time_left,
-                        obs_space=None,
+                        observation_space=None,
                     )
 
                     undo_disable = ";".join(
@@ -511,7 +511,7 @@ class Workload(object):
                             query_timeout=min(target_pqt, workload_timeout - workload_time + 1),
                             logger=self.logger,
                             sysknobs=sysknobs,
-                            obs_space=obs_space,
+                            observation_space=observation_space,
                         )
                     else:
                         assert reset_metrics
@@ -572,14 +572,14 @@ class Workload(object):
                         f.write(json.dumps(run.explain_data))
                         f.write("\n\n")
 
-            if obs_space and obs_space.require_metrics():
+            if observation_space and observation_space.require_metrics():
                 # Create the metrics.
                 # Log the metrics data as a flattened.
                 accum_data = cast(
                     list[dict[str, Any]],
                     [v.metric_data for _, v in qid_runtime_data.items()],
                 )
-                accum_stats = obs_space.merge_deltas(accum_data)
+                accum_stats = observation_space.merge_deltas(accum_data)
                 with open(results_dir / "run.metrics.json", "w") as f:
                     # Flatten it.
                     def flatten(d: dict[str, Any]) -> dict[str, Any]:
@@ -665,7 +665,7 @@ class Workload(object):
         self,
         pgconn: PostgresConn,
         reward_utility: RewardUtility,
-        obs_space: StateSpace,
+        observation_space: StateSpace,
         action_space: HolonSpace,
         actions: list[HolonAction],
         actions_names: list[str],
@@ -688,14 +688,14 @@ class Workload(object):
             # Execute benchbase if specified.
             success = self._execute_benchbase(benchbase_config, results)
             # We can only create a state if we succeeded.
-            success = obs_space.check_benchbase(self.dbgym_cfg, results)
+            success = observation_space.check_benchbase(self.dbgym_cfg, results)
         else:
             ret = self._execute_workload(
                 pgconn,
                 actions=actions,
                 actions_names=actions_names,
                 results=results,
-                obs_space=obs_space,
+                observation_space=observation_space,
                 action_space=action_space,
                 reset_metrics=reset_metrics,
                 override_workload_timeout=self.workload_timeout,

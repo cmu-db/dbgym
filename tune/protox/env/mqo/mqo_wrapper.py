@@ -332,7 +332,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             ) = self.unwrapped.workload.execute(
                 pgconn=self.unwrapped.pgconn,
                 reward_utility=self.unwrapped.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 actions=[r[1] for r in runs],
                 actions_names=[r[0] for r in runs],
