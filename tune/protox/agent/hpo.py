@@ -598,6 +598,14 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
             if results[i].error:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
+    
+    # Save the best params.json
+    # Before saving, copy it into run_*/[codebase]/data/. We copy so that when we open the
+    #   params.json file using open_and_save(), it links to the params.json file directly
+    #   instead of to the dir TuneOpt*/. By linking to the params.json file directly, we
+    #   know which params.json file in TuneOpt*/ was actually used for tuning.
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
-    best_params_fpath = Path(best_result.path) / "params.json"
-    link_result(dbgym_cfg, best_params_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name))
+    best_params_generated_fpath = Path(best_result.path) / "params.json"
+    best_params_copy_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json"
+    shutil.copy(best_params_generated_fpath, best_params_copy_fpath)
+    link_result(dbgym_cfg, best_params_copy_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name))

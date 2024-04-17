@@ -42,7 +42,6 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpoed_agent_params_path = conv_inputpath_to_realabspath(dbgym_cfg, hpoed_agent_params_path)
 
     # Tune
-    print(f"type(hpoed_agent_params_path)={type(hpoed_agent_params_path)}")
     with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
         hpoed_params = json.load(f)
 
