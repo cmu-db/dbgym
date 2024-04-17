@@ -16,7 +16,7 @@ import argparse
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, workload_name_fn, default_tuning_steps_dpath
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
 from tune.protox.agent.build_trial import build_trial
@@ -140,9 +140,13 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     Replay a single tuning run (as in one tuning_steps/ folder).
     """
     hpo_params_fpath = tuning_steps_dpath / "params.json"
-
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
+    # Set configs to the hpo_params that are allowed to differ between HPO and tuning.
+    # The way we set these may be different than how they were set during the tuning run, because
+    #   we are replaying instead of tuning.
+    hpo_params["enable_boot_during_tune"] = False
+    hpo_params["tune_boot_config_fpath"] = DEFAULT_BOOT_CONFIG_FPATH
 
     output_log_fpath = tuning_steps_dpath / "output.log"
 
