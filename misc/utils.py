@@ -143,7 +143,7 @@ default_tuning_steps_dpath = (
     lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / "dbgym_tune_protox_agent" / "data" / default_tuning_steps_dname(benchmark_name, workload_name, boot_enabled_during_tune)
+    / "dbgym_tune_protox_agent" / "artifacts" / default_tuning_steps_dname(benchmark_name, workload_name, boot_enabled_during_tune)
 )
 
 

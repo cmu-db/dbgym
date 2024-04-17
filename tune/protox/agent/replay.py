@@ -131,41 +131,47 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     replay_args = ReplayArgs(workload_timeout, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
 
     # Replay
+    replay_tuning_run(dbgym_cfg, tuning_steps_dpath, replay_args)
+
+
+def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_args: ReplayArgs):
+    """
+    Replay a single tuning run (as in one tuning_steps/ folder).
+    """
     hpo_params_fpath = tuning_steps_dpath / "params.json"
 
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
-        
-    tuning_step_dpaths = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
-    for tuning_step_dpath in tqdm.tqdm(tuning_step_dpaths, leave=False):
-        replay_step(dbgym_cfg, tuning_step_dpath, hpo_params, replay_args)
 
-
-def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, hpo_params: dict, replay_args: ReplayArgs):
     horizon = hpo_params["horizon"]
     query_timeout = hpo_params["query_timeout"]
 
     folders = []
     start_found = False
-    filename = "output.log" if args.alternate else "stderr"
+    output_log_fpath = tuning_steps_dpath / "output.log"
     last_evaluation = None
-    with open(f"{args.input}/{filename}", "r") as f:
+    with open_and_save(dbgym_cfg, output_log_fpath) as f:
         for line in f:
             if not start_found:
                 if "Baseline Metric" in line:
-                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0])
+                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0].split("[")[0])
                     start_found = True
             else:
                 if "mv" in line and "tuning_steps" in line:
                     repo = eval(line.split("Running ")[-1])[-1]
                     last_folder = repo.split("/")[-1]
-                    time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0])
+                    time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                     last_evaluation = time_since_start
-                    if (time_since_start - start_time).total_seconds() < args.cutoff * 3600 or args.cutoff == 0:
+                    if replay_args.cutoff == None or (time_since_start - start_time).total_seconds() < replay_args.cutoff * 3600:
                         folders.append(last_folder)
 
+    print(f"folders={folders}")
+    print(f"last_evaluation={last_evaluation}")
+
+    assert False, "done"
+
     # Only apply threshold if time is less than.
-    threshold_limit = last_evaluation - datetime.timedelta(seconds=int(args.threshold_limit * 3600))
+    threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600))
 
     spec = Spec(
         agent_type=None,

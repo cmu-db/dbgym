@@ -93,10 +93,11 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
     # Link the tuning steps data (this directory allows you to replay the tuning run).
-    # Replaying requires the params.json file, so we also copy it here.
-    # Since params.json is fairly small, I choose to copy the file itself instead of just
-    #   making a symlink to it.
+    # Replaying requires output.log and params.json, so we also copy them into the tuning_steps/ directory.
+    # The reason I copy them in is to ensure that tuning_steps/ is a fully self-contained directory.
     tuning_steps_dpath = dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps")
     shutil.copy(hpoed_agent_params_path, tuning_steps_dpath)
-    tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, False)
+    output_fpath = dbgym_cfg.cur_task_runs_artifacts_path() / "output.log"
+    shutil.copy(output_fpath, tuning_steps_dpath)
+    tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, enable_boot_during_tune)
     link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname)
