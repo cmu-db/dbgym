@@ -1,3 +1,10 @@
+'''
+Replaying a tuning run gives you the authoritative runtimes of that tuning run.
+The original tuning run has per-query timeouts, so the runtimes may be inaccurate. The
+    replayed tuning run does not have per-query timeouts.
+Additionally, the original tuning run may have been accelerated by Boot, whereas the
+    replayed tuning run is not.
+'''
 import datetime
 import logging
 import click

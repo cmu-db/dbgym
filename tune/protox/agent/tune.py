@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import time
 import click
 import pandas as pd
@@ -79,6 +80,11 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     # Output the step data.
     pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
-    # Link the tuning steps data (more details than step data).
+    # Link the tuning steps data (this directory allows you to replay the tuning run).
+    # Replaying requires the params.json file, so we also copy it here.
+    # Since params.json is fairly small, I choose to copy the file itself instead of just
+    #   making a symlink to it.
+    tuning_steps_dpath = dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps")
+    shutil.copy(hpoed_agent_params_path, tuning_steps_dpath)
     tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, False)
-    link_result(dbgym_cfg, dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps"), custom_result_name=tuning_steps_link_dname)
+    link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname)
