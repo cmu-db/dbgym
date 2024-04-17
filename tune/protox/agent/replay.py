@@ -6,6 +6,7 @@ Additionally, the original tuning run may have been accelerated by Boot, whereas
     replayed tuning run is not.
 '''
 import datetime
+import json
 import logging
 import click
 import yaml
@@ -119,6 +120,7 @@ class ReplayArgs:
 def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+
     if tuning_steps_dpath == None:
         tuning_steps_dpath = default_tuning_steps_dpath(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name, boot_enabled_during_tune)
 
@@ -129,23 +131,19 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     replay_args = ReplayArgs(workload_timeout, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
 
     # Replay
-    print(f"tuning_steps_dpath={tuning_steps_dpath}")
+    hpo_params_fpath = tuning_step_dpath / "params.json"
+
+    with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
+        hpo_params = json.load(f)
+        
     tuning_step_dpaths = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
     for tuning_step_dpath in tqdm.tqdm(tuning_step_dpaths, leave=False):
-        replay_step(dbgym_cfg, tuning_step_dpath, replay_args)
+        replay_step(dbgym_cfg, tuning_step_dpath, hpo_params, replay_args)
 
 
-def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, replay_args: ReplayArgs):
-    with open_and_save(dbgym_cfg, tuning_step_dpath / "stdout", "r") as f:
-        config = f.readlines()[0]
-        config = eval(config.split("HPO Configuration: ")[-1])
-        horizon = config["horizon"]
-
-    with open_and_save(dbgym_cfg, tuning_step_dpath / "stdout", "r") as f:
-        for line in f:
-            if "HPO Configuration: " in line:
-                hpo = eval(line.split("HPO Configuration: ")[-1].strip())
-                per_query_timeout = hpo["mythril_args"]["timeout"]
+def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, hpo_params: dict, replay_args: ReplayArgs):
+    horizon = hpo_params["horizon"]
+    query_timeout = hpo_params["query_timeout"]
 
     folders = []
     start_found = False
@@ -193,7 +191,7 @@ def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, replay_args: Re
     # Get the minimum reward.
     runs = [Path(args.input) / "tuning_steps" / fold / "run.raw.csv" for fold in folders]
     runs = [pd.read_csv(run) for run in runs]
-    rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == per_query_timeout) for run in runs]
+    rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == query_timeout) for run in runs]
     rewards = sorted(rewards, key=lambda x: x[0])
     min_reward = min([r[0] for r in rewards])
     if maximal:
@@ -285,7 +283,7 @@ def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, replay_args: Re
                 # Get the evaluation reward.
                 reward = pd.read_csv(f"{args.input}/{repo}/run.raw.csv")
                 assert len(reward.columns) == 6
-                has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == per_query_timeout
+                has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == query_timeout
                 reward = reward["Latency (microseconds)"].sum() / 1e6
                 assert reward > 0
 

@@ -93,13 +93,13 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     raise IOError("No free ports to bind postgres to.")
 
 
-def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpoed_params: dict[str, Any]) -> None:
-    if hpoed_params["benchmark_config"]["query_spec"]["oltp_workload"]:
+def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpo_params: dict[str, Any]) -> None:
+    if hpo_params["benchmark_config"]["query_spec"]["oltp_workload"]:
         conf_etree = ET.parse(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
         conf_etree.getroot().find("url").text = jdbc  # type: ignore
 
-        oltp_config = hpoed_params["benchbase_config"]["oltp_config"]
+        oltp_config = hpo_params["benchbase_config"]["oltp_config"]
         if conf_etree.getroot().find("scalefactor") is not None:
             conf_etree.getroot().find("scalefactor").text = str(oltp_config["oltp_sf"])  # type: ignore
         if conf_etree.getroot().find("terminals") is not None:
@@ -130,38 +130,38 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, pgport: int, is_hpo: bool, hpoed_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, pgport: int, is_hpo: bool, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
-        hpoed_params["trace"],
-        hpoed_params["verbose"],
+        hpo_params["trace"],
+        hpo_params["verbose"],
     )
 
     reward_utility = RewardUtility(
         target=(
             "tps"
-            if hpoed_params["benchmark_config"]["query_spec"]["oltp_workload"]
+            if hpo_params["benchmark_config"]["query_spec"]["oltp_workload"]
             else "latency"
         ),
-        metric=hpoed_params["reward"],
-        reward_scaler=hpoed_params["reward_scaler"],
+        metric=hpo_params["reward"],
+        reward_scaler=hpo_params["reward_scaler"],
         logger=logger,
     )
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
-    enable_boot = hpoed_params["enable_boot_during_hpo"] if is_hpo else hpoed_params["enable_boot_during_tune"]
-    boot_config_fpath = hpoed_params["hpo_boot_config_fpath"] if is_hpo else hpoed_params["tune_boot_config_fpath"]
+    enable_boot = hpo_params["enable_boot_during_hpo"] if is_hpo else hpo_params["enable_boot_during_tune"]
+    boot_config_fpath = hpo_params["hpo_boot_config_fpath"] if is_hpo else hpo_params["tune_boot_config_fpath"]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
     pgconn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
-        pristine_pgdata_snapshot_fpath=Path(hpoed_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
-        pgdata_parent_dpath=Path(hpoed_params["pgconn_info"]["pgdata_parent_dpath"]),
-        pgbin_path=Path(hpoed_params["pgconn_info"]["pgbin_path"]),
+        pristine_pgdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
+        pgdata_parent_dpath=Path(hpo_params["pgconn_info"]["pgdata_parent_dpath"]),
+        pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
         boot_config_fpath=boot_config_fpath,
         connect_timeout=300,
@@ -170,13 +170,13 @@ def _build_utilities(
 
     workload = Workload(
         dbgym_cfg=dbgym_cfg,
-        tables=hpoed_params["benchmark_config"]["tables"],
-        attributes=hpoed_params["benchmark_config"]["attributes"],
-        query_spec=hpoed_params["benchmark_config"]["query_spec"],
-        workload_path=Path(hpoed_params["workload_path"]),
+        tables=hpo_params["benchmark_config"]["tables"],
+        attributes=hpo_params["benchmark_config"]["attributes"],
+        query_spec=hpo_params["benchmark_config"]["query_spec"],
+        workload_path=Path(hpo_params["workload_path"]),
         pid=None,
-        workload_timeout=hpoed_params["workload_timeout"],
-        workload_timeout_penalty=hpoed_params["workload_timeout_penalty"],
+        workload_timeout=hpo_params["workload_timeout"],
+        workload_timeout_penalty=hpo_params["workload_timeout_penalty"],
         logger=logger,
     )
 
@@ -305,7 +305,7 @@ def _build_obs_space(
 
 def _build_env(
     dbgym_cfg: DBGymConfig,
-    hpoed_params: dict[str, Any],
+    hpo_params: dict[str, Any],
     pgconn: PostgresConn,
     obs_space: StateSpace,
     holon_space: HolonSpace,
@@ -321,28 +321,28 @@ def _build_env(
         observation_space=obs_space,
         action_space=holon_space,
         workload=workload,
-        horizon=hpoed_params["horizon"],
+        horizon=hpo_params["horizon"],
         reward_utility=reward_utility,
         pgconn=pgconn,
-        query_timeout=hpoed_params["query_timeout"],
-        benchbase_config=hpoed_params["benchbase_config"],
+        query_timeout=hpo_params["query_timeout"],
+        benchbase_config=hpo_params["benchbase_config"],
         logger=logger,
         replay=False,
     )
 
     # Check whether to create the MQO wrapper.
-    if not hpoed_params["benchmark_config"]["query_spec"]["oltp_workload"]:
+    if not hpo_params["benchmark_config"]["query_spec"]["oltp_workload"]:
         if (
-            hpoed_params["workload_eval_mode"] != "pq"
-            or hpoed_params["workload_eval_inverse"]
-            or hpoed_params["workload_eval_reset"]
+            hpo_params["workload_eval_mode"] != "pq"
+            or hpo_params["workload_eval_inverse"]
+            or hpo_params["workload_eval_reset"]
         ):
             env = MQOWrapper(
-                workload_eval_mode=hpoed_params["workload_eval_mode"],
-                workload_eval_inverse=hpoed_params["workload_eval_inverse"],
-                workload_eval_reset=hpoed_params["workload_eval_reset"],
-                benchbase_config=hpoed_params["benchbase_config"],
-                query_timeout=hpoed_params["query_timeout"],
+                workload_eval_mode=hpo_params["workload_eval_mode"],
+                workload_eval_inverse=hpo_params["workload_eval_inverse"],
+                workload_eval_reset=hpo_params["workload_eval_reset"],
+                benchbase_config=hpo_params["benchbase_config"],
+                query_timeout=hpo_params["query_timeout"],
                 env=env,
                 logger=logger,
             )
@@ -510,16 +510,16 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, is_hpo: bool, hpoed_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, seed: int, is_hpo: bool, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
-    port, signal = _get_signal(hpoed_params["pgconn_info"]["pgbin_path"])
-    _modify_benchbase_config(dbgym_cfg, port, hpoed_params)
+    port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
+    _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpoed_params)
-    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpoed_params, workload, logger)
-    obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpoed_params, seed)
+    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpo_params)
+    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
+    obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
         hpo_params,

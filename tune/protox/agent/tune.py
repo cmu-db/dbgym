@@ -55,33 +55,33 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
 
     # Tune
     with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
-        hpoed_params = json.load(f)
+        hpo_params = json.load(f)
 
     # Coerce using a dummy space.
-    hpoed_params = coerce_config(dbgym_cfg, build_space(
+    hpo_params = coerce_config(dbgym_cfg, build_space(
         sysknobs={},
         benchmark_config={},
         workload_path=Path(),
         embedder_path=[],
         pgconn_info={}
-    ), hpoed_params)
+    ), hpo_params)
 
-    # Add configs to the hpoed_params that are allowed to differ between HPO and tuning.
+    # Add configs to the hpo_params that are allowed to differ between HPO and tuning.
     # In general, for configs that can differ between HPO and tuning, I chose to name
     #   them "*tune*" and "*hpo*" to the end of them instead of naming them the same
     #   and overriding the config during tuning. It's just much less confusing if we
-    #   make sure to never override any configs in hpoed_params.
-    hpoed_params["enable_boot_during_tune"] = enable_boot_during_tune
-    hpoed_params["tune_boot_config_fpath"] = tune_boot_config_fpath
+    #   make sure to never override any configs in hpo_params.
+    hpo_params["enable_boot_during_tune"] = enable_boot_during_tune
+    hpo_params["tune_boot_config_fpath"] = tune_boot_config_fpath
 
     # Piggyback off the HPO magic.
     t = TuneTrial(dbgym_cfg, False)
-    t.setup(hpoed_params)
+    t.setup(hpo_params)
     start = time.time()
 
     data = []
     step_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "step_data.csv"
-    while (time.time() - start) < hpoed_params["duration"] * 3600:
+    while (time.time() - start) < hpo_params["duration"] * 3600:
         data.append(t.step())
 
         # Continuously write the file out.

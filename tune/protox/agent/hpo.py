@@ -23,7 +23,7 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_SYSKNOBS_PATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
 
 
 METRIC_NAME = "Best Metric"
@@ -412,27 +412,27 @@ class TuneTrial:
         self.dbgym_cfg = dbgym_cfg
         self.is_hpo = is_hpo
 
-    def setup(self, hpoed_params: dict[str, Any]) -> None:
+    def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
         torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
-            hpoed_params["seed"]
-            if hpoed_params["seed"] != -1
+            hpo_params["seed"]
+            if hpo_params["seed"] != -1
             else np.random.randint(np.iinfo(np.int32).max)
         )
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-        self.timeout = TuneTimeoutChecker(hpoed_params["duration"])
+        self.timeout = TuneTimeoutChecker(hpo_params["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
-            hpoed_params=hpoed_params,
+            hpo_params=hpo_params,
             is_hpo=self.is_hpo,
         )
-        self.logger.get_logger(None).info("%s", hpoed_params)
+        self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
@@ -498,7 +498,7 @@ class TuneTrial:
         if Path(self.signal).exists():
             os.remove(self.signal)
 
-# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpoed_params`. This is because it's a pain to turn DBGymConfig
+# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_params`. This is because it's a pain to turn DBGymConfig
 #   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
 # Using a function to create a class is Ray's recommended way of doing this (see
 #   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
@@ -510,9 +510,9 @@ def create_tune_opt_class(dbgym_cfg_param):
     class TuneOpt(Trainable):
         dbgym_cfg = global_dbgym_cfg
 
-        def setup(self, hpoed_params: dict[str, Any]) -> None:
+        def setup(self, hpo_params: dict[str, Any]) -> None:
             self.trial = TuneTrial(TuneOpt.dbgym_cfg, True)
-            self.trial.setup(hpoed_params)
+            self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:
             return self.trial.step()
