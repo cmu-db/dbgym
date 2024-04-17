@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 import shutil
 import time
@@ -33,7 +32,12 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     type=Path,
     help=f"The path to best params found by the agent HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
-def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path) -> None:
+@click.option(
+    "--enable-boot-during-tune",
+    is_flag=True,
+    help="Whether to enable the Boot query accelerator during the tuning process. Deciding to use Boot during tuning is separate from deciding to use Boot during HPO.",
+)
+def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
@@ -55,15 +59,15 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
         pgconn_info={}
     ), hpoed_params)
 
-    # Assume we are executing from the root.
-    # TODO(phw2): get this from dbgym_cfg
-    hpoed_params["dbgym_dir"] = os.getcwd()
-
-    # Get the duration.
-    assert "duration" in hpoed_params
+    # Add configs to the hpoed_params that are allowed to differ between HPO and tuning.
+    # In general, for configs that can differ between HPO and tuning, I chose to append
+    #   "_during_hpo"/"_during_tune" to the end of them instead of naming them the same
+    #   and overriding the config during tuning. It's just much less confusing if we
+    #   make sure to never override any configs in hpoed_params.
+    hpoed_params["enable_boot_during_tune"] = enable_boot_during_tune
 
     # Piggyback off the HPO magic.
-    t = TuneTrial(dbgym_cfg)
+    t = TuneTrial(dbgym_cfg, False)
     t.setup(hpoed_params)
     start = time.time()
 
