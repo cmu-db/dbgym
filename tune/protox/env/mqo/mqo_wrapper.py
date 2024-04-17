@@ -191,7 +191,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         if self.workload_eval_mode in ["all", "all_enum", "global_dual"]:
             # Load the global (optimizer) knobs.
             qid_ams = parse_access_methods(
-                self.unwrapped.pgconn.conn(), self.unwrapped.workload.queries
+                self.unwrapped.pg_conn.conn(), self.unwrapped.workload.queries
             )
             runs.append(
                 (
@@ -330,7 +330,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 _,
                 target_metric_data,
             ) = self.unwrapped.workload.execute(
-                pgconn=self.unwrapped.pgconn,
+                pg_conn=self.unwrapped.pg_conn,
                 reward_utility=self.unwrapped.reward_utility,
                 observation_space=self.observation_space,
                 action_space=self.action_space,

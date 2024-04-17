@@ -331,7 +331,7 @@ class Workload(object):
     @time_record("execute")
     def _execute_workload(
         self,
-        pgconn: PostgresConn,
+        pg_conn: PostgresConn,
         actions: list[HolonAction] = [],
         actions_names: list[str] = [],
         results: Optional[Union[str, Path]] = None,
@@ -422,7 +422,7 @@ class Workload(object):
                 if sql_type != QueryType.SELECT:
                     # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. 
                     assert sql_type != QueryType.INS_UPD_DEL
-                    pgconn.conn().execute(query)
+                    pg_conn.conn().execute(query)
                     continue
 
                 if disable_pg_hint:
@@ -442,12 +442,12 @@ class Workload(object):
                             if value == 0
                         ]
                     )
-                    pgconn.conn().execute(disable)
+                    pg_conn.conn().execute(disable)
 
                     qid_runtime, _, _, _ = _acquire_metrics_around_query(
                         self.logger,
                         f"{qid}",
-                        pgconn.conn(),
+                        pg_conn.conn(),
                         query,
                         query_timeout=time_left,
                         observation_space=None,
@@ -460,7 +460,7 @@ class Workload(object):
                             if value == 0
                         ]
                     )
-                    pgconn.conn().execute(undo_disable)
+                    pg_conn.conn().execute(undo_disable)
 
                 else:
                     # De-duplicate the runs.
@@ -505,7 +505,7 @@ class Workload(object):
 
                     if not skip_execute:
                         best_run: BestQueryRun = execute_variations(
-                            connection=pgconn.conn(),
+                            connection=pg_conn.conn(),
                             runs=runs,
                             query=query,
                             query_timeout=min(target_pqt, workload_timeout - workload_time + 1),
@@ -539,7 +539,7 @@ class Workload(object):
                         if st != QueryType.SELECT:
                             # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. If we do have INS_UPD_DEL queries, our "undo" logic will likely have to change.
                             assert st != QueryType.INS_UPD_DEL
-                            pgconn.conn().execute(rq)
+                            pg_conn.conn().execute(rq)
 
                     stop_running = True
                     break
@@ -551,7 +551,7 @@ class Workload(object):
                 assert sql_type != QueryType.UNKNOWN
                 if sql_type != QueryType.SELECT:
                     assert sql_type != QueryType.INS_UPD_DEL
-                    pgconn.conn().execute(query)
+                    pg_conn.conn().execute(query)
 
         if results is not None:
             # Make the result directory.
@@ -663,7 +663,7 @@ class Workload(object):
 
     def execute(
         self,
-        pgconn: PostgresConn,
+        pg_conn: PostgresConn,
         reward_utility: RewardUtility,
         observation_space: StateSpace,
         action_space: HolonSpace,
@@ -681,7 +681,7 @@ class Workload(object):
 
         # Purge results directory first.
         tmp_dir = tempfile.gettempdir()
-        results = f"{tmp_dir}/results{pgconn.pgport}"
+        results = f"{tmp_dir}/results{pg_conn.pgport}"
         shutil.rmtree(results, ignore_errors=True)
 
         if self.benchbase:
@@ -691,7 +691,7 @@ class Workload(object):
             success = observation_space.check_benchbase(self.dbgym_cfg, results)
         else:
             ret = self._execute_workload(
-                pgconn,
+                pg_conn,
                 actions=actions,
                 actions_names=actions_names,
                 results=results,

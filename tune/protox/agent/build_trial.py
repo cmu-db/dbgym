@@ -156,7 +156,7 @@ def _build_utilities(
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
-    pgconn = PostgresConn(
+    pg_conn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
         pristine_pgdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
@@ -180,7 +180,7 @@ def _build_utilities(
         logger=logger,
     )
 
-    return logger, reward_utility, pgconn, workload
+    return logger, reward_utility, pg_conn, workload
 
 
 def _build_actions(
@@ -306,7 +306,7 @@ def _build_observation_space(
 def _build_env(
     dbgym_cfg: DBGymConfig,
     hpo_params: dict[str, Any],
-    pgconn: PostgresConn,
+    pg_conn: PostgresConn,
     observation_space: StateSpace,
     holon_space: HolonSpace,
     lsc: LSC,
@@ -323,7 +323,7 @@ def _build_env(
         workload=workload,
         horizon=hpo_params["horizon"],
         reward_utility=reward_utility,
-        pgconn=pgconn,
+        pg_conn=pg_conn,
         query_timeout=hpo_params["query_timeout"],
         benchbase_config=hpo_params["benchbase_config"],
         logger=logger,
@@ -517,13 +517,13 @@ def build_trial(
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpo_params)
+    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
     observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
         hpo_params,
-        pgconn,
+        pg_conn,
         observation_space,
         holon_space,
         lsc,

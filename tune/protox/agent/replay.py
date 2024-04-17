@@ -172,23 +172,28 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Only apply threshold if time is less than.
     threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
 
-    # Build PostgresEnv
+    # Build PostgresEnv.
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
-    postgres_env = agent_env.unwrapped
-    print(f"postgres_env={postgres_env}, type(postgres_env)={type(postgres_env)}")
-    assert False, "done"
+    pg_env = agent_env.unwrapped
 
+    # Reset things.
     if not replay_args.simulated:
-        env.restore_pristine_snapshot()
-        env.action_space.reset(**{"connection": env.connection, "workload": spec.workload})
-        spec.workload.reset()
+        pg_env.pg_conn.restore_pristine_snapshot()
 
     # Get the minimum reward.
-    runs = [Path(args.input) / "tuning_steps" / fold / "run.raw.csv" for fold in folders]
-    runs = [pd.read_csv(run) for run in runs]
-    rewards = [(run["Latency (microseconds)"].sum() / 1e6, (run["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run in runs]
+    run_raw_csv_fpaths = [tuning_steps_dpath / fold / "run.raw.csv" for fold in folders]
+    run_raw_csvs = [pd.read_csv(run_raw_csv_fpath) for run_raw_csv_fpath in run_raw_csv_fpaths]
+    rewards = [(run_raw_csv["Latency (microseconds)"].sum() / 1e6, (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run_raw_csv in run_raw_csvs]
     rewards = sorted(rewards, key=lambda x: x[0])
     min_reward = min([r[0] for r in rewards])
+
+    print(f"run_raw_csv_fpaths={run_raw_csv_fpaths}")
+    print(f"run_raw_csvs={run_raw_csvs}")
+    print(f"rewards={rewards}")
+    print(f"min_reward={min_reward}")
+
+    assert False, "done"
+
     if maximal:
         target = [r[1] for r in rewards if r[0] == min_reward]
         assert len(target) >= 1
