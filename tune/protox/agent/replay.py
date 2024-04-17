@@ -8,18 +8,28 @@ import argparse
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, workload_name_fn, default_tuning_steps_dpath
+from misc.utils import DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
 from tune.protox.env.pg_env import PostgresEnv
 
-class DotDict(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
 
 REPLAY_DATA_FNAME = "replay_data.csv"
+
+
+class ReplayArgs:
+    def __init__(
+        self, workload_timeout: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list
+    ):
+        self.workload_timeout = workload_timeout
+        self.num_samples = num_samples
+        self.threshold = threshold
+        self.threshold_limit = threshold_limit
+        self.maximal = maximal
+        self.simulated = simulated
+        self.maximal_only = maximal_only
+        self.cutoff = cutoff
+        self.blocklist = blocklist
 
 
 @click.command()
@@ -108,38 +118,27 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     # Convert all input paths to absolute paths
     tuning_steps_dpath = conv_inputpath_to_realabspath(dbgym_cfg, tuning_steps_dpath)
 
+    # Group args together to reduce the # of parameters we pass into functions
+    replay_args = ReplayArgs(workload_timeout, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
+
     # Replay
     print(f"tuning_steps_dpath={tuning_steps_dpath}")
     tuning_step_dpaths = sorted(tuning_steps_dpath.rglob("run.raw.csv"))
     for tuning_step_dpath in tqdm.tqdm(tuning_step_dpaths, leave=False):
-        replay_step(dbgym_cfg, new_args)
+        replay_step(dbgym_cfg, tuning_step_dpath, replay_args)
 
 
-def replay_step(dbgym_cfg: DBGymConfig, maximal):
-    maximal = args.maximal
-    maximal_only = args.maximal_only
-    threshold = args.threshold
+def replay_step(dbgym_cfg: DBGymConfig, tuning_step_dpath: Path, replay_args: ReplayArgs):
+    with open_and_save(dbgym_cfg, tuning_step_dpath / "stdout", "r") as f:
+        config = f.readlines()[0]
+        config = eval(config.split("HPO Configuration: ")[-1])
+        horizon = config["horizon"]
 
-    with open(f"{args.input}/config.yaml") as f:
-        mythril = yaml.safe_load(f)
-        mythril["mythril"]["benchbase_config_path"] = f"{args.input}/benchmark.xml"
-        mythril["mythril"]["verbose"] = True
-        mythril["mythril"]["postgres_path"] = args.pg_path
-
-    if args.alternate:
-        horizon = args.horizon
-        per_query_timeout = args.query_timeout
-    else:
-        with open(f"{args.input}/stdout", "r") as f:
-            config = f.readlines()[0]
-            config = eval(config.split("HPO Configuration: ")[-1])
-            horizon = config["horizon"]
-
-        with open(f"{args.input}/stdout", "r") as f:
-            for line in f:
-                if "HPO Configuration: " in line:
-                    hpo = eval(line.split("HPO Configuration: ")[-1].strip())
-                    per_query_timeout = hpo["mythril_args"]["timeout"]
+    with open_and_save(dbgym_cfg, tuning_step_dpath / "stdout", "r") as f:
+        for line in f:
+            if "HPO Configuration: " in line:
+                hpo = eval(line.split("HPO Configuration: ")[-1].strip())
+                per_query_timeout = hpo["mythril_args"]["timeout"]
 
     folders = []
     start_found = False
