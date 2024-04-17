@@ -6,7 +6,7 @@ SCALE_FACTOR=0.01
 INTENDED_PGDATA_HARDWARE=ssd
 PGDATA_PARENT_DPATH=/mnt/nvme1n1/phw2/dbgym_tmp/
 
-# space for testing
+# space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
 python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --duration 0.1  --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH --enable-boot-during-hpo
 exit 0
 
