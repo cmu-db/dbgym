@@ -607,9 +607,6 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
-        # I call it hpo_ray_results because agent tuning also uses Ray and stores its results
-        #   in tune_ray_results. By making them separate, we avoid the possibility of
-        #   file collisions.
         storage_path=dbgym_cfg.cur_task_runs_path("hpo_ray_results", mkdir=True),
     )
 

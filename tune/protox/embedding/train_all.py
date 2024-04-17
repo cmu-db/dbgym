@@ -216,10 +216,7 @@ def train_all_embeddings(
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
-        # I call it tune_ray_results because agent HPO also uses Ray and stores its results
-        #   in hpo_ray_results. By making them separate, we avoid the possibility of
-        #   file collisions.
-        storage_path=dbgym_cfg.cur_task_runs_path("tune_ray_results", mkdir=True),
+        storage_path=dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True),
     )
 
     resources = {"cpu": 1}

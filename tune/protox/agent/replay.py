@@ -131,7 +131,7 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     replay_args = ReplayArgs(workload_timeout, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
 
     # Replay
-    hpo_params_fpath = tuning_step_dpath / "params.json"
+    hpo_params_fpath = tuning_steps_dpath / "params.json"
 
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
