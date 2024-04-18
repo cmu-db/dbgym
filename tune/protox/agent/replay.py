@@ -326,7 +326,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     if not replay_args.simulated:
                         # Apply index changes
                         cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
-                        pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=True)
+                        # Like in tuning, we don't dump the page cache when calling shift_state() to see how the workload
+                        #   performs in a warm cache scenario.
+                        pg_env.shift_state(cc, index_modification_sqls)
                     existing_index_acts = index_acts
 
                     if not replay_args.simulated:

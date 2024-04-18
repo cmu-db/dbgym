@@ -24,7 +24,7 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_params: dic
             "verbose": True,
             "trace": True,
             "seed": hpo_params["mythril_args"]["seed"],
-            "trial_duration": hpo_params["mythril_args"]["trial_duration"],
+            "tune_duration_during_hpo": hpo_params["mythril_args"]["tune_duration_during_hpo"],
             "workload_timeout": hpo_params["mythril_args"]["workload_timeout"],
             "query_timeout": hpo_params["mythril_args"]["timeout"],
             "pgconn_info": {

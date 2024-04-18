@@ -43,7 +43,13 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     type=Path,
     help="The path to the file configuring Boot when tuning. This may be a different Boot config than the one used for HPO.",
 )
-def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, tune_boot_config_fpath: Path) -> None:
+@click.option(
+    "--tune-duration-during-tune",
+    default=30,
+    type=float,
+    help="The number of hours to run the tuning agent for. This may be different than how long we ran the agent for during HPO."
+)
+def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, tune_boot_config_fpath: Path, tune_duration_during_tune: float) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
@@ -73,6 +79,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     #   make sure to never override any configs in hpo_params.
     hpo_params["enable_boot_during_tune"] = enable_boot_during_tune
     hpo_params["tune_boot_config_fpath"] = tune_boot_config_fpath
+    hpo_params["tune_duration_during_tune"] = tune_duration_during_tune
 
     # Piggyback off the HPO magic.
     t = TuneTrial(dbgym_cfg, False)
@@ -81,7 +88,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
 
     data = []
     step_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "step_data.csv"
-    while (time.time() - start) < hpo_params["trial_duration"] * 3600:
+    while (time.time() - start) < hpo_params["tune_duration_during_tune"] * 3600:
         data.append(t.step())
 
         # Continuously write the file out.

@@ -228,7 +228,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             action, prior_state
         )
         # Attempt to maneuver to the new state.
-        success = self.shift_state(config_changes, sql_commands, dump_page_cache=True)
+        # Don't dump the page cache in shift_state() in order to see how the workload performs in
+        #   a warm cache scenario.
+        success = self.shift_state(config_changes, sql_commands)
         return success, EnvInfoDict(
             {
                 "attempted_changes": (config_changes, sql_commands),
