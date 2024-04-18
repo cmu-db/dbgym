@@ -329,7 +329,7 @@ class Workload(object):
         return max([len(cols) for _, cols in self.query_usages.items()])
 
     @time_record("execute")
-    def _execute_workload(
+    def execute_workload(
         self,
         pg_conn: PostgresConn,
         actions: list[HolonAction] = [],
@@ -690,7 +690,7 @@ class Workload(object):
             # We can only create a state if we succeeded.
             success = observation_space.check_benchbase(self.dbgym_cfg, results)
         else:
-            ret = self._execute_workload(
+            ret = self.execute_workload(
                 pg_conn,
                 actions=actions,
                 actions_names=actions_names,

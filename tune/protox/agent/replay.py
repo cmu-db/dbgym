@@ -215,46 +215,53 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line:
                 num_lines += 1
 
-    print(f"num_lines={num_lines}")
-    assert False, "done"
-
     def run_sample(action, timeout):
         samples = []
         # This should reliably check that we are loading the correct knobs...
-        ql_knobs = spec.action_space.get_knob_space().get_query_level_knobs(action) if action is not None else {}
-        for i in range(args.samples):
-            runtime = spec.workload._execute_workload(
-                connection=env.connection,
-                workload_timeout=timeout,
-                ql_knobs=ql_knobs,
-                env_spec=spec,
-                blocklist=[l for l in args.blocklist.split(",") if len(l) > 0])
+        ql_knobs = pg_env.action_space.get_knob_space().get_query_level_knobs(action) if action is not None else {}
+        for i in range(replay_args.samples):
+            runtime = pg_env.workload.execute_workload(
+                pg_conn=pg_env.pg_conn,
+                actions=[built_action],
+                action_names=["Replay"],
+                observation_space=None,
+                action_space=pg_env.action_space,
+                reset_metrics=None,
+                override_workload_timeout=hpo_params["workload_timeout"],
+                query_timeout=hpo_params["query_timeout"],
+                workload_qdir=None,
+                disable_pg_hint=False,
+                blocklist=replay_args.blocklist,
+                first=False,
+            )
             samples.append(runtime)
             logging.info(f"Runtime: {runtime}")
 
-            if runtime >= args.workload_timeout:
+            if runtime >= replay_args.workload_timeout:
                 break
 
-            if args.samples == 2 and runtime >= timeout:
+            if replay_args.samples == 2 and runtime >= timeout:
                 break
-            elif args.samples > 2 and len(samples) >= 2 and runtime >= timeout:
+            elif replay_args.samples > 2 and len(samples) >= 2 and runtime >= timeout:
                 break
 
         return samples
 
     run_data = []
     pbar = tqdm.tqdm(total=num_lines)
-    with open(f"{args.input}/{filename}", "r") as f:
+    with open_and_save(dbgym_cfg, output_log_fpath) as f:
         current_step = 0
 
         start_found = False
         start_time = None
-        timeout = args.workload_timeout
+        timeout = replay_args.workload_timeout
         cur_reward_max = timeout
         selected_action_knobs = None
         noop_index = False
         maximal_repo = None
         existing_indexes = []
+
+        assert False, "done"
 
         for line in f:
             # Keep going until we've found the start.
@@ -267,7 +274,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
             elif "Selected action: " in line:
                 act = eval(line.split("Selected action: ")[-1])
-                selected_action_knobs = env.action_space.get_knob_space().from_jsonable(act[0])[0]
+                selected_action_knobs = pg_env.action_space.get_knob_space().from_jsonable(act[0])[0]
                 noop_index = "NOOP" in act[1][0]
 
             elif (maximal and ("mv" in line and "tuning_steps" in line)):
