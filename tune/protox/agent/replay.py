@@ -296,12 +296,12 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 reward = reward["Latency (microseconds)"].sum() / 1e6
                 assert reward > 0
 
-                if ((not maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
+                if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
                     index_sqls = []
                     knobs = {}
                     insert_knobs = False
 
-                    with open_and_save(tuning_steps_dpath / repo / "act_sql.txt", "r") as f:
+                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "act_sql.txt") as f:
                         for line in f:
                             line = line.strip()
                             if len(line) == 0:
