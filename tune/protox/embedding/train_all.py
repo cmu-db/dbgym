@@ -250,9 +250,9 @@ def train_all_embeddings(
                 print(f"Trial {results[i]} FAILED")
         assert False
 
-    duration = time.time() - start_time
+    train_all_embeddings_duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
-        f.write(f"{duration}")
+        f.write(f"{train_all_embeddings_duration}")
 
 
 def _hpo_train(

@@ -257,9 +257,9 @@ def datagen(
     start_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
-    duration = time.time() - start_time
+    datagen_duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
-        f.write(f"{duration}")
+        f.write(f"{datagen_duration}")
     stop_postgres(dbgym_cfg, pgbin_path, pgdata_dpath)
 
 

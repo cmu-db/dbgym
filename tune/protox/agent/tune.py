@@ -81,7 +81,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
 
     data = []
     step_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "step_data.csv"
-    while (time.time() - start) < hpo_params["duration"] * 3600:
+    while (time.time() - start) < hpo_params["trial_duration"] * 3600:
         data.append(t.step())
 
         # Continuously write the file out.

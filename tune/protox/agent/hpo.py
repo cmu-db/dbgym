@@ -30,7 +30,7 @@ METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, trial_duration, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -45,7 +45,7 @@ class AgentHPOArgs:
         self.agent = agent
         self.max_concurrent = max_concurrent
         self.num_samples = num_samples
-        self.duration = duration
+        self.trial_duration = trial_duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
         self.enable_boot_during_hpo = enable_boot_during_hpo
@@ -145,7 +145,7 @@ class AgentHPOArgs:
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
 @click.option(
-    "--duration", default=30, type=float, help="The total number of hours to run for."
+    "--trial-duration", default=4, type=float, help="The number of hours to run each hyperparamer config trial for."
 )
 @click.option(
     "--workload-timeout",
@@ -190,7 +190,7 @@ def hpo(
     agent,
     max_concurrent,
     num_samples,
-    duration,
+    trial_duration,
     workload_timeout,
     query_timeout,
     enable_boot_during_hpo: bool,
@@ -235,7 +235,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, trial_duration, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -249,7 +249,7 @@ def build_space(
     embedder_path: list[Path],
     pgconn_info: dict[str, str],
     benchbase_config: dict[str, Any]={},
-    duration: int=30,
+    trial_duration: int=30,
     seed: int=0,
     enable_boot_during_hpo: bool=False,
     hpo_boot_config_fpath: Path=None,
@@ -268,7 +268,7 @@ def build_space(
         "hpo_boot_config_fpath": hpo_boot_config_fpath,
         
         # Timeouts.
-        "duration": duration,
+        "trial_duration": trial_duration,
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
 
@@ -375,9 +375,9 @@ def build_space(
 
 
 class TuneTimeoutChecker(object):
-    def __init__(self, duration: int) -> None:
-        self.limit = (duration * 3600) > 0
-        self.remain = int(duration * 3600)
+    def __init__(self, trial_duration: int) -> None:
+        self.limit = (trial_duration * 3600) > 0
+        self.remain = int(trial_duration * 3600)
         self.running = False
         self.start = 0.
 
@@ -425,7 +425,7 @@ class TuneTrial:
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-        self.timeout = TuneTimeoutChecker(hpo_params["duration"])
+        self.timeout_checker = TuneTimeoutChecker(hpo_params["trial_duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
@@ -436,7 +436,7 @@ class TuneTrial:
         self.logger.get_logger(None).info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
-        self.agent.set_timeout_checker(self.timeout)
+        self.agent.set_timeout_checker(self.timeout_checker)
         self.agent.set_logger(self.logger)
 
         self.env_init = False
@@ -446,7 +446,7 @@ class TuneTrial:
     def step(self) -> dict[Any, Any]:
         self.step_count += 1
         # Only measure the actual tuning time.
-        self.timeout.resume()
+        self.timeout_checker.resume()
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
@@ -574,7 +574,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
             "pgbin_path": hpo_args.pgbin_path,
         },
         benchbase_config=benchbase_config,
-        duration=hpo_args.duration,
+        trial_duration=hpo_args.trial_duration,
         seed=hpo_args.seed,
         enable_boot_during_hpo=hpo_args.enable_boot_during_hpo,
         hpo_boot_config_fpath=hpo_args.hpo_boot_config_fpath,
