@@ -279,7 +279,8 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         with torch.no_grad():
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
-            info["action_json_str"] = json.dumps(self.action_space.to_jsonable([action]))
+            actions_info = self.action_space.convert_actions_to_format_for_replay([action])
+            info["actions_info"] = actions_info
             info["maximal_embed"] = self.action_space.to_latent([action])
 
         return self.unwrapped.step_post_execute(success, action, info)

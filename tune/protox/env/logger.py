@@ -114,9 +114,9 @@ class Logger(object):
                 # info_dict["prior_state_container"] is a somewhat complex object so we use pickle over json
                 pickle.dump(info_dict["prior_state_container"], f)
 
-        if info_dict["action_json_str"]:
-            with open(self.tuning_steps_dpath / time / "action.json", "w") as f:
-                f.write(info_dict["action_json_str"])
+        if info_dict["actions_info"]:
+            with open(self.tuning_steps_dpath / time / "action.pkl", "wb") as f:
+                pickle.dump(info_dict["actions_info"], f)
 
     def advance(self) -> None:
         if self.writer is None:

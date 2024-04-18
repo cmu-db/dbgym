@@ -191,11 +191,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     rewards = sorted(rewards, key=lambda x: x[0])
     min_reward = min([r[0] for r in rewards])
 
-    print(f"run_raw_csv_fpaths={run_raw_csv_fpaths}")
-    print(f"run_raw_csvs={run_raw_csvs}")
-    print(f"rewards={rewards}")
-    print(f"min_reward={min_reward}")
-
     maximal = replay_args.maximal
     if maximal:
         target = [r[1] for r in rewards if r[0] == min_reward]
@@ -301,17 +296,18 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 assert reward > 0
 
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
-                    index_sqls = []
-                    all_knobs = {}
-                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.json", "r") as f:
-                        action_json = json.load(f)
-                        assert len(action_json) == 3, "action_json should be a list with system knobs, an index, and per-query knobs"
-                        system_knobs = action_json[0]
-                        index_sqls = action_json[1]
-                        query_knobs = action_json[2]
+                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
+                        actions_info = pickle.load(f)
+                        assert type(actions_info) is list and len(actions_info) == 1, f"there should only be one action in actions_info {actions_info}"
+                        action_info = actions_info[0]
+                        assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
+                        system_knobs = action_info[0]
+                        index_acts = action_info[1]
+                        query_knobs = action_info[2]
                         all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
 
-                    print(f"index_sqls 1={index_sqls}")
+                    print(f"index_acts 1={index_acts}")
+                    assert False, "done"
 
                     assert len(index_sqls) > 0
                     assert len(all_knobs) > 0
@@ -326,7 +322,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         index_sqls = all_sc
 
                     print(f"index_sqls 2={index_sqls}")
-                    assert False, "done"
 
                     execute_sqls = []
                     for index_sql in index_sqls:

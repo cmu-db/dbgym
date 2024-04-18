@@ -192,8 +192,9 @@ class EnvInfoDict(TypedDict, total=False):
     q_timeout: bool
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
-    # JSON string of the action that was executed.
-    action_json_str: Optional[str]
+    # Information about the actions that were executed this step.
+    # The actions are in a format usable by replay.
+    actions_info: Tuple["KnobSpaceAction", "IndexAction", "QuerySpaceAction"]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction
 

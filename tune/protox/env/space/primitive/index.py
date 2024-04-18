@@ -59,6 +59,11 @@ class IndexAction(object):
 
     @property
     def idx_name(self) -> str:
+        """
+        The idx_name of an IndexAction uniquely identifies it. If two actions represent the same index, they will
+            have the same idx_name. If they don't represent the same index, they will have different idx_names.
+        This is a more reliable way of testing equality than using sql(), because sql() has options.
+        """
         if self._idx_name is not None:
             return self._idx_name
 
