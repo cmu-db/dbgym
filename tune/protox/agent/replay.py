@@ -308,8 +308,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         query_knobs = action_info[2]
                         all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
 
-                    print(f"index_acts 1={index_acts}")
-
                     assert len(index_acts) > 0
                     assert len(all_knobs) > 0
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
@@ -321,9 +319,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                         all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True, True)]
                         index_acts = all_sc
-
-                    print(f"index_acts 2={index_acts}")
-                    assert False, "done"
 
                     # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
                     index_modifaction_sqls = []
