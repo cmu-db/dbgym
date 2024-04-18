@@ -122,7 +122,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             config_changes, sql_commands = self.action_space.generate_plan_from_config(
                 config, sc
             )
-            assert self.shift_state(config_changes, sql_commands)
+            assert self.shift_state(config_changes, sql_commands, dump_page_cache=True)
 
             # Note that we do not actually update the baseline metric/reward used by the reward
             # utility. This is so the reward is not stochastic with respect to the starting state.
@@ -228,7 +228,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             action, prior_state
         )
         # Attempt to maneuver to the new state.
-        success = self.shift_state(config_changes, sql_commands)
+        success = self.shift_state(config_changes, sql_commands, dump_page_cache=True)
         return success, EnvInfoDict(
             {
                 "attempted_changes": (config_changes, sql_commands),

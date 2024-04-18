@@ -343,7 +343,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         # Apply index changes
                         cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
                         print(f"cc={cc}")
-                        pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=False)
+                        pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=True)
                     existing_index_acts = index_acts
 
                     if not replay_args.simulated:
