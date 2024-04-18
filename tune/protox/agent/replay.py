@@ -143,6 +143,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     def _is_tuning_step_line(line: str) -> bool:
         return "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line and "baseline" not in line
 
+    maximal = replay_args.maximal
+    maximal_only = replay_args.maximal_only
+    threshold = replay_args.threshold
+
     hpo_params_fpath = tuning_steps_dpath / "params.json"
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
@@ -191,7 +195,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     rewards = sorted(rewards, key=lambda x: x[0])
     min_reward = min([r[0] for r in rewards])
 
-    maximal = replay_args.maximal
     if maximal:
         target = [r[1] for r in rewards if r[0] == min_reward]
         assert len(target) >= 1
@@ -214,15 +217,14 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif _is_tuning_step_line(line):
                 num_lines += 1
 
-    def _run_sample(action, timeout):
+    def _run_sample(action_info, timeout):
         samples = []
         # This should reliably check that we are loading the correct knobs...
-        ql_knobs = pg_env.action_space.get_knob_space().get_query_level_knobs(action) if action is not None else {}
-        for i in range(replay_args.samples):
+        for _ in range(replay_args.num_samples):
             runtime = pg_env.workload.execute_workload(
                 pg_conn=pg_env.pg_conn,
-                actions=[built_action],
-                action_names=["Replay"],
+                actions=[action_info],
+                actions_names=["Replay"],
                 observation_space=None,
                 action_space=pg_env.action_space,
                 reset_metrics=None,
@@ -239,9 +241,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             if runtime >= replay_args.workload_timeout:
                 break
 
-            if replay_args.samples == 2 and runtime >= timeout:
+            if replay_args.num_samples == 2 and runtime >= timeout:
                 break
-            elif replay_args.samples > 2 and len(samples) >= 2 and runtime >= timeout:
+            elif replay_args.num_samples > 2 and len(samples) >= 2 and runtime >= timeout:
                 break
 
         return samples
@@ -324,7 +326,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     index_modifaction_sqls = []
                     for index_act in index_acts:
                         if index_act in existing_index_acts:
-                            assert False, "done 2"
                             continue
                         index_modifaction_sqls.append(index_act.sql(True, True))
                     for index_act in existing_index_acts:
@@ -337,11 +338,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         pg_env.shift_state(cc, index_modifaction_sqls, dump_page_cache=True)
                     existing_index_acts = index_acts
 
-                    assert False, "done"
-
-                    if not args.simulated:
+                    if not replay_args.simulated:
                         # Get samples.
-                        run_samples = samples = _run_sample(all_knobs, timeout)
+                        run_samples = samples = _run_sample(action_info, timeout)
                         logging.info(f"Original Runtime: {reward} (timeout {has_timeout}). New Samples: {samples}")
                     else:
                         run_samples = samples = [reward, reward]
@@ -383,5 +382,5 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             run_data.append(data)
 
     # Output.
-    pd.DataFrame(run_data).to_csv(args.output, index=False)
-    env.close()
+    pd.DataFrame(run_data).to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
+    pg_env.close()
