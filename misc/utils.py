@@ -518,10 +518,10 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
 
 
 def try_create_symlink(src_path: Path, dst_path: Path) -> None:
-    '''
+    """
     Our functions that create symlinks might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to create a symlink.
-    '''
+    """
     try:
         os.symlink(src_path, dst_path)
     except FileExistsError:
@@ -530,10 +530,10 @@ def try_create_symlink(src_path: Path, dst_path: Path) -> None:
 
 
 def try_remove_file(path: Path) -> None:
-    '''
+    """
     Our functions that remove files might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to remove a file.
-    '''
+    """
     try:
         os.remove(path)
     except FileNotFoundError:

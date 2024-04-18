@@ -405,10 +405,10 @@ class TuneTimeoutChecker(object):
 
 class TuneTrial:
     def __init__(self, dbgym_cfg: DBGymConfig, is_hpo: bool) -> None:
-        '''
+        """
         We use this object for both HPO and tune. It behaves *slightly* differently
         depending on what it's used for, which is why we have an is_hpo param.
-        '''
+        """
         self.dbgym_cfg = dbgym_cfg
         self.is_hpo = is_hpo
 

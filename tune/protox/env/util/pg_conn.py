@@ -1,10 +1,10 @@
-'''
+"""
 At a high level, this file's goal is to provide helpers to manage a Postgres instance during
     agent tuning.
 On the other hand, the goal of dbms.postgres.cli is to (1) install+build postgres and (2)
     create pgdata.
 util.pg provides helpers used by *both* of the above files (as well as other files).
-'''
+"""
 import os
 import shutil
 import threading
@@ -126,9 +126,9 @@ class PostgresConn:
         dump_page_cache: bool = False,
         save_checkpoint: bool = False,
     ) -> bool:
-        '''
+        """
         This function assumes that some snapshot has already been untarred into self.pgdata_dpath
-        '''
+        """
         # Install the new configuration changes.
         if conf_changes is not None:
             if SHARED_PRELOAD_LIBRARIES:
@@ -244,7 +244,7 @@ class PostgresConn:
         return True
 
     def _set_up_boot(self, intelligent_cache: bool, early_stop: bool, seq_sample: bool, seq_sample_pct: int, seq_sample_seed: int, mu_hyp_opt: float, mu_hyp_time: int, mu_hyp_stdev: float):
-        '''
+        """
         Sets up Boot on the currently running Postgres instances.
         Uses instance vars of PostgresConn for configuration.
         I chose to not encode any "default values" in this function. This is so that all values
@@ -252,7 +252,7 @@ class PostgresConn:
             was used in a given experiment by looking only at the config file. If we did encode
             "default values" in the function, we would need to know the state of the code at the
             time of the experiment, which is very difficult in the general case.
-        '''
+        """
         # If any of these commands fail, they'll throw a Python exception
         # Thus, if none of them throw an exception, we know they passed
         self.logger.get_logger(__name__).debug("Setting up boot")
