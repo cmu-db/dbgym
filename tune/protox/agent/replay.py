@@ -178,7 +178,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     # Build PostgresEnv.
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
-    pg_env = agent_env.unwrapped
+    pg_env: PostgresEnv = agent_env.unwrapped
 
     # Reset things.
     if not replay_args.simulated:
@@ -317,7 +317,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         if not noop_index:
                             all_sc.extend(index_acts)
 
-                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True)]
+                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True, True)]
                         index_acts = all_sc
 
                     # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
@@ -326,19 +326,18 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         if index_act in existing_index_acts:
                             assert False, "done 2"
                             continue
-                        index_modifaction_sqls.append(index_act.sql(True))
+                        index_modifaction_sqls.append(index_act.sql(True, True))
                     for index_act in existing_index_acts:
                         if index_act not in index_acts:
                             index_modifaction_sqls.append(index_act.sql(False))
 
-                    print(f"index_modifaction_sqls={index_modifaction_sqls}")
-                    assert False, "done"
-
                     if not replay_args.simulated:
                         # Apply index changes
-                        cc, _ = env.action_space.get_knob_space().generate_plan(selected_action_knobs if selected_action_knobs else {})
-                        env.shift_state(cc, index_modifaction_sqls, dump_page_cache=True)
+                        cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
+                        pg_env.shift_state(cc, index_modifaction_sqls, dump_page_cache=True)
                     existing_index_acts = index_acts
+
+                    assert False, "done"
 
                     if not args.simulated:
                         # Get samples.
