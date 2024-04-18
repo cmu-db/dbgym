@@ -317,7 +317,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         if not noop_index:
                             all_sc.extend(index_acts)
 
-                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True, True)]
+                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True)]
                         index_acts = all_sc
 
                     # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
@@ -326,10 +326,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         if index_act in existing_index_acts:
                             assert False, "done 2"
                             continue
-                        index_modifaction_sqls.append(index_act.sql(True, True))
+                        index_modifaction_sqls.append(index_act.sql(True))
                     for index_act in existing_index_acts:
                         if index_act not in index_acts:
-                            index_modifaction_sqls.append(index_act.sql(False, True))
+                            index_modifaction_sqls.append(index_act.sql(False))
 
                     print(f"index_modifaction_sqls={index_modifaction_sqls}")
                     assert False, "done"
