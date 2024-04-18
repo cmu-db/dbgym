@@ -258,7 +258,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
-        print_step = 0
 
         for line in f:
             # Keep going until we've found the start.
@@ -304,11 +303,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
                         index_acts.add(action_info[1])
 
-                    print(f"\n\n\nprint_step={print_step}")
-                    print_step += 1
-                    print(f"existing_index_acts={existing_index_acts}")
-                    print(f"before index_acts={index_acts}")
-
                     assert len(index_acts) > 0
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                         prior_states = pickle.load(f)
@@ -320,8 +314,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         all_sc = {a for a in all_sc if not "USING btree ()" in a.sql(True)}
                         index_acts = all_sc
 
-                    print(f"after index_acts={index_acts}")
-
                     # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
                     index_modification_sqls = []
                     for index_act in index_acts:
@@ -331,18 +323,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         if existing_index_act not in index_acts:
                             index_modification_sqls.append(existing_index_act.sql(False))
 
-                    print(f"index_modification_sqls={index_modification_sqls}")
-                    pg_indexes_cursor = pg_env.pg_conn.conn().execute("SELECT * FROM pg_indexes WHERE schemaname = 'public';")
-                    rows = pg_indexes_cursor.fetchall()
-                    for row in rows:
-                        if "UNIQUE" not in row[4]:
-                            print(f"row={row}")
-                    print("\n\n")
-
                     if not replay_args.simulated:
                         # Apply index changes
                         cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
-                        print(f"cc={cc}")
                         pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=True)
                     existing_index_acts = index_acts
 
