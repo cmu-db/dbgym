@@ -268,6 +268,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
         # Execute.
+        self.logger.get_logger(__name__).info("MQOWrapper called step_execute()")
         success, info = self.unwrapped.step_execute(success, runs, info)
         if info["query_metric_data"]:
             self._update_best_observed(info["query_metric_data"])

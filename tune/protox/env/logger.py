@@ -105,7 +105,7 @@ class Logger(object):
             Path(f"{self.tuning_steps_dpath}/{time}").mkdir(parents=True, exist_ok=True)
 
         if info_dict["prior_pgconf"]:
-            local["mv"][
+            local["cp"][
                 info_dict["prior_pgconf"], f"{self.tuning_steps_dpath}/{time}/old_pg.conf"
             ].run()
 

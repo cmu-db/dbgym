@@ -82,26 +82,26 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpo_params["tune_duration_during_tune"] = tune_duration_during_tune
 
     # Piggyback off the HPO magic.
-    t = TuneTrial(dbgym_cfg, False)
-    t.setup(hpo_params)
+    tune_trial = TuneTrial(dbgym_cfg, False)
+    tune_trial.setup(hpo_params)
     start = time.time()
 
     data = []
     step_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "step_data.csv"
     while (time.time() - start) < hpo_params["tune_duration_during_tune"] * 3600:
-        data.append(t.step())
+        data.append(tune_trial.step())
 
         # Continuously write the file out.
         pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
-    t.cleanup()
+    tune_trial.cleanup()
 
     # Output the step data.
     pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
     # Link the tuning steps data (this directory allows you to replay the tuning run).
     # Replaying requires output.log and params.json, so we also copy them into the tuning_steps/ directory.
-    # The reason I copy them in is to ensure that tuning_steps/ is a fully self-contained directory.
+    # The reason I don't use symlinks for output.log or params.json is to ensure that tuning_steps/ is a fully self-contained directory.
     tuning_steps_dpath = dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps")
     shutil.copy(hpoed_agent_params_path, tuning_steps_dpath)
     output_fpath = dbgym_cfg.cur_task_runs_artifacts_path() / "output.log"

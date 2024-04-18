@@ -12,6 +12,7 @@ from misc.utils import DBGymConfig
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import (
     EnvInfoDict,
     HolonAction,
@@ -250,7 +251,8 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            start_time = time.time()
+            self.logger.get_logger(__name__).info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n")
+            self.logger.get_logger(__name__).info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n")
             (
                 success,
                 metric,

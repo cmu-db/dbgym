@@ -22,6 +22,7 @@ from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGy
 
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -141,7 +142,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     Replay a single tuning run (as in one tuning_steps/ folder).
     """
     def _is_tuning_step_line(line: str) -> bool:
-        return "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line and "baseline" not in line
+        return "mv" in line and "tuning_steps" in line and "baseline" not in line
 
     maximal = replay_args.maximal
     maximal_only = replay_args.maximal_only
@@ -159,6 +160,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     output_log_fpath = tuning_steps_dpath / "output.log"
 
     # Go through output.log and find the tuning_steps/[time]/ folders, as well as the time of the last folder
+    # This finds all the [time] folders in tuning_steps/ (except "baseline" since we ignore that in `_is_tuning_step_line()`),
+    #   so you could just do `ls tuning_steps/` if you wanted to.
     folders = []
     start_found = False
     last_evaluation = None
@@ -181,6 +184,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
 
     # Build PostgresEnv.
+    # TODO(phw2): build it with replay = true
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
 
@@ -220,6 +224,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     def _run_sample(action_info, timeout):
         samples = []
         for _ in range(replay_args.num_samples):
+            logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
+            logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
             runtime = pg_env.workload.execute_workload(
                 pg_conn=pg_env.pg_conn,
                 actions=[action_info],
@@ -258,6 +264,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
+        if1_count = 0
+        if2_count = 0
 
         for line in f:
             # Keep going until we've found the start.
@@ -275,7 +283,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif (maximal and (_is_tuning_step_line(line))):
                 maximal_repo = line
 
-            elif (maximal and "Found new maximal state with" in line) or (not maximal and (_is_tuning_step_line(line))):
+            elif (maximal and "Found new maximal state with" in line) or (not maximal and _is_tuning_step_line(line)):
+                if1_count += 1
+                print(f"if1_count={if1_count}")
+
                 if _is_tuning_step_line(line):
                     repo = eval(line.split("Running ")[-1])[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
@@ -294,6 +305,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 assert reward > 0
 
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
+                    if2_count += 1
+                    print(f"if2_count={if2_count}")
+
                     index_acts = set()
 
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
