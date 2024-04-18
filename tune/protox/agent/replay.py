@@ -16,7 +16,7 @@ import argparse
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, workload_name_fn, default_tuning_steps_dpath
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
 from tune.protox.agent.build_trial import build_trial
@@ -288,7 +288,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     maximal_repo = None
 
                 # Get the evaluation reward.
-                reward = pd.read_csv(f"{args.input}/{repo}/run.raw.csv")
+                run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
+                save_file(dbgym_cfg, run_raw_csv_fpath)
+                reward = pd.read_csv(run_raw_csv_fpath)
                 assert len(reward.columns) == 6
                 has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
                 reward = reward["Latency (microseconds)"].sum() / 1e6
@@ -299,7 +301,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     knobs = {}
                     insert_knobs = False
 
-                    with open(f"{args.input}/{repo}/act_sql.txt", "r") as f:
+                    with open_and_save(tuning_steps_dpath / repo / "act_sql.txt", "r") as f:
                         for line in f:
                             line = line.strip()
                             if len(line) == 0:
