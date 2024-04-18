@@ -301,23 +301,20 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
                     index_sqls = []
-                    knobs = {}
+                    all_knobs = {}
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.json") as f:
                         action_json = json.load(f)
-                        print(f"len(action_json)={len(action_json)}")
-                        assert False, "done"
-                        for line in f:
-                            line = line.strip()
-                            if len(line) == 0:
-                                insert_knobs = True
-                            elif not insert_knobs:
-                                index_sqls.append(line)
-                            else:
-                                k, v = line.split(" = ")
-                                knobs[k] = float(v)
+                        assert len(action_json) == 3, "action_json should be a list with system knobs, an index, and per-query knobs"
+                        system_knobs = action_json[0]
+                        index_sqls = action_json[1]
+                        query_knobs = action_json[2]
+                        all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
+
+                    print(f"index_sqls={index_sqls}")
+                    print(f"all_knobs={all_knobs}")
 
                     assert len(index_sqls) > 0
-                    assert len(knobs) > 0
+                    assert len(all_knobs) > 0
                     with open(f"{args.input}/{repo}/prior_state.txt", "r") as f:
                         prior_states = eval(f.read())
                         all_sc = [s.strip() for s in prior_states[1]]
@@ -346,7 +343,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     if not args.simulated:
                         # Get samples.
-                        run_samples = samples = _run_sample(knobs, timeout)
+                        run_samples = samples = _run_sample(all_knobs, timeout)
                         logging.info(f"Original Runtime: {reward} (timeout {has_timeout}). New Samples: {samples}")
                     else:
                         run_samples = samples = [reward, reward]
