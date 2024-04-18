@@ -192,8 +192,8 @@ class EnvInfoDict(TypedDict, total=False):
     q_timeout: bool
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
-    # JSON of the action that was executed.
-    action_json: Optional[str]
+    # JSON string of the action that was executed.
+    action_json_str: Optional[str]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction
 

@@ -197,7 +197,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "results": results,
                     "prior_state_container": None,
                     "prior_pgconf": None,
-                    "action_json": None,
+                    "action_json_str": None,
                 }
             )
             self.baseline_metric = metric
@@ -286,7 +286,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results": results,
-                    "action_json": json.dumps(
+                    "action_json_str": json.dumps(
                         self.action_space.to_jsonable([a[1] for a in actions])
                     ),
                 }

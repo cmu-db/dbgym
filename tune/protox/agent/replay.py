@@ -8,6 +8,7 @@ Additionally, the original tuning run may have been accelerated by Boot, whereas
 import datetime
 import json
 import logging
+import pickle
 import click
 import yaml
 import pandas as pd
@@ -302,7 +303,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
                     index_sqls = []
                     all_knobs = {}
-                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.json") as f:
+                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.json", "r") as f:
                         action_json = json.load(f)
                         assert len(action_json) == 3, "action_json should be a list with system knobs, an index, and per-query knobs"
                         system_knobs = action_json[0]
@@ -310,19 +311,22 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         query_knobs = action_json[2]
                         all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
 
-                    print(f"index_sqls={index_sqls}")
-                    print(f"all_knobs={all_knobs}")
+                    print(f"index_sqls 1={index_sqls}")
 
                     assert len(index_sqls) > 0
                     assert len(all_knobs) > 0
-                    with open(f"{args.input}/{repo}/prior_state.txt", "r") as f:
-                        prior_states = eval(f.read())
-                        all_sc = [s.strip() for s in prior_states[1]]
+                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
+                        prior_states = pickle.load(f)
+                        index_acts = prior_states[1]
+                        all_sc = [index_act.sql(True, True).strip() for index_act in index_acts]
                         if not noop_index:
                             all_sc.extend(index_sqls)
 
                         all_sc = [a for a in all_sc if not "USING btree ()" in a]
                         index_sqls = all_sc
+
+                    print(f"index_sqls 2={index_sqls}")
+                    assert False, "done"
 
                     execute_sqls = []
                     for index_sql in index_sqls:

@@ -1,6 +1,7 @@
 import inspect
 import json
 import logging
+import pickle
 import time
 from datetime import datetime
 from pathlib import Path
@@ -109,12 +110,13 @@ class Logger(object):
             ].run()
 
         if info_dict["prior_state_container"]:
-            with open(f"{self.tuning_steps_dpath}/{time}/prior_state.txt", "w") as f:
-                f.write(str(info_dict["prior_state_container"]))
+            with open(self.tuning_steps_dpath / time / "prior_state.pkl", "wb") as f:
+                # info_dict["prior_state_container"] is a somewhat complex object so we use pickle over json
+                pickle.dump(info_dict["prior_state_container"], f)
 
-        if info_dict["action_json"]:
-            with open(f"{self.tuning_steps_dpath}/{time}/action.json", "w") as f:
-                f.write(info_dict["action_json"])
+        if info_dict["action_json_str"]:
+            with open(self.tuning_steps_dpath / time / "action.json", "w") as f:
+                f.write(info_dict["action_json_str"])
 
     def advance(self) -> None:
         if self.writer is None:
