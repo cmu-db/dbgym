@@ -192,8 +192,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     print(f"rewards={rewards}")
     print(f"min_reward={min_reward}")
 
-    assert False, "done"
-
+    maximal = replay_args.maximal
     if maximal:
         target = [r[1] for r in rewards if r[0] == min_reward]
         assert len(target) >= 1
@@ -207,6 +206,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             logging.warn("Maximal disabled.")
         else:
             logging.info(f"Maximal found: {min_reward}")
+
+    assert False, "done"
 
     num_lines = 0
     with open(f"{args.input}/{filename}", "r") as f:
