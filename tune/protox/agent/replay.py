@@ -258,7 +258,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         selected_action_knobs = None
         noop_index = False
         maximal_repo = None
-        existing_indexes = []
+        existing_index_acts = []
 
         for line in f:
             # Keep going until we've found the start.
@@ -296,49 +296,54 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 assert reward > 0
 
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
+                    index_acts = []
+
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
                         actions_info = pickle.load(f)
                         assert type(actions_info) is list and len(actions_info) == 1, f"there should only be one action in actions_info {actions_info}"
                         action_info = actions_info[0]
                         assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
                         system_knobs = action_info[0]
-                        index_acts = action_info[1]
+                        index_acts.append(action_info[1])
                         query_knobs = action_info[2]
                         all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
 
                     print(f"index_acts 1={index_acts}")
-                    assert False, "done"
 
-                    assert len(index_sqls) > 0
+                    assert len(index_acts) > 0
                     assert len(all_knobs) > 0
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                         prior_states = pickle.load(f)
-                        index_acts = prior_states[1]
-                        all_sc = [index_act.sql(True, True).strip() for index_act in index_acts]
+                        prior_index_acts = prior_states[1]
+                        all_sc = [index_act for index_act in prior_index_acts]
                         if not noop_index:
-                            all_sc.extend(index_sqls)
+                            all_sc.extend(index_acts)
 
-                        all_sc = [a for a in all_sc if not "USING btree ()" in a]
-                        index_sqls = all_sc
+                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True, True)]
+                        index_acts = all_sc
 
-                    print(f"index_sqls 2={index_sqls}")
+                    print(f"index_acts 2={index_acts}")
+                    assert False, "done"
 
-                    execute_sqls = []
-                    for index_sql in index_sqls:
-                        if index_sql in existing_indexes:
+                    # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
+                    index_modifaction_sqls = []
+                    for index_act in index_acts:
+                        if index_act in existing_index_acts:
+                            assert False, "done 2"
                             continue
-                        execute_sqls.append(index_sql)
-                    for index_sql in existing_indexes:
-                        if index_sql not in index_sqls:
-                            indexname = index_sql.split("CREATE INDEX")[-1].split(" ON ")[0]
-                            execute_sqls.append(f"DROP INDEX IF EXISTS {indexname}")
+                        index_modifaction_sqls.append(index_act.sql(True, True))
+                    for index_act in existing_index_acts:
+                        if index_act not in index_acts:
+                            index_modifaction_sqls.append(index_act.sql(False, True))
 
-                    if not args.simulated:
-                        # Reset snapshot.
-                        env.action_space.reset(connection=env.connection, workload=env.workload)
+                    print(f"index_modifaction_sqls={index_modifaction_sqls}")
+                    assert False, "done"
+
+                    if not replay_args.simulated:
+                        # Apply index changes
                         cc, _ = env.action_space.get_knob_space().generate_plan(selected_action_knobs if selected_action_knobs else {})
-                        env.shift_state(cc, execute_sqls, dump_page_cache=True)
-                    existing_indexes = index_sqls
+                        env.shift_state(cc, index_modifaction_sqls, dump_page_cache=True)
+                    existing_index_acts = index_acts
 
                     if not args.simulated:
                         # Get samples.
