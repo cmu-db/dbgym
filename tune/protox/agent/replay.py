@@ -139,6 +139,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     """
     Replay a single tuning run (as in one tuning_steps/ folder).
     """
+    def _is_tuning_step_line(line: str) -> bool:
+        return "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line and "baseline" not in line
+
     hpo_params_fpath = tuning_steps_dpath / "params.json"
     with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
         hpo_params = json.load(f)
@@ -161,7 +164,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0].split("[")[0])
                     start_found = True
             else:
-                if "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line:
+                if _is_tuning_step_line(line):
                     repo = eval(line.split("Running ")[-1])[-1]
                     last_folder = repo.split("/")[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
@@ -212,10 +215,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         for line in f:
             if "Baseline Metric" in line:
                 num_lines += 1
-            elif "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line:
+            elif _is_tuning_step_line(line):
                 num_lines += 1
 
-    def run_sample(action, timeout):
+    def _run_sample(action, timeout):
         samples = []
         # This should reliably check that we are loading the correct knobs...
         ql_knobs = pg_env.action_space.get_knob_space().get_query_level_knobs(action) if action is not None else {}
@@ -275,11 +278,11 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 selected_action_knobs = pg_env.action_space.get_knob_space().from_jsonable(act[0])[0]
                 noop_index = "NOOP" in act[1][0]
 
-            elif (maximal and ("mv" in line and "tuning_steps" in line)):
+            elif (maximal and (_is_tuning_step_line(line))):
                 maximal_repo = line
 
-            elif (maximal and "Found new maximal state with" in line) or (not maximal and ("mv" in line and "tuning_steps" in line)):
-                if "mv" in line and "tuning_steps" in line:
+            elif (maximal and "Found new maximal state with" in line) or (not maximal and (_is_tuning_step_line(line))):
+                if _is_tuning_step_line(line):
                     repo = eval(line.split("Running ")[-1])[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                 elif "Found new maximal state with" in line:
@@ -299,9 +302,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
                     index_sqls = []
                     knobs = {}
-                    insert_knobs = False
-
-                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "act_sql.txt") as f:
+                    with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.json") as f:
+                        action_json = json.load(f)
+                        print(f"len(action_json)={len(action_json)}")
+                        assert False, "done"
                         for line in f:
                             line = line.strip()
                             if len(line) == 0:
@@ -342,7 +346,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     if not args.simulated:
                         # Get samples.
-                        run_samples = samples = run_sample(knobs, timeout)
+                        run_samples = samples = _run_sample(knobs, timeout)
                         logging.info(f"Original Runtime: {reward} (timeout {has_timeout}). New Samples: {samples}")
                     else:
                         run_samples = samples = [reward, reward]

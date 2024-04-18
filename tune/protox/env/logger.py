@@ -113,7 +113,7 @@ class Logger(object):
                 f.write(str(info_dict["prior_state_container"]))
 
         if info_dict["action_json"]:
-            with open(f"{self.tuning_steps_dpath}/{time}/action.txt", "w") as f:
+            with open(f"{self.tuning_steps_dpath}/{time}/action.json", "w") as f:
                 f.write(info_dict["action_json"])
 
     def advance(self) -> None:
