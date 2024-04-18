@@ -207,15 +207,16 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         else:
             logging.info(f"Maximal found: {min_reward}")
 
-    assert False, "done"
-
     num_lines = 0
-    with open(f"{args.input}/{filename}", "r") as f:
+    with open_and_save(dbgym_cfg, output_log_fpath) as f:
         for line in f:
             if "Baseline Metric" in line:
                 num_lines += 1
-            elif "mv" in line and "tuning_steps" in line:
+            elif "mv" in line and "tuning_steps" in line and "postgresql.auto.old" not in line:
                 num_lines += 1
+
+    print(f"num_lines={num_lines}")
+    assert False, "done"
 
     def run_sample(action, timeout):
         samples = []
