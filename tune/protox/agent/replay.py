@@ -261,14 +261,12 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         maximal_repo = None
         existing_indexes = []
 
-        assert False, "done"
-
         for line in f:
             # Keep going until we've found the start.
             if not start_found:
                 if "Baseline Metric" in line:
                     start_found = True
-                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0])
+                    start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0].split("[")[0])
                     pbar.update(1)
                 continue
 
@@ -283,10 +281,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif (maximal and "Found new maximal state with" in line) or (not maximal and ("mv" in line and "tuning_steps" in line)):
                 if "mv" in line and "tuning_steps" in line:
                     repo = eval(line.split("Running ")[-1])[-1]
-                    time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0])
+                    time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                 elif "Found new maximal state with" in line:
                     repo = eval(maximal_repo.split("Running ")[-1])[-1]
-                    time_since_start = parse(maximal_repo.split("DEBUG:")[-1].split(" Running")[0])
+                    time_since_start = parse(maximal_repo.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                     maximal_repo = None
 
                 # Get the evaluation reward.
