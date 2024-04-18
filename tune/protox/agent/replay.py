@@ -219,7 +219,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     def _run_sample(action_info, timeout):
         samples = []
-        # This should reliably check that we are loading the correct knobs...
         for _ in range(replay_args.num_samples):
             runtime = pg_env.workload.execute_workload(
                 pg_conn=pg_env.pg_conn,
@@ -229,7 +228,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 action_space=pg_env.action_space,
                 reset_metrics=None,
                 override_workload_timeout=hpo_params["workload_timeout"],
-                query_timeout=hpo_params["query_timeout"],
+                query_timeout=None,
                 workload_qdir=None,
                 disable_pg_hint=False,
                 blocklist=replay_args.blocklist,
@@ -252,15 +251,14 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     pbar = tqdm.tqdm(total=num_lines)
     with open_and_save(dbgym_cfg, output_log_fpath) as f:
         current_step = 0
-
         start_found = False
         start_time = None
         timeout = replay_args.workload_timeout
         cur_reward_max = timeout
-        selected_action_knobs = None
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
+        print_step = 0
 
         for line in f:
             # Keep going until we've found the start.
@@ -273,7 +271,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
             elif "Selected action: " in line:
                 act = eval(line.split("Selected action: ")[-1])
-                selected_action_knobs = pg_env.action_space.get_knob_space().from_jsonable(act[0])[0]
                 noop_index = "NOOP" in act[1][0]
 
             elif (maximal and (_is_tuning_step_line(line))):
@@ -298,44 +295,55 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 assert reward > 0
 
                 if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
-                    index_acts = []
+                    index_acts = set()
 
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
                         actions_info = pickle.load(f)
                         assert type(actions_info) is list and len(actions_info) == 1, f"there should only be one action in actions_info {actions_info}"
                         action_info = actions_info[0]
                         assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
-                        system_knobs = action_info[0]
-                        index_acts.append(action_info[1])
-                        query_knobs = action_info[2]
-                        all_knobs = {k: v for k, v in list(system_knobs.items()) + list(query_knobs.items())}
+                        index_acts.add(action_info[1])
+
+                    print(f"\n\n\nprint_step={print_step}")
+                    print_step += 1
+                    print(f"existing_index_acts={existing_index_acts}")
+                    print(f"before index_acts={index_acts}")
 
                     assert len(index_acts) > 0
-                    assert len(all_knobs) > 0
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                         prior_states = pickle.load(f)
-                        prior_index_acts = prior_states[1]
-                        all_sc = [index_act for index_act in prior_index_acts]
+                        all_sc = set(prior_states[1])
                         if not noop_index:
-                            all_sc.extend(index_acts)
+                            for index_act in index_acts:
+                                all_sc.add(index_act)
 
-                        all_sc = [a for a in all_sc if not "USING btree ()" in a.sql(True, True)]
+                        all_sc = {a for a in all_sc if not "USING btree ()" in a.sql(True)}
                         index_acts = all_sc
 
+                    print(f"after index_acts={index_acts}")
+
                     # Get the CREATE INDEX or DROP INDEX statements to turn the state into the one we should be in at this tuning step
-                    index_modifaction_sqls = []
+                    index_modification_sqls = []
                     for index_act in index_acts:
-                        if index_act in existing_index_acts:
-                            continue
-                        index_modifaction_sqls.append(index_act.sql(True, True))
-                    for index_act in existing_index_acts:
-                        if index_act not in index_acts:
-                            index_modifaction_sqls.append(index_act.sql(False))
+                        if index_act not in existing_index_acts:
+                            index_modification_sqls.append(index_act.sql(True))
+                    for existing_index_act in existing_index_acts:
+                        if existing_index_act not in index_acts:
+                            index_modification_sqls.append(existing_index_act.sql(False))
+
+                    print(f"index_modification_sqls={index_modification_sqls}")
+                    pg_indexes_cursor = pg_env.pg_conn.conn().execute("SELECT * FROM pg_indexes WHERE schemaname = 'public';")
+                    rows = pg_indexes_cursor.fetchall()
+                    for row in rows:
+                        if "UNIQUE" not in row[4]:
+                            print(f"row={row}")
+                    print("\n\n")
 
                     if not replay_args.simulated:
                         # Apply index changes
                         cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
-                        pg_env.shift_state(cc, index_modifaction_sqls, dump_page_cache=True)
+                        print(f"cc={cc}")
+                        pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=False)
                     existing_index_acts = index_acts
 
                     if not replay_args.simulated:
@@ -382,5 +390,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             run_data.append(data)
 
     # Output.
-    pd.DataFrame(run_data).to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
+    run_data_df = pd.DataFrame(run_data)
+    print(f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}.")
+    run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
     pg_env.close()

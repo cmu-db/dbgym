@@ -140,6 +140,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         env: AgentEnv,
         train_freq: TrainFreq,
         replay_buffer: ReplayBuffer,
+        is_hpo: bool,
         action_noise: Optional[ActionNoise] = None,
         learning_starts: int = 0,
     ) -> RolloutReturn:
@@ -182,7 +183,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # Rescale and perform action
             new_obs, rewards, terms, truncs, infos = env.step(actions)
             dones = terms or truncs
-            if self.logger:
+            # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
+            #   stashed in the same directory and potentially crash the system.
+            if self.logger and not is_hpo:
                 self.logger.stash_results(infos)
 
             self.num_timesteps += 1
@@ -210,7 +213,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             num_collected_steps, num_collected_episodes, continue_training
         )
 
-    def learn(self, env: AgentEnv, total_timesteps: int) -> None:
+    def learn(self, env: AgentEnv, total_timesteps: int, is_hpo: bool) -> None:
         assert isinstance(env, AgentEnv)
         total_timesteps = self._setup_learn(env, total_timesteps)
 
@@ -218,9 +221,10 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             rollout = self.collect_rollouts(
                 env,
                 train_freq=self.train_freq,
+                replay_buffer=self.replay_buffer,
+                is_hpo=is_hpo,
                 action_noise=self.action_noise,
                 learning_starts=self.learning_starts,
-                replay_buffer=self.replay_buffer,
             )
 
             if rollout.continue_training is False:

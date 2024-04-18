@@ -464,9 +464,13 @@ class TuneTrial:
                 f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
             )
             self.env_init = True
-            self.logger.stash_results(infos, name_override="baseline")
+
+            # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
+            #   stashed in the same directory and potentially crash the system.
+            if not self.is_hpo:
+                self.logger.stash_results(infos, name_override="baseline")
         else:
-            self.agent.learn(self.env, total_timesteps=1)
+            self.agent.learn(self.env, total_timesteps=1, is_hpo=self.is_hpo)
 
         self.timeout.pause()
         self.logger.advance()

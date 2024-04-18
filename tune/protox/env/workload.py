@@ -379,7 +379,7 @@ class Workload(object):
                     for action in actions
                 ],
             )
-
+        
         # Figure out workload to execute.
         if workload_qdir is not None and workload_qdir[0] is not None:
             # Load actual queries to execute.

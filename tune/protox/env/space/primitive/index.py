@@ -6,7 +6,8 @@ from tune.protox.env.types import IndexSpaceRawSample
 class IndexAction(object):
     IA = TypeVar("IA", bound="IndexAction")
 
-    index_counter: ClassVar[int] = 0
+    index_name_counter = 0
+    index_name_map: dict["IndexAction", int] = dict()
 
     def __init__(
         self,
@@ -26,7 +27,6 @@ class IndexAction(object):
         self.inc_names = inc_names
         self.raw_repr = raw_repr
         self.bias = bias
-        self._idx_name: Optional[str] = None
 
     @property
     def is_valid(self) -> bool:
@@ -54,25 +54,18 @@ class IndexAction(object):
             raw_repr=None,
             bias=0.0,
         )
-        ia._idx_name = idx_name
+        assert ia.get_index_name() == idx_name
         return ia
 
-    @property
-    def idx_name(self) -> str:
-        """
-        The idx_name of an IndexAction uniquely identifies it. If two actions represent the same index, they will
-            have the same idx_name. If they don't represent the same index, they will have different idx_names.
-        This is a more reliable way of testing equality than using sql(), because sql() has options.
-        """
-        if self._idx_name is not None:
-            return self._idx_name
-
-        IndexAction.index_counter += 1
-        self._idx_name = f"index{IndexAction.index_counter}"
-        return self._idx_name
+    def get_index_name(self):
+        if self not in IndexAction.index_name_map:
+            IndexAction.index_name_map[self] = f"index{IndexAction.index_name_counter}"
+            IndexAction.index_name_counter += 1
+        
+        return IndexAction.index_name_map[self]
 
     def sql(self, add: bool, allow_fail: bool = False) -> str:
-        idx_name = self.idx_name
+        idx_name = self.get_index_name()
         if not add:
             if allow_fail:
                 return f"DROP INDEX IF EXISTS {idx_name}"
@@ -102,12 +95,13 @@ class IndexAction(object):
             assert isinstance(other, IndexAction)
             ts = set(self.inc_names)
             os = set(other.inc_names)
-            return (
+            is_eq = (
                 self.idx_type == other.idx_type
                 and self.tbl_name == other.tbl_name
                 and self.columns == other.columns
                 and ts == os
             )
+            return is_eq
         return False
 
     def __hash__(self) -> int:
@@ -124,7 +118,7 @@ class IndexAction(object):
     def __repr__(self, add: bool = True) -> str:
         return "{a} {idx_name} ON {tbl_name} USING {idx_type} ({columns}) {inc_clause}".format(
             a="CREATE" if add else "NOOP",
-            idx_name=self.idx_name,
+            idx_name=self.get_index_name(),
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
             columns=",".join(self.columns),
