@@ -123,6 +123,8 @@ class PostgresEnv(gym.Env[Any, Any]):
             config_changes, sql_commands = self.action_space.generate_plan_from_config(
                 config, sc
             )
+            # We dump the page cache here because we're resetting. We don't want stuff from
+            #   a previous task.py invocation to affect this.
             assert self.shift_state(config_changes, sql_commands, dump_page_cache=True)
 
             # Note that we do not actually update the baseline metric/reward used by the reward
@@ -231,7 +233,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         # Attempt to maneuver to the new state.
         # Don't dump the page cache in shift_state() in order to see how the workload performs in
         #   a warm cache scenario.
-        success = self.shift_state(config_changes, sql_commands)
+        success = self.shift_state(config_changes, sql_commands, dump_page_cache=True)
         return success, EnvInfoDict(
             {
                 "attempted_changes": (config_changes, sql_commands),
