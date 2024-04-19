@@ -1,3 +1,4 @@
+from enum import Enum
 import os
 import shutil
 import subprocess
@@ -10,6 +11,9 @@ import yaml
 import redis
 
 from util.shell import subprocess_run
+
+# Enums
+TuningMode = Enum('TuningMode', ['HPO', 'TUNE', 'REPLAY'])
 
 # Default values
 DEFAULT_WORKLOAD_TIMEOUT = 600
