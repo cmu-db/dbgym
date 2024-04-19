@@ -202,12 +202,12 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Get the minimum reward.
     run_raw_csv_fpaths = [tuning_steps_dpath / fold / "run.raw.csv" for fold in folders]
     run_raw_csvs = [pd.read_csv(run_raw_csv_fpath) for run_raw_csv_fpath in run_raw_csv_fpaths]
-    rewards = [(run_raw_csv["Latency (microseconds)"].sum() / 1e6, (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run_raw_csv in run_raw_csvs]
-    rewards = sorted(rewards, key=lambda x: x[0])
-    min_reward = min([r[0] for r in rewards])
+    original_runtime_infos = [(run_raw_csv["Latency (microseconds)"].sum() / 1e6, (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run_raw_csv in run_raw_csvs]
+    original_runtime_infos = sorted(original_runtime_infos, key=lambda x: x[0])
+    min_original_runtime = min([r[0] for r in original_runtime_infos])
 
     if maximal:
-        target = [r[1] for r in rewards if r[0] == min_reward]
+        target = [r[1] for r in original_runtime_infos if r[0] == min_original_runtime]
         assert len(target) >= 1
         if target[0]:
             # Don't use maximal if the min maximal is timed out.
@@ -218,7 +218,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             maximal_only = False
             logging.warn("Maximal disabled.")
         else:
-            logging.info(f"Maximal found: {min_reward}")
+            logging.info(f"Maximal found: {min_original_runtime}")
 
     num_lines = 0
     with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
@@ -305,7 +305,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
 
-                if ((not replay_args.maximal_only and original_runtime < cur_reward_max) or original_runtime == min_reward) and (not maximal or not has_timeout):
+                if ((not replay_args.maximal_only and original_runtime < cur_reward_max) or original_runtime == min_original_runtime) and (not maximal or not has_timeout):
                     if2_count += 1
                     print(f"if2_count={if2_count}")
 
@@ -376,7 +376,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 run_folder = repo.split("/")[-1]
                 if run_folder in folders and run_folder == folders[-1]:
                     break
-                elif maximal_only and original_runtime == min_reward:
+                elif maximal_only and original_runtime == min_original_runtime:
                     break
             pbar.update(1)
 
