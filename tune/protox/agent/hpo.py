@@ -23,7 +23,7 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
 
 
 METRIC_NAME = "Best Metric"
@@ -404,13 +404,13 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig, is_hpo: bool) -> None:
+    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode) -> None:
         """
-        We use this object for both HPO and tune. It behaves *slightly* differently
-        depending on what it's used for, which is why we have an is_hpo param.
+        We use this object for HPO, tune, and replay. It behaves *slightly* differently
+        depending on what it's used for, which is why we have the tuning_mode param.
         """
         self.dbgym_cfg = dbgym_cfg
-        self.is_hpo = is_hpo
+        self.tuning_mode = tuning_mode
 
     def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
@@ -425,14 +425,14 @@ class TuneTrial:
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-        tune_duration = hpo_params["tune_duration_during_hpo"] if self.is_hpo else hpo_params["tune_duration_during_tune"]
+        tune_duration = hpo_params["tune_duration_during_hpo"] if self.tuning_mode == TuningMode.HPO else hpo_params["tune_duration_during_tune"]
 
         self.timeout_checker = TuneTimeoutChecker(tune_duration)
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
             hpo_params=hpo_params,
-            is_hpo=self.is_hpo,
+            tuning_mode=self.tuning_mode,
         )
         self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
@@ -469,10 +469,10 @@ class TuneTrial:
 
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially crash the system.
-            if not self.is_hpo:
+            if not self.tuning_mode == TuningMode.HPO:
                 self.logger.stash_results(infos, name_override="baseline")
         else:
-            self.agent.learn(self.env, total_timesteps=1, is_hpo=self.is_hpo)
+            self.agent.learn(self.env, total_timesteps=1, tuning_mode=self.tuning_mode)
 
         self.timeout_checker.pause()
         self.logger.advance()

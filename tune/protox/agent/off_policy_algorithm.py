@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
+from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
@@ -140,7 +141,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         env: AgentEnv,
         train_freq: TrainFreq,
         replay_buffer: ReplayBuffer,
-        is_hpo: bool,
+        tuning_mode: TuningMode,
         action_noise: Optional[ActionNoise] = None,
         learning_starts: int = 0,
     ) -> RolloutReturn:
@@ -185,7 +186,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             dones = terms or truncs
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially crash the system.
-            if self.logger and not is_hpo:
+            if self.logger and not tuning_mode == TuningMode.HPO:
                 self.logger.stash_results(infos)
 
             self.num_timesteps += 1
@@ -213,7 +214,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             num_collected_steps, num_collected_episodes, continue_training
         )
 
-    def learn(self, env: AgentEnv, total_timesteps: int, is_hpo: bool) -> None:
+    def learn(self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode) -> None:
         assert isinstance(env, AgentEnv)
         total_timesteps = self._setup_learn(env, total_timesteps)
 
@@ -222,7 +223,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 env,
                 train_freq=self.train_freq,
                 replay_buffer=self.replay_buffer,
-                is_hpo=is_hpo,
+                tuning_mode=tuning_mode,
                 action_noise=self.action_noise,
                 learning_starts=self.learning_starts,
             )

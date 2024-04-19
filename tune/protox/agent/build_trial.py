@@ -17,7 +17,7 @@ from gymnasium.wrappers import (  # type: ignore
 )
 from torch import nn
 
-from misc.utils import DBGymConfig, open_and_save, make_redis_started, save_file
+from misc.utils import DBGymConfig, TuningMode, open_and_save, make_redis_started, save_file
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -130,7 +130,7 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, pgport: int, is_hpo: bool, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, pgport: int, tuning_mode: TuningMode, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
@@ -151,8 +151,8 @@ def _build_utilities(
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
-    enable_boot = hpo_params["enable_boot_during_hpo"] if is_hpo else hpo_params["enable_boot_during_tune"]
-    boot_config_fpath = hpo_params["hpo_boot_config_fpath"] if is_hpo else hpo_params["tune_boot_config_fpath"]
+    enable_boot = hpo_params["enable_boot_during_hpo"] if tuning_mode == TuningMode.HPO else hpo_params["enable_boot_during_tune"]
+    boot_config_fpath = hpo_params["hpo_boot_config_fpath"] if tuning_mode == TuningMode.HPO else hpo_params["tune_boot_config_fpath"]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
@@ -510,14 +510,14 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, is_hpo: bool, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, seed: int, tuning_mode: TuningMode, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, port, is_hpo, hpo_params)
+    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, port, tuning_mode, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
     observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
