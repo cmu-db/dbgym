@@ -8,7 +8,7 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, TuningMode
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
@@ -28,6 +28,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
+        tuning_mode: TuningMode,
         observation_space: StateSpace,
         action_space: HolonSpace,
         workload: Workload,
@@ -37,12 +38,11 @@ class PostgresEnv(gym.Env[Any, Any]):
         query_timeout: int,
         benchbase_config: dict[str, Any],
         logger: Optional[Logger] = None,
-        replay: bool = False,
     ):
         super().__init__()
 
         self.dbgym_cfg = dbgym_cfg
-        self.replay = replay
+        self.tuning_mode = tuning_mode
         self.logger = logger
         self.action_space = action_space
         self.observation_space = observation_space
@@ -144,7 +144,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         else:
             # Restore a pristine snapshot of the world.
             self.pg_conn.restore_pristine_snapshot()
-            assert not self.replay
+            assert self.tuning_mode != TuningMode.REPLAY
 
             # On the first time, run the benchmark to get the baseline.
             assert isinstance(self.observation_space, StateSpace)
@@ -349,7 +349,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step(  # type: ignore
         self, action: HolonAction
     ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
-        assert not self.replay
+        assert self.tuning_mode != TuningMode.REPLAY
         success, info = self.step_before_execution(action)
         success, info = self.step_execute(success, [("PerQuery", action)], info)
         return self.step_post_execute(success, action, info)

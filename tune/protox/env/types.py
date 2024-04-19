@@ -193,7 +193,7 @@ class EnvInfoDict(TypedDict, total=False):
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
     # Information about the actions that were executed this step.
-    # The actions are in a format usable by replay.
+    # The actions are in a format usable by replay. (TODO(phw2))
     actions_info: Tuple["KnobSpaceAction", "IndexAction", "QuerySpaceAction"]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction

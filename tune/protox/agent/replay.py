@@ -9,16 +9,13 @@ import datetime
 import json
 import logging
 import pickle
-from typing import List, Tuple
 import click
-import yaml
 import pandas as pd
 import tqdm
-import argparse
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, conv_inputpath_to_realabspath, open_and_save, save_file, workload_name_fn, default_tuning_steps_dpath
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, conv_inputpath_to_realabspath, open_and_save, save_file, workload_name_fn, default_tuning_steps_dpath
 # sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
 
 from tune.protox.agent.build_trial import build_trial
@@ -188,7 +185,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     # Build PostgresEnv.
     # TODO(phw2): build PostgresEnv with replay = true
-    _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
+    _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], TuningMode.REPLAY, hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
 
     # Reset things.

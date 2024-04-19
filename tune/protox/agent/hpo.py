@@ -517,7 +517,7 @@ def create_tune_opt_class(dbgym_cfg_param):
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
-            self.trial = TuneTrial(TuneOpt.dbgym_cfg, True)
+            self.trial = TuneTrial(TuneOpt.dbgym_cfg, TuningMode.HPO)
             self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:

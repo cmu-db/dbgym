@@ -5,7 +5,7 @@ import time
 import click
 import pandas as pd
 
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, TuningMode, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
 from tune.protox.agent.coerce_config import coerce_config
 from tune.protox.agent.hpo import TuneTrial, build_space
 
@@ -82,7 +82,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpo_params["tune_duration_during_tune"] = tune_duration_during_tune
 
     # Piggyback off the HPO magic.
-    tune_trial = TuneTrial(dbgym_cfg, False)
+    tune_trial = TuneTrial(dbgym_cfg, TuningMode.TUNE)
     tune_trial.setup(hpo_params)
     start = time.time()
 

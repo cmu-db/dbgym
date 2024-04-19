@@ -305,6 +305,7 @@ def _build_observation_space(
 
 def _build_env(
     dbgym_cfg: DBGymConfig,
+    tuning_mode: TuningMode,
     hpo_params: dict[str, Any],
     pg_conn: PostgresConn,
     observation_space: StateSpace,
@@ -318,6 +319,7 @@ def _build_env(
     env = gym.make(
         "Postgres-v0",
         dbgym_cfg=dbgym_cfg,
+        tuning_mode=tuning_mode,
         observation_space=observation_space,
         action_space=holon_space,
         workload=workload,
@@ -327,7 +329,6 @@ def _build_env(
         query_timeout=hpo_params["query_timeout"],
         benchbase_config=hpo_params["benchbase_config"],
         logger=logger,
-        replay=False,
     )
 
     # Check whether to create the MQO wrapper.
