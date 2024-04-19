@@ -185,7 +185,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             new_obs, rewards, terms, truncs, infos = env.step(actions)
             dones = terms or truncs
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
-            #   stashed in the same directory and potentially crash the system.
+            #   stashed in the same directory and potentially cause a race condition.
             if self.logger and not tuning_mode == TuningMode.HPO:
                 self.logger.stash_results(infos)
 
