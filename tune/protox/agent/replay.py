@@ -151,11 +151,11 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     hpo_params_fpath = tuning_steps_dpath / "params.json"
     with open_and_save(dbgym_cfg, hpo_params_fpath, "r") as f:
         hpo_params = json.load(f)
-    # Set configs to the hpo_params that are allowed to differ between HPO and tuning.
-    # The way we set these may be different than how they were set during the tuning run, because
-    #   we are replaying instead of tuning.
-    hpo_params["enable_boot_during_tune"] = False
-    hpo_params["tune_boot_config_fpath"] = DEFAULT_BOOT_CONFIG_FPATH
+    # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.
+    hpo_params["enable_boot"][str(TuningMode.REPLAY)] = False
+    hpo_params["boot_config_fpath"][str(TuningMode.REPLAY)] = None
+    # TODO(phw2): set tune_duration to be None to represent inf
+    hpo_params["tune_duration"][str(TuningMode.REPLAY)] = hpo_params["tune_duration"][str(TuningMode.TUNE)]
 
     output_log_fpath = tuning_steps_dpath / "output.log"
 

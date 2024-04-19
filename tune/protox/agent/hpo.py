@@ -165,7 +165,7 @@ class AgentHPOArgs:
     help="Whether to enable the Boot query accelerator during the HPO process. Deciding to use Boot during HPO is separate from deciding to use Boot during tuning.",
 )
 @click.option(
-    "--hpo-boot-config-fpath",
+    "--boot-config-fpath-during-hpo",
     default=DEFAULT_BOOT_CONFIG_FPATH,
     type=Path,
     help="The path to the file configuring Boot when running HPO. When tuning, you may use a different Boot config.",
@@ -264,11 +264,17 @@ def build_space(
         "verbose": True,
         "trace": True,
         "seed": seed,
-        "enable_boot_during_hpo": enable_boot_during_hpo,
-        "hpo_boot_config_fpath": hpo_boot_config_fpath,
+        "enable_boot": {
+            str(TuningMode.HPO): enable_boot_during_hpo,
+        },
+        "boot_config_fpath": {
+            str(TuningMode.HPO): hpo_boot_config_fpath,
+        },
         
         # Timeouts.
-        "tune_duration_during_hpo": tune_duration_during_hpo,
+        "tune_duration": {
+            str(TuningMode.HPO): tune_duration_during_hpo,
+        },
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
 

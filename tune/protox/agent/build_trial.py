@@ -151,8 +151,8 @@ def _build_utilities(
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
-    enable_boot = hpo_params["enable_boot_during_hpo"] if tuning_mode == TuningMode.HPO else hpo_params["enable_boot_during_tune"]
-    boot_config_fpath = hpo_params["hpo_boot_config_fpath"] if tuning_mode == TuningMode.HPO else hpo_params["tune_boot_config_fpath"]
+    enable_boot = hpo_params["enable_boot"][tuning_mode]
+    boot_config_fpath = hpo_params["boot_config_fpath"][tuning_mode]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
