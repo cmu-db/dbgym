@@ -115,7 +115,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpoed_agent_params_copy_fpath = tuning_steps_dpath / "params.json"
     shutil.copy(hpoed_agent_params_path, hpoed_agent_params_copy_fpath)
     tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, enable_boot_during_tune)
-    link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname)
+    link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname + ".link")
     # We also create a link to hpoed_agent_params_path. This is useful when we are _manually_ looking through
     #   run_*/ and want to see which other run_*/ was responsible for creating params.json
     hpoed_agent_params_link_fpath = tuning_steps_dpath / "params.json.link"

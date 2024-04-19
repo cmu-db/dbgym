@@ -71,6 +71,26 @@ default_benchbase_config_path = (
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
 
+# Generally useful functions
+workload_name_fn = (
+    lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
+)
+
+# Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
+#   Since they can refer to either the actual or the link, they do not have ".link" in them.
+traindata_fname = (
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
+)
+default_embedder_dname = (
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
+)
+default_hpoed_agent_params_fname = (
+    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
+)
+default_tuning_steps_dname = (
+    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
+)
+
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 # Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
@@ -79,19 +99,18 @@ default_benchbase_config_path = (
 #   ok to have to hardcode them when reading.
 # Details
 #  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
-traindata_fname = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
-)
+#  - By convention, symlinks should end with ".link". The bug that motivated this decision involved replaying a tuning run. When
+#    replaying a tuning run, you read the tuning_steps/ folder of the tuning run. Earlier, I created a symlink to that tuning_steps/
+#    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an output.log file, which goes in
+#    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the output.log file of the
+#    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
 default_traindata_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / traindata_fname(benchmark_name, workload_name)
-)
-default_embedder_dname = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
+    / (traindata_fname(benchmark_name, workload_name) + ".link")
 )
 default_embedder_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -99,19 +118,13 @@ default_embedder_path = (
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / default_embedder_dname(benchmark_name, workload_name)
-)
-default_hpoed_agent_params_fname = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
+    / (default_embedder_dname(benchmark_name, workload_name) + ".link")
 )
 default_hpoed_agent_params_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_tune_protox_agent"
     / "data"
-    / default_hpoed_agent_params_fname(benchmark_name, workload_name)
-)
-workload_name_fn = (
-    lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
+    / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
 )
 default_workload_path = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -119,7 +132,7 @@ default_workload_path = (
     )
     / f"dbgym_benchmark_{benchmark_name}"
     / "data"
-    / workload_name
+    / (workload_name + ".link")
 )
 default_pristine_pgdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
@@ -127,7 +140,7 @@ default_pristine_pgdata_snapshot_path = (
     )
     / "dbgym_dbms_postgres"
     / "data"
-    / get_pgdata_tgz_name(benchmark_name, scale_factor)
+    / (get_pgdata_tgz_name(benchmark_name, scale_factor) + ".link")
 )
 default_pgdata_parent_dpath = (
     lambda workspace_path: get_tmp_path_from_workspace_path(
@@ -138,16 +151,13 @@ default_pgbin_path = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / "dbgym_dbms_postgres" / "build" / "repo" / "boot"/ "build" / "postgres" / "bin"
-)
-default_tuning_steps_dname = (
-    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
+    / "dbgym_dbms_postgres" / "build" / "repo.link" / "boot"/ "build" / "postgres" / "bin"
 )
 default_tuning_steps_dpath = (
     lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / "dbgym_tune_protox_agent" / "artifacts" / default_tuning_steps_dname(benchmark_name, workload_name, boot_enabled_during_tune)
+    / "dbgym_tune_protox_agent" / "artifacts" / (default_tuning_steps_dname(benchmark_name, workload_name, boot_enabled_during_tune) + ".link")
 )
 
 
@@ -350,7 +360,7 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
     )
 
 
-def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
+def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
     """
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
@@ -369,6 +379,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: os.PathLike, mode="r"):
         - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked.
     """
     # validate open_fpath
+    assert isinstance(open_fpath, Path)
     assert os.path.isabs(
         open_fpath
     ), f"open_and_save(): open_fpath ({open_fpath}) should be an absolute path"
@@ -415,7 +426,7 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
 
 
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
+def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -426,6 +437,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
         In these cases we create a symlink so we have full provenance for how the dependency was created
     """
     # validate fpath
+    assert isinstance(fpath, Path)
     assert not os.path.islink(fpath), f"fpath ({fpath}) should not be a symlink"
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
@@ -440,16 +452,14 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
     if is_child_path(fpath, dbgym_cfg.dbgym_runs_path):
         # get paths we'll need later.
         _, codebase_dname, org_dpath, org_dname = extract_from_task_run_fordpath(dbgym_cfg, fpath)
-        this_run_save_dpath = os.path.join(
-            dbgym_cfg.dbgym_this_run_path, codebase_dname, org_dname
-        )
+        this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / codebase_dname / org_dname
         os.makedirs(this_run_save_dpath, exist_ok=True)
 
         # if the fpath file is directly in org_dpath, we symlink the file directly
         parent_dpath = os.path.dirname(fpath)
         if os.path.samefile(parent_dpath, org_dpath):
             fname = os.path.basename(fpath)
-            symlink_fpath = os.path.join(this_run_save_dpath, fname)
+            symlink_fpath = this_run_save_dpath / (fname + ".link")
             try_create_symlink(fpath, symlink_fpath)
         # else, we know the fpath file is _not_ directly inside org_dpath dir
         # we go as far back as we can while still staying in org_dpath and symlink that "base" dir
@@ -462,18 +472,16 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> Path:
 
             # create symlink
             open_base_dname = dir_basename(base_dpath)
-            symlink_dpath = os.path.join(this_run_save_dpath, open_base_dname)
+            symlink_dpath = this_run_save_dpath / (open_base_dname + ".link")
             try_create_symlink(base_dpath, symlink_dpath)
     # if it wasn't generated by a run
     else:
         # since we don't know where the file is at all, the location is "unknown" and the org is "all"
-        this_run_save_dpath = os.path.join(
-            dbgym_cfg.dbgym_this_run_path, "unknown", "all"
-        )
+        this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / "unknown" / "all"
         os.makedirs(this_run_save_dpath, exist_ok=True)
         fname = os.path.basename(fpath)
         # in this case, we want to copy instead of symlinking since it might disappear in the future
-        copy_fpath = os.path.join(this_run_save_dpath, fname)
+        copy_fpath = this_run_save_dpath / fname
         shutil.copy(fpath, copy_fpath)
 
 
@@ -497,12 +505,12 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
         result_name = custom_result_name
     else:
         if os.path.isfile(result_fordpath):
-            result_name = os.path.basename(result_fordpath)
+            result_name = os.path.basename(result_fordpath) + ".link"
         elif os.path.isdir(result_fordpath):
-            result_name = dir_basename(result_fordpath)
+            result_name = dir_basename(result_fordpath) + ".link"
         else:
             raise AssertionError("result_fordpath must be either a file or dir")
-    
+
     # Figure out the parent directory path of the symlink
     codebase_dpath, codebase_dname, _, org_dname = extract_from_task_run_fordpath(dbgym_cfg, result_fordpath)
     # We're only supposed to save files generated by us, which means they should be in cur_task_runs_path()
@@ -514,6 +522,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
     # Note that in a multi-threaded setting, this might remove one created by a process in the same run,
     #   meaning it's not "old" by our definition of "old". However, we'll always end up with a symlink
     #   file of the current run regardless of the order of threads.
+    assert result_name.endswith(".link") and not result_name.endswith(".link.link"), "result_name ({result_name}) should end with \".link\""
     symlink_path = symlink_parent_dpath / result_name
     try_remove_file(symlink_path)
     try_create_symlink(result_fordpath, symlink_path)
@@ -526,6 +535,7 @@ def try_create_symlink(src_path: Path, dst_path: Path) -> None:
     Our functions that create symlinks might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to create a symlink.
     """
+    assert dst_path.name.endswith(".link") and not dst_path.name.endswith(".link.link")
     try:
         os.symlink(src_path, dst_path)
     except FileExistsError:

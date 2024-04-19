@@ -80,13 +80,13 @@ def _analyze_embeddings_part(dbgym_cfg: DBGymConfig, part_i: int, generic_args: 
     start_time = time.time()
     _create_stats_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args)
     analyze_part_duration = time.time() - start_time
-    with open(os.path.join(part_dpath, "stats_time.txt"), "w") as f:
+    with open(part_dpath / "stats_time.txt", "w") as f:
         f.write(f"{analyze_part_duration}")
 
     start_time = time.time()
     _create_ranges_for_part(dbgym_cfg, part_dpath, generic_args, analyze_args)
     create_range_duration = time.time() - start_time
-    with open(os.path.join(part_dpath, "ranges_time.txt"), "w") as f:
+    with open(part_dpath / "ranges_time.txt", "w") as f:
         f.write(f"{create_range_duration}")
 
 

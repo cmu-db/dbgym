@@ -68,6 +68,7 @@ class Workload(object):
         pid: Optional[int],
         query_spec: QuerySpec,
     ) -> None:
+        assert all(sql[1].exists() and not sql[1].is_symlink() and sql[1].is_absolute() for sql in sqls), f"sqls ({sqls}) should only contain existent real absolute paths."
         do_tbl_include_subsets_prune = query_spec["tbl_include_subsets_prune"]
         self.order = []
         self.queries = QueryMap({})
@@ -256,7 +257,7 @@ class Workload(object):
             sqls = [
                 (
                     line.split(",")[0],
-                    self.workload_path / line.split(",")[1],
+                    Path(line.split(",")[1]),
                     1.0,
                 )
                 for line in lines
@@ -270,7 +271,7 @@ class Workload(object):
                 sqls = [
                     (
                         split[0],
-                        self.workload_path / split[1],
+                        Path(split[1]),
                         float(split[2]),
                     )
                     for split in splits

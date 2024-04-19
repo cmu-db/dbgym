@@ -650,7 +650,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     #   run_*/[codebase]/hpo_ray_results/TuneOpt*/.
     best_params_copy_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json"
     shutil.copy(best_params_generated_fpath, best_params_copy_fpath)
-    link_result(dbgym_cfg, best_params_copy_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name))
+    link_result(dbgym_cfg, best_params_copy_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name) + ".link")
     # We also link from run_*/[codebase]/data/params.json to run_*/[codebase]/hpo_ray_results/TuneOpt*/**/params.json.
     #   This way, when _manually_ looking through run_*/, we can see which HPO trial was
     #   responsible for creating params.json.

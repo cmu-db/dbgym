@@ -84,11 +84,11 @@ def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: f
 
 
 def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
+    return dbgym_cfg.cur_symlinks_build_path("repo.link", "boot", "build", "postgres", "bin")
 
 
 def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo")
+    return dbgym_cfg.cur_symlinks_build_path("repo.link")
 
 
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
@@ -156,21 +156,21 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
 
 def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
-    pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
-    assert pgbin_symlink_dpath.exists()
+    pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_cfg).resolve()
+    assert pgbin_real_dpath.exists()
     dbgym_pguser = DBGYM_POSTGRES_USER
     dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
     # Create user
-    save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
+    save_file(dbgym_cfg, pgbin_real_dpath / "psql")
     subprocess_run(
         f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
     subprocess_run(
         f'./psql -c "grant pg_monitor to {dbgym_pguser}" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
 
     # Load shared preload libraries
@@ -179,14 +179,14 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
             # You have to use TO and you can't put single quotes around the libraries (https://postgrespro.com/list/thread-id/2580120)
             # The method I wrote here works for both one library and multiple libraries
             f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-            cwd=pgbin_symlink_dpath,
+            cwd=pgbin_real_dpath,
         )
 
     # Create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
         f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{dbgym_pguser}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
 
 
