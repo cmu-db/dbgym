@@ -309,6 +309,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     if2_count += 1
                     print(f"if2_count={if2_count}")
 
+                    if if2_count >= 2:
+                        break
+
                     index_acts = set()
 
                     with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:

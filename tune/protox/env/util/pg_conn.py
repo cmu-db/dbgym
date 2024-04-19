@@ -79,8 +79,8 @@ class PostgresConn:
             self._conn = None
 
     def move_log(self) -> None:
-        pglog_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log"
-        pglog_this_step_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg.log.{self.log_step}"
+        pglog_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log"
+        pglog_this_step_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log.{self.log_step}"
         if pglog_fpath.exists():
             shutil.move(
                 pglog_fpath,
@@ -175,7 +175,9 @@ class PostgresConn:
                 "-t",
                 "180",
                 "-l",
-                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "pg.log",
+                # We log to pg{self.pgport}.log instead of pg.log so that different PostgresConn objects
+                #   don't all try to write to the same file.
+                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log",
                 "start",
             ].run(retcode=None)
 

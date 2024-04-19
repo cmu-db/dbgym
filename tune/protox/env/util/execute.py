@@ -37,7 +37,7 @@ def _time_query(
     query: str,
     timeout: float,
 ) -> Tuple[float, bool, Any]:
-    has_timeout = False
+    did_timeout = False
     has_explain = "EXPLAIN" in query
     explain_data = None
 
@@ -45,11 +45,13 @@ def _time_query(
         start_time = time.time()
         cursor = connection.execute(query)
         qid_runtime = (time.time() - start_time) * 1e6
+        print(f"{prefix} measured qid_runtime={qid_runtime/1e6}")
 
         if has_explain:
             c = [c for c in cursor][0][0][0]
             assert "Execution Time" in c
             qid_runtime = float(c["Execution Time"]) * 1e3
+            print(f"{prefix} explain qid_runtime={qid_runtime/1e6}")
             explain_data = c
 
         if logger:
@@ -63,11 +65,11 @@ def _time_query(
                 f"{prefix} exceeded evaluation timeout {timeout}"
             )
         qid_runtime = timeout * 1e6
-        has_timeout = True
+        did_timeout = True
     except Exception as e:
         assert False, print(e)
     # qid_runtime is in microseconds.
-    return qid_runtime, has_timeout, explain_data
+    return qid_runtime, did_timeout, explain_data
 
 
 def _acquire_metrics_around_query(
