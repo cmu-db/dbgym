@@ -213,6 +213,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 if1_count += 1
                 print(f"if1_count={if1_count}")
 
+                if if1_count >= 10:
+                    break
+
                 if _is_tuning_step_line(line):
                     repo = eval(line.split("Running ")[-1])[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
@@ -278,6 +281,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     "step": current_step,
                     "original_runtime": original_runtime,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
+                    "repo": repo,
                     "replayed_runtime": replayed_runtime,
                 })
                 current_step += 1
@@ -286,15 +290,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 if run_folder in folders and run_folder == folders[-1]:
                     break
             progess_bar.update(1)
-
-        if len(run_data) > 0:
-            data = {
-                "step": current_step,
-                "original_runtime": run_data[-1]["original_runtime"],
-                "time_since_start": -1,
-                "replayed_runtime": run_data[-1]["replayed_runtime"],
-            }
-            run_data.append(data)
 
     # Output.
     run_data_df = pd.DataFrame(run_data)
