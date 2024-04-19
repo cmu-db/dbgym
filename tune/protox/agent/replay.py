@@ -170,7 +170,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
         logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
         assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
-        runtime = pg_env.workload.execute_workload(
+        replayed_runtime = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
             actions=[action_info],
             actions_names=["Replay"],
@@ -183,7 +183,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             blocklist=replay_args.blocklist,
             first=False,
         )
-        return runtime
+        return replayed_runtime
 
     run_data = []
     progess_bar = tqdm.tqdm(total=num_lines)
@@ -229,7 +229,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
                 assert len(run_raw_csv.columns) == 6
-                has_timeout = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
+                did_any_query_timeout_in_original = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
                 original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
 
@@ -269,10 +269,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=False)
                 existing_index_acts = index_acts
 
-                # Get the runtime.
+                # Execute the workload to get the runtime.
                 if not replay_args.simulated:
                     replayed_runtime = _execute_workload_wrapper(action_info)
-                    logging.info(f"Original Runtime: {original_runtime} (timed out? {has_timeout}). Replayed Runtime: {replayed_runtime}")
+                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_timeout_in_original}). Replayed Runtime: {replayed_runtime}")
                 else:
                     replayed_runtime = original_runtime
 
@@ -280,8 +280,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 run_data.append({
                     "step": current_step,
                     "original_runtime": original_runtime,
+                    "did_any_query_timeout_in_original": did_any_query_timeout_in_original,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
-                    "repo": repo,
                     "replayed_runtime": replayed_runtime,
                 })
                 current_step += 1
