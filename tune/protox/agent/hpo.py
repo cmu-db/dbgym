@@ -279,7 +279,9 @@ def build_space(
         "tune_duration": {
             str(TuningMode.HPO): tune_duration_during_hpo,
         },
-        "workload_timeout": tune.choice(workload_timeouts),
+        "workload_timeout": {
+            str(TuningMode.HPO): tune.choice(workload_timeouts),
+        },
         "query_timeout": tune.choice(query_timeouts),
 
         # Paths.

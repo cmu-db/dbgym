@@ -152,7 +152,6 @@ def _build_utilities(
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
     enable_boot = hpo_params["enable_boot"][str(tuning_mode)]
-    boot_config_fpath = hpo_params["boot_config_fpath"][str(tuning_mode)]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
@@ -163,7 +162,7 @@ def _build_utilities(
         pgdata_parent_dpath=Path(hpo_params["pgconn_info"]["pgdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
-        boot_config_fpath=boot_config_fpath,
+        boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
         connect_timeout=300,
         logger=logger,
     )
@@ -175,7 +174,7 @@ def _build_utilities(
         query_spec=hpo_params["benchmark_config"]["query_spec"],
         workload_path=Path(hpo_params["workload_path"]),
         pid=None,
-        workload_timeout=hpo_params["workload_timeout"],
+        workload_timeout=hpo_params["workload_timeout"][str(tuning_mode)],
         workload_timeout_penalty=hpo_params["workload_timeout_penalty"],
         logger=logger,
     )

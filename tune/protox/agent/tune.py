@@ -72,9 +72,9 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
         pgconn_info={}
     ), hpo_params)
 
-    # Set args to defaults programmatically cont.
-    # We need to do this here instead of up above because we need hpo_params
-    tune_duration_during_tune = tune_duration_during_tune if tune_duration_during_tune != None else hpo_params["tune_duration"][str(TuningMode.HPO)]
+    # Set defaults that depend on hpo_params
+    if tune_duration_during_tune == None:
+        tune_duration_during_tune = hpo_params["tune_duration"][str(TuningMode.HPO)]
 
     # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.
     # In general, for configs that can differ between HPO, tuning, and replay I chose to name
@@ -86,6 +86,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     hpo_params["enable_boot"][str(TuningMode.TUNE)] = enable_boot_during_tune
     hpo_params["boot_config_fpath"][str(TuningMode.TUNE)] = boot_config_fpath_during_tune
     hpo_params["tune_duration"][str(TuningMode.TUNE)] = tune_duration_during_tune
+    hpo_params["workload_timeout"][str(TuningMode.TUNE)] = hpo_params["workload_timeout"][str(TuningMode.HPO)]
 
     # Piggyback off the HPO magic.
     tune_trial = TuneTrial(dbgym_cfg, TuningMode.TUNE)
@@ -109,8 +110,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     # Replaying requires output.log and params.json, so we also copy them into the tuning_steps/ directory.
     # The reason I don't use symlinks for output.log or params.json is to ensure that tuning_steps/ is a fully self-contained directory.
     tuning_steps_dpath = dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps")
+    # We copy hpoed_agent_params_path instead of moving it because hpoed_agent_params_path was generated in another task run
     shutil.copy(hpoed_agent_params_path, tuning_steps_dpath)
-    output_fpath = dbgym_cfg.cur_task_runs_artifacts_path() / "output.log"
-    shutil.copy(output_fpath, tuning_steps_dpath)
     tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, enable_boot_during_tune)
     link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname)

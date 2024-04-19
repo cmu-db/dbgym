@@ -72,7 +72,7 @@ class Logger(object):
         logging.basicConfig(format=formatter, level=level, force=True)
 
         # Setup the file logger.
-        file_logger = logging.FileHandler(self.log_dpath / "output.log")
+        file_logger = logging.FileHandler(self.tuning_steps_dpath / "output.log")
         file_logger.setFormatter(logging.Formatter(formatter))
         file_logger.setLevel(level)
         logging.getLogger().addHandler(file_logger)

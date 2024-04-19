@@ -30,9 +30,9 @@ REPLAY_DATA_FNAME = "replay_data.csv"
 
 class ReplayArgs:
     def __init__(
-        self, workload_timeout: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list
+        self, workload_timeout_during_replay: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list
     ):
-        self.workload_timeout = workload_timeout
+        self.workload_timeout_during_replay = workload_timeout_during_replay
         self.num_samples = num_samples
         self.threshold = threshold
         self.threshold_limit = threshold_limit
@@ -70,10 +70,12 @@ class ReplayArgs:
     help="The path to the `tuning_steps` directory to be replayed."
 )
 @click.option(
-    "--workload-timeout",
-    default=DEFAULT_WORKLOAD_TIMEOUT,
+    "--workload-timeout-during-replay",
+    default=None,
     type=int,
-    help="The timeout (in seconds) of a workload when replaying."
+    # You can make it use the workload timeout used during tuning if you want.
+    # I just made it use the workload timeout from HPO because I don't currently persist the tuning HPO params.
+    help="The timeout (in seconds) of a workload when replaying. By default, it will be equal to the workload timeout used during HPO."
 )
 @click.option(
     "--num-samples",
@@ -120,7 +122,7 @@ class ReplayArgs:
     type=list,
     help="Ignore running queries in the blocklist."
 )
-def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list) -> None:
+def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout_during_replay: bool, num_samples: int, threshold: float, threshold_limit: float, maximal: bool, simulated: bool, maximal_only: bool, cutoff: float, blocklist: list) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
 
@@ -131,7 +133,7 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     tuning_steps_dpath = conv_inputpath_to_realabspath(dbgym_cfg, tuning_steps_dpath)
 
     # Group args together to reduce the # of parameters we pass into functions
-    replay_args = ReplayArgs(workload_timeout, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
+    replay_args = ReplayArgs(workload_timeout_during_replay, num_samples, threshold, threshold_limit, maximal, simulated, maximal_only, cutoff, blocklist)
 
     # Replay
     replay_tuning_run(dbgym_cfg, tuning_steps_dpath, replay_args)
@@ -151,9 +153,15 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     hpo_params_fpath = tuning_steps_dpath / "params.json"
     with open_and_save(dbgym_cfg, hpo_params_fpath, "r") as f:
         hpo_params = json.load(f)
+
+    # Set defaults that depend on hpo_params
+    if replay_args.workload_timeout_during_replay == None:
+        replay_args.workload_timeout_during_replay = hpo_params["workload_timeout"][str(TuningMode.HPO)]
+
     # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.
     hpo_params["enable_boot"][str(TuningMode.REPLAY)] = False
     hpo_params["boot_config_fpath"][str(TuningMode.REPLAY)] = None
+    hpo_params["workload_timeout"][str(TuningMode.REPLAY)] = replay_args.workload_timeout_during_replay
 
     # Go through output.log and find the tuning_steps/[time]/ folders, as well as the time of the last folder
     # This finds all the [time] folders in tuning_steps/ (except "baseline" since we ignore that in `_is_tuning_step_line()`),
@@ -178,7 +186,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         folders.append(last_folder)
     
     # Set tune_duration to be high so that it doesn't cut the replay off early
-    hpo_params["tune_duration"][str(TuningMode.REPLAY)] = replay_args.workload_timeout * len(folders)
+    hpo_params["tune_duration"][str(TuningMode.REPLAY)] = replay_args.workload_timeout_during_replay * len(folders)
 
     # Only apply threshold if time is less than.
     threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
@@ -225,7 +233,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         for _ in range(replay_args.num_samples):
             logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
             logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
-            # DEBUG(phw2) assert replay_args.workload_timeout == hpo_params["workload_timeout_during_replay"] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
+            assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
             runtime = pg_env.workload.execute_workload(
                 pg_conn=pg_env.pg_conn,
                 actions=[action_info],
@@ -242,7 +250,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             samples.append(runtime)
             logging.info(f"Runtime: {runtime}")
 
-            if runtime >= replay_args.workload_timeout:
+            if runtime >= replay_args.workload_timeout_during_replay:
                 break
 
         return samples
@@ -253,7 +261,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         current_step = 0
         start_found = False
         start_time = None
-        cur_reward_max = replay_args.workload_timeout
+        cur_reward_max = replay_args.workload_timeout_during_replay
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
@@ -356,7 +364,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     current_step += 1
 
-                    if (not has_timeout) or (max(run_samples) < replay_args.workload_timeout):
+                    if (not has_timeout) or (max(run_samples) < replay_args.workload_timeout_during_replay):
                         # Apply a tolerance..
                         # If we've timed out, only apply threshold only if we've found a strictly better config.
                         apply_threshold = threshold if threshold_limit == None or time_since_start < threshold_limit else 0

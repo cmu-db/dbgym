@@ -26,5 +26,5 @@ python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-fa
 python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --train-max-concurrent 10
 
 # agent
-python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --tune-duration-during-hpo 4 --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH --enable-boot-during-hpo
+python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --max-concurrent 4 --tune-duration-during-hpo 4 --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
 python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR

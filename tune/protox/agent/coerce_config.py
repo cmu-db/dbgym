@@ -27,7 +27,9 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_params: dic
             "tune_duration": {
                 str(TuningMode.HPO): hpo_params["mythril_args"]["duration"],
             },
-            "workload_timeout": hpo_params["mythril_args"]["workload_timeout"],
+            "workload_timeout": {
+                str(TuningMode.HPO): hpo_params["mythril_args"]["workload_timeout"],
+            },
             "query_timeout": hpo_params["mythril_args"]["timeout"],
             "pgconn_info": {
                 "pgport": 5432,
