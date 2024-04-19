@@ -221,7 +221,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif _is_tuning_step_line(line):
                 num_lines += 1
 
-    def _run_sample(action_info, timeout):
+    def _run_sample(action_info, workload_timeout):
         samples = []
         for _ in range(replay_args.num_samples):
             logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
@@ -246,9 +246,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             if runtime >= replay_args.workload_timeout:
                 break
 
-            if replay_args.num_samples == 2 and runtime >= timeout:
+            if replay_args.num_samples == 2 and runtime >= workload_timeout:
                 break
-            elif replay_args.num_samples > 2 and len(samples) >= 2 and runtime >= timeout:
+            elif replay_args.num_samples > 2 and len(samples) >= 2 and runtime >= workload_timeout:
                 break
 
         return samples
@@ -259,8 +259,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         current_step = 0
         start_found = False
         start_time = None
-        timeout = replay_args.workload_timeout
-        cur_reward_max = timeout
+        workload_timeout = replay_args.workload_timeout
+        cur_reward_max = workload_timeout
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
@@ -347,8 +347,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     if not replay_args.simulated:
                         # Get samples.
-                        run_samples = samples = _run_sample(action_info, timeout)
-                        logging.info(f"Original Runtime: {reward} (timeout {has_timeout}). New Samples: {samples}")
+                        run_samples = samples = _run_sample(action_info, workload_timeout)
+                        logging.info(f"Original Runtime: {reward} (workload_timeout {has_timeout}). New Samples: {samples}")
                     else:
                         run_samples = samples = [reward, reward]
 
@@ -363,14 +363,14 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     current_step += 1
 
-                    if (not has_timeout) or (max(run_samples) < timeout):
+                    if (not has_timeout) or (max(run_samples) < workload_timeout):
                         # Apply a tolerance..
                         # If we've timed out, only apply threshold only if we've found a strictly better config.
                         apply_threshold = threshold if threshold_limit == None or time_since_start < threshold_limit else 0
                         cur_reward_max = reward - apply_threshold
 
-                    if max(run_samples) < timeout:
-                        timeout = max(run_samples)
+                    if max(run_samples) < workload_timeout:
+                        workload_timeout = max(run_samples)
 
                 run_folder = repo.split("/")[-1]
                 if run_folder in folders and run_folder == folders[-1]:
