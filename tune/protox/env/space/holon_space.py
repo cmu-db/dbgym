@@ -370,5 +370,5 @@ class HolonSpace(spaces.Tuple):
         sql_commands = list(itertools.chain(*[o[1] for o in outputs]))
         return config_changes, sql_commands
 
-    def convert_actions_to_format_for_replay(self, actions: list[HolonAction]):
+    def convert_actions_to_format_for_replay(self, actions: list[HolonAction]) -> list:
         return [(a[0], self.get_index_space().to_action(a[1]), a[2]) for a in actions]

@@ -9,6 +9,7 @@ import datetime
 import json
 import logging
 import pickle
+from typing import List, Tuple
 import click
 import yaml
 import pandas as pd
@@ -22,7 +23,9 @@ from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGy
 
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
+from tune.protox.env.types import HolonAction
 
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -149,7 +152,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     threshold = replay_args.threshold
 
     hpo_params_fpath = tuning_steps_dpath / "params.json"
-    with open_and_save(dbgym_cfg, hpo_params_fpath) as f:
+    with open_and_save(dbgym_cfg, hpo_params_fpath, "r") as f:
         hpo_params = json.load(f)
     # Set configs to the hpo_params that are allowed to differ between HPO and tuning.
     # The way we set these may be different than how they were set during the tuning run, because
@@ -184,7 +187,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
 
     # Build PostgresEnv.
-    # TODO(phw2): build it with replay = true
+    # TODO(phw2): build PostgresEnv with replay = true
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], False, hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
 
@@ -221,11 +224,12 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif _is_tuning_step_line(line):
                 num_lines += 1
 
-    def _run_sample(action_info, workload_timeout):
+    def _run_sample(action_info: "HolonAction") -> list[float]:
         samples = []
         for _ in range(replay_args.num_samples):
             logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
             logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
+            # DEBUG(phw2) assert replay_args.workload_timeout == hpo_params["workload_timeout_during_replay"] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
             runtime = pg_env.workload.execute_workload(
                 pg_conn=pg_env.pg_conn,
                 actions=[action_info],
@@ -233,7 +237,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 observation_space=None,
                 action_space=pg_env.action_space,
                 reset_metrics=None,
-                override_workload_timeout=hpo_params["workload_timeout"],
                 query_timeout=None,
                 workload_qdir=None,
                 disable_pg_hint=False,
@@ -246,11 +249,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             if runtime >= replay_args.workload_timeout:
                 break
 
-            if replay_args.num_samples == 2 and runtime >= workload_timeout:
-                break
-            elif replay_args.num_samples > 2 and len(samples) >= 2 and runtime >= workload_timeout:
-                break
-
         return samples
 
     run_data = []
@@ -259,8 +257,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         current_step = 0
         start_found = False
         start_time = None
-        workload_timeout = replay_args.workload_timeout
-        cur_reward_max = workload_timeout
+        cur_reward_max = replay_args.workload_timeout
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
@@ -347,8 +344,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     if not replay_args.simulated:
                         # Get samples.
-                        run_samples = samples = _run_sample(action_info, workload_timeout)
-                        logging.info(f"Original Runtime: {reward} (workload_timeout {has_timeout}). New Samples: {samples}")
+                        run_samples = samples = _run_sample(action_info)
+                        logging.info(f"Original Runtime: {reward} (timed out? {has_timeout}). New Samples: {samples}")
                     else:
                         run_samples = samples = [reward, reward]
 
@@ -363,14 +360,11 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                     current_step += 1
 
-                    if (not has_timeout) or (max(run_samples) < workload_timeout):
+                    if (not has_timeout) or (max(run_samples) < replay_args.workload_timeout):
                         # Apply a tolerance..
                         # If we've timed out, only apply threshold only if we've found a strictly better config.
                         apply_threshold = threshold if threshold_limit == None or time_since_start < threshold_limit else 0
                         cur_reward_max = reward - apply_threshold
-
-                    if max(run_samples) < workload_timeout:
-                        workload_timeout = max(run_samples)
 
                 run_folder = repo.split("/")[-1]
                 if run_folder in folders and run_folder == folders[-1]:
