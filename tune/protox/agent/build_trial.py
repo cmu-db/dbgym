@@ -130,7 +130,7 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, pgport: int, tuning_mode: TuningMode, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, pgport: int, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
@@ -151,8 +151,8 @@ def _build_utilities(
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
-    enable_boot = hpo_params["enable_boot"][tuning_mode]
-    boot_config_fpath = hpo_params["boot_config_fpath"][tuning_mode]
+    enable_boot = hpo_params["enable_boot"][str(tuning_mode)]
+    boot_config_fpath = hpo_params["boot_config_fpath"][str(tuning_mode)]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
@@ -511,18 +511,19 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, tuning_mode: TuningMode, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, seed: int, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, port, tuning_mode, hpo_params)
+    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, tuning_mode, port, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
     observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
+        tuning_mode,
         hpo_params,
         pg_conn,
         observation_space,

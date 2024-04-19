@@ -30,7 +30,7 @@ METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -49,7 +49,7 @@ class AgentHPOArgs:
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
         self.enable_boot_during_hpo = enable_boot_during_hpo
-        self.hpo_boot_config_fpath = hpo_boot_config_fpath
+        self.boot_config_fpath_during_hpo = boot_config_fpath_during_hpo
 
 
 @click.command()
@@ -194,7 +194,7 @@ def hpo(
     workload_timeout,
     query_timeout,
     enable_boot_during_hpo: bool,
-    hpo_boot_config_fpath: Path,
+    boot_config_fpath_during_hpo: Path,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
@@ -224,7 +224,7 @@ def hpo(
     pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    hpo_boot_config_fpath = conv_inputpath_to_realabspath(dbgym_cfg, hpo_boot_config_fpath)
+    boot_config_fpath_during_hpo = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath_during_hpo)
 
     # Check assertions on args
     if intended_pgdata_hardware == "hdd":
@@ -235,7 +235,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, hpo_boot_config_fpath)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -252,7 +252,7 @@ def build_space(
     tune_duration_during_hpo: int=30,
     seed: int=0,
     enable_boot_during_hpo: bool=False,
-    hpo_boot_config_fpath: Path=None,
+    boot_config_fpath_during_hpo: Path=None,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
     boot_enabled: bool = False,
@@ -264,11 +264,15 @@ def build_space(
         "verbose": True,
         "trace": True,
         "seed": seed,
+        # For params that may differ between HPO, tune, and replay, I chose to represent them
+        #   as dictionaries. I felt this was less confusing that overriding parts of the hpo_params
+        #   during tune or replay. With the dictionary representation, we never override anything in
+        #   hpo_params - we only ever add new fields to hpo_params.
         "enable_boot": {
             str(TuningMode.HPO): enable_boot_during_hpo,
         },
         "boot_config_fpath": {
-            str(TuningMode.HPO): hpo_boot_config_fpath,
+            str(TuningMode.HPO): boot_config_fpath_during_hpo,
         },
         
         # Timeouts.
@@ -381,7 +385,7 @@ def build_space(
 
 
 class TuneTimeoutChecker(object):
-    def __init__(self, tune_duration: int) -> None:
+    def __init__(self, tune_duration: float) -> None:
         self.limit = (tune_duration * 3600) > 0
         self.remain = int(tune_duration * 3600)
         self.running = False
@@ -431,14 +435,14 @@ class TuneTrial:
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-        tune_duration = hpo_params["tune_duration_during_hpo"] if self.tuning_mode == TuningMode.HPO else hpo_params["tune_duration_during_tune"]
+        tune_duration = hpo_params["tune_duration"][str(self.tuning_mode)]
 
         self.timeout_checker = TuneTimeoutChecker(tune_duration)
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
+            self.tuning_mode,
             seed=seed,
             hpo_params=hpo_params,
-            tuning_mode=self.tuning_mode,
         )
         self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
@@ -585,7 +589,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         tune_duration_during_hpo=hpo_args.tune_duration_during_hpo,
         seed=hpo_args.seed,
         enable_boot_during_hpo=hpo_args.enable_boot_during_hpo,
-        hpo_boot_config_fpath=hpo_args.hpo_boot_config_fpath,
+        boot_config_fpath_during_hpo=hpo_args.boot_config_fpath_during_hpo,
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )

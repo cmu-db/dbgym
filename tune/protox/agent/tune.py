@@ -45,9 +45,9 @@ from tune.protox.agent.hpo import TuneTrial, build_space
 )
 @click.option(
     "--tune-duration-during-tune",
-    default=30,
+    default=None,
     type=float,
-    help="The number of hours to run the tuning agent for. This may be different than how long we ran the agent for during HPO."
+    help="The number of hours to run the tuning agent for. If you do not specify this argument, it will be the same as --tune-duration-during-hpo."
 )
 def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, boot_config_fpath_during_tune: Path, tune_duration_during_tune: float) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
@@ -72,11 +72,17 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
         pgconn_info={}
     ), hpo_params)
 
+    # Set args to defaults programmatically cont.
+    # We need to do this here instead of up above because we need hpo_params
+    tune_duration_during_tune = tune_duration_during_tune if tune_duration_during_tune != None else hpo_params["tune_duration"][str(TuningMode.HPO)]
+
     # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.
     # In general, for configs that can differ between HPO, tuning, and replay I chose to name
     #   them "*tune*" and "*hpo*" to the end of them instead of naming them the same
     #   and overriding the config during tuning. It's just much less confusing if we
     #   make sure to never override any configs in hpo_params.
+    # Note that while we currently do not persist the hpo_params used during *tuning* back to
+    #   a file, this is entirely possible to do in the future if needed.
     hpo_params["enable_boot"][str(TuningMode.TUNE)] = enable_boot_during_tune
     hpo_params["boot_config_fpath"][str(TuningMode.TUNE)] = boot_config_fpath_during_tune
     hpo_params["tune_duration"][str(TuningMode.TUNE)] = tune_duration_during_tune
@@ -88,7 +94,7 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
 
     data = []
     step_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "step_data.csv"
-    while (time.time() - start) < hpo_params["tune_duration_during_tune"] * 3600:
+    while (time.time() - start) < tune_duration_during_tune * 3600:
         data.append(tune_trial.step())
 
         # Continuously write the file out.

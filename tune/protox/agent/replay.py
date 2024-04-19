@@ -154,10 +154,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.
     hpo_params["enable_boot"][str(TuningMode.REPLAY)] = False
     hpo_params["boot_config_fpath"][str(TuningMode.REPLAY)] = None
-    # TODO(phw2): set tune_duration to be None to represent inf
-    hpo_params["tune_duration"][str(TuningMode.REPLAY)] = hpo_params["tune_duration"][str(TuningMode.TUNE)]
-
-    output_log_fpath = tuning_steps_dpath / "output.log"
 
     # Go through output.log and find the tuning_steps/[time]/ folders, as well as the time of the last folder
     # This finds all the [time] folders in tuning_steps/ (except "baseline" since we ignore that in `_is_tuning_step_line()`),
@@ -165,7 +161,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     folders = []
     start_found = False
     last_evaluation = None
-    with open_and_save(dbgym_cfg, output_log_fpath) as f:
+    output_log_fpath = tuning_steps_dpath / "output.log"
+    with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
         for line in f:
             if not start_found:
                 if "Baseline Metric" in line:
@@ -179,13 +176,15 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     last_evaluation = time_since_start
                     if replay_args.cutoff == None or (time_since_start - start_time).total_seconds() < replay_args.cutoff * 3600:
                         folders.append(last_folder)
+    
+    # Set tune_duration to be high so that it doesn't cut the replay off early
+    hpo_params["tune_duration"][str(TuningMode.REPLAY)] = replay_args.workload_timeout * len(folders)
 
     # Only apply threshold if time is less than.
     threshold_limit = last_evaluation - datetime.timedelta(seconds=int(replay_args.threshold_limit * 3600)) if replay_args.threshold_limit != None else None
 
     # Build PostgresEnv.
-    # TODO(phw2): build PostgresEnv with replay = true
-    _, _, agent_env, _, _ = build_trial(dbgym_cfg, hpo_params["seed"], TuningMode.REPLAY, hpo_params)
+    _, _, agent_env, _, _ = build_trial(dbgym_cfg, TuningMode.REPLAY, hpo_params["seed"], hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
 
     # Reset things.
@@ -214,7 +213,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             logging.info(f"Maximal found: {min_reward}")
 
     num_lines = 0
-    with open_and_save(dbgym_cfg, output_log_fpath) as f:
+    with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
         for line in f:
             if "Baseline Metric" in line:
                 num_lines += 1
@@ -250,7 +249,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     run_data = []
     pbar = tqdm.tqdm(total=num_lines)
-    with open_and_save(dbgym_cfg, output_log_fpath) as f:
+    with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
         current_step = 0
         start_found = False
         start_time = None

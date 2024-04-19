@@ -138,10 +138,10 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
     def collect_rollouts(
         self,
+        tuning_mode: TuningMode,
         env: AgentEnv,
         train_freq: TrainFreq,
         replay_buffer: ReplayBuffer,
-        tuning_mode: TuningMode,
         action_noise: Optional[ActionNoise] = None,
         learning_starts: int = 0,
     ) -> RolloutReturn:
@@ -220,10 +220,10 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
         while self.num_timesteps < total_timesteps:
             rollout = self.collect_rollouts(
+                tuning_mode,
                 env,
                 train_freq=self.train_freq,
                 replay_buffer=self.replay_buffer,
-                tuning_mode=tuning_mode,
                 action_noise=self.action_noise,
                 learning_starts=self.learning_starts,
             )
