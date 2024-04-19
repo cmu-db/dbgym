@@ -199,7 +199,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     if not replay_args.simulated:
         pg_env.pg_conn.restore_pristine_snapshot()
 
-    # Get the minimum reward.
+    # Get the minimum original runtime.
     run_raw_csv_fpaths = [tuning_steps_dpath / fold / "run.raw.csv" for fold in folders]
     run_raw_csvs = [pd.read_csv(run_raw_csv_fpath) for run_raw_csv_fpath in run_raw_csv_fpaths]
     original_runtime_infos = [(run_raw_csv["Latency (microseconds)"].sum() / 1e6, (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]) for run_raw_csv in run_raw_csvs]
@@ -296,7 +296,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     time_since_start = parse(maximal_repo.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                     maximal_repo = None
 
-                # Get the evaluation reward.
+                # Get the original runtime.
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
