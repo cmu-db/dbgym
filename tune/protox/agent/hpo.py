@@ -642,13 +642,17 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
     
-    # Save the best params.json
-    # Before saving, copy it into run_*/[codebase]/data/. We copy so that when we open the
-    #   params.json file using open_and_save(), it links to the params.json file directly
-    #   instead of to the dir TuneOpt*/. By linking to the params.json file directly, we
-    #   know which params.json file in TuneOpt*/ was actually used for tuning.
+    # Save the best params.json.
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
     best_params_generated_fpath = Path(best_result.path) / "params.json"
+    # Before saving, copy it into run_*/[codebase]/data/. This way, save_file() called on
+    #   params.json will link directly to run_*/[codebase]/data/params.json instead of to
+    #   run_*/[codebase]/hpo_ray_results/TuneOpt*/.
     best_params_copy_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json"
     shutil.copy(best_params_generated_fpath, best_params_copy_fpath)
     link_result(dbgym_cfg, best_params_copy_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name))
+    # We also link from run_*/[codebase]/data/params.json to run_*/[codebase]/hpo_ray_results/TuneOpt*/**/params.json.
+    #   This way, when _manually_ looking through run_*/, we can see which HPO trial was
+    #   responsible for creating params.json.
+    best_params_link_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json.link"
+    os.symlink(best_params_generated_fpath, best_params_link_fpath)

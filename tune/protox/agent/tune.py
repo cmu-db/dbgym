@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import shutil
 import time
@@ -107,10 +108,15 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     pd.DataFrame(data).to_csv(step_data_fpath, index=False)
 
     # Link the tuning steps data (this directory allows you to replay the tuning run).
-    # Replaying requires output.log and params.json, so we also copy them into the tuning_steps/ directory.
-    # The reason I don't use symlinks for output.log or params.json is to ensure that tuning_steps/ is a fully self-contained directory.
     tuning_steps_dpath = dbgym_cfg.cur_task_runs_artifacts_path("tuning_steps")
+    # Replaying requires params.json, so we also copy it into the tuning_steps/ directory.
     # We copy hpoed_agent_params_path instead of moving it because hpoed_agent_params_path was generated in another task run
-    shutil.copy(hpoed_agent_params_path, tuning_steps_dpath)
+    # We copy instead of just symlinking so that tuning_steps/ is a fully self-contained directory.
+    hpoed_agent_params_copy_fpath = tuning_steps_dpath / "params.json"
+    shutil.copy(hpoed_agent_params_path, hpoed_agent_params_copy_fpath)
     tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, enable_boot_during_tune)
     link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname)
+    # We also create a link to hpoed_agent_params_path. This is useful when we are _manually_ looking through
+    #   run_*/ and want to see which other run_*/ was responsible for creating params.json
+    hpoed_agent_params_link_fpath = tuning_steps_dpath / "params.json.link"
+    os.symlink(hpoed_agent_params_path, hpoed_agent_params_link_fpath)
