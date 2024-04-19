@@ -299,13 +299,13 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # Get the evaluation reward.
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
-                reward = pd.read_csv(run_raw_csv_fpath)
-                assert len(reward.columns) == 6
-                has_timeout = (reward["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
-                reward = reward["Latency (microseconds)"].sum() / 1e6
-                assert reward > 0
+                run_raw_csv = pd.read_csv(run_raw_csv_fpath)
+                assert len(run_raw_csv.columns) == 6
+                has_timeout = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
+                original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
+                assert original_runtime > 0
 
-                if ((not replay_args.maximal_only and reward < cur_reward_max) or reward == min_reward) and (not maximal or not has_timeout):
+                if ((not replay_args.maximal_only and original_runtime < cur_reward_max) or original_runtime == min_reward) and (not maximal or not has_timeout):
                     if2_count += 1
                     print(f"if2_count={if2_count}")
 
@@ -352,13 +352,13 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     if not replay_args.simulated:
                         # Get samples.
                         run_samples = samples = _run_sample(action_info)
-                        logging.info(f"Original Runtime: {reward} (timed out? {has_timeout}). New Samples: {samples}")
+                        logging.info(f"Original Runtime: {original_runtime} (timed out? {has_timeout}). New Samples: {samples}")
                     else:
-                        run_samples = samples = [reward, reward]
+                        run_samples = samples = [original_runtime, original_runtime]
 
                     data = {
                         "step": current_step,
-                        "orig_cost": reward,
+                        "original_runtime": original_runtime,
                         "time_since_start": (time_since_start - start_time).total_seconds(),
                     }
                     samples = {f"runtime{i}": s for i, s in enumerate(samples)}
@@ -371,19 +371,19 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                         # Apply a tolerance..
                         # If we've timed out, only apply threshold only if we've found a strictly better config.
                         apply_threshold = threshold if threshold_limit == None or time_since_start < threshold_limit else 0
-                        cur_reward_max = reward - apply_threshold
+                        cur_reward_max = original_runtime - apply_threshold
 
                 run_folder = repo.split("/")[-1]
                 if run_folder in folders and run_folder == folders[-1]:
                     break
-                elif maximal_only and reward == min_reward:
+                elif maximal_only and original_runtime == min_reward:
                     break
             pbar.update(1)
 
         if len(run_data) > 0:
             data = {
                 "step": current_step,
-                "orig_cost": run_data[-1]["orig_cost"],
+                "original_runtime": run_data[-1]["original_runtime"],
                 "time_since_start": -1,
                 "runtime0": run_data[-1]["runtime0"],
             }
