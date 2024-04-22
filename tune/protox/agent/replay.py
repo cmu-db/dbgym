@@ -10,6 +10,7 @@ import json
 import logging
 import pickle
 import click
+import numpy as np
 import pandas as pd
 import tqdm
 from pathlib import Path
@@ -20,9 +21,10 @@ from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGy
 
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import HolonAction
+from tune.protox.env.types import HolonAction, IndexSpaceRawSample
 
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -106,6 +108,10 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     replay_tuning_run(dbgym_cfg, tuning_steps_dpath, replay_args)
 
 
+def check_index_space_raw_samples_equality(sample1: IndexSpaceRawSample, sample2: IndexSpaceRawSample) -> bool:
+    return np.array_equal(sample1[-1], sample2[-1]) and sample1[:-1] == sample2[:-1]
+
+
 def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_args: ReplayArgs):
     """
     Replay a single tuning run (as in one tuning_steps/ folder).
@@ -152,6 +158,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Build PostgresEnv.
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, TuningMode.REPLAY, hpo_params["seed"], hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
+    action_space: HolonSpace = pg_env.action_space
 
     # Reset things.
     if not replay_args.simulated:
@@ -166,16 +173,17 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 num_lines += 1
 
     # A convenience wrapper around execute_workload() which fills in the arguments properly
-    def _execute_workload_wrapper(action_info: "HolonAction") -> list[float]:
-        logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
-        logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
+    def _execute_workload_wrapper(actions_info: list["HolonAction"]) -> list[float]:
+        logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
+        logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n")
         assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
+        all_holon_action_variations = actions_info["all_holon_action_variations"]
         replayed_runtime = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
-            actions=[action_info],
-            actions_names=["Replay"],
+            actions=[holon_action for (_, holon_action) in all_holon_action_variations],
+            variation_names=[variation_name for (variation_name, _) in all_holon_action_variations],
             observation_space=None,
-            action_space=pg_env.action_space,
+            action_space=action_space,
             reset_metrics=None,
             query_timeout=None,
             workload_qdir=None,
@@ -233,14 +241,22 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
 
-                # Get the indexes from this action and the prior state
-                index_acts = set()
+                # Extract the necessary values from action.pkl
                 with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
                     actions_info = pickle.load(f)
-                    assert type(actions_info) is list and len(actions_info) == 1, f"there should only be one action in actions_info {actions_info}"
-                    action_info = actions_info[0]
-                    assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
-                    index_acts.add(action_info[1])
+                    all_holon_action_variations = actions_info["all_holon_action_variations"]
+                    # Extract the KnobSpaceAction and IndexAction from all_holon_action_variations.
+                    # These two should be identical across all HolonActions, which we will assert.
+                    _, first_holon_action = all_holon_action_variations[0]
+                    knob_space_action = first_holon_action[0]
+                    index_space_raw_sample = first_holon_action[1]
+                    index_action = action_space.get_index_space().to_action(index_space_raw_sample)
+                    assert all([knob_space_action == holon_action[0] for (_, holon_action) in all_holon_action_variations])
+                    assert all([check_index_space_raw_samples_equality(index_space_raw_sample, holon_action[1]) for (_, holon_action) in all_holon_action_variations])
+
+                # Get the indexes from this action and the prior state
+                index_acts = set()
+                index_acts.add(index_action)
                 assert len(index_acts) > 0
                 with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                     prior_states = pickle.load(f)
@@ -263,7 +279,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # Modify Postgres to have the right indexes and system-wide knobs. `index_modification_sqls` holds the indexes
                 #   while `cc` holds the system-wide knobs.
                 if not replay_args.simulated:
-                    cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
+                    cc, _ = action_space.get_knob_space().generate_action_plan(knob_space_action, prior_states[0])
                     # Like in tuning, we don't dump the page cache when calling shift_state() to see how the workload
                     #   performs in a warm cache scenario.
                     pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=False)
@@ -271,7 +287,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
-                    replayed_runtime = _execute_workload_wrapper(action_info)
+                    replayed_runtime = _execute_workload_wrapper(actions_info)
                     logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_timeout_in_original}). Replayed Runtime: {replayed_runtime}")
                 else:
                     replayed_runtime = original_runtime

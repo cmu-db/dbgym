@@ -334,7 +334,7 @@ class Workload(object):
         self,
         pg_conn: PostgresConn,
         actions: list[HolonAction] = [],
-        actions_names: list[str] = [],
+        variation_names: list[str] = [],
         results: Optional[Union[str, Path]] = None,
         observation_space: Optional[StateSpace] = None,
         action_space: Optional[HolonSpace] = None,
@@ -351,7 +351,7 @@ class Workload(object):
             if not override_workload_timeout
             else override_workload_timeout
         )
-        assert len(actions) == len(actions_names)
+        assert len(actions) == len(variation_names)
 
         # Do we need metrics.
         need_metric = False if not observation_space else observation_space.require_metrics()
@@ -478,7 +478,7 @@ class Workload(object):
                                 }
                             ),
                         )
-                        for ql_knob, act_name in zip(ql_knobs, actions_names)
+                        for ql_knob, act_name in zip(ql_knobs, variation_names)
                     ]
                     for r in zruns:
                         if r[2] not in [rr[2] for rr in runs]:
@@ -669,7 +669,7 @@ class Workload(object):
         observation_space: StateSpace,
         action_space: HolonSpace,
         actions: list[HolonAction],
-        actions_names: list[str],
+        variation_names: list[str],
         benchbase_config: dict[str, Any],
         query_timeout: Optional[int] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
@@ -694,7 +694,7 @@ class Workload(object):
             ret = self.execute_workload(
                 pg_conn,
                 actions=actions,
-                actions_names=actions_names,
+                variation_names=variation_names,
                 results=results,
                 observation_space=observation_space,
                 action_space=action_space,
