@@ -228,12 +228,23 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     time_since_start = parse(maximal_repo.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                     maximal_repo = None
 
-                # Get the original runtime.
+                # Get the original runtime as well as whether any individual queries and/or the full workload timed out.
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
                 assert len(run_raw_csv.columns) == 6
-                did_any_query_timeout_in_original = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
+                # `did_any_query_time_out_in_original` will be true when a query does not execute to completion, regardless of how it happened. Even
+                #   if this was because there was only 1s before the workload timed out and thus the query was "unfairly" given a 1s "statement_timeout",
+                #   we will still set `did_any_query_time_out_in_original` to true because that query didn't not execute to completion.
+                # When setting `did_any_query_time_out_in_original`, we can't just check whether the latency in run.raw.csv == `query_timeout` because
+                #   this doesn't handle the edge case where the "statement_timeout" setting in Postgres is set to be < `query_timeout`. This edge case
+                #   would happen when the amount of time remaining before we hit `workload_timeout` is less then `query_timeout` and thus Proto-X sets
+                #   "statement_timeout" to be < `query_timeout` in order to not exceed the `workload_timeout`.
+                did_any_query_time_out_in_original = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
+                # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
+                #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
+                #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.
+                did_workload_time_out_in_original = False
                 original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
 
@@ -284,7 +295,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
                     replayed_runtime = _execute_workload_wrapper(actions_info)
-                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_timeout_in_original}). Replayed Runtime: {replayed_runtime}")
+                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_time_out_in_original}). Replayed Runtime: {replayed_runtime}")
                 else:
                     replayed_runtime = original_runtime
 
@@ -292,7 +303,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 run_data.append({
                     "step": current_step,
                     "original_runtime": original_runtime,
-                    "did_any_query_timeout_in_original": did_any_query_timeout_in_original,
+                    "did_any_query_time_out_in_original": did_any_query_time_out_in_original,
+                    "did_workload_time_out_in_original": did_workload_time_out_in_original,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "replayed_runtime": replayed_runtime,
                 })
@@ -305,6 +317,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     # Output.
     run_data_df = pd.DataFrame(run_data)
+    pd.set_option('display.max_columns', 10)
     print(f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}.")
     run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
     pg_env.close()
