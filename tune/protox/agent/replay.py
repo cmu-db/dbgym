@@ -245,8 +245,14 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
                 #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
                 #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.
-                did_workload_time_out_in_original = False
-                original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
+                # We separate the penalty rows from the non-penalty rows to process them separately.
+                run_raw_csv_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] == "P"]
+                run_raw_csv_non_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] != "P"]
+                # Penalties are added when the workload times out so this is a reliable indicator of whether the workload timed out.
+                did_workload_time_out_in_original = len(run_raw_csv_penalty_rows) > 0
+                # Penalties are meant to affect the reward of the tuning agent but they are unrelated to the actual runtime, so we ignore them when
+                #   computing the original runtime.
+                original_runtime = run_raw_csv_non_penalty_rows["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
 
                 # Extract the necessary values from action.pkl
