@@ -4,7 +4,7 @@ set -euxo pipefail
 
 SCALE_FACTOR=0.1
 INTENDED_PGDATA_HARDWARE=ssd
-PGDATA_PARENT_DPATH=/mnt/nvme1n1/phw2/dbgym_tmp/
+PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
 # python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 4 --max-concurrent 4 --workload-timeout 100 --query-timeout 15 --tune-duration-during-hpo 0.1  --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH

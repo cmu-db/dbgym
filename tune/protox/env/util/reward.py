@@ -88,11 +88,10 @@ class RewardUtility(object):
 
         summary = [f for f in Path(parent).rglob("*.raw.csv")][0]
         data = pd.read_csv(summary)
-        assert len(data.columns) == 6
-
-        sum_data = data.sum()
-        latency: float = sum_data["Latency (microseconds)"]
-        return latency / 1.0e6
+        assert len(data.columns) == 7
+        summed_data = data.sum()
+        summed_latency: float = summed_data["Latency (microseconds)"]
+        return summed_latency / 1.0e6
 
     def __call__(
         self,

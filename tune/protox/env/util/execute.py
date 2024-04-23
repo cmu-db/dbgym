@@ -37,7 +37,7 @@ def _time_query(
     query: str,
     timeout: float,
 ) -> Tuple[float, bool, Any]:
-    did_timeout = False
+    did_time_out = False
     has_explain = "EXPLAIN" in query
     explain_data = None
 
@@ -45,13 +45,11 @@ def _time_query(
         start_time = time.time()
         cursor = connection.execute(query)
         qid_runtime = (time.time() - start_time) * 1e6
-        print(f"{prefix} measured qid_runtime={qid_runtime/1e6}")
 
         if has_explain:
             c = [c for c in cursor][0][0][0]
             assert "Execution Time" in c
             qid_runtime = float(c["Execution Time"]) * 1e3
-            print(f"{prefix} explain qid_runtime={qid_runtime/1e6}")
             explain_data = c
 
         if logger:
@@ -65,11 +63,11 @@ def _time_query(
                 f"{prefix} exceeded evaluation timeout {timeout}"
             )
         qid_runtime = timeout * 1e6
-        did_timeout = True
+        did_time_out = True
     except Exception as e:
         assert False, print(e)
     # qid_runtime is in microseconds.
-    return qid_runtime, did_timeout, explain_data
+    return qid_runtime, did_time_out, explain_data
 
 
 def _acquire_metrics_around_query(
@@ -87,7 +85,7 @@ def _acquire_metrics_around_query(
     if query_timeout > 0:
         _force_statement_timeout(connection, query_timeout * 1000)
 
-    qid_runtime, did_timeout, explain_data = _time_query(
+    qid_runtime, did_time_out, explain_data = _time_query(
         logger, prefix, connection, query, query_timeout
     )
 
@@ -100,7 +98,7 @@ def _acquire_metrics_around_query(
         diff = None
 
     # qid_runtime is in microseconds.
-    return qid_runtime, did_timeout, explain_data, diff
+    return qid_runtime, did_time_out, explain_data, diff
 
 
 def execute_variations(
@@ -142,7 +140,7 @@ def execute_variations(
         if logger:
             logger.get_logger(__name__).debug(f"{qr.prefix_qid} executing with {pqkk}")
 
-        runtime, did_timeout, explain_data, metric = _acquire_metrics_around_query(
+        runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
             logger=logger,
             prefix=qr.prefix_qid,
             connection=connection,
@@ -151,7 +149,7 @@ def execute_variations(
             observation_space=observation_space,
         )
 
-        if not did_timeout:
+        if not did_time_out:
             new_timeout_limit = math.ceil(runtime / 1e3) / 1.0e3
             if new_timeout_limit < timeout_limit:
                 timeout_limit = new_timeout_limit
@@ -161,7 +159,7 @@ def execute_variations(
             best_qr = BestQueryRun(
                 qr,
                 runtime,
-                did_timeout,
+                did_time_out,
                 explain_data,
                 metric,
             )

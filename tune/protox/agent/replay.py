@@ -10,6 +10,7 @@ import json
 import logging
 import pickle
 import click
+import numpy as np
 import pandas as pd
 import tqdm
 from pathlib import Path
@@ -20,9 +21,10 @@ from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGy
 
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import HolonAction
+from tune.protox.env.types import HolonAction, IndexSpaceRawSample
 
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -152,6 +154,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
     # Build PostgresEnv.
     _, _, agent_env, _, _ = build_trial(dbgym_cfg, TuningMode.REPLAY, hpo_params["seed"], hpo_params)
     pg_env: PostgresEnv = agent_env.unwrapped
+    action_space: HolonSpace = pg_env.action_space
 
     # Reset things.
     if not replay_args.simulated:
@@ -166,16 +169,17 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 num_lines += 1
 
     # A convenience wrapper around execute_workload() which fills in the arguments properly
-    def _execute_workload_wrapper(action_info: "HolonAction") -> list[float]:
-        logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables, pg_env.action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
-        logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), pg_env.action_space.get_knob_space().tables)}\n\n")
+    def _execute_workload_wrapper(actions_info: list["HolonAction"]) -> list[float]:
+        logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
+        logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n")
         assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
+        all_holon_action_variations = actions_info["all_holon_action_variations"]
         replayed_runtime = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
-            actions=[action_info],
-            actions_names=["Replay"],
+            actions=[holon_action for (_, holon_action) in all_holon_action_variations],
+            variation_names=[variation_name for (variation_name, _) in all_holon_action_variations],
             observation_space=None,
-            action_space=pg_env.action_space,
+            action_space=action_space,
             reset_metrics=None,
             query_timeout=None,
             workload_qdir=None,
@@ -224,23 +228,49 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     time_since_start = parse(maximal_repo.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
                     maximal_repo = None
 
-                # Get the original runtime.
+                # Get the original runtime as well as whether any individual queries and/or the full workload timed out.
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
-                assert len(run_raw_csv.columns) == 6
-                did_any_query_timeout_in_original = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
-                original_runtime = run_raw_csv["Latency (microseconds)"].sum() / 1e6
+                assert len(run_raw_csv.columns) == 7
+                # `did_any_query_time_out_in_original` will be true when *all variations* of at least one query of the original workload did not execute
+                #   to completion, regardless of how it happened. Even if this was because there was only 1s before the workload timed out and thus the
+                #   query was "unfairly" given a 1s "statement_timeout", we will still set `did_any_query_time_out_in_original` to true because that query
+                #   didn't not execute to completion.
+                # When setting `did_any_query_time_out_in_original`, we can't just check whether the latency in run.raw.csv == `query_timeout` because
+                #   this doesn't handle the edge case where the "statement_timeout" setting in Postgres is set to be < `query_timeout`. This edge case
+                #   would happen when the amount of time remaining before we hit `workload_timeout` is less then `query_timeout` and thus Proto-X sets
+                #   "statement_timeout" to be < `query_timeout` in order to not exceed the `workload_timeout`.
+                did_any_query_time_out_in_original = any(run_raw_csv["Timed Out"])
+                # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
+                #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
+                #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.
+                # We separate the penalty rows from the non-penalty rows to process them separately.
+                run_raw_csv_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] == "P"]
+                run_raw_csv_non_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] != "P"]
+                # Penalties are added when the workload times out so this is a reliable indicator of whether the workload timed out.
+                did_workload_time_out_in_original = len(run_raw_csv_penalty_rows) > 0
+                # Penalties are meant to affect the reward of the tuning agent but they are unrelated to the actual runtime, so we ignore them when
+                #   computing the original runtime.
+                original_runtime = run_raw_csv_non_penalty_rows["Latency (microseconds)"].sum() / 1e6
                 assert original_runtime > 0
+
+                # Extract the necessary values from action.pkl
+                with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
+                    actions_info = pickle.load(f)
+                    all_holon_action_variations = actions_info["all_holon_action_variations"]
+                    # Extract the KnobSpaceAction and IndexAction from all_holon_action_variations.
+                    # These two should be identical across all HolonActions, which we will assert.
+                    _, first_holon_action = all_holon_action_variations[0]
+                    knob_space_action = first_holon_action[0]
+                    index_space_raw_sample = first_holon_action[1]
+                    index_action = action_space.get_index_space().to_action(index_space_raw_sample)
+                    assert all([knob_space_action == holon_action[0] for (_, holon_action) in all_holon_action_variations])
+                    assert all([index_action == action_space.get_index_space().to_action(holon_action[1]) for (_, holon_action) in all_holon_action_variations])
 
                 # Get the indexes from this action and the prior state
                 index_acts = set()
-                with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
-                    actions_info = pickle.load(f)
-                    assert type(actions_info) is list and len(actions_info) == 1, f"there should only be one action in actions_info {actions_info}"
-                    action_info = actions_info[0]
-                    assert type(action_info) is tuple and len(action_info) == 3, f"action_info ({action_info}) should be a tuple with system knobs, an index, and per-query knobs"
-                    index_acts.add(action_info[1])
+                index_acts.add(index_action)
                 assert len(index_acts) > 0
                 with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                     prior_states = pickle.load(f)
@@ -263,7 +293,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 # Modify Postgres to have the right indexes and system-wide knobs. `index_modification_sqls` holds the indexes
                 #   while `cc` holds the system-wide knobs.
                 if not replay_args.simulated:
-                    cc, _ = pg_env.action_space.get_knob_space().generate_action_plan(action_info[0], prior_states[0])
+                    cc, _ = action_space.get_knob_space().generate_action_plan(knob_space_action, prior_states[0])
                     # Like in tuning, we don't dump the page cache when calling shift_state() to see how the workload
                     #   performs in a warm cache scenario.
                     pg_env.shift_state(cc, index_modification_sqls, dump_page_cache=False)
@@ -271,8 +301,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
-                    replayed_runtime = _execute_workload_wrapper(action_info)
-                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_timeout_in_original}). Replayed Runtime: {replayed_runtime}")
+                    replayed_runtime = _execute_workload_wrapper(actions_info)
+                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_time_out_in_original}). Replayed Runtime: {replayed_runtime}")
                 else:
                     replayed_runtime = original_runtime
 
@@ -280,7 +310,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 run_data.append({
                     "step": current_step,
                     "original_runtime": original_runtime,
-                    "did_any_query_timeout_in_original": did_any_query_timeout_in_original,
+                    "did_any_query_time_out_in_original": did_any_query_time_out_in_original,
+                    "did_workload_time_out_in_original": did_workload_time_out_in_original,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "replayed_runtime": replayed_runtime,
                 })
@@ -293,6 +324,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
     # Output.
     run_data_df = pd.DataFrame(run_data)
+    pd.set_option('display.max_columns', 10)
     print(f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}.")
     run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
     pg_env.close()

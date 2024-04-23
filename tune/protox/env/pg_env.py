@@ -164,7 +164,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 observation_space=self.observation_space,
                 action_space=self.action_space,
                 actions=[default_action],
-                actions_names=["GlobalDual"],
+                variation_names=["GlobalDual"],
                 benchbase_config=self.benchbase_config,
                 query_timeout=self.query_timeout,
                 update=False,
@@ -246,7 +246,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step_execute(
         self,
         setup_success: bool,
-        actions: list[Tuple[str, HolonAction]],
+        all_holon_action_variations: list[Tuple[str, HolonAction]],
         info: EnvInfoDict,
     ) -> Tuple[bool, EnvInfoDict]:
         if setup_success:
@@ -255,6 +255,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             # Evaluate the benchmark.
             self.logger.get_logger(__name__).info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n")
             self.logger.get_logger(__name__).info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n")
+            self.logger.get_logger(__name__).info(f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n")
             (
                 success,
                 metric,
@@ -269,8 +270,8 @@ class PostgresEnv(gym.Env[Any, Any]):
                 action_space=self.action_space,
                 benchbase_config=self.benchbase_config,
                 query_timeout=self.query_timeout,
-                actions=[a[1] for a in actions],
-                actions_names=[a[0] for a in actions],
+                actions=[a[1] for a in all_holon_action_variations],
+                variation_names=[a[0] for a in all_holon_action_variations],
                 update=True,
             )
         else:
@@ -284,7 +285,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             metric, reward = self.reward_utility(did_error=True)
             results, q_timeout, query_metric_data = None, True, None
 
-        actions_info = self.action_space.convert_actions_to_format_for_replay([action[1] for action in actions])
+        # Build EnvInfoDict
         info.update(
             EnvInfoDict(
                 {
@@ -293,7 +294,9 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results": results,
-                    "actions_info": actions_info,
+                    "actions_info": {
+                        "all_holon_action_variations": all_holon_action_variations,
+                    },
                 }
             )
         )
