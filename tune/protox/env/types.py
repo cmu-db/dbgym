@@ -188,8 +188,8 @@ class EnvInfoDict(TypedDict, total=False):
     metric: float
     # Reward of this step.
     reward: float
-    # Whether any queries timed out during this step's evaluation.
-    q_timeout: bool
+    # Whether any queries timed out or the workload as a whole timed out.
+    did_anything_time_out: bool
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
     # Information about the actions that were executed this step.

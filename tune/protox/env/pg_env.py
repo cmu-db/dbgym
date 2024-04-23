@@ -261,7 +261,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 metric,
                 reward,
                 results,
-                q_timeout,
+                did_anything_time_out,
                 query_metric_data,
             ) = self.workload.execute(
                 pg_conn=self.pg_conn,
@@ -283,14 +283,14 @@ class PostgresEnv(gym.Env[Any, Any]):
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
-            results, q_timeout, query_metric_data = None, True, None
+            results, did_anything_time_out, query_metric_data = None, True, None
 
         # Build EnvInfoDict
         info.update(
             EnvInfoDict(
                 {
                     "metric": metric,
-                    "q_timeout": q_timeout,
+                    "did_anything_time_out": did_anything_time_out,
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results": results,

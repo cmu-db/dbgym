@@ -570,11 +570,11 @@ class Workload(object):
                 start = 0.0
                 for i, qid in enumerate(self.order):
                     if qid in qid_runtime_data:
-                        data = qid_runtime_data[qid]
-                        assert data and data.runtime and data.query_run
-                        rtime = data.runtime
-                        pfx = data.query_run.prefix
-                        f.write(f"{i+1},{qid},{start},{rtime},{data.time_out},0,{pfx}\n")
+                        best_run = qid_runtime_data[qid]
+                        assert best_run and best_run.runtime and best_run.query_run
+                        rtime = best_run.runtime
+                        pfx = best_run.query_run.prefix
+                        f.write(f"{i+1},{qid},{start},{rtime},{best_run.timed_out},0,{pfx}\n")
                         start += rtime / 1e6
 
                 # Write a penalty term if needed.
@@ -594,7 +594,7 @@ class Workload(object):
 
             # Get all the timeouts.
             did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
-            return (did_any_query_time_out or workload_timed_out), qid_runtime_data
+            return did_any_query_time_out, workload_timed_out, qid_runtime_data
 
         return workload_runtime_accum
 
@@ -649,7 +649,7 @@ class Workload(object):
             # We can only create a state if we succeeded.
             success = observation_space.check_benchbase(self.dbgym_cfg, results)
         else:
-            ret = self.execute_workload(
+            did_any_query_time_out, did_workload_time_out, query_metric_data = self.execute_workload(
                 pg_conn,
                 actions=actions,
                 variation_names=variation_names,
@@ -663,8 +663,7 @@ class Workload(object):
                 blocklist=[],
                 first=first,
             )
-            assert isinstance(ret, tuple)
-            q_timeout, query_metric_data = ret[0], ret[1]
+            did_anything_time_out = did_any_query_time_out or did_workload_time_out
             success = True
 
         metric, reward = None, None
@@ -675,6 +674,6 @@ class Workload(object):
 
         if self.logger:
             self.logger.get_logger(__name__).info(
-                f"Benchmark iteration with metric {metric} (reward: {reward}) (q_timeout: {q_timeout})"
+                f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
             )
-        return success, metric, reward, results, q_timeout, query_metric_data
+        return success, metric, reward, results, did_anything_time_out, query_metric_data
