@@ -195,7 +195,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         current_step = 0
         start_found = False
         start_time = None
-        noop_index = False
         maximal_repo = None
         existing_index_acts = []
 
@@ -207,10 +206,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     start_time = parse(line.split("INFO:")[-1].split(" Baseline Metric")[0].split("[")[0])
                     progess_bar.update(1)
                 continue
-
-            elif "Selected action: " in line:
-                act = eval(line.split("Selected action: ")[-1])
-                noop_index = "NOOP" in act[1][0]
 
             elif _is_tuning_step_line(line):
                 if _is_tuning_step_line(line):
@@ -268,9 +263,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb") as f:
                     prior_states = pickle.load(f)
                     all_sc = set(prior_states[1])
-                    if not noop_index:
-                        for index_act in index_acts:
-                            all_sc.add(index_act)
+                    for index_act in index_acts:
+                        all_sc.add(index_act)
 
                     all_sc = {a for a in all_sc if not "USING btree ()" in a.sql(True)}
                     index_acts = all_sc

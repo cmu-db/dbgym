@@ -117,9 +117,8 @@ class IndexAction(object):
         )
         return h
 
-    def __repr__(self, add: bool = True) -> str:
-        return "{a} {idx_name} ON {tbl_name} USING {idx_type} ({columns}) {inc_clause}".format(
-            a="CREATE" if add else "NOOP",
+    def __repr__(self) -> str:
+        return "CREATE {idx_name} ON {tbl_name} USING {idx_type} ({columns}) {inc_clause}".format(
             idx_name=self.get_index_name(),
             tbl_name=self.tbl_name,
             idx_type=self.idx_type,
