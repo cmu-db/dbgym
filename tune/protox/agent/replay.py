@@ -198,7 +198,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         noop_index = False
         maximal_repo = None
         existing_index_acts = []
-        if1_count = 0
 
         for line in f:
             # Keep going until we've found the start.
@@ -214,12 +213,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 noop_index = "NOOP" in act[1][0]
 
             elif _is_tuning_step_line(line):
-                if1_count += 1
-                print(f"if1_count={if1_count}")
-
-                if if1_count >= 10:
-                    break
-
                 if _is_tuning_step_line(line):
                     repo = eval(line.split("Running ")[-1])[-1]
                     time_since_start = parse(line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0])
