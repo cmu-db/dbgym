@@ -288,8 +288,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 else:
                     did_any_query_time_out_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = did_any_query_time_out_in_original, did_workload_time_out_in_original, original_workload_runtime
 
-                # Add this tuning step's data to `run_data``.
-                run_data.append({
+                # Perform some validity checks and then add this tuning step's data to `run_data``.
+                this_step_run_data = {
                     "step": current_step,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "original_workload_runtime": original_workload_runtime,
@@ -298,7 +298,13 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     "replayed_workload_runtime": replayed_workload_runtime,
                     "did_any_query_time_out_in_replay": did_any_query_time_out_in_replay,
                     "did_workload_time_out_in_replay": did_workload_time_out_in_replay,
-                })
+                }
+                # Log before performing checks to help with debugging.
+                logging.info(f"this_step_run_data={this_step_run_data}")
+                assert not (did_workload_time_out_in_original and not did_any_query_time_out_in_original), "If the original workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
+                assert not (did_workload_time_out_in_replay and not did_any_query_time_out_in_replay), "If the replayed workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
+                assert not (did_any_query_time_out_in_replay and not did_workload_time_out_in_replay), "During replay, individual queries should not time out unless they timed out because the whole workload timed out."
+                run_data.append(this_step_run_data)
                 current_step += 1
 
                 run_folder = repo.split("/")[-1]
