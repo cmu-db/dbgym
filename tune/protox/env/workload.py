@@ -329,6 +329,10 @@ class Workload(object):
     def max_indexable(self) -> int:
         return max([len(cols) for _, cols in self.query_usages.items()])
 
+    @staticmethod
+    def compute_total_workload_runtime(qid_runtime_data: dict[str, BestQueryRun]) -> float:
+        return sum(best_run.runtime for best_run in qid_runtime_data.values()) / 1.0e6
+
     @time_record("execute")
     def execute_workload(
         self,
@@ -400,10 +404,6 @@ class Workload(object):
             actual_queries = self.queries
 
         # Now let us start executing.
-        # `workload_runtime_accum` is the accumulated runtime of the queries in the workload. Note that we execute multiple variations of each query, but
-        #   we only add the runtime of the *fastest* variation of each query to `workload_runtime_accum`. If all variations timed out, we'll add whatever
-        #   the timeout was set to to `workload_runtime_accum`.
-        workload_runtime_accum = 0.0
         qid_runtime_data: dict[str, BestQueryRun] = {}
         workload_timed_out = False
 
@@ -469,7 +469,7 @@ class Workload(object):
                         connection=pg_conn.conn(),
                         runs=runs,
                         query=query,
-                        query_timeout=min(target_pqt, this_execution_workload_timeout - workload_runtime_accum + 1),
+                        query_timeout=min(target_pqt, this_execution_workload_timeout - Workload.compute_total_workload_runtime(qid_runtime_data) + 1),
                         logger=self.logger,
                         sysknobs=sysknobs,
                         observation_space=observation_space,
@@ -490,9 +490,8 @@ class Workload(object):
 
                 assert best_run.runtime
                 qid_runtime_data[qid] = best_run
-                workload_runtime_accum += best_run.runtime / 1e6
 
-                if workload_runtime_accum > this_execution_workload_timeout:
+                if Workload.compute_total_workload_runtime(qid_runtime_data) > this_execution_workload_timeout:
                     # We need to undo any potential statements after the timed out query.
                     for st, rq in queries[qidx+1:]:
                         if st != QueryType.SELECT:
@@ -561,6 +560,7 @@ class Workload(object):
                     output["flattened"] = True
                     f.write(json.dumps(output, indent=4))
 
+            # run.raw.csv will essentially contain the information in qid_runtime_data. However, run.raw.csv may have an extra line for the penalty.
             with open(results_dir / "run.raw.csv", "w") as f:
                 # Write the raw query data.
                 f.write(
@@ -582,7 +582,7 @@ class Workload(object):
                 if workload_timed_out and self.workload_timeout_penalty > 1:
                     # Get the penalty.
                     penalty = (
-                        this_execution_workload_timeout * self.workload_timeout_penalty - workload_runtime_accum
+                        this_execution_workload_timeout * self.workload_timeout_penalty - Workload.compute_total_workload_runtime(qid_runtime_data)
                     )
                     penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
                 elif workload_timed_out and not first:
@@ -596,7 +596,7 @@ class Workload(object):
             did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
             return did_any_query_time_out, workload_timed_out, qid_runtime_data
 
-        return workload_runtime_accum
+        return Workload.compute_total_workload_runtime(qid_runtime_data)
 
     @time_record("execute")
     def _execute_benchbase(
