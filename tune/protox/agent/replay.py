@@ -232,15 +232,16 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
-                assert len(run_raw_csv.columns) == 6
-                # `did_any_query_time_out_in_original` will be true when a query does not execute to completion, regardless of how it happened. Even
-                #   if this was because there was only 1s before the workload timed out and thus the query was "unfairly" given a 1s "statement_timeout",
-                #   we will still set `did_any_query_time_out_in_original` to true because that query didn't not execute to completion.
+                assert len(run_raw_csv.columns) == 7
+                # `did_any_query_time_out_in_original` will be true when *all variations* of at least one query of the original workload did not execute
+                #   to completion, regardless of how it happened. Even if this was because there was only 1s before the workload timed out and thus the
+                #   query was "unfairly" given a 1s "statement_timeout", we will still set `did_any_query_time_out_in_original` to true because that query
+                #   didn't not execute to completion.
                 # When setting `did_any_query_time_out_in_original`, we can't just check whether the latency in run.raw.csv == `query_timeout` because
                 #   this doesn't handle the edge case where the "statement_timeout" setting in Postgres is set to be < `query_timeout`. This edge case
                 #   would happen when the amount of time remaining before we hit `workload_timeout` is less then `query_timeout` and thus Proto-X sets
                 #   "statement_timeout" to be < `query_timeout` in order to not exceed the `workload_timeout`.
-                did_any_query_time_out_in_original = (run_raw_csv["Latency (microseconds)"].max() / 1e6) == hpo_params["query_timeout"]
+                did_any_query_time_out_in_original = any(run_raw_csv["Timed Out"])
                 # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
                 #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
                 #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.

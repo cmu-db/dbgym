@@ -45,13 +45,11 @@ def _time_query(
         start_time = time.time()
         cursor = connection.execute(query)
         qid_runtime = (time.time() - start_time) * 1e6
-        print(f"{prefix} measured qid_runtime={qid_runtime/1e6}")
 
         if has_explain:
             c = [c for c in cursor][0][0][0]
             assert "Execution Time" in c
             qid_runtime = float(c["Execution Time"]) * 1e3
-            print(f"{prefix} explain qid_runtime={qid_runtime/1e6}")
             explain_data = c
 
         if logger:

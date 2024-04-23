@@ -406,7 +406,7 @@ class Workload(object):
         # Now let us start executing.
         workload_time = 0.0
         time_left = workload_timeout
-        qid_runtime_data = {}
+        qid_runtime_data: dict[str, BestQueryRun] = {}
         stop_running = False
 
         for execute_idx, qid in enumerate(actual_order):
@@ -606,7 +606,7 @@ class Workload(object):
             with open(results_dir / "run.raw.csv", "w") as f:
                 # Write the raw query data.
                 f.write(
-                    "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Worker Id (start number),Phase Id (index in config file)\n"
+                    "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Timed Out,Worker Id (start number),Phase Id (index in config file)\n"
                 )
 
                 start = 0.0
@@ -616,7 +616,7 @@ class Workload(object):
                         assert data and data.runtime and data.query_run
                         rtime = data.runtime
                         pfx = data.query_run.prefix
-                        f.write(f"{i+1},{qid},{start},{rtime},0,{pfx}\n")
+                        f.write(f"{i+1},{qid},{start},{rtime},{data.timeout},0,{pfx}\n")
                         start += rtime / 1e6
 
                 # Write a penalty term if needed.
@@ -632,7 +632,7 @@ class Workload(object):
                     penalty = 3.0e6
 
                 if penalty > 0:
-                    f.write(f"{len(self.order)},P,{time.time()},{penalty},0,PENALTY\n")
+                    f.write(f"{len(self.order)},P,{time.time()},{penalty},True,0,PENALTY\n")
 
             # Get all the timeouts.
             timeouts = [v.timeout for _, v in qid_runtime_data.items()]
