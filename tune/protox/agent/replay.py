@@ -108,10 +108,6 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     replay_tuning_run(dbgym_cfg, tuning_steps_dpath, replay_args)
 
 
-def check_index_space_raw_samples_equality(sample1: IndexSpaceRawSample, sample2: IndexSpaceRawSample) -> bool:
-    return np.array_equal(sample1[-1], sample2[-1]) and sample1[:-1] == sample2[:-1]
-
-
 def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_args: ReplayArgs):
     """
     Replay a single tuning run (as in one tuning_steps/ folder).
@@ -252,7 +248,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                     index_space_raw_sample = first_holon_action[1]
                     index_action = action_space.get_index_space().to_action(index_space_raw_sample)
                     assert all([knob_space_action == holon_action[0] for (_, holon_action) in all_holon_action_variations])
-                    assert all([check_index_space_raw_samples_equality(index_space_raw_sample, holon_action[1]) for (_, holon_action) in all_holon_action_variations])
+                    assert all([index_action == action_space.get_index_space().to_action(holon_action[1]) for (_, holon_action) in all_holon_action_variations])
 
                 # Get the indexes from this action and the prior state
                 index_acts = set()
