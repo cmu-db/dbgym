@@ -405,10 +405,10 @@ class Workload(object):
         #   the timeout was set to to `workload_runtime_accum`.
         workload_runtime_accum = 0.0
         qid_runtime_data: dict[str, BestQueryRun] = {}
-        stop_running = False
+        workload_timed_out = False
 
         for execute_idx, qid in enumerate(actual_order):
-            if stop_running:
+            if workload_timed_out:
                 break
 
             queries = actual_queries[qid]
@@ -500,7 +500,7 @@ class Workload(object):
                             assert st != QueryType.INS_UPD_DEL
                             pg_conn.conn().execute(rq)
 
-                    stop_running = True
+                    workload_timed_out = True
                     break
 
         # Undo any necessary state changes.
@@ -579,13 +579,13 @@ class Workload(object):
 
                 # Write a penalty term if needed.
                 penalty = 0.0
-                if stop_running and self.workload_timeout_penalty > 1:
+                if workload_timed_out and self.workload_timeout_penalty > 1:
                     # Get the penalty.
                     penalty = (
                         this_execution_workload_timeout * self.workload_timeout_penalty - workload_runtime_accum
                     )
                     penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
-                elif stop_running and not first:
+                elif workload_timed_out and not first:
                     # Always degrade it a little if we've timed out.
                     penalty = 3.0e6
 
@@ -594,7 +594,7 @@ class Workload(object):
 
             # Get all the timeouts.
             did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
-            return (did_any_query_time_out or stop_running), qid_runtime_data
+            return (did_any_query_time_out or workload_timed_out), qid_runtime_data
 
         return workload_runtime_accum
 
