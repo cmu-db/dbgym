@@ -404,7 +404,10 @@ class Workload(object):
             actual_queries = self.queries
 
         # Now let us start executing.
-        workload_time = 0.0
+        # `workload_runtime_accum` is the accumulated runtime of the queries in the workload. Note that we execute multiple variations of each query, but
+        #   we only add the runtime of the *fastest* variation of each query to `workload_runtime_accum`. If all variations timed out, we'll add whatever
+        #   the timeout was set to to `workload_runtime_accum`.
+        workload_runtime_accum = 0.0
         time_left = workload_timeout
         qid_runtime_data: dict[str, BestQueryRun] = {}
         stop_running = False
@@ -509,7 +512,7 @@ class Workload(object):
                             connection=pg_conn.conn(),
                             runs=runs,
                             query=query,
-                            query_timeout=min(target_pqt, workload_timeout - workload_time + 1),
+                            query_timeout=min(target_pqt, workload_timeout - workload_runtime_accum + 1),
                             logger=self.logger,
                             sysknobs=sysknobs,
                             observation_space=observation_space,
@@ -533,7 +536,7 @@ class Workload(object):
                     qid_runtime = best_run.runtime
 
                 time_left -= qid_runtime / 1e6
-                workload_time += qid_runtime / 1e6
+                workload_runtime_accum += qid_runtime / 1e6
                 if time_left < 0:
                     # We need to undo any potential statements after the timed out query.
                     for st, rq in queries[qidx+1:]:
@@ -624,7 +627,7 @@ class Workload(object):
                 if stop_running and self.workload_timeout_penalty > 1:
                     # Get the penalty.
                     penalty = (
-                        workload_timeout * self.workload_timeout_penalty - workload_time
+                        workload_timeout * self.workload_timeout_penalty - workload_runtime_accum
                     )
                     penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
                 elif stop_running and not first:
@@ -638,7 +641,7 @@ class Workload(object):
             timeouts = [v.timeout for _, v in qid_runtime_data.items()]
             return True, (any(timeouts) or stop_running), qid_runtime_data
 
-        return workload_time
+        return workload_runtime_accum
 
     @time_record("execute")
     def _execute_benchbase(

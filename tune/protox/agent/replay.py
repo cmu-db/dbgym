@@ -187,6 +187,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             blocklist=replay_args.blocklist,
             first=False,
         )
+        assert type(replayed_runtime) is float, "Workload.execute_workload() can return either a float or a tuple. During replay, we must ensure that it returns a float."
         return replayed_runtime
 
     run_data = []
