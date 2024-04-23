@@ -348,7 +348,7 @@ class Workload(object):
         workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
         blocklist: list[str] = [],
         first: bool = False,
-    ) -> Union[float, Tuple[bool, bool, dict[str, Any]]]:
+    ) -> Tuple[bool, bool, dict[str, Any]]:
         this_execution_workload_timeout = (
             self.workload_timeout
             if not override_workload_timeout
@@ -592,11 +592,9 @@ class Workload(object):
                 if penalty > 0:
                     f.write(f"{len(self.order)},P,{time.time()},{penalty},True,0,PENALTY\n")
 
-            # Get all the timeouts.
-            did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
-            return did_any_query_time_out, workload_timed_out, qid_runtime_data
-
-        return Workload.compute_total_workload_runtime(qid_runtime_data)
+        # Get all the timeouts.
+        did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
+        return did_any_query_time_out, workload_timed_out, qid_runtime_data
 
     @time_record("execute")
     def _execute_benchbase(

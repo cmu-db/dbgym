@@ -5,26 +5,22 @@ The original tuning run has per-query timeouts, so the runtimes may be inaccurat
 Additionally, the original tuning run may have been accelerated by Boot, whereas the
     replayed tuning run is not.
 """
-import datetime
 import json
 import logging
 import pickle
 import click
-import numpy as np
 import pandas as pd
 import tqdm
 from pathlib import Path
 from dateutil.parser import parse
 
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, conv_inputpath_to_realabspath, open_and_save, save_file, workload_name_fn, default_tuning_steps_dpath
-# sys.path.append("/home/phw2/dbgym") # TODO(phw2): figure out if this is required
-
+from misc.utils import DBGymConfig, TuningMode, conv_inputpath_to_realabspath, open_and_save, save_file, workload_name_fn, default_tuning_steps_dpath
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import HolonAction, IndexSpaceRawSample
+from tune.protox.env.types import HolonAction
+from tune.protox.env.workload import Workload
 
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -168,13 +164,13 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             elif _is_tuning_step_line(line):
                 num_lines += 1
 
-    # A convenience wrapper around execute_workload() which fills in the arguments properly
+    # A convenience wrapper around execute_workload() which fills in the arguments properly and processes the return values.
     def _execute_workload_wrapper(actions_info: list["HolonAction"]) -> list[float]:
         logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
         logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n")
         assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
         all_holon_action_variations = actions_info["all_holon_action_variations"]
-        replayed_runtime = pg_env.workload.execute_workload(
+        did_any_query_time_out, did_workload_time_out, qid_runtime_data = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
             actions=[holon_action for (_, holon_action) in all_holon_action_variations],
             variation_names=[variation_name for (variation_name, _) in all_holon_action_variations],
@@ -186,8 +182,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             blocklist=replay_args.blocklist,
             first=False,
         )
-        assert type(replayed_runtime) is float, "Workload.execute_workload() can return either a float or a tuple. During replay, we must ensure that it returns a float."
-        return replayed_runtime
+        workload_runtime = Workload.compute_total_workload_runtime(qid_runtime_data)
+        return did_any_query_time_out, did_workload_time_out, workload_runtime
 
     run_data = []
     progess_bar = tqdm.tqdm(total=num_lines)
@@ -240,8 +236,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 did_workload_time_out_in_original = len(run_raw_csv_penalty_rows) > 0
                 # Penalties are meant to affect the reward of the tuning agent but they are unrelated to the actual runtime, so we ignore them when
                 #   computing the original runtime.
-                original_runtime = run_raw_csv_non_penalty_rows["Latency (microseconds)"].sum() / 1e6
-                assert original_runtime > 0
+                original_workload_runtime = run_raw_csv_non_penalty_rows["Latency (microseconds)"].sum() / 1e6
+                assert original_workload_runtime > 0
 
                 # Extract the necessary values from action.pkl
                 with open_and_save(dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb") as f:
@@ -288,19 +284,20 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
-                    replayed_runtime = _execute_workload_wrapper(actions_info)
-                    logging.info(f"Original Runtime: {original_runtime} (timed out? {did_any_query_time_out_in_original}). Replayed Runtime: {replayed_runtime}")
+                    did_any_query_time_out_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = _execute_workload_wrapper(actions_info)
                 else:
-                    replayed_runtime = original_runtime
+                    did_any_query_time_out_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = did_any_query_time_out_in_original, did_workload_time_out_in_original, original_workload_runtime
 
                 # Add this tuning step's data to `run_data``.
                 run_data.append({
                     "step": current_step,
-                    "original_runtime": original_runtime,
+                    "time_since_start": (time_since_start - start_time).total_seconds(),
+                    "original_workload_runtime": original_workload_runtime,
                     "did_any_query_time_out_in_original": did_any_query_time_out_in_original,
                     "did_workload_time_out_in_original": did_workload_time_out_in_original,
-                    "time_since_start": (time_since_start - start_time).total_seconds(),
-                    "replayed_runtime": replayed_runtime,
+                    "replayed_workload_runtime": replayed_workload_runtime,
+                    "did_any_query_time_out_in_replay": did_any_query_time_out_in_replay,
+                    "did_workload_time_out_in_replay": did_workload_time_out_in_replay,
                 })
                 current_step += 1
 
