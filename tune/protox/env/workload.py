@@ -352,9 +352,6 @@ class Workload(object):
         )
         assert len(actions) == len(variation_names)
 
-        # Do we need metrics.
-        need_metric = False if not observation_space else observation_space.require_metrics()
-
         sysknobs = KnobSpaceAction({})
         ql_knobs = []
         if len(actions) > 0:
