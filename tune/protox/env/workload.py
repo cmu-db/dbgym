@@ -346,7 +346,7 @@ class Workload(object):
         blocklist: list[str] = [],
         first: bool = False,
     ) -> Union[float, Tuple[bool, bool, dict[str, Any]]]:
-        workload_timeout = (
+        this_execution_workload_timeout = (
             self.workload_timeout
             if not override_workload_timeout
             else override_workload_timeout
@@ -408,7 +408,7 @@ class Workload(object):
         #   we only add the runtime of the *fastest* variation of each query to `workload_runtime_accum`. If all variations timed out, we'll add whatever
         #   the timeout was set to to `workload_runtime_accum`.
         workload_runtime_accum = 0.0
-        time_left = workload_timeout
+        time_left = this_execution_workload_timeout
         qid_runtime_data: dict[str, BestQueryRun] = {}
         stop_running = False
 
@@ -487,7 +487,7 @@ class Workload(object):
                         if r[2] not in [rr[2] for rr in runs]:
                             runs.append(r)
 
-                    target_pqt = query_timeout if query_timeout else workload_timeout
+                    target_pqt = query_timeout if query_timeout else this_execution_workload_timeout
                     skip_execute = False
                     if (
                         reset_metrics is not None
@@ -512,7 +512,7 @@ class Workload(object):
                             connection=pg_conn.conn(),
                             runs=runs,
                             query=query,
-                            query_timeout=min(target_pqt, workload_timeout - workload_runtime_accum + 1),
+                            query_timeout=min(target_pqt, this_execution_workload_timeout - workload_runtime_accum + 1),
                             logger=self.logger,
                             sysknobs=sysknobs,
                             observation_space=observation_space,
@@ -627,7 +627,7 @@ class Workload(object):
                 if stop_running and self.workload_timeout_penalty > 1:
                     # Get the penalty.
                     penalty = (
-                        workload_timeout * self.workload_timeout_penalty - workload_runtime_accum
+                        this_execution_workload_timeout * self.workload_timeout_penalty - workload_runtime_accum
                     )
                     penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
                 elif stop_running and not first:
