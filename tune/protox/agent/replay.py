@@ -183,7 +183,6 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             reset_metrics=None,
             query_timeout=None,
             workload_qdir=None,
-            disable_pg_hint=False,
             blocklist=replay_args.blocklist,
             first=False,
         )

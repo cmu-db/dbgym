@@ -342,7 +342,6 @@ class Workload(object):
         override_workload_timeout: Optional[float] = None,
         query_timeout: Optional[int] = None,
         workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
-        disable_pg_hint: bool = False,
         blocklist: list[str] = [],
         first: bool = False,
     ) -> Union[float, Tuple[bool, bool, dict[str, Any]]]:
@@ -428,114 +427,74 @@ class Workload(object):
                     pg_conn.conn().execute(query)
                     continue
 
-                if disable_pg_hint:
-                    assert len(ql_knobs) == 1
-                    ql_knob = ql_knobs[0]
-                    qid_knobs = {
-                        ql_knob[0].knobs[k]: ql_knob[1][k]
-                        for k in ql_knob[1].keys()
-                        if f"{qid}_" in k
-                    }
-
-                    # Alter the session first.
-                    disable = ";".join(
-                        [
-                            f"SET {knob.knob_name} = OFF"
-                            for knob, value in qid_knobs.items()
-                            if value == 0
-                        ]
+                # De-duplicate the runs.
+                runs: list[QueryRun] = []
+                zruns: list[QueryRun] = [
+                    QueryRun(
+                        act_name,
+                        f"{act_name}_{qid}",
+                        QuerySpaceKnobAction(
+                            {
+                                ql_knob[0].knobs[k]: ql_knob[1][k]
+                                for k in ql_knob[1].keys()
+                                if f"{qid}_" in k
+                            }
+                        ),
                     )
-                    pg_conn.conn().execute(disable)
+                    for ql_knob, act_name in zip(ql_knobs, variation_names)
+                ]
+                for r in zruns:
+                    if r[2] not in [rr[2] for rr in runs]:
+                        runs.append(r)
 
-                    qid_runtime, _, _, _ = _acquire_metrics_around_query(
-                        self.logger,
-                        f"{qid}",
-                        pg_conn.conn(),
-                        query,
-                        query_timeout=this_execution_workload_timeout - workload_runtime_accum,
-                        observation_space=None,
+                target_pqt = query_timeout if query_timeout else this_execution_workload_timeout
+                skip_execute = False
+                if (
+                    reset_metrics is not None
+                    and qid in reset_metrics
+                    and not reset_metrics[qid].timeout
+                ):
+                    # If we have a reset metric, use it's timeout and convert to seconds.
+                    truntime = reset_metrics[qid].runtime
+                    assert truntime is not None
+                    target_pqt = math.ceil(truntime / 1.0e6)
+
+                    # If we've seen the exact same query knobs before, skip it.
+                    rmetrics = reset_metrics[qid]
+                    skip_execute = (
+                        (rmetrics.query_run is not None)
+                        and (rmetrics.query_run.qknobs is not None)
+                        and (rmetrics.query_run.qknobs == runs[-1].qknobs)
                     )
 
-                    undo_disable = ";".join(
-                        [
-                            f"SET {knob.knob_name} = ON"
-                            for knob, value in qid_knobs.items()
-                            if value == 0
-                        ]
+                if not skip_execute:
+                    best_run: BestQueryRun = execute_variations(
+                        connection=pg_conn.conn(),
+                        runs=runs,
+                        query=query,
+                        query_timeout=min(target_pqt, this_execution_workload_timeout - workload_runtime_accum + 1),
+                        logger=self.logger,
+                        sysknobs=sysknobs,
+                        observation_space=observation_space,
                     )
-                    pg_conn.conn().execute(undo_disable)
-
                 else:
-                    # De-duplicate the runs.
-                    runs: list[QueryRun] = []
-                    zruns: list[QueryRun] = [
-                        QueryRun(
-                            act_name,
-                            f"{act_name}_{qid}",
-                            QuerySpaceKnobAction(
-                                {
-                                    ql_knob[0].knobs[k]: ql_knob[1][k]
-                                    for k in ql_knob[1].keys()
-                                    if f"{qid}_" in k
-                                }
-                            ),
-                        )
-                        for ql_knob, act_name in zip(ql_knobs, variation_names)
-                    ]
-                    for r in zruns:
-                        if r[2] not in [rr[2] for rr in runs]:
-                            runs.append(r)
+                    assert reset_metrics
+                    best_run = reset_metrics[qid]
 
-                    target_pqt = query_timeout if query_timeout else this_execution_workload_timeout
-                    skip_execute = False
-                    if (
-                        reset_metrics is not None
-                        and qid in reset_metrics
-                        and not reset_metrics[qid].timeout
+                if reset_metrics is not None and qid in reset_metrics:
+                    # Old one is actually better so let's use that.
+                    rmetric = reset_metrics[qid]
+                    if best_run.timeout or (
+                        best_run.runtime
+                        and rmetric.runtime
+                        and rmetric.runtime < best_run.runtime
                     ):
-                        # If we have a reset metric, use it's timeout and convert to seconds.
-                        truntime = reset_metrics[qid].runtime
-                        assert truntime is not None
-                        target_pqt = math.ceil(truntime / 1.0e6)
+                        best_run = rmetric
 
-                        # If we've seen this exact before, skip it.
-                        rmetrics = reset_metrics[qid]
-                        skip_execute = (
-                            (rmetrics.query_run is not None)
-                            and (rmetrics.query_run.qknobs is not None)
-                            and (rmetrics.query_run.qknobs == runs[-1].qknobs)
-                        )
+                assert best_run.runtime
+                qid_runtime_data[qid] = best_run
+                workload_runtime_accum += best_run.runtime / 1e6
 
-                    if not skip_execute:
-                        best_run: BestQueryRun = execute_variations(
-                            connection=pg_conn.conn(),
-                            runs=runs,
-                            query=query,
-                            query_timeout=min(target_pqt, this_execution_workload_timeout - workload_runtime_accum + 1),
-                            logger=self.logger,
-                            sysknobs=sysknobs,
-                            observation_space=observation_space,
-                        )
-                    else:
-                        assert reset_metrics
-                        best_run = reset_metrics[qid]
-
-                    if reset_metrics is not None and qid in reset_metrics:
-                        # Old one is actually better so let's use that.
-                        rmetric = reset_metrics[qid]
-                        if best_run.timeout or (
-                            best_run.runtime
-                            and rmetric.runtime
-                            and rmetric.runtime < best_run.runtime
-                        ):
-                            best_run = rmetric
-
-                    assert best_run.runtime
-                    qid_runtime_data[qid] = best_run
-                    qid_runtime = best_run.runtime
-
-                workload_runtime_accum += qid_runtime / 1e6
-                
                 if workload_runtime_accum > this_execution_workload_timeout:
                     # We need to undo any potential statements after the timed out query.
                     for st, rq in queries[qidx+1:]:
@@ -704,7 +663,6 @@ class Workload(object):
                 override_workload_timeout=self.workload_timeout,
                 query_timeout=query_timeout,
                 workload_qdir=None,
-                disable_pg_hint=False,
                 blocklist=[],
                 first=first,
             )
