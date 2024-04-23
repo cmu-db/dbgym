@@ -136,7 +136,7 @@ BestQueryRun = NamedTuple(
     [
         ("query_run", Optional[QueryRun]),
         ("runtime", Optional[float]),
-        ("timeout", bool),
+        ("timed_out", bool),
         ("explain_data", Optional[Any]),
         ("metric_data", Optional[dict[str, Any]]),
     ],

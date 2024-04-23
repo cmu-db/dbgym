@@ -449,7 +449,7 @@ class Workload(object):
                 if (
                     reset_metrics is not None
                     and qid in reset_metrics
-                    and not reset_metrics[qid].timeout
+                    and not reset_metrics[qid].timed_out
                 ):
                     # If we have a reset metric, use it's timeout and convert to seconds.
                     truntime = reset_metrics[qid].runtime
@@ -481,7 +481,7 @@ class Workload(object):
                 if reset_metrics is not None and qid in reset_metrics:
                     # Old one is actually better so let's use that.
                     rmetric = reset_metrics[qid]
-                    if best_run.timeout or (
+                    if best_run.timed_out or (
                         best_run.runtime
                         and rmetric.runtime
                         and rmetric.runtime < best_run.runtime
@@ -574,7 +574,7 @@ class Workload(object):
                         assert data and data.runtime and data.query_run
                         rtime = data.runtime
                         pfx = data.query_run.prefix
-                        f.write(f"{i+1},{qid},{start},{rtime},{data.timeout},0,{pfx}\n")
+                        f.write(f"{i+1},{qid},{start},{rtime},{data.time_out},0,{pfx}\n")
                         start += rtime / 1e6
 
                 # Write a penalty term if needed.
@@ -593,8 +593,8 @@ class Workload(object):
                     f.write(f"{len(self.order)},P,{time.time()},{penalty},True,0,PENALTY\n")
 
             # Get all the timeouts.
-            timeouts = [v.timeout for _, v in qid_runtime_data.items()]
-            return True, (any(timeouts) or stop_running), qid_runtime_data
+            did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
+            return (did_any_query_time_out or stop_running), qid_runtime_data
 
         return workload_runtime_accum
 
@@ -664,8 +664,8 @@ class Workload(object):
                 first=first,
             )
             assert isinstance(ret, tuple)
-            success, q_timeout, query_metric_data = ret[0], ret[1], ret[2]
-            assert success
+            q_timeout, query_metric_data = ret[0], ret[1]
+            success = True
 
         metric, reward = None, None
         if reward_utility is not None:

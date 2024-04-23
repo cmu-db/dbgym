@@ -41,7 +41,7 @@ def _mutilate_action_with_metrics(
 
         processed = set()
         for q, data in query_metric_data.items():
-            if not data.timeout:
+            if not data.timed_out:
                 assert data.query_run
                 pqk = data.query_run.qknobs
                 for k, v in data.query_run.qknobs.items():
@@ -147,18 +147,18 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
     def _update_best_observed(self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False) -> None:
         if query_metric_data is not None:
-            for q, data in query_metric_data.items():
-                if q not in self.best_observed or force_overwrite:
-                    self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+            for qid, best_run in query_metric_data.items():
+                if qid not in self.best_observed or force_overwrite:
+                    self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
                     if self.logger:
-                        self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6} (force: {force_overwrite})")
-                elif not data.timeout:
-                    qobs = self.best_observed[q]
-                    assert qobs.runtime and data.runtime
-                    if data.runtime < qobs.runtime:
-                        self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                        self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})")
+                elif not best_run.timed_out:
+                    qobs = self.best_observed[qid]
+                    assert qobs.runtime and best_run.runtime
+                    if best_run.runtime < qobs.runtime:
+                        self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
                         if self.logger:
-                            self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6}")
+                            self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
 
     def step(  # type: ignore
         self,
