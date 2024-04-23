@@ -408,7 +408,6 @@ class Workload(object):
         #   we only add the runtime of the *fastest* variation of each query to `workload_runtime_accum`. If all variations timed out, we'll add whatever
         #   the timeout was set to to `workload_runtime_accum`.
         workload_runtime_accum = 0.0
-        time_left = this_execution_workload_timeout
         qid_runtime_data: dict[str, BestQueryRun] = {}
         stop_running = False
 
@@ -453,7 +452,7 @@ class Workload(object):
                         f"{qid}",
                         pg_conn.conn(),
                         query,
-                        query_timeout=time_left,
+                        query_timeout=this_execution_workload_timeout - workload_runtime_accum,
                         observation_space=None,
                     )
 
@@ -535,9 +534,9 @@ class Workload(object):
                     qid_runtime_data[qid] = best_run
                     qid_runtime = best_run.runtime
 
-                time_left -= qid_runtime / 1e6
                 workload_runtime_accum += qid_runtime / 1e6
-                if time_left < 0:
+                
+                if workload_runtime_accum > this_execution_workload_timeout:
                     # We need to undo any potential statements after the timed out query.
                     for st, rq in queries[qidx+1:]:
                         if st != QueryType.SELECT:
