@@ -35,22 +35,29 @@ def _mutilate_action_with_metrics(
         of all variations we tried.
     """
 
+    # At the start of the function, the query knobs in `action` are those selected by the agent.
+
     if query_metric_data is not None:
         extract_q_knobs = action_space.extract_query(action)
         assert extract_q_knobs
 
         processed = set()
         for q, data in query_metric_data.items():
+            # For queries where at least one variation didn't time out, modify the query knobs in `action`
+            #   to be that from the best variation.
             if not data.timed_out:
                 assert data.query_run
-                pqk = data.query_run.qknobs
                 for k, v in data.query_run.qknobs.items():
                     # Implant the best.
                     extract_q_knobs[k] = v
+            # For all queries that we ran, even if all their variations time out, add them to `processed`.
+            # By doing so, the next part of the function will not affect queries where all variations timed
+            #   out and will leave their knobs equal to the ones selected by the agent.
             processed.add(q)
 
+        # If we have set `timeout_qknobs`, then use those knobs for the queries that we didn't run at all.
+        # Usually, these `timeout_qknobs` are those of the "PrevDual" variation.
         if timeout_qknobs:
-            qspace = action_space.get_query_space()
             assert timeout_qknobs
 
             all_qids = set([k.query_name for k in timeout_qknobs.keys()]) - processed
@@ -65,6 +72,16 @@ def _mutilate_action_with_metrics(
                     extract_q_knobs[k] = v
 
         action = action_space.replace_query(action, extract_q_knobs)
+
+    # There are three types of queries we handle in different ways.
+    # For queries that executed where at least one variation didn't time out, we can safely use the
+    #   query knobs of their best variation.
+    # For queries that executed where all their variations timed out, we don't want to use the knobs
+    #   in `timeout_qknobs` since those are known to be bad. Instead, we just use the knobs selected by
+    #   by the agent, which may be different from the knobs of *all* variations. 
+    # Finally, for queries that didn't execute, we'll assume that some arbitrary variation ("PrevDual")
+    #   is probably better than the knobs set by the agent.
+
     return action
 
 
