@@ -188,7 +188,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             actions = [best_observed_holon_action]
             variation_names = ["BestObserved"]
 
-        did_any_query_time_out, did_workload_time_out, qid_runtime_data = pg_env.workload.execute_workload(
+        num_timed_out_queries, did_workload_time_out, qid_runtime_data = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
             actions=actions,
             variation_names=variation_names,
@@ -201,7 +201,7 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             first=False,
         )
         workload_runtime = Workload.compute_total_workload_runtime(qid_runtime_data)
-        return did_any_query_time_out, did_workload_time_out, workload_runtime
+        return num_timed_out_queries, did_workload_time_out, workload_runtime
 
     run_data = []
     progess_bar = tqdm.tqdm(total=num_lines)
@@ -235,15 +235,10 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
                 assert len(run_raw_csv.columns) == 7
-                # `did_any_query_time_out_in_original` will be true when *all variations* of at least one query of the original workload did not execute
-                #   to completion, regardless of how it happened. Even if this was because there was only 1s before the workload timed out and thus the
-                #   query was "unfairly" given a 1s "statement_timeout", we will still set `did_any_query_time_out_in_original` to true because that query
-                #   didn't not execute to completion.
-                # When setting `did_any_query_time_out_in_original`, we can't just check whether the latency in run.raw.csv == `query_timeout` because
-                #   this doesn't handle the edge case where the "statement_timeout" setting in Postgres is set to be < `query_timeout`. This edge case
-                #   would happen when the amount of time remaining before we hit `workload_timeout` is less then `query_timeout` and thus Proto-X sets
-                #   "statement_timeout" to be < `query_timeout` in order to not exceed the `workload_timeout`.
-                did_any_query_time_out_in_original = any(run_raw_csv["Timed Out"])
+                # `num_timed_out_queries_in_original` counts the number of queries where *all variations* timed out. Note that the query_timeout of
+                #   a query may be set extremely low because the workload is about to time out, so it could be viewed as "unfair" to count those queries as
+                #   having timed out. Regardless, that's how we currently do things.
+                num_timed_out_queries_in_original = run_raw_csv["Timed Out"].sum()
                 # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
                 #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
                 #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.
@@ -302,26 +297,26 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
-                    did_any_query_time_out_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = _execute_workload_wrapper(actions_info)
+                    num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = _execute_workload_wrapper(actions_info)
                 else:
-                    did_any_query_time_out_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = did_any_query_time_out_in_original, did_workload_time_out_in_original, original_workload_runtime
+                    num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = num_timed_out_queries_in_original, did_workload_time_out_in_original, original_workload_runtime
 
                 # Perform some validity checks and then add this tuning step's data to `run_data``.
                 this_step_run_data = {
                     "step": current_step,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "original_workload_runtime": original_workload_runtime,
-                    "did_any_query_time_out_in_original": did_any_query_time_out_in_original,
+                    "num_timed_out_queries_in_original": num_timed_out_queries_in_original,
                     "did_workload_time_out_in_original": did_workload_time_out_in_original,
                     "replayed_workload_runtime": replayed_workload_runtime,
-                    "did_any_query_time_out_in_replay": did_any_query_time_out_in_replay,
+                    "num_timed_out_queries_in_replay": num_timed_out_queries_in_replay,
                     "did_workload_time_out_in_replay": did_workload_time_out_in_replay,
                 }
                 # Log before performing checks to help with debugging.
                 logging.info(f"this_step_run_data={this_step_run_data}")
-                assert not (did_workload_time_out_in_original and not did_any_query_time_out_in_original), "If the original workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
-                assert not (did_workload_time_out_in_replay and not did_any_query_time_out_in_replay), "If the replayed workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
-                assert not (did_any_query_time_out_in_replay and not did_workload_time_out_in_replay), "During replay, individual queries should not time out unless they timed out because the whole workload timed out."
+                assert not (did_workload_time_out_in_original and not num_timed_out_queries_in_original > 0), "If the original workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
+                assert not (did_workload_time_out_in_replay and not num_timed_out_queries_in_replay > 0), "If the replayed workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
+                assert not (num_timed_out_queries_in_replay > 0 and not did_workload_time_out_in_replay), "During replay, individual queries should not time out unless they timed out because the whole workload timed out."
                 run_data.append(this_step_run_data)
                 current_step += 1
 

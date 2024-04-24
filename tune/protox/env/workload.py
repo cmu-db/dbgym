@@ -348,7 +348,7 @@ class Workload(object):
         workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
         blocklist: list[str] = [],
         first: bool = False,
-    ) -> Tuple[bool, bool, dict[str, Any]]:
+    ) -> Tuple[int, bool, dict[str, Any]]:
         this_execution_workload_timeout = (
             self.workload_timeout
             if not override_workload_timeout
@@ -593,8 +593,8 @@ class Workload(object):
                     f.write(f"{len(self.order)},P,{time.time()},{penalty},True,0,PENALTY\n")
 
         # Get all the timeouts.
-        did_any_query_time_out = any([best_run.timed_out for _, best_run in qid_runtime_data.items()])
-        return did_any_query_time_out, workload_timed_out, qid_runtime_data
+        num_timed_out_queries = sum([1 if best_run.timed_out else 0 for _, best_run in qid_runtime_data.items()])
+        return num_timed_out_queries, workload_timed_out, qid_runtime_data
 
     @time_record("execute")
     def _execute_benchbase(
@@ -647,7 +647,7 @@ class Workload(object):
             # We can only create a state if we succeeded.
             success = observation_space.check_benchbase(self.dbgym_cfg, results)
         else:
-            did_any_query_time_out, did_workload_time_out, query_metric_data = self.execute_workload(
+            num_timed_out_queries, did_workload_time_out, query_metric_data = self.execute_workload(
                 pg_conn,
                 actions=actions,
                 variation_names=variation_names,
@@ -661,7 +661,7 @@ class Workload(object):
                 blocklist=[],
                 first=first,
             )
-            did_anything_time_out = did_any_query_time_out or did_workload_time_out
+            did_anything_time_out = num_timed_out_queries > 0 or did_workload_time_out
             success = True
 
         metric, reward = None, None
