@@ -181,6 +181,9 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             actions = [holon_action for (_, holon_action) in all_holon_action_variations]
             variation_names = [variation_name for (variation_name, _) in all_holon_action_variations]
         else:
+            # Note that "best observed" is not an entirely accurate name. Specifically, if the workload times out, some queries
+            #   will not have had a chance to run at all. Based on the behavior of `_mutilate_action_with_metrics()`, we select
+            #   an arbitrary variation fo the queries that have not executed at all.
             best_observed_holon_action = actions_info["best_observed_holon_action"]
             actions = [best_observed_holon_action]
             variation_names = ["BestObserved"]
