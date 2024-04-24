@@ -277,15 +277,14 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         if info["query_metric_data"]:
             self._update_best_observed(info["query_metric_data"])
 
-        best_holon_action = _mutilate_action_with_metrics(
+        best_observed_holon_action = _mutilate_action_with_metrics(
             self.action_space, action, info["query_metric_data"], timeout_qknobs
         )
-        best_observed_query_space_action = best_holon_action[2]
 
         with torch.no_grad():
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
-            info["actions_info"]["best_observed_query_space_action"] = best_observed_query_space_action
+            info["actions_info"]["best_observed_holon_action"] = best_observed_holon_action
             info["maximal_embed"] = self.action_space.to_latent([action])
 
         return self.unwrapped.step_post_execute(success, action, info)

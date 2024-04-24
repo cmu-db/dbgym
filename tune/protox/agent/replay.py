@@ -28,9 +28,10 @@ REPLAY_DATA_FNAME = "replay_data.csv"
 
 class ReplayArgs:
     def __init__(
-        self, workload_timeout_during_replay: bool, simulated: bool, cutoff: float, blocklist: list
+        self, workload_timeout_during_replay: bool, replay_all_variations: bool, simulated: bool, cutoff: float, blocklist: list
     ):
         self.workload_timeout_during_replay = workload_timeout_during_replay
+        self.replay_all_variations = replay_all_variations
         self.simulated = simulated
         self.cutoff = cutoff
         self.blocklist = blocklist
@@ -71,6 +72,11 @@ class ReplayArgs:
     help="The timeout (in seconds) of a workload when replaying. By default, it will be equal to the workload timeout used during HPO."
 )
 @click.option(
+    "--replay-all-variations",
+    is_flag=True,
+    help="If true, replay all the variations of each query. If false, only replay the variation we found was best in the tuning run. Replaying all variations has two possible use cases: (1) it makes the cache warm to better replicate behavior during tuning, (2) if the best variation during tuning was determined with Boot, it might not still be the best variation."
+)
+@click.option(
     "--simulated",
     is_flag=True,
     help="Set to true to use the runtimes from the original tuning run instead of replaying the workload."
@@ -87,7 +93,7 @@ class ReplayArgs:
     type=list,
     help="Ignore running queries in the blocklist."
 )
-def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout_during_replay: bool, simulated: bool, cutoff: float, blocklist: list) -> None:
+def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, boot_enabled_during_tune: bool, tuning_steps_dpath: Path, workload_timeout_during_replay: bool, replay_all_variations: bool, simulated: bool, cutoff: float, blocklist: list) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
 
@@ -98,7 +104,7 @@ def replay(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_en
     tuning_steps_dpath = conv_inputpath_to_realabspath(dbgym_cfg, tuning_steps_dpath)
 
     # Group args together to reduce the # of parameters we pass into functions
-    replay_args = ReplayArgs(workload_timeout_during_replay, simulated, cutoff, blocklist)
+    replay_args = ReplayArgs(workload_timeout_during_replay, replay_all_variations, simulated, cutoff, blocklist)
 
     # Replay
     replay_tuning_run(dbgym_cfg, tuning_steps_dpath, replay_args)
@@ -169,11 +175,20 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
         logging.info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n")
         logging.info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n")
         assert replay_args.workload_timeout_during_replay == hpo_params["workload_timeout"][str(TuningMode.REPLAY)] == pg_env.workload.workload_timeout, "All these different sources of workload_timeout during replay should show the same value"
-        all_holon_action_variations = actions_info["all_holon_action_variations"]
+
+        if replay_args.replay_all_variations:
+            all_holon_action_variations = actions_info["all_holon_action_variations"]
+            actions = [holon_action for (_, holon_action) in all_holon_action_variations]
+            variation_names = [variation_name for (variation_name, _) in all_holon_action_variations]
+        else:
+            best_observed_holon_action = actions_info["best_observed_holon_action"]
+            actions = [best_observed_holon_action]
+            variation_names = ["BestObserved"]
+
         did_any_query_time_out, did_workload_time_out, qid_runtime_data = pg_env.workload.execute_workload(
             pg_conn=pg_env.pg_conn,
-            actions=[holon_action for (_, holon_action) in all_holon_action_variations],
-            variation_names=[variation_name for (variation_name, _) in all_holon_action_variations],
+            actions=actions,
+            variation_names=variation_names,
             observation_space=None,
             action_space=action_space,
             reset_metrics=None,
