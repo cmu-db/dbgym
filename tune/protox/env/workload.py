@@ -590,7 +590,7 @@ class Workload(object):
                     penalty = 3.0e6
 
                 if penalty > 0:
-                    f.write(f"{len(self.order)},P,{time.time()},{penalty},True,0,PENALTY\n")
+                    f.write(f"{len(self.order)},P,{time.time()},{penalty},,0,PENALTY\n")
 
         # Get all the timeouts.
         num_timed_out_queries = sum([1 if best_run.timed_out else 0 for _, best_run in qid_runtime_data.items()])

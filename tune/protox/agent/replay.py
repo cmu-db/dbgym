@@ -201,7 +201,8 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
             first=False,
         )
         workload_runtime = Workload.compute_total_workload_runtime(qid_runtime_data)
-        return num_timed_out_queries, did_workload_time_out, workload_runtime
+        num_executed_queries = len(qid_runtime_data)
+        return num_executed_queries, num_timed_out_queries, did_workload_time_out, workload_runtime
 
     run_data = []
     progess_bar = tqdm.tqdm(total=num_lines)
@@ -235,16 +236,19 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
                 assert len(run_raw_csv.columns) == 7
-                # `num_timed_out_queries_in_original` counts the number of queries where *all variations* timed out. Note that the query_timeout of
-                #   a query may be set extremely low because the workload is about to time out, so it could be viewed as "unfair" to count those queries as
-                #   having timed out. Regardless, that's how we currently do things.
-                num_timed_out_queries_in_original = run_raw_csv["Timed Out"].sum()
                 # When setting `did_workload_time_out_in_original`, we can't just check whether the sum of latencies in run.raw.csv == `workload_timeout`
                 #   because Proto-X decreases `workload_timeout` over the course of the tuning run. Specifically, at the end of a tuning step, Proto-X
                 #   sets `workload_timeout` to be equal to the runtime of the workload that just ran.
                 # We separate the penalty rows from the non-penalty rows to process them separately.
                 run_raw_csv_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] == "P"]
                 run_raw_csv_non_penalty_rows = run_raw_csv[run_raw_csv["Transaction Name"] != "P"]
+                # Get the number of executed queries. A query timing out is not the same as a query not being executed. We do this instead of getting the
+                #   number of skipped queries since we don't have the total # of queries with the current codebase.
+                num_executed_queries_in_original = len(run_raw_csv_non_penalty_rows)
+                # `num_timed_out_queries_in_original` counts the number of queries where *all variations* timed out. Note that the query_timeout of
+                #   a query may be set extremely low because the workload is about to time out, so it could be viewed as "unfair" to count those queries as
+                #   having timed out. Regardless, that's how we currently do things.
+                num_timed_out_queries_in_original = run_raw_csv_non_penalty_rows["Timed Out"].sum()
                 # Penalties are added when the workload times out so this is a reliable indicator of whether the workload timed out.
                 did_workload_time_out_in_original = len(run_raw_csv_penalty_rows) > 0
                 # Penalties are meant to affect the reward of the tuning agent but they are unrelated to the actual runtime, so we ignore them when
@@ -297,25 +301,25 @@ def replay_tuning_run(dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_a
 
                 # Execute the workload to get the runtime.
                 if not replay_args.simulated:
-                    num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = _execute_workload_wrapper(actions_info)
+                    num_executed_queries_in_replay, num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = _execute_workload_wrapper(actions_info)
                 else:
-                    num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = num_timed_out_queries_in_original, did_workload_time_out_in_original, original_workload_runtime
+                    num_executed_queries_in_replay, num_timed_out_queries_in_replay, did_workload_time_out_in_replay, replayed_workload_runtime = num_executed_queries_in_original, num_timed_out_queries_in_original, did_workload_time_out_in_original, original_workload_runtime
 
                 # Perform some validity checks and then add this tuning step's data to `run_data``.
                 this_step_run_data = {
                     "step": current_step,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "original_workload_runtime": original_workload_runtime,
+                    "num_executed_queries_in_original": num_executed_queries_in_original,
                     "num_timed_out_queries_in_original": num_timed_out_queries_in_original,
                     "did_workload_time_out_in_original": did_workload_time_out_in_original,
                     "replayed_workload_runtime": replayed_workload_runtime,
+                    "num_executed_queries_in_replay": num_executed_queries_in_replay,
                     "num_timed_out_queries_in_replay": num_timed_out_queries_in_replay,
                     "did_workload_time_out_in_replay": did_workload_time_out_in_replay,
                 }
                 # Log before performing checks to help with debugging.
                 logging.info(f"this_step_run_data={this_step_run_data}")
-                assert not (did_workload_time_out_in_original and not num_timed_out_queries_in_original > 0), "If the original workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
-                assert not (did_workload_time_out_in_replay and not num_timed_out_queries_in_replay > 0), "If the replayed workload timed out, at least one of the queries should have timed out (except for the extremely rare case where the workload timed out in between two queries)."
                 assert not (num_timed_out_queries_in_replay > 0 and not did_workload_time_out_in_replay), "During replay, individual queries should not time out unless they timed out because the whole workload timed out."
                 run_data.append(this_step_run_data)
                 current_step += 1

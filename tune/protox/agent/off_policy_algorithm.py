@@ -187,7 +187,6 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially cause a race condition.
             if self.logger and not tuning_mode == TuningMode.HPO:
-                actions_info = infos["actions_info"]
                 self.logger.stash_results(infos)
 
             self.num_timesteps += 1

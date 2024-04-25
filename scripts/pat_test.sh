@@ -7,7 +7,7 @@ INTENDED_PGDATA_HARDWARE=ssd
 PGDATA_PARENT_DPATH=/mnt/nvme0n1/phw2/dbgym_tmp/
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
-python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR
+python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR --tune-duration-during-tune 0.02
 python3 task.py --no-startup-check tune protox agent replay tpch --scale-factor $SCALE_FACTOR
 exit 0
 
