@@ -6,13 +6,18 @@ from datetime import datetime
 from pathlib import Path
 import click
 import yaml
+import redis
 
-# Relpaths of different folders in the codebase
-TUNE_RELPATH = Path("tune")
-PROTOX_RELPATH = TUNE_RELPATH / "protox"
-PROTOX_EMBEDDING_RELPATH = PROTOX_RELPATH / "embedding"
-PROTOX_AGENT_RELPATH = PROTOX_RELPATH / "agent"
-PROTOX_WOLP_RELPATH = PROTOX_AGENT_RELPATH / "wolp"
+from util.shell import subprocess_run
+
+# Relative paths of different folders in the codebase
+DBMS_PATH = Path("dbms")
+POSTGRES_PATH = DBMS_PATH / "postgres"
+TUNE_PATH = Path("tune")
+PROTOX_PATH = TUNE_PATH / "protox"
+PROTOX_EMBEDDING_PATH = PROTOX_PATH / "embedding"
+PROTOX_AGENT_PATH = PROTOX_PATH / "agent"
+PROTOX_WOLP_PATH = PROTOX_AGENT_PATH / "wolp"
 
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
@@ -47,16 +52,17 @@ BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
 WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
 SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
 
-# Paths of config files in the codebase. These are named "*_relpath" because they are always a relative path
+# Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
-DEFAULT_HPO_SPACE_RELPATH = PROTOX_EMBEDDING_RELPATH / "default_hpo_space.json"
-DEFAULT_SYSKNOBS_RELPATH = PROTOX_AGENT_RELPATH / "default_sysknobs.yaml"
+DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
+DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
+DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
 default_benchmark_config_path = (
-    lambda benchmark_name: PROTOX_RELPATH
+    lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchmark_config.yaml"
 )
 default_benchbase_config_path = (
-    lambda benchmark_name: PROTOX_RELPATH
+    lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
 
@@ -473,10 +479,11 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: os.PathLike) -> None:
 
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> None:
+def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: str | None=None) -> Path:
     """
     result_path must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path
     result_path itself can be a file or a dir but not a symlink
+    Returns the symlink path.
     Create a symlink of the same name to result_path inside [workspace]/data/
     Will override the old symlink if there is one
     This is called so that [workspace]/data/ always contains the latest generated version of a file
@@ -503,7 +510,9 @@ def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: s
     #   file of the current run regardless of the order of threads.
     try_remove_file(symlink_path)
     try_create_symlink(result_path, symlink_path)
-    
+
+    return symlink_path
+
 
 def try_create_symlink(src_path: Path, dst_path: Path) -> None:
     '''
@@ -529,14 +538,37 @@ def try_remove_file(path: Path) -> None:
         pass
 
 
-def restart_ray():
+def restart_ray(redis_port: int):
     """
     Stop and start Ray.
     This is good to do between each stage to avoid bugs from carrying over across stages
     """
-    os.system("ray stop -f")
+    subprocess_run("ray stop -f")
     ncpu = os.cpu_count()
     # --disable-usage-stats avoids a Y/N prompt
-    os.system(
-        f"OMP_NUM_THREADS={ncpu} ray start --head --num-cpus={ncpu} --disable-usage-stats"
+    subprocess_run(
+        f"OMP_NUM_THREADS={ncpu} ray start --head --port={redis_port} --num-cpus={ncpu} --disable-usage-stats"
     )
+
+
+def make_redis_started(port: int):
+    """
+    Start Redis if it's not already started.
+    Note that Ray uses Redis but does *not* use this function. It starts Redis on its own.
+    One current use for this function to start/stop Redis for Boot.
+    """
+    try:
+        r = redis.Redis(port=port)
+        r.ping()
+        # This means Redis is running, so we do nothing
+        do_start_redis = False
+    except (redis.ConnectionError, redis.TimeoutError):
+        # This means Redis is not running, so we start it
+        do_start_redis = True
+    
+    # I'm starting Redis outside of except so that errors in r.ping get propagated correctly
+    if do_start_redis:
+        subprocess_run(f"redis-server --port {port} --daemonize yes")
+        # When you start Redis in daemon mode, it won't let you know if it's started, so we ping again to check
+        r = redis.Redis(port=port)
+        r.ping()

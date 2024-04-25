@@ -4,11 +4,11 @@ import yaml
 from misc.utils import DBGymConfig, open_and_save
 
 
-def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: dict[str, Any]) -> dict[str, Any]:
-    if "space_version" not in hpoed_params:
+def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_params: dict[str, Any]) -> dict[str, Any]:
+    if "space_version" not in hpo_params:
         # This is an old version. Coerce the params file.
         new_config = {}
-        margs = hpoed_params["mythril_args"]
+        margs = hpo_params["mythril_args"]
 
         with open_and_save(dbgym_cfg, margs["benchmark_config"]) as f:
             benchmark_config = yaml.safe_load(f)
@@ -17,17 +17,16 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
             benchmark_config["benchmark"] = benchmark
 
         # Merge the query specs.
-        mqs = hpoed_params["mythril_query_spec"]
+        mqs = hpo_params["mythril_query_spec"]
         benchmark_config["query_spec"].update(mqs)
 
         defaults = {
             "verbose": True,
             "trace": True,
-            "seed": hpoed_params["mythril_args"]["seed"],
-            "duration": hpoed_params["mythril_args"]["duration"],
-            "workload_timeout": hpoed_params["mythril_args"]["workload_timeout"],
-            "query_timeout": hpoed_params["mythril_args"]["timeout"],
-            "output_log_path": "artifacts",
+            "seed": hpo_params["mythril_args"]["seed"],
+            "duration": hpo_params["mythril_args"]["duration"],
+            "workload_timeout": hpo_params["mythril_args"]["workload_timeout"],
+            "query_timeout": hpo_params["mythril_args"]["timeout"],
             "pgconn_info": {
                 "pgport": 5432,
                 "pguser": "admin",
@@ -45,41 +44,41 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
                     "oltp_warmup": margs.get("oltp_warmup", 0),
                 },
                 "benchbase_path": "/home/wz2/noisepage-pilot/artifacts/benchbase/",
-                "benchbase_config_path": hpoed_params["mythril_args"][
+                "benchbase_config_path": hpo_params["mythril_args"][
                     "benchbase_config_path"
                 ],
             },
-            "system_knobs": hpoed_params["mythril_system_knobs"],
+            "system_knobs": hpo_params["mythril_system_knobs"],
             "lsc": {
-                "enabled": hpoed_params["lsc_parameters"]["lsc_enabled"],
-                "initial": hpoed_params["lsc_parameters"]["lsc_shift_initial"],
-                "increment": hpoed_params["lsc_parameters"]["lsc_shift_increment"],
-                "max": hpoed_params["lsc_parameters"]["lsc_shift_max"],
-                "shift_eps_freq": hpoed_params["lsc_parameters"][
+                "enabled": hpo_params["lsc_parameters"]["lsc_enabled"],
+                "initial": hpo_params["lsc_parameters"]["lsc_shift_initial"],
+                "increment": hpo_params["lsc_parameters"]["lsc_shift_increment"],
+                "max": hpo_params["lsc_parameters"]["lsc_shift_max"],
+                "shift_eps_freq": hpo_params["lsc_parameters"][
                     "lsc_shift_schedule_eps_freq"
                 ],
-                "shift_after": hpoed_params["lsc_parameters"]["lsc_shift_after"],
+                "shift_after": hpo_params["lsc_parameters"]["lsc_shift_after"],
             },
             "neighbor_parameters": {
-                "knob_num_nearest": hpoed_params["neighbor_parameters"][
+                "knob_num_nearest": hpo_params["neighbor_parameters"][
                     "knob_num_nearest"
                 ],
-                "knob_span": hpoed_params["neighbor_parameters"]["knob_span"],
-                "index_num_samples": hpoed_params["neighbor_parameters"][
+                "knob_span": hpo_params["neighbor_parameters"]["knob_span"],
+                "index_num_samples": hpo_params["neighbor_parameters"][
                     "index_num_samples"
                 ],
-                "index_rules": hpoed_params["neighbor_parameters"].get(
+                "index_rules": hpo_params["neighbor_parameters"].get(
                     "index_subset", True
                 ),
             },
-            "embedder_path": hpoed_params["vae_metadata"]["embedder_path"],
+            "embedder_path": hpo_params["vae_metadata"]["embedder_path"],
         }
 
         for s in space.keys():
             if s in defaults:
                 new_config[s] = defaults[s]
-            elif s in hpoed_params:
-                new_config[s] = hpoed_params[s]
+            elif s in hpo_params:
+                new_config[s] = hpo_params[s]
             elif s == "space_version":
                 continue
             else:
@@ -87,4 +86,4 @@ def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpoed_params: d
 
         return new_config
 
-    return hpoed_params
+    return hpo_params

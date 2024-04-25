@@ -16,10 +16,11 @@ import psutil
 import psycopg
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
+import yaml
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, parent_dpath_of_path
-from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME
+from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
+from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES
 
 
 class PostgresConn:
@@ -32,6 +33,8 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         postgres_logs_dir: Union[str, Path],
         connect_timeout: int,
+        enable_boot: bool,
+        boot_config_fpath: Path,
         logger: Logger,
     ) -> None:
 
@@ -41,6 +44,8 @@ class PostgresConn:
         self.pgbin_path = pgbin_path
         self.postgres_logs_dir = postgres_logs_dir
         self.connect_timeout = connect_timeout
+        self.enable_boot = enable_boot
+        self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
         self.logger = logger
 
@@ -127,9 +132,16 @@ class PostgresConn:
         '''
         # Install the new configuration changes.
         if conf_changes is not None:
-            conf_changes.append("shared_preload_libraries='pg_hint_plan'")
-            with open(f"{self.pgdata_dpath}/postgresql.auto.conf", "w") as f:
+            if SHARED_PRELOAD_LIBRARIES:
+                # This way of doing it works for both single or multiple libraries. An example of a way
+                # that *doesn't* work is `f"shared_preload_libraries='"{SHARED_PRELOAD_LIBRARIES}"'"`
+                conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'")
+            pgdata_auto_conf_path = self.pgdata_dpath / "postgresql.auto.conf"
+            with open(pgdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
+            save_auto_conf_path = self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True) / "postgresql.auto.conf"         
+            local["cp"][pgdata_auto_conf_path, save_auto_conf_path].run()
+            link_result(self.dbgym_cfg, save_auto_conf_path)
 
         # Start postgres instance.
         self.shutdown_postgres()
@@ -208,11 +220,58 @@ class PostgresConn:
                 "Waiting for postgres to bootup but it is not..."
             )
 
-        # Move the temporary over since we know the temporary can load.
+        # Set up Boot if we're told to do so
+        if self.enable_boot:
+            # I'm choosing to only load the file if enable_boot is on, so we
+            # don't crash if enable_boot is off and the file doesn't exist.
+            with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
+                boot_config = yaml.safe_load(f)
+                
+            self._set_up_boot(
+                boot_config["intelligent_cache"],
+                boot_config["early_stop"],
+                boot_config["seq_sample"],
+                boot_config["seq_sample_pct"],
+                boot_config["seq_sample_seed"],
+                boot_config["mu_hyp_opt"],
+                boot_config["mu_hyp_time"],
+                boot_config["mu_hyp_stdev"],
+            )
+
+        # Move the temporary over since we now know the temporary can load.
         if save_checkpoint:
             shutil.move(f"{self.pgdata_dpath}.tgz.tmp", f"{self.pgdata_dpath}.tgz")
 
         return True
+
+    def _set_up_boot(self, intelligent_cache: bool, early_stop: bool, seq_sample: bool, seq_sample_pct: int, seq_sample_seed: int, mu_hyp_opt: float, mu_hyp_time: int, mu_hyp_stdev: float):
+        '''
+        Sets up Boot on the currently running Postgres instances.
+        Uses instance vars of PostgresConn for configuration.
+        I chose to not encode any "default values" in this function. This is so that all values
+            are explicitly included in the config file. This way, we can know what Boot config
+            was used in a given experiment by looking only at the config file. If we did encode
+            "default values" in the function, we would need to know the state of the code at the
+            time of the experiment, which is very difficult in the general case.
+        '''
+        # If any of these commands fail, they'll throw a Python exception
+        # Thus, if none of them throw an exception, we know they passed
+        self.logger.get_logger(__name__).debug("Setting up boot")
+        self.conn().execute("DROP EXTENSION IF EXISTS bytejack")
+        self.conn().execute("CREATE EXTENSION IF NOT EXISTS bytejack")
+        self.conn().execute("SELECT bytejack_connect()")
+        self.conn().execute("SELECT bytejack_cache_clear()")
+        self.conn().execute("SET bytejack.enable=true")
+        self.conn().execute("SET bytejack.intercept_explain_analyze=true")
+        self.conn().execute(f"SET bytejack.intelligent_cache={intelligent_cache}")
+        self.conn().execute(f"SET bytejack.early_stop={early_stop}")
+        self.conn().execute(f"SET bytejack.seq_sample={seq_sample}")
+        self.conn().execute(f"SET bytejack.seq_sample_pct={seq_sample_pct}")
+        self.conn().execute(f"SET bytejack.seq_sample_seed={seq_sample_seed}")
+        self.conn().execute(f"SET bytejack.mu_hyp_opt={mu_hyp_opt}")
+        self.conn().execute(f"SET bytejack.mu_hyp_time={mu_hyp_time}")
+        self.conn().execute(f"SET bytejack.mu_hyp_stdev={mu_hyp_stdev}")
+        self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
     def psql(self, sql: str) -> Tuple[int, Optional[str]]:

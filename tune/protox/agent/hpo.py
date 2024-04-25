@@ -22,14 +22,14 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_RELPATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DBGymConfig, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath
 
 
 METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -47,6 +47,8 @@ class AgentHPOArgs:
         self.duration = duration
         self.workload_timeout = workload_timeout
         self.query_timeout = query_timeout
+        self.enable_boot_during_hpo = enable_boot_during_hpo
+        self.boot_config_fpath = boot_config_fpath
 
 
 @click.command()
@@ -83,7 +85,7 @@ class AgentHPOArgs:
 )
 @click.option(
     "--sysknobs-path",
-    default=DEFAULT_SYSKNOBS_RELPATH,
+    default=DEFAULT_SYSKNOBS_PATH,
     help=f"The path to the file configuring the space of system knobs the tuner can tune.",
 )
 @click.option(
@@ -108,7 +110,7 @@ class AgentHPOArgs:
     "--pgdata-parent-dpath",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
@@ -120,7 +122,7 @@ class AgentHPOArgs:
     "--workload-path",
     default=None,
     type=Path,
-    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -156,6 +158,17 @@ class AgentHPOArgs:
     type=int,
     help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
 )
+@click.option(
+    "--enable-boot-during-hpo",
+    is_flag=True,
+    help="Whether to enable the Boot query accelerator during the HPO process. Deciding to use Boot during HPO is separate from deciding to use Boot during tuning.",
+)
+@click.option(
+    "--boot-config-fpath",
+    default=DEFAULT_BOOT_CONFIG_FPATH,
+    type=Path,
+    help="The path to the file configuring Boot.",
+)
 def hpo(
     dbgym_cfg,
     benchmark_name,
@@ -179,6 +192,8 @@ def hpo(
     duration,
     workload_timeout,
     query_timeout,
+    enable_boot_during_hpo: bool,
+    boot_config_fpath: Path,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
@@ -208,6 +223,7 @@ def hpo(
     pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
+    boot_config_fpath = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath)
 
     # Check assertions on args
     if intended_pgdata_hardware == "hdd":
@@ -218,7 +234,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, duration, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -234,8 +250,11 @@ def build_space(
     benchbase_config: dict[str, Any]={},
     duration: int=30,
     seed: int=0,
+    enable_boot_during_hpo: bool=False,
+    boot_config_fpath: Path=None,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
+    boot_enabled: bool = False,
 ) -> dict[str, Any]:
 
     return {
@@ -244,42 +263,48 @@ def build_space(
         "verbose": True,
         "trace": True,
         "seed": seed,
+        "enable_boot_during_hpo": enable_boot_during_hpo,
+        "boot_config_fpath": boot_config_fpath,
+        
         # Timeouts.
         "duration": duration,
         "workload_timeout": tune.choice(workload_timeouts),
         "query_timeout": tune.choice(query_timeouts),
+
         # Paths.
         "workload_path": str(workload_path),
-        "output_log_path": "artifacts/",
         "pgconn_info": pgconn_info,
         "benchmark_config": benchmark_config,
         "benchbase_config": benchbase_config,
-        # Horizon before resetting.
-        "horizon": 5,
-        # Workload Eval.
-        "workload_eval_mode": tune.choice(["global_dual", "prev_dual", "all"]),
-        "workload_eval_inverse": tune.choice([False, True]),
-        "workload_eval_reset": tune.choice([False, True]),
-        # Reward.
-        "reward": tune.choice(["multiplier", "relative", "cdb_delta"]),
-        "reward_scaler": tune.choice([1, 2, 5, 10]),
-        "workload_timeout_penalty": tune.choice([1, 2, 4]),
-        # State.
-        "metric_state": tune.choice(["metric", "structure", "structure_normalize"]),
-        "maximize_state": not benchmark_config.get("oltp_workload", False),
-        # Whether to normalize state or not.
-        "normalize_state": tune.sample_from(
-            lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True
-        ),
-        # Whether to normalize reward or not.
-        "normalize_reward": tune.choice([False, True]),
+        # Embeddings.
+        "embedder_path": tune.choice(map(str, embedder_path)),
+
         # Default quantization factor to use.
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
-        # Embeddings.
-        "embedder_path": tune.choice(map(str, embedder_path)),
-        # LSC Parameters.
-        # Note that the units for these are based on the embedding itself.
+
+        # Horizon before resetting.
+        "horizon": 5,
+
+        # Workload Eval.
+        "workload_eval_mode": tune.choice(["all", "all_enum"]),
+        "workload_eval_inverse": tune.choice([False, True]),
+        "workload_eval_reset": True,
+
+        # Reward.
+        "reward": tune.choice(["multiplier", "relative"]),
+        "reward_scaler": tune.choice([1, 2, 10]),
+        "workload_timeout_penalty": 1,
+        "normalize_reward": tune.choice([False, True]),
+
+        # State.
+        "metric_state": tune.choice(([] if boot_enabled else ["metric"]) + ["structure", "structure_normalize"]),
+        "maximize_state": not benchmark_config.get("oltp_workload", False),
+        # Whether to normalize state or not.
+        "normalize_state": tune.sample_from(lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True),
+
+        # LSC Parameters. The units for these are based on the embedding itself.
+        # TODO(): Set these parameters based on the workload/embedding structure itself.
         "lsc": {
             "enabled": False,
             # These are the initial low-bias, comma separated by the horizon step.
@@ -293,72 +318,58 @@ def build_space(
             # How many episodes to start.
             "shift_after": 3,
         },
+
         # RL Agent Parameters.
         # Number of warmup steps.
         "learning_starts": 0,
         # Learning rate.
-        "learning_rate": tune.choice([1e-3, 8e-4, 6e-4, 3e-4, 5e-5, 3e-5, 1e-5]),
-        "critic_lr_scale": tune.choice([1.0, 2.5, 5.0, 7.5, 10.0]),
-        "policy_l2_reg": tune.choice([0.0, 0.01, 0.03, 0.05]),
+        "learning_rate": tune.choice([1e-3, 6e-4, 3e-5]),
+        "critic_lr_scale": tune.choice([1.0, 2.5, 5.0]),
+        "policy_l2_reg": tune.choice([0.01, 0.05]),
         # Discount.
-        "gamma": tune.choice([0, 0.9, 0.95, 0.995, 1.0]),
+        "gamma": tune.choice([0, 0.9, 0.95]),
         # Polyak averaging rate.
-        "tau": tune.choice([1.0, 0.99, 0.995]),
+        "tau": tune.choice([0.995, 1.0]),
         # Replay Buffer Size.
         "buffer_size": 1_000_000,
         # Batch size.
-        "batch_size": tune.choice([8, 16, 32, 64]),
+        "batch_size": tune.choice([16, 32]),
         # Gradient Clipping.
         "grad_clip": tune.choice([1.0, 5.0, 10.0]),
         # Gradient steps per sample.
         "gradient_steps": tune.choice([1, 2, 4]),
-        # Target noise.
-        "target_noise": {
-            "target_noise_clip": tune.choice([0, 0.05, 0.1, 0.15]),
-            "target_policy_noise": tune.sample_from(
-                lambda spc: 0.1
-                if spc["config"]["target_noise"]["target_noise_clip"] == 0
-                else float(np.random.choice([0.05, 0.1, 0.15, 0.2]))
-            ),
-        },
+
         # Training steps.
         "train_freq_unit": tune.choice(["step", "episode"]),
-        "train_freq_frequency": tune.sample_from(
-            lambda spc: 1
-            if spc["config"]["train_freq_unit"] == "episode"
-            else int(np.random.choice([1, 2]))
-        ),
+        "train_freq_frequency": 1,
+
+        # Target noise.
+        "target_noise": {
+            "target_noise_clip": tune.choice([0.05, 0.1, 0.15]),
+            "target_policy_noise": tune.choice([0.15, 0.2]),
+        },
         # Noise parameters.
         "noise_parameters": {
             "noise_type": tune.choice(["normal", "ou"]),
-            "noise_sigma": tune.choice([0.01, 0.05, 0.1, 0.15, 0.2]),
+            "noise_sigma": tune.choice([0.05, 0.1, 0.15]),
         },
         "scale_noise_perturb": True,
+
         # Neighbor parameters.
         "neighbor_parameters": {
-            "knob_num_nearest": tune.choice([100, 200]),
-            "knob_span": tune.choice([1, 2]),
+            "knob_num_nearest": tune.choice([10, 100]),
+            "knob_span": tune.choice([1, 3]),
             "index_num_samples": 1,
-            "index_rules": tune.choice([False, True]),
+            # Use index rules whenever we aren't optimizing OLTP.
+            "index_rules": not benchmark_config.get("oltp_workload", False),
         },
         # Networks.
         "weight_init": tune.choice(["xavier_normal", "xavier_uniform", "orthogonal"]),
         "bias_zero": tune.choice([False, True]),
         "policy_weight_adjustment": tune.choice([1, 100]),
         "activation_fn": tune.choice(["gelu", "mish"]),
-        "pi_arch": tune.choice(["128", "256", "128,128", "256,256", "512", "256,512"]),
-        "qf_arch": tune.choice(
-            [
-                "256,64",
-                "256,256",
-                "256,128,128",
-                "256,64,64",
-                "512",
-                "512,256",
-                "1024",
-                "1024,256",
-            ]
-        ),
+        "pi_arch": tune.choice(["128,128", "256,256", "512,512"]),
+        "qf_arch": tune.choice(["256", "512", "1024"]),
     }
 
 
@@ -392,31 +403,37 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig) -> None:
+    def __init__(self, dbgym_cfg: DBGymConfig, is_hpo: bool) -> None:
+        '''
+        We use this object for both HPO and tune. It behaves *slightly* differently
+        depending on what it's used for, which is why we have an is_hpo param.
+        '''
         self.dbgym_cfg = dbgym_cfg
+        self.is_hpo = is_hpo
 
-    def setup(self, hpoed_params: dict[str, Any]) -> None:
+    def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
         torch.set_default_dtype(torch.float32) # type: ignore
         seed = (
-            hpoed_params["seed"]
-            if hpoed_params["seed"] != -1
+            hpo_params["seed"]
+            if hpo_params["seed"] != -1
             else np.random.randint(np.iinfo(np.int32).max)
         )
         np.random.seed(seed)
         torch.manual_seed(seed)
         assert hasattr(self, "logdir")
 
-        self.timeout = TuneTimeoutChecker(hpoed_params["duration"])
+        self.timeout = TuneTimeoutChecker(hpo_params["duration"])
         self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             seed=seed,
             logdir=self.logdir,
-            hpoed_params=hpoed_params
+            is_hpo=self.is_hpo,
+            hpo_params=hpo_params
         )
-        self.logger.get_logger(None).info("%s", hpoed_params)
+        self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
@@ -482,7 +499,7 @@ class TuneTrial:
         if Path(self.signal).exists():
             os.remove(self.signal)
 
-# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpoed_params`. This is because it's a pain to turn DBGymConfig
+# I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_params`. This is because it's a pain to turn DBGymConfig
 #   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
 # Using a function to create a class is Ray's recommended way of doing this (see
 #   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
@@ -494,10 +511,10 @@ def create_tune_opt_class(dbgym_cfg_param):
     class TuneOpt(Trainable):
         dbgym_cfg = global_dbgym_cfg
 
-        def setup(self, hpoed_params: dict[str, Any]) -> None:
-            self.trial = TuneTrial(TuneOpt.dbgym_cfg)
+        def setup(self, hpo_params: dict[str, Any]) -> None:
+            self.trial = TuneTrial(TuneOpt.dbgym_cfg, True)
             self.trial.logdir = self.logdir # type: ignore
-            self.trial.setup(hpoed_params)
+            self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:
             return self.trial.step()
@@ -557,12 +574,14 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         benchbase_config=benchbase_config,
         duration=hpo_args.duration,
         seed=hpo_args.seed,
+        enable_boot_during_hpo=hpo_args.enable_boot_during_hpo,
+        boot_config_fpath=hpo_args.boot_config_fpath,
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )
 
-    restart_ray()
-    ray.init(address="localhost:6379", log_to_driver=False)
+    restart_ray(dbgym_cfg.root_yaml["ray_gcs_port"])
+    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False)
 
     # Scheduler.
     scheduler = FIFOScheduler() # type: ignore
