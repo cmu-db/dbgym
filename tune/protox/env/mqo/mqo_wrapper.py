@@ -348,7 +348,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 success,
                 metric,
                 _,
-                results,
+                results_dpath,
                 _,
                 target_metric_data,
             ) = self.unwrapped.workload.execute(
@@ -380,7 +380,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
             # Reward should be irrelevant. If we do accidentally use it, cause an error.
             # Similarly, metric should be irrelevant. Do not shift the workload timeout.
-            info = EnvInfoDict({"metric": None, "reward": None, "results": results})
+            info = EnvInfoDict({"metric": None, "reward": None, "results_dpath": results_dpath})
             # Use this to adjust the container and state but don't shift the step.
             state, _, _, _, info = self.unwrapped.step_post_execute(
                 True, action, info, soft=True

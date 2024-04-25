@@ -174,7 +174,7 @@ class EnvInfoDict(TypedDict, total=False):
     # Data generated from each run.
     best_query_run_data: dict[str, BestQueryRun]
     # Path to run artifacts.
-    results: Optional[Union[str, Path]]
+    results_dpath: Optional[Union[str, Path]]
 
     # Previous state container.
     prior_state_container: Optional[HolonStateContainer]

@@ -99,8 +99,8 @@ class Logger(object):
         """
         time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         time = name_override if name_override else time
-        if info_dict["results"] is not None and Path(info_dict["results"]).exists():
-            local["mv"][info_dict["results"], f"{self.tuning_steps_dpath}/{time}"].run()
+        if info_dict["results_dpath"] is not None and Path(info_dict["results_dpath"]).exists():
+            local["mv"][info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{time}"].run()
         else:
             Path(f"{self.tuning_steps_dpath}/{time}").mkdir(parents=True, exist_ok=True)
 

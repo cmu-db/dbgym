@@ -339,7 +339,7 @@ class Workload(object):
         pg_conn: PostgresConn,
         actions: list[HolonAction] = [],
         variation_names: list[str] = [],
-        results: Optional[Union[str, Path]] = None,
+        results_dpath: Optional[Union[str, Path]] = None,
         observation_space: Optional[StateSpace] = None,
         action_space: Optional[HolonSpace] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
@@ -511,13 +511,13 @@ class Workload(object):
                     assert sql_type != QueryType.INS_UPD_DEL
                     pg_conn.conn().execute(query)
 
-        if results is not None:
+        if results_dpath is not None:
             # Make the result directory.
-            results_dir = Path(results)
-            if not results_dir.exists():
-                results_dir.mkdir(parents=True, exist_ok=True)
+            results_dpath = Path(results_dpath)
+            if not results_dpath.exists():
+                results_dpath.mkdir(parents=True, exist_ok=True)
 
-            with open(results_dir / "run.plans", "w") as f:
+            with open(results_dpath / "run.plans", "w") as f:
                 # Output the explain data.
                 for qid, run in qid_runtime_data.items():
                     if run.explain_data is not None:
@@ -538,7 +538,7 @@ class Workload(object):
                     [v.metric_data for _, v in qid_runtime_data.items()],
                 )
                 accum_stats = observation_space.merge_deltas(accum_data)
-                with open(results_dir / "run.metrics.json", "w") as f:
+                with open(results_dpath / "run.metrics.json", "w") as f:
                     # Flatten it.
                     def flatten(d: dict[str, Any]) -> dict[str, Any]:
                         flat: dict[str, Any] = {}
@@ -561,7 +561,7 @@ class Workload(object):
                     f.write(json.dumps(output, indent=4))
 
             # run.raw.csv will essentially contain the information in qid_runtime_data. However, run.raw.csv may have an extra line for the penalty.
-            with open(results_dir / "run.raw.csv", "w") as f:
+            with open(results_dpath / "run.raw.csv", "w") as f:
                 # Write the raw query data.
                 f.write(
                     "Transaction Type Index,Transaction Name,Start Time (microseconds),Latency (microseconds),Timed Out,Worker Id (start number),Phase Id (index in config file)\n"
@@ -598,7 +598,7 @@ class Workload(object):
 
     @time_record("execute")
     def _execute_benchbase(
-        self, benchbase_config: dict[str, Any], results: Union[str, Path]
+        self, benchbase_config: dict[str, Any], results_dpath: Union[str, Path]
     ) -> bool:
         bb_path = benchbase_config["benchbase_path"]
         with local.cwd(bb_path):
@@ -610,7 +610,7 @@ class Workload(object):
                 "-c",
                 benchbase_config["benchbase_config_path"],
                 "-d",
-                results,
+                results_dpath,
                 "--execute=true",
             ].run(retcode=None)
 
@@ -636,22 +636,22 @@ class Workload(object):
         if self.logger:
             self.logger.get_logger(__name__).info("Starting to run benchmark...")
 
-        # Purge results directory first.
-        tmp_dir = tempfile.gettempdir()
-        results = f"{tmp_dir}/results{pg_conn.pgport}"
-        shutil.rmtree(results, ignore_errors=True)
+        # Generate a unique temporary directory to store results in.
+        results_dpath = Path(tempfile.mkdtemp())
+        print(results_dpath.is_dir(), results_dpath.exists(), not any(results_dpath.iterdir()))
+        assert results_dpath.is_dir() and results_dpath.exists() and not any(results_dpath.iterdir()), "results_dpath should be existent and empty since mkdtemp should guarantee a unique dir."
 
         if self.benchbase:
             # Execute benchbase if specified.
-            success = self._execute_benchbase(benchbase_config, results)
+            success = self._execute_benchbase(benchbase_config, results_dpath)
             # We can only create a state if we succeeded.
-            success = observation_space.check_benchbase(self.dbgym_cfg, results)
+            success = observation_space.check_benchbase(self.dbgym_cfg, results_dpath)
         else:
             num_timed_out_queries, did_workload_time_out, query_metric_data = self.execute_workload(
                 pg_conn,
                 actions=actions,
                 variation_names=variation_names,
-                results=results,
+                results_dpath=results_dpath,
                 observation_space=observation_space,
                 action_space=action_space,
                 reset_metrics=reset_metrics,
@@ -667,11 +667,11 @@ class Workload(object):
         metric, reward = None, None
         if reward_utility is not None:
             metric, reward = reward_utility(
-                result_dir=results, update=update, did_error=not success
+                results_dpath=results_dpath, update=update, did_error=not success
             )
 
         if self.logger:
             self.logger.get_logger(__name__).info(
                 f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
             )
-        return success, metric, reward, results, did_anything_time_out, query_metric_data
+        return success, metric, reward, results_dpath, did_anything_time_out, query_metric_data

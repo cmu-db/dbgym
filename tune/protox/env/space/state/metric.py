@@ -152,10 +152,10 @@ class MetricStateSpace(StateSpace, spaces.Dict):
                     self.internal_spaces[metric] = Box(low=-np.inf, high=np.inf)
         super().__init__(self.internal_spaces, seed)
 
-    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
-        assert results is not None
-        assert Path(results).exists()
-        metric_files = [f for f in Path(results).rglob("*metrics.json")]
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]) -> bool:
+        assert results_dpath is not None
+        assert Path(results_dpath).exists()
+        metric_files = [f for f in Path(results_dpath).rglob("*metrics.json")]
         if len(metric_files) != 2:
             return False
 

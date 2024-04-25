@@ -158,7 +158,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
             default_action = self.action_space.null_action(sc)
 
-            success, metric, _, results, _, query_metric_data = self.workload.execute(
+            success, metric, _, results_dpath, _, query_metric_data = self.workload.execute(
                 pg_conn=self.pg_conn,
                 reward_utility=self.reward_utility,
                 observation_space=self.observation_space,
@@ -181,7 +181,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 self.workload.queries,
             )
             state = self.observation_space.construct_offline(
-                self.pg_conn.conn(), results, self.state_container
+                self.pg_conn.conn(), results_dpath, self.state_container
             )
 
             # Set the metric workload.
@@ -197,7 +197,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "baseline_metric": metric,
                     "baseline_reward": reward,
                     "query_metric_data": query_metric_data,
-                    "results": results,
+                    "results_dpath": results_dpath,
                     "prior_state_container": None,
                     "prior_pgconf": None,
                     "actions_info": None,
@@ -260,7 +260,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                 success,
                 metric,
                 reward,
-                results,
+                results_dpath,
                 did_anything_time_out,
                 query_metric_data,
             ) = self.workload.execute(
@@ -283,7 +283,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
-            results, did_anything_time_out, query_metric_data = None, True, None
+            results_dpath, did_anything_time_out, query_metric_data = None, True, None
 
         # Build EnvInfoDict
         info.update(
@@ -293,7 +293,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "did_anything_time_out": did_anything_time_out,
                     "query_metric_data": query_metric_data,
                     "reward": reward,
-                    "results": results,
+                    "results_dpath": results_dpath,
                     "actions_info": {
                         "all_holon_action_variations": all_holon_action_variations,
                     },
@@ -334,7 +334,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             # Now. The state container should be accurate.
             assert isinstance(self.observation_space, StateSpace)
             next_state = self.observation_space.construct_offline(
-                self.pg_conn.conn(), info["results"], self.state_container
+                self.pg_conn.conn(), info["results_dpath"], self.state_container
             )
         else:
             assert self.current_state

@@ -95,7 +95,7 @@ class RewardUtility(object):
 
     def __call__(
         self,
-        result_dir: Union[str, Path, None] = None,
+        results_dpath: Union[str, Path, None] = None,
         metric: Optional[float] = None,
         update: bool = True,
         did_error: bool = False,
@@ -108,14 +108,14 @@ class RewardUtility(object):
         # (param) (new_tps/old_tps) + (1-param) (max(min_mem, new_mem)/min_mem
         #
         # minimum memory before start trading...)
-        assert did_error or result_dir is not None or metric is not None
+        assert did_error or results_dpath is not None or metric is not None
         self.logger.get_logger(__name__).debug(
-            f"[reward_calc]: {result_dir} {metric} {update} {did_error}"
+            f"[reward_calc]: {results_dpath} {metric} {update} {did_error}"
         )
 
         if metric is None:
             # Either it errored or we have a result directory to process.
-            assert did_error or result_dir
+            assert did_error or results_dpath
 
             # Extract the metric if we're running it manually.
             metric_fn = (
@@ -127,8 +127,8 @@ class RewardUtility(object):
             if did_error:
                 metric = self.worst_perf
             else:
-                assert result_dir
-                metric = metric_fn(result_dir)
+                assert results_dpath
+                metric = metric_fn(results_dpath)
         actual_r = None
         assert metric is not None
 
