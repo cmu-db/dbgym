@@ -309,10 +309,10 @@ def is_fully_resolved(path: Path) -> bool:
 
 
 def path_exists_dont_follow_symlinks(path: Path) -> bool:
-    '''
+    """
     As of writing this comment, ray is currently constraining us to python <3.12. However, the "follow_symlinks" option in
     Path.exists() only comes up in python 3.12. Thus, this is the only way to check if a path exists without following symlinks.
-    '''
+    """
     # If the path exists and is a symlink, os.path.islink() will be true (even if the symlink is broken)
     if os.path.islink(path):
         return True
@@ -515,10 +515,10 @@ def link_result(dbgym_cfg: DBGymConfig, result_path: Path, custom_result_name: s
 
 
 def try_create_symlink(src_path: Path, dst_path: Path) -> None:
-    '''
+    """
     Our functions that create symlinks might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to create a symlink.
-    '''
+    """
     try:
         os.symlink(src_path, dst_path)
     except FileExistsError:
@@ -527,10 +527,10 @@ def try_create_symlink(src_path: Path, dst_path: Path) -> None:
 
 
 def try_remove_file(path: Path) -> None:
-    '''
+    """
     Our functions that remove files might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to remove a file.
-    '''
+    """
     try:
         os.remove(path)
     except FileNotFoundError:

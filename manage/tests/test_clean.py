@@ -23,10 +23,10 @@ class MockDBGymConfig:
 
 
 class CleanTests(unittest.TestCase):
-    '''
+    """
     I deemed "clean" important enough to write unittests before because I'm really paranoid
       about losing files that took 30 hours to build.
-    '''
+    """
     @staticmethod
     def create_structure(root_path: Path, structure: dict) -> None:
         def create_structure_internal(root_path: Path, cur_path: Path, structure: dict) -> None:
@@ -97,10 +97,10 @@ class CleanTests(unittest.TestCase):
 
     @staticmethod
     def make_workspace_structure(symlinks_structure: dict, task_runs_structure: dict) -> dict:
-        '''
+        """
         This function exists so that it's easier to refactor the tests in case we ever change
           how the workspace is organized.
-        '''
+        """
         return {
             "symlinks": symlinks_structure,
             "task_runs": task_runs_structure,
@@ -474,17 +474,19 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    # TODO(phw2)
-    def test_dont_loop_infinitely_if_there_are_cycles_between_dirs_in_runs(self):
+    def test_dont_loop_infinitely_if_there_are_cycles_between_different_dirs_in_runs(self):
         starting_symlinks_structure = {
             "symlink1": ("symlink", "task_runs/dir1")
         }
         starting_task_runs_structure = {
             "dir1": {
-                "symlink2": ("symlink", "task_runs/file1.txt")
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir2/file2.txt")
             },
-            "file1.txt": ("file",),
-            "file2.txt": ("file",)
+            "dir2": {
+                "file2.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
+            },
         }
         starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
         ending_symlinks_structure = {
@@ -492,13 +494,18 @@ class CleanTests(unittest.TestCase):
         }
         ending_task_runs_structure = {
             "dir1": {
-                "symlink2": ("symlink", None)
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir2/file2.txt")
+            },
+            "dir2": {
+                "file2.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
             },
         }
         ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
     # don't loop infinitely if there are task_run self-cycles (symlink in task run that refers to the same task run)
