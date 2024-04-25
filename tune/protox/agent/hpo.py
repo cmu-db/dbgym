@@ -30,7 +30,7 @@ METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -50,6 +50,7 @@ class AgentHPOArgs:
         self.query_timeout = query_timeout
         self.enable_boot_during_hpo = enable_boot_during_hpo
         self.boot_config_fpath_during_hpo = boot_config_fpath_during_hpo
+        self.build_space_good_for_boot = build_space_good_for_boot
 
 
 @click.command()
@@ -170,6 +171,23 @@ class AgentHPOArgs:
     type=Path,
     help="The path to the file configuring Boot when running HPO. When tuning, you may use a different Boot config.",
 )
+# Building a space good for Boot is subtly different from whether we enable Boot during HPO.
+# There are certain options that qualitatively do not perform well with Boot (e.g. metrics state
+#   because Boot extrapolates the query runtime but not metrics). This param controls whether we
+#   use those options or not.
+# I chose the word "good" instead of "compatible" because metrics state does not _crash_ if you
+#   use Boot but it just doesn't seem like it would perform well.
+# One workflow where these two variables are different is where we don't enable Boot during HPO
+#   but do want to enable Boot during tuning.
+# However, whether we're building a space good for Boot is also different from whether we enable
+#   Boot during tuning. We often want to compare one tuning run with Boot against one without
+#   Boot, in which case we'd build a space good for Boot and then run it once with Boot and once
+#   without Boot.
+@click.option(
+    "--build-space-good-for-boot",
+    is_flag=True,
+    help="Whether to avoid certain options that are known to not perform well when Boot is enabled. See the codebase for why this is subtly different from --enable-boot-during-hpo.",
+)
 def hpo(
     dbgym_cfg,
     benchmark_name,
@@ -195,6 +213,7 @@ def hpo(
     query_timeout,
     enable_boot_during_hpo: bool,
     boot_config_fpath_during_hpo: Path,
+    build_space_good_for_boot: bool,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
@@ -235,7 +254,7 @@ def hpo(
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -253,9 +272,9 @@ def build_space(
     seed: int=0,
     enable_boot_during_hpo: bool=False,
     boot_config_fpath_during_hpo: Path=None,
+    build_space_good_for_boot: bool = False,
     workload_timeouts: list[int]=[600],
     query_timeouts: list[int]=[30],
-    boot_enabled: bool = False,
 ) -> dict[str, Any]:
 
     return {
@@ -311,7 +330,7 @@ def build_space(
         "normalize_reward": tune.choice([False, True]),
 
         # State.
-        "metric_state": tune.choice(([] if boot_enabled else ["metric"]) + ["structure", "structure_normalize"]),
+        "metric_state": tune.choice(([] if build_space_good_for_boot else ["metric"]) + ["structure", "structure_normalize"]),
         "maximize_state": not benchmark_config.get("oltp_workload", False),
         # Whether to normalize state or not.
         "normalize_state": tune.sample_from(lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True),
@@ -592,6 +611,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         seed=hpo_args.seed,
         enable_boot_during_hpo=hpo_args.enable_boot_during_hpo,
         boot_config_fpath_during_hpo=hpo_args.boot_config_fpath_during_hpo,
+        build_space_good_for_boot=hpo_args.build_space_good_for_boot,
         workload_timeouts=workload_timeouts,
         query_timeouts=query_timeouts,
     )
