@@ -480,17 +480,46 @@ class CleanTests(unittest.TestCase):
         }
         starting_task_runs_structure = {
             "dir1": {
-                "file1.txt": ("file",),
                 "symlink2": ("symlink", "task_runs/file2.txt")
             },
             "file2.txt": ("file",),
-            "file3.txt": ("file",)
         }
         starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
 
+        # We disallow links to links so it's an AssertionError
         with self.assertRaises(AssertionError):
+            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+
+    def test_multi_link_loop_gives_error(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/symlink2")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "symlink2": ("symlink", "symlinks/symlink1")
+            },
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+
+        # pathlib disallows multi-link loops so it's a RuntimeError
+        with self.assertRaises(RuntimeError):
+            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+
+    def test_link_self_loop_gives_error(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "symlinks/symlink1")
+        }
+        starting_task_runs_structure = dict()
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+
+        # pathlib disallows multi-link loops so it's a RuntimeError
+        with self.assertRaises(RuntimeError):
             clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
 
     def test_dont_loop_infinitely_if_there_are_cycles_between_different_dirs_in_runs(self):
@@ -578,10 +607,6 @@ class CleanTests(unittest.TestCase):
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
-
-    # don't loop infinitely if there are symlink self cycles (symlink that refers to itself)
-
-    # don't loop infinitely if there are symlink non-self cycles
 
     # links to non-existent files are ok
 
