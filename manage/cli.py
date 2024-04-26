@@ -134,7 +134,7 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
             symlink_fpath: Path = symlink_fpaths_to_process.pop()
             assert symlink_fpath.is_symlink()
             real_fordpath = symlink_fpath.resolve()
-            assert str(real_fordpath) == str(os.readlink(symlink_fpath)), f"symlink_fpath ({symlink_fpath}) seems to point to *another* symlink. This is difficult to handle and has no practical use, so it is currently disallowed. Please resolve this situation manually."
+            assert str(real_fordpath) == str(os.readlink(symlink_fpath)), f"symlink_fpath ({symlink_fpath}) seems to point to *another* symlink. This is difficult to handle, so it is currently disallowed. Please resolve this situation manually."
 
             # If the file doesn't exist, we'll just ignore it.
             if not real_fordpath.exists():

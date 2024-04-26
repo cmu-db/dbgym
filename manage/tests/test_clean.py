@@ -417,7 +417,7 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    def test_safe_mode_link_to_link_to_file_in_dir_in_task_runs(self):
+    def test_safe_mode_link_to_dir_with_link_to_file_in_dir_in_task_runs(self):
         starting_symlinks_structure = {
             "symlink1": ("symlink", "task_runs/dir1")
         }
@@ -474,6 +474,25 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
+    def test_link_to_link_to_file_gives_error(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1/symlink2")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/file2.txt")
+            },
+            "file2.txt": ("file",),
+            "file3.txt": ("file",)
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+
+        with self.assertRaises(AssertionError):
+            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+
     def test_dont_loop_infinitely_if_there_are_cycles_between_different_dirs_in_runs(self):
         starting_symlinks_structure = {
             "symlink1": ("symlink", "task_runs/dir1")
@@ -508,9 +527,57 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    # don't loop infinitely if there are task_run self-cycles (symlink in task run that refers to the same task run)
+    def test_dont_loop_infinitely_if_there_is_a_dir_in_runs_that_links_to_a_file_in_itself(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
+            },
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
 
-    # don't loop infinitely if there are task_run non-self cycles
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_dont_loop_infinitely_if_there_is_loop_amongst_symlinks(self):
+        starting_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        starting_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
+            },
+        }
+        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
+        ending_symlinks_structure = {
+            "symlink1": ("symlink", "task_runs/dir1")
+        }
+        ending_task_runs_structure = {
+            "dir1": {
+                "file1.txt": ("file",),
+                "symlink2": ("symlink", "task_runs/dir1/file1.txt")
+            },
+        }
+        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
     # don't loop infinitely if there are symlink self cycles (symlink that refers to itself)
 
