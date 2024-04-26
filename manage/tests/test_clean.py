@@ -728,6 +728,8 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
+    # test symlinks that point to strings which aren't absolute paths
+
 
 if __name__ == '__main__':
     unittest.main()
