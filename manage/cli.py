@@ -89,7 +89,14 @@ def manage_standardize(dbgym_cfg):
     help="The mode to clean the workspace (default=\"safe\"). \"aggressive\" means \"only keep run_*/ folders referenced by a file in symlinks/\". \"safe\" means \"in addition to that, recursively keep any run_*/ folders referenced by any symlinks in run_*/ folders we are keeping.\""
 )
 def manage_clean(dbgym_cfg: DBGymConfig, mode: str):
-    clean_workspace(dbgym_cfg.dbgym_workspace_path, mode)
+    clean_workspace(dbgym_cfg, mode)
+
+
+@click.command("count")
+@click.pass_obj
+def manage_count(dbgym_cfg: DBGymConfig):
+    num_files = _count_files_in_workspace(dbgym_cfg)
+    print(f"The workspace ({dbgym_cfg.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks.")
 
 
 def add_symlinks_in_dpath(symlinks_stack: List[Path], root_dpath: Path, processed_symlinks: Set[Path]) -> None:
@@ -104,6 +111,21 @@ def add_symlinks_in_dpath(symlinks_stack: List[Path], root_dpath: Path, processe
             if file_path.is_symlink() and file_path not in processed_symlinks:
                 symlinks_stack.append(file_path)
                 processed_symlinks.add(file_path)
+
+
+def _count_files_in_workspace(dbgym_cfg: DBGymConfig) -> int:
+    """
+    Counts the number of files (regular file or dir or symlink) in the workspace.
+    """
+    total_count = 0
+    for dirpath, dirnames, filenames in os.walk(dbgym_cfg.dbgym_workspace_path, followlinks=False):
+        # Check if any of the directories are symbolic links and remove them from dirnames
+        dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
+        
+        # Count files and directories (non-symlink directories already filtered)
+        total_count += len(filenames) + len(dirnames)
+
+    return total_count
 
 
 def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
@@ -133,7 +155,11 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
         while symlink_fpaths_to_process:
             symlink_fpath: Path = symlink_fpaths_to_process.pop()
             assert symlink_fpath.is_symlink()
+            # Path.resolve() resolves all layers of symlinks while os.readlink() only resolves one layer.
+            # However, os.readlink() literally reads the string contents of the link. We need to do some
+            #   processing on the result of os.readlink() to convert it to an absolute path
             real_fordpath = symlink_fpath.resolve()
+            one_layer_resolved_fordpath = os.readlink(symlink_fpath)
             assert str(real_fordpath) == str(os.readlink(symlink_fpath)), f"symlink_fpath ({symlink_fpath}) seems to point to *another* symlink. This is difficult to handle, so it is currently disallowed. Please resolve this situation manually."
 
             # If the file doesn't exist, we'll just ignore it.
@@ -170,6 +196,7 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
 
     # 3. Go through all children of task_runs/*, deleting any that we weren't told to keep
     # It's true that symlinks might link outside of task_runs/*. We'll just not care about those
+    starting_num_files = _count_files_in_workspace(dbgym_cfg)
     if dbgym_cfg.dbgym_runs_path.exists():
         for child_fordpath in dbgym_cfg.dbgym_runs_path.iterdir():
             if child_fordpath not in task_run_child_fordpaths_to_keep:
@@ -177,9 +204,13 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
                     shutil.rmtree(child_fordpath)
                 else:
                     os.remove(child_fordpath)
+    ending_num_files = _count_files_in_workspace(dbgym_cfg)
+    print(f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files")
+    print(f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}")
 
 
 manage_group.add_command(manage_show)
 manage_group.add_command(manage_write)
 manage_group.add_command(manage_standardize)
 manage_group.add_command(manage_clean)
+manage_group.add_command(manage_count)
