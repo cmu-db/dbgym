@@ -302,7 +302,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
             info["actions_info"]["best_observed_holon_action"] = best_observed_holon_action
-            info["maximal_embed"] = self.action_space.to_latent([action])
+            info["maximal_embed"] = self.action_space.to_latent([best_observed_holon_action])
 
         return self.unwrapped.step_post_execute(success, action, info)
 

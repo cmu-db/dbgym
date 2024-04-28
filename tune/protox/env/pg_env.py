@@ -123,9 +123,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             config_changes, sql_commands = self.action_space.generate_plan_from_config(
                 config, sc
             )
-            # We dump the page cache here because we're resetting. We don't want stuff from
-            #   a previous task.py invocation to affect this.
-            assert self.shift_state(config_changes, sql_commands, dump_page_cache=True)
+            # Don't dump the page cache because we want to keep it warm to see the performance of
+            #   workloads under a warm cache.
+            assert self.shift_state(config_changes, sql_commands, dump_page_cache=False)
 
             # Note that we do not actually update the baseline metric/reward used by the reward
             # utility. This is so the reward is not stochastic with respect to the starting state.
@@ -233,7 +233,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         # Attempt to maneuver to the new state.
         # Don't dump the page cache in shift_state() in order to see how the workload performs in
         #   a warm cache scenario.
-        success = self.shift_state(config_changes, sql_commands, dump_page_cache=True)
+        success = self.shift_state(config_changes, sql_commands, dump_page_cache=False)
         return success, EnvInfoDict(
             {
                 "attempted_changes": (config_changes, sql_commands),
@@ -365,7 +365,6 @@ class PostgresEnv(gym.Env[Any, Any]):
         config_changes: list[str],
         sql_commands: list[str],
         dump_page_cache: bool = False,
-        ignore_error: bool = False,
     ) -> bool:
         def attempt_checkpoint(conn_str: str) -> None:
             # CHECKPOINT to prevent the DBMS from entering a super slow shutdown
