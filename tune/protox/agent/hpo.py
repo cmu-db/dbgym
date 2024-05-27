@@ -435,13 +435,19 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode) -> None:
+    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, ray_trial_id: str | None=None) -> None:
         """
         We use this object for HPO, tune, and replay. It behaves *slightly* differently
         depending on what it's used for, which is why we have the tuning_mode param.
         """
         self.dbgym_cfg = dbgym_cfg
         self.tuning_mode = tuning_mode
+
+        if self.tuning_mode == TuningMode.HPO:
+            assert ray_trial_id != None, "If we're doing HPO, we will create multiple TuneTrial() objects. We thus need to differentiate them somehow."
+        else:
+            assert ray_trial_id == None, "If we're not doing HPO, we (currently) will create only one TuneTrial() object. For clarity, we set ray_trial_id to None since ray_trial_id should not be used in this case."
+        self.ray_trial_id = ray_trial_id
 
     def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
@@ -498,9 +504,10 @@ class TuneTrial:
             )
             self.env_init = True
 
-            # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
-            #   stashed in the same directory and potentially crash the system.
-            if not self.tuning_mode == TuningMode.HPO:
+            # During HPO, we need to make sure different trials don't create folders that override each other.
+            if self.tuning_mode == TuningMode.HPO:
+                self.logger.stash_results(infos, name_override=f"baseline_{self.ray_trial_id}")
+            else:
                 self.logger.stash_results(infos, name_override="baseline")
         else:
             self.agent.learn(self.env, total_timesteps=1, tuning_mode=self.tuning_mode)
@@ -548,7 +555,7 @@ def create_tune_opt_class(dbgym_cfg_param):
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
-            self.trial = TuneTrial(TuneOpt.dbgym_cfg, TuningMode.HPO)
+            self.trial = TuneTrial(TuneOpt.dbgym_cfg, TuningMode.HPO, ray_trial_id=self.trial_id)
             self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:

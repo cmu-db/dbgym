@@ -97,25 +97,24 @@ class Logger(object):
         """
         Stash data about this step of tuning so that it can be replayed.
         """
-        time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        time = name_override if name_override else time
+        dname = name_override if name_override else datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         if info_dict["results_dpath"] is not None and Path(info_dict["results_dpath"]).exists():
-            local["mv"][info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{time}"].run()
+            local["mv"][info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{dname}"].run()
         else:
-            Path(f"{self.tuning_steps_dpath}/{time}").mkdir(parents=True, exist_ok=True)
+            Path(f"{self.tuning_steps_dpath}/{dname}").mkdir(parents=True, exist_ok=True)
 
         if info_dict["prior_pgconf"]:
             local["cp"][
-                info_dict["prior_pgconf"], f"{self.tuning_steps_dpath}/{time}/old_pg.conf"
+                info_dict["prior_pgconf"], f"{self.tuning_steps_dpath}/{dname}/old_pg.conf"
             ].run()
 
         if info_dict["prior_state_container"]:
-            with open(self.tuning_steps_dpath / time / "prior_state.pkl", "wb") as f:
+            with open(self.tuning_steps_dpath / dname / "prior_state.pkl", "wb") as f:
                 # info_dict["prior_state_container"] is a somewhat complex object so we use pickle over json
                 pickle.dump(info_dict["prior_state_container"], f)
 
         if info_dict["actions_info"]:
-            with open(self.tuning_steps_dpath / time / "action.pkl", "wb") as f:
+            with open(self.tuning_steps_dpath / dname / "action.pkl", "wb") as f:
                 pickle.dump(info_dict["actions_info"], f)
 
     def advance(self) -> None:

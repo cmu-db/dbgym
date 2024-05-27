@@ -51,7 +51,7 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     help="The number of hours to run the tuning agent for. If you do not specify this argument, it will be the same as --tune-duration-during-hpo."
 )
 def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, boot_config_fpath_during_tune: Path, tune_duration_during_tune: float) -> None:
-    '''IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters".''' 
+    """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters".""" 
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
