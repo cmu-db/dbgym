@@ -212,11 +212,11 @@ def train_all_embeddings(
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_config = RunConfig(
         name=f"ProtoXEmbeddingHPO_{dtime}",
-        storage_path=None,
         failure_config=FailureConfig(max_failures=0, fail_fast=True),
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
+        storage_path=dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True),
     )
 
     resources = {"cpu": 1}
@@ -250,9 +250,9 @@ def train_all_embeddings(
                 print(f"Trial {results[i]} FAILED")
         assert False
 
-    duration = time.time() - start_time
+    train_all_embeddings_duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/hpo_train_time.txt", "w") as f:
-        f.write(f"{duration}")
+        f.write(f"{train_all_embeddings_duration}")
 
 
 def _hpo_train(

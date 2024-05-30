@@ -14,7 +14,7 @@ class StateSpace(ABC, spaces.Space[Any]):
         pass
 
     @abstractmethod
-    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]) -> bool:
         pass
 
     @abstractmethod

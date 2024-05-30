@@ -1,9 +1,9 @@
-'''
+"""
 At a high level, this file's goal is to (1) install+build postgres and (2) create pgdata.
 On the other hand, the goal of tune.protox.env.util.postgres is to provide helpers to manage
     a Postgres instance during agent tuning.
 util.pg provides helpers used by *both* of the above files (as well as other files).
-'''
+"""
 import logging
 import os
 import shutil
@@ -84,11 +84,11 @@ def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: f
 
 
 def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo", "boot", "build", "postgres", "bin")
+    return dbgym_cfg.cur_symlinks_build_path("repo.link", "boot", "build", "postgres", "bin")
 
 
 def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo")
+    return dbgym_cfg.cur_symlinks_build_path("repo.link")
 
 
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
@@ -143,7 +143,7 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
     # Create .tgz file.
     # Note that you can't pass "[pgdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[pgdata].tgz" as a dir.
     pgdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
-        ".", mkdir=True
+        mkdir=True
     ) / get_pgdata_tgz_name(benchmark_name, scale_factor)
     # We need to cd into pgdata_dpath so that the tar file does not contain folders for the whole path of pgdata_dpath.
     subprocess_run(f"tar -czf {pgdata_tgz_real_fpath} .", cwd=pgdata_dpath)
@@ -156,21 +156,21 @@ def _create_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
 
 def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
     # get necessary vars
-    pgbin_symlink_dpath = _get_pgbin_symlink_path(dbgym_cfg)
-    assert pgbin_symlink_dpath.exists()
+    pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_cfg).resolve()
+    assert pgbin_real_dpath.exists()
     dbgym_pguser = DBGYM_POSTGRES_USER
     dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
     # Create user
-    save_file(dbgym_cfg, pgbin_symlink_dpath / "psql")
+    save_file(dbgym_cfg, pgbin_real_dpath / "psql")
     subprocess_run(
         f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
     subprocess_run(
         f'./psql -c "grant pg_monitor to {dbgym_pguser}" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
 
     # Load shared preload libraries
@@ -179,14 +179,14 @@ def _generic_pgdata_setup(dbgym_cfg: DBGymConfig):
             # You have to use TO and you can't put single quotes around the libraries (https://postgrespro.com/list/thread-id/2580120)
             # The method I wrote here works for both one library and multiple libraries
             f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-            cwd=pgbin_symlink_dpath,
+            cwd=pgbin_real_dpath,
         )
 
     # Create the dbgym database. since one pgdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark
     subprocess_run(
         f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{dbgym_pguser}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_symlink_dpath,
+        cwd=pgbin_real_dpath,
     )
 
 
