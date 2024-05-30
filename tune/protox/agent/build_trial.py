@@ -5,7 +5,7 @@ import shutil
 import socket
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Callable, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -381,6 +381,7 @@ def _build_agent(
     observation_space: StateSpace,
     action_space: HolonSpace,
     logger: Logger,
+    ray_trial_id: Optional[str],
 ) -> Wolp:
     action_dim = noise_action_dim = action_space.latent_dim()
     critic_action_dim = action_space.critic_dim()
@@ -498,6 +499,7 @@ def _build_agent(
             obs_shape=[gym.spaces.utils.flatdim(observation_space)],
             action_dim=critic_action_dim,
         ),
+        ray_trial_id=ray_trial_id,
         learning_starts=hpo_params["learning_starts"],
         batch_size=hpo_params["batch_size"],
         train_freq=(hpo_params["train_freq_frequency"], hpo_params["train_freq_unit"]),
@@ -510,7 +512,7 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, seed: int, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, seed: int, hpo_params: dict[str, Any], ray_trial_id: Optional[str]=None
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
@@ -533,5 +535,5 @@ def build_trial(
         logger,
     )
 
-    agent = _build_agent(seed, hpo_params, observation_space, holon_space, logger)
+    agent = _build_agent(seed, hpo_params, observation_space, holon_space, logger, ray_trial_id)
     return logger, target_reset, env, agent, signal

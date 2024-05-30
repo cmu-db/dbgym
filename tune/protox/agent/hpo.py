@@ -10,7 +10,7 @@ import torch
 import os
 import pandas as pd
 from datetime import datetime
-from typing import Any, Union
+from typing import Any, Optional, Union
 import random
 import click
 import ssd_checker
@@ -435,7 +435,7 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, ray_trial_id: str | None=None) -> None:
+    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, ray_trial_id: Optional[str]=None) -> None:
         """
         We use this object for HPO, tune, and replay. It behaves *slightly* differently
         depending on what it's used for, which is why we have the tuning_mode param.
@@ -470,6 +470,7 @@ class TuneTrial:
             self.tuning_mode,
             seed=seed,
             hpo_params=hpo_params,
+            ray_trial_id=self.ray_trial_id,
         )
         self.logger.get_logger(None).info("%s", hpo_params)
         self.logger.get_logger(None).info(f"Seed: {seed}")
@@ -504,11 +505,8 @@ class TuneTrial:
             )
             self.env_init = True
 
-            # During HPO, we need to make sure different trials don't create folders that override each other.
-            if self.tuning_mode == TuningMode.HPO:
-                self.logger.stash_results(infos, name_override=f"baseline_{self.ray_trial_id}")
-            else:
-                self.logger.stash_results(infos, name_override="baseline")
+            assert self.ray_trial_id != None if self.tuning_mode == TuningMode.HPO else True, "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
+            self.logger.stash_results(infos, name_override="baseline", ray_trial_id=self.ray_trial_id)
         else:
             self.agent.learn(self.env, total_timesteps=1, tuning_mode=self.tuning_mode)
 

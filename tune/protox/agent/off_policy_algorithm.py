@@ -47,10 +47,12 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
         seed: Optional[int] = None,
+        ray_trial_id: Optional[str] = None,
     ):
         super().__init__(seed=seed)
         self.policy = policy
         self.replay_buffer = replay_buffer
+        self.ray_trial_id = ray_trial_id
 
         self.batch_size = batch_size
         self.learning_starts = learning_starts
@@ -186,8 +188,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             dones = terms or truncs
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially cause a race condition.
-            if self.logger and not tuning_mode == TuningMode.HPO:
-                self.logger.stash_results(infos)
+            if self.logger:
+                assert self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True, "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
+                self.logger.stash_results(infos, ray_trial_id=self.ray_trial_id)
 
             self.num_timesteps += 1
             num_collected_steps += 1

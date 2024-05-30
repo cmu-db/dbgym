@@ -92,12 +92,17 @@ class Logger(object):
         return logging.getLogger(name)
 
     def stash_results(
-        self, info_dict: dict[str, Any], name_override: Optional[str] = None
+        self, info_dict: dict[str, Any], name_override: Optional[str] = None, ray_trial_id: Optional[str] = None,
     ) -> None:
         """
         Stash data about this step of tuning so that it can be replayed.
         """
         dname = name_override if name_override else datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if ray_trial_id != None:
+            # Orthogonal to whether name_override is used, ray_trial_id disambiguates between folders created
+            # by different HPO trials so that the folders don't overwrite each other.
+            dname += f"_{ray_trial_id}"
+
         if info_dict["results_dpath"] is not None and Path(info_dict["results_dpath"]).exists():
             local["mv"][info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{dname}"].run()
         else:
