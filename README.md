@@ -25,7 +25,7 @@ pip install -r dependency/requirements.sh
 # Linux
 cat dependency/apt_requirements.txt | xargs sudo apt-get install -y
 
-# Install Rust
+# Install Rust.
 ./dependency/rust.sh
 
 
@@ -41,32 +41,32 @@ PGDATA_PARENT_DPATH=/path/to/dir/in/ssd/mount
 
 
 ## Benchmark
-# Generate data
+# Generate data.
 python3 task.py --no-startup-check benchmark tpch data $SCALE_FACTOR
 
-# Generate queries
+# Generate queries.
 python3 task.py --no-startup-check benchmark tpch workload --scale-factor $SCALE_FACTOR
 
 
 ## DBMS
-# Build Postgres
+# Build Postgres.
 python3 task.py --no-startup-check dbms postgres build
 
-# Load TPC-H into Postgres
+# Load TPC-H into Postgres.
 python3 task.py --no-startup-check dbms postgres pgdata tpch --scale-factor $SCALE_FACTOR --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
 
 
 ## Tune
-# Generate training data for Proto-X's index embedding
+# Generate training data for Proto-X's index embedding.
 python3 task.py --no-startup-check tune protox embedding datagen tpch --scale-factor $SCALE_FACTOR --override-sample-limits "lineitem,32768" --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH
 
-# Train Proto-X's index embedding model
+# Train Proto-X's index embedding model.
 python3 task.py --no-startup-check tune protox embedding train tpch --scale-factor $SCALE_FACTOR --iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2
 
-# Search for hyperparameters to train the Proto-X agent
+# Search for hyperparameters to train the Proto-X agent.
 python3 task.py --no-startup-check tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --duration 0.1  --intended-pgdata-hardware $INTENDED_PGDATA_HARDWARE --pgdata-parent-dpath $PGDATA_PARENT_DPATH --enable-boot-during-hpo
 
-# Train the Proto-X agent
+# Train the Proto-X agent. The DBMS is tuned *during* the training process, which is why this step is called `tune`.
 python3 task.py --no-startup-check tune protox agent tune tpch --scale-factor $SCALE_FACTOR
 ```
 
