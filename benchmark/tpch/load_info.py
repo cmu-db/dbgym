@@ -1,5 +1,5 @@
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import get_scale_factor_string
+from misc.utils import DBGymConfig, get_scale_factor_string
 
 
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
@@ -22,7 +22,7 @@ class TpchLoadInfo(LoadInfoBaseClass):
         "lineitem",
     ]
 
-    def __init__(self, dbgym_cfg, scale_factor):
+    def __init__(self, dbgym_cfg: DBGymConfig, scale_factor: float):
         # schema and constraints
         schema_root_dpath = dbgym_cfg.dbgym_repo_path
         for component in TpchLoadInfo.CODEBASE_PATH_COMPONENTS[
@@ -39,13 +39,12 @@ class TpchLoadInfo(LoadInfoBaseClass):
         ), f"self._constraints_fpath ({self._constraints_fpath}) does not exist"
 
         # tables
-        data_root_dpath = (
-            dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
-        )
-        tables_dpath = data_root_dpath / f"tables_sf{get_scale_factor_string(scale_factor)}"
+        data_root_dpath = dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
+        tables_symlink_dpath = data_root_dpath / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
+        tables_dpath = tables_symlink_dpath.resolve()
         assert (
-            tables_dpath.exists()
-        ), f"tables_dpath ({tables_dpath}) does not exist. Make sure you have generated the TPC-H data"
+            tables_dpath.exists() and tables_dpath.is_absolute() and not tables_dpath.is_symlink()
+        ), f"tables_dpath ({tables_dpath}) should be an existent real absolute path. Make sure you have generated the TPC-H data"
         self._tables_and_fpaths = []
         for table in TpchLoadInfo.TABLES:
             table_fpath = tables_dpath / f"{table}.tbl"

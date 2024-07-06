@@ -50,7 +50,7 @@ class StructureStateSpace(StateSpace, spaces.Dict):
     def require_metrics(self) -> bool:
         return False
 
-    def check_benchbase(self, dbgym_cfg: DBGymConfig, results: Union[str, Path]) -> bool:
+    def check_benchbase(self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]) -> bool:
         # We don't use benchbase metrics anyways.
         return True
 

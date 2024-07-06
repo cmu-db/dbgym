@@ -28,7 +28,7 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
         data = _attach(data, raw_data, select_args.idx_limit)
 
     curated_dpath = dbgym_cfg.cur_task_runs_data_path("curated", mkdir=True)
-    curated_results_fpath = dbgym_cfg.cur_task_runs_data_path(".", mkdir=True) / "curated_results.csv"
+    curated_results_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "curated_results.csv"
     data.to_csv(
         curated_results_fpath, index=False
     )
@@ -77,7 +77,7 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
             )
 
             if loop_i == 0:
-                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name))
+                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name) + ".link")
 
             info_txt.write(f"model{idx}/embedder.pth\n")
             idx += 1

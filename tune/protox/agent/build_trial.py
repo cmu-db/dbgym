@@ -5,7 +5,7 @@ import shutil
 import socket
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Callable, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -17,7 +17,7 @@ from gymnasium.wrappers import (  # type: ignore
 )
 from torch import nn
 
-from misc.utils import DBGymConfig, open_and_save, make_redis_started, save_file
+from misc.utils import DBGymConfig, TuningMode, open_and_save, make_redis_started, save_file
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -93,9 +93,9 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     raise IOError("No free ports to bind postgres to.")
 
 
-def _modify_benchbase_config(logdir: str, port: int, hpo_params: dict[str, Any]) -> None:
+def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpo_params: dict[str, Any]) -> None:
     if hpo_params["benchmark_config"]["query_spec"]["oltp_workload"]:
-        conf_etree = ET.parse(Path(logdir) / "benchmark.xml")
+        conf_etree = ET.parse(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
         conf_etree.getroot().find("url").text = jdbc  # type: ignore
 
@@ -110,7 +110,7 @@ def _modify_benchbase_config(logdir: str, port: int, hpo_params: dict[str, Any])
                 conf_etree.getroot().find("works").find("work").find("time").text = str(oltp_config["oltp_duration"])  # type: ignore
             if works.find("warmup") is not None:  # type: ignore
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"])  # type: ignore
-        conf_etree.write(Path(logdir) / "benchmark.xml")
+        conf_etree.write(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
 
 
 def _gen_noise_scale(
@@ -130,14 +130,12 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, logdir: str, pgport: int, is_hpo: bool, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, pgport: int, hpo_params: dict[str, Any]
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
+        dbgym_cfg,
         hpo_params["trace"],
         hpo_params["verbose"],
-        Path(logdir),
-        Path(logdir) / "repository",
-        Path(logdir) / "tboard",
     )
 
     reward_utility = RewardUtility(
@@ -153,19 +151,18 @@ def _build_utilities(
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
-    enable_boot = hpo_params["enable_boot_during_hpo"] if is_hpo else hpo_params["enable_boot_during_tune"]
+    enable_boot = hpo_params["enable_boot"][str(tuning_mode)]
     if enable_boot:
         make_redis_started(dbgym_cfg.root_yaml["boot_redis_port"])
 
-    pgconn = PostgresConn(
+    pg_conn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
         pristine_pgdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
         pgdata_parent_dpath=Path(hpo_params["pgconn_info"]["pgdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
-        postgres_logs_dir=Path(logdir) / "pg_logs",
         enable_boot=enable_boot,
-        boot_config_fpath=hpo_params["boot_config_fpath"],
+        boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
         connect_timeout=300,
         logger=logger,
     )
@@ -177,12 +174,12 @@ def _build_utilities(
         query_spec=hpo_params["benchmark_config"]["query_spec"],
         workload_path=Path(hpo_params["workload_path"]),
         pid=None,
-        workload_timeout=hpo_params["workload_timeout"],
+        workload_timeout=hpo_params["workload_timeout"][str(tuning_mode)],
         workload_timeout_penalty=hpo_params["workload_timeout_penalty"],
         logger=logger,
     )
 
-    return logger, reward_utility, pgconn, workload
+    return logger, reward_utility, pg_conn, workload
 
 
 def _build_actions(
@@ -276,7 +273,7 @@ def _build_actions(
     return hspace, lsc
 
 
-def _build_obs_space(
+def _build_observation_space(
     dbgym_cfg: DBGymConfig, action_space: HolonSpace, lsc: LSC, hpo_params: dict[str, Any], seed: int
 ) -> StateSpace:
     if hpo_params["metric_state"] == "metric":
@@ -307,9 +304,10 @@ def _build_obs_space(
 
 def _build_env(
     dbgym_cfg: DBGymConfig,
+    tuning_mode: TuningMode,
     hpo_params: dict[str, Any],
-    pgconn: PostgresConn,
-    obs_space: StateSpace,
+    pg_conn: PostgresConn,
+    observation_space: StateSpace,
     holon_space: HolonSpace,
     lsc: LSC,
     workload: Workload,
@@ -320,16 +318,16 @@ def _build_env(
     env = gym.make(
         "Postgres-v0",
         dbgym_cfg=dbgym_cfg,
-        observation_space=obs_space,
+        tuning_mode=tuning_mode,
+        observation_space=observation_space,
         action_space=holon_space,
         workload=workload,
         horizon=hpo_params["horizon"],
         reward_utility=reward_utility,
-        pgconn=pgconn,
-        pqt=hpo_params["query_timeout"],
+        pg_conn=pg_conn,
+        query_timeout=hpo_params["query_timeout"],
         benchbase_config=hpo_params["benchbase_config"],
         logger=logger,
-        replay=False,
     )
 
     # Check whether to create the MQO wrapper.
@@ -344,7 +342,7 @@ def _build_env(
                 workload_eval_inverse=hpo_params["workload_eval_inverse"],
                 workload_eval_reset=hpo_params["workload_eval_reset"],
                 benchbase_config=hpo_params["benchbase_config"],
-                pqt=hpo_params["query_timeout"],
+                query_timeout=hpo_params["query_timeout"],
                 env=env,
                 logger=logger,
             )
@@ -380,18 +378,19 @@ def _build_env(
 def _build_agent(
     seed: int,
     hpo_params: dict[str, Any],
-    obs_space: StateSpace,
+    observation_space: StateSpace,
     action_space: HolonSpace,
     logger: Logger,
+    ray_trial_id: Optional[str],
 ) -> Wolp:
     action_dim = noise_action_dim = action_space.latent_dim()
     critic_action_dim = action_space.critic_dim()
 
     actor = Actor(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["pi_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -401,10 +400,10 @@ def _build_agent(
     )
 
     actor_target = Actor(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["pi_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -418,10 +417,10 @@ def _build_agent(
     )
 
     critic = ContinuousCritic(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["qf_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -430,10 +429,10 @@ def _build_agent(
     )
 
     critic_target = ContinuousCritic(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         net_arch=[int(l) for l in hpo_params["qf_arch"].split(",")],
-        features_dim=gym.spaces.utils.flatdim(obs_space),
+        features_dim=gym.spaces.utils.flatdim(observation_space),
         activation_fn=_parse_activation_fn(hpo_params["activation_fn"]),
         weight_init=hpo_params["weight_init"],
         bias_zero=hpo_params["bias_zero"],
@@ -447,7 +446,7 @@ def _build_agent(
     )
 
     policy = WolpPolicy(
-        observation_space=obs_space,
+        observation_space=observation_space,
         action_space=action_space,
         actor=actor,
         actor_target=actor_target,
@@ -497,9 +496,10 @@ def _build_agent(
         policy=policy,
         replay_buffer=ReplayBuffer(
             buffer_size=hpo_params["buffer_size"],
-            obs_shape=[gym.spaces.utils.flatdim(obs_space)],
+            obs_shape=[gym.spaces.utils.flatdim(observation_space)],
             action_dim=critic_action_dim,
         ),
+        ray_trial_id=ray_trial_id,
         learning_starts=hpo_params["learning_starts"],
         batch_size=hpo_params["batch_size"],
         train_freq=(hpo_params["train_freq_frequency"], hpo_params["train_freq_unit"]),
@@ -512,21 +512,22 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, seed: int, logdir: str, is_hpo: bool, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, seed: int, hpo_params: dict[str, Any], ray_trial_id: Optional[str]=None
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
-    _modify_benchbase_config(logdir, port, hpo_params)
+    _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pgconn, workload = _build_utilities(dbgym_cfg, logdir, port, is_hpo, hpo_params)
+    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, tuning_mode, port, hpo_params)
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
-    obs_space = _build_obs_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
+    observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
     target_reset, env = _build_env(
         dbgym_cfg,
+        tuning_mode,
         hpo_params,
-        pgconn,
-        obs_space,
+        pg_conn,
+        observation_space,
         holon_space,
         lsc,
         workload,
@@ -534,5 +535,5 @@ def build_trial(
         logger,
     )
 
-    agent = _build_agent(seed, hpo_params, obs_space, holon_space, logger)
+    agent = _build_agent(seed, hpo_params, observation_space, holon_space, logger, ray_trial_id)
     return logger, target_reset, env, agent, signal

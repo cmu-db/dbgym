@@ -37,7 +37,7 @@ def _time_query(
     query: str,
     timeout: float,
 ) -> Tuple[float, bool, Any]:
-    has_timeout = False
+    did_time_out = False
     has_explain = "EXPLAIN" in query
     explain_data = None
 
@@ -63,11 +63,11 @@ def _time_query(
                 f"{prefix} exceeded evaluation timeout {timeout}"
             )
         qid_runtime = timeout * 1e6
-        has_timeout = True
+        did_time_out = True
     except Exception as e:
         assert False, print(e)
     # qid_runtime is in microseconds.
-    return qid_runtime, has_timeout, explain_data
+    return qid_runtime, did_time_out, explain_data
 
 
 def _acquire_metrics_around_query(
@@ -75,44 +75,46 @@ def _acquire_metrics_around_query(
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
-    pqt: float = 0.0,
-    obs_space: Optional[StateSpace] = None,
+    query_timeout: float = 0.0,
+    observation_space: Optional[StateSpace] = None,
 ) -> Tuple[float, bool, Any, Any]:
     _force_statement_timeout(connection, 0)
-    if obs_space and obs_space.require_metrics():
-        initial_metrics = obs_space.construct_online(connection)
+    if observation_space and observation_space.require_metrics():
+        initial_metrics = observation_space.construct_online(connection)
 
-    if pqt > 0:
-        _force_statement_timeout(connection, pqt * 1000)
+    if query_timeout > 0:
+        _force_statement_timeout(connection, query_timeout * 1000)
+    else:
+        assert query_timeout == 0, f"Setting query_timeout to 0 indicates \"timeout\". However, setting query_timeout ({query_timeout}) < 0 is a bug."
 
-    qid_runtime, did_timeout, explain_data = _time_query(
-        logger, prefix, connection, query, pqt
+    qid_runtime, did_time_out, explain_data = _time_query(
+        logger, prefix, connection, query, query_timeout
     )
 
     # Wipe the statement timeout.
     _force_statement_timeout(connection, 0)
-    if obs_space and obs_space.require_metrics():
-        final_metrics = obs_space.construct_online(connection)
-        diff = obs_space.state_delta(initial_metrics, final_metrics)
+    if observation_space and observation_space.require_metrics():
+        final_metrics = observation_space.construct_online(connection)
+        diff = observation_space.state_delta(initial_metrics, final_metrics)
     else:
         diff = None
 
     # qid_runtime is in microseconds.
-    return qid_runtime, did_timeout, explain_data, diff
+    return qid_runtime, did_time_out, explain_data, diff
 
 
 def execute_variations(
     connection: psycopg.Connection[Any],
     runs: list[QueryRun],
     query: str,
-    pqt: float = 0,
+    query_timeout: float = 0,
     logger: Optional[Logger] = None,
     sysknobs: Optional[KnobSpaceAction] = None,
-    obs_space: Optional[StateSpace] = None,
+    observation_space: Optional[StateSpace] = None,
 ) -> BestQueryRun:
 
     # Initial timeout.
-    timeout_limit = pqt
+    timeout_limit = query_timeout
     # Best run invocation.
     best_qr = BestQueryRun(None, None, True, None, None)
 
@@ -140,16 +142,16 @@ def execute_variations(
         if logger:
             logger.get_logger(__name__).debug(f"{qr.prefix_qid} executing with {pqkk}")
 
-        runtime, did_timeout, explain_data, metric = _acquire_metrics_around_query(
+        runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
             logger=logger,
             prefix=qr.prefix_qid,
             connection=connection,
             query=pqk_query,
-            pqt=timeout_limit,
-            obs_space=obs_space,
+            query_timeout=timeout_limit,
+            observation_space=observation_space,
         )
 
-        if not did_timeout:
+        if not did_time_out:
             new_timeout_limit = math.ceil(runtime / 1e3) / 1.0e3
             if new_timeout_limit < timeout_limit:
                 timeout_limit = new_timeout_limit
@@ -159,7 +161,7 @@ def execute_variations(
             best_qr = BestQueryRun(
                 qr,
                 runtime,
-                did_timeout,
+                did_time_out,
                 explain_data,
                 metric,
             )
