@@ -575,3 +575,19 @@ def make_redis_started(port: int):
         # When you start Redis in daemon mode, it won't let you know if it's started, so we ping again to check
         r = redis.Redis(port=port)
         r.ping()
+
+
+def is_ssd(path: Path) -> bool:
+    try:
+        device = subprocess.check_output(['df', path]).decode().split('\n')[1].split()[0]
+        device_basename = os.path.basename(device)
+        lsblk_output = subprocess.check_output(['lsblk', '-d', '-o', 'name,rota']).decode()
+        for line in lsblk_output.split('\n')[1:]:
+            parts = line.split()
+            if parts and parts[0] == device_basename:
+                is_ssd = int(parts[1]) == 0
+                return is_ssd
+        return False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False

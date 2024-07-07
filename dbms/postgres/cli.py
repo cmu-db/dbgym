@@ -10,11 +10,10 @@ import shutil
 import subprocess
 from pathlib import Path
 import click
-import ssd_checker
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath
+from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, save_file, get_pgdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_pgdata_parent_dpath, is_ssd
 from util.shell import subprocess_run
 from sqlalchemy import Connection
 from util.pg import SHARED_PRELOAD_LIBRARIES, conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
@@ -73,9 +72,9 @@ def postgres_pgdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: f
 
     # Check assertions on args
     if intended_pgdata_hardware == "hdd":
-        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
+        assert not is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
     elif intended_pgdata_hardware == "ssd":
-        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+        assert is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
     else:
         assert False
 

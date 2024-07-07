@@ -13,7 +13,6 @@ import pandas as pd
 import yaml
 from sklearn.preprocessing import quantile_transform
 import shutil
-import ssd_checker
 
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
@@ -32,6 +31,7 @@ from misc.utils import (
     save_file,
     workload_name_fn,
     default_pgdata_parent_dpath,
+    is_ssd,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
@@ -211,9 +211,9 @@ def datagen(
 
     # Check assertions on args
     if intended_pgdata_hardware == "hdd":
-        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
+        assert not is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
     elif intended_pgdata_hardware == "ssd":
-        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+        assert is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
     else:
         assert False
 
