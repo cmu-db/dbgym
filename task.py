@@ -6,7 +6,7 @@ import yaml
 
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
-from misc.utils import DBGymConfig, is_ssd
+from misc.utils import DBGymConfig
 from tune.cli import tune_group
 
 # TODO(phw2): save commit, git diff, and run command

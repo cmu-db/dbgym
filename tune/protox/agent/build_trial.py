@@ -158,8 +158,8 @@ def _build_utilities(
     pg_conn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
-        pristine_pgdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_pgdata_snapshot_path"]),
-        pgdata_parent_dpath=Path(hpo_params["pgconn_info"]["pgdata_parent_dpath"]),
+        pristine_dbdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_dbdata_snapshot_path"]),
+        dbdata_parent_dpath=Path(hpo_params["pgconn_info"]["dbdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
         boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],

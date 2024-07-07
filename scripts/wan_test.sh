@@ -10,7 +10,7 @@ python3 task.py benchmark tpch generate-data 1
 python3 task.py benchmark tpch generate-workload queries_15721_15723 15721 15723
 
 # Create tpch_sf1.tgz
-python3 task.py dbms postgres pgdata tpch --scale-factor 1
+python3 task.py dbms postgres dbdata tpch --scale-factor 1
 
 # Run Proto-X
 python3 task.py dbms postgres start

@@ -48,8 +48,8 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
         else:
             return str(scale_factor).replace(".", "point")
     
-def get_pgdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_pgdata.tgz"
+def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
 
 
 # Other parameters
@@ -134,15 +134,15 @@ default_workload_path = (
     / "data"
     / (workload_name + ".link")
 )
-default_pristine_pgdata_snapshot_path = (
+default_pristine_dbdata_snapshot_path = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
     / "dbgym_dbms_postgres"
     / "data"
-    / (get_pgdata_tgz_name(benchmark_name, scale_factor) + ".link")
+    / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
 )
-default_pgdata_parent_dpath = (
+default_dbdata_parent_dpath = (
     lambda workspace_path: get_tmp_path_from_workspace_path(
         workspace_path
     )
@@ -202,8 +202,8 @@ class DBGymConfig:
         )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
         # tmp is a workspace for this run only
-        # one use for it is to place the unzipped pgdata
-        # there's no need to save the actual pgdata dir in run_*/ because we just save a symlink to
+        # one use for it is to place the unzipped dbdata
+        # there's no need to save the actual dbdata dir in run_*/ because we just save a symlink to
         #   the .tgz file we unzipped
         self.dbgym_tmp_path = get_tmp_path_from_workspace_path(self.dbgym_workspace_path)
         if self.dbgym_tmp_path.exists():

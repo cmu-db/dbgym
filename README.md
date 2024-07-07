@@ -11,7 +11,7 @@ These steps were tested on a fresh repository clone, Ubuntu ??.04.
 ./dependency/install_dependencies.sh
 
 # Compile a custom fork of PostgreSQL, load TPC-H, train the Proto-X agent, and tune.
-./scripts/quickstart.sh postgres path/to/put/pgdata/in tpch 0.01 protox
+./scripts/quickstart.sh postgres dir/to/put/dbdata/in/ tpch 0.01 protox
 ```
 
 ## Overview
