@@ -166,13 +166,11 @@ class DBGymConfig:
     Global configurations that apply to all parts of DB-Gym
     """
 
-    def __init__(self, config_path, startup_check=False):
+    def __init__(self, config_path):
         """
         Parameters
         ----------
         config_path : Path
-        startup_check : bool
-            True if startup_check shoul
         """
         assert is_base_git_dir(
             os.getcwd()
@@ -187,18 +185,6 @@ class DBGymConfig:
         dbgym_workspace_path = (
             Path(yaml_config["dbgym_workspace_path"]).resolve().absolute()
         )
-
-        # Quickly display options.
-        if startup_check:
-            msg = (
-                "💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩\n"
-                f"\tdbgym_workspace_path: {dbgym_workspace_path}\n"
-                "\n"
-                "Proceed?"
-            )
-            if not click.confirm(msg):
-                print("Goodbye.")
-                sys.exit(0)
 
         self.path: Path = config_path
         self.cur_path_list: list[str] = ["dbgym"]
