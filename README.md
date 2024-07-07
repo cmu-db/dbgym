@@ -4,14 +4,15 @@
 
 ## Quickstart
 
-These steps were tested on a fresh repository clone, Ubuntu ??.04.
+These steps were tested on a fresh repository clone, Ubuntu 22.04.
 
 ```
 # Setup dependencies.
+# You may want to create a Python virtual environment (e.g. with conda) before doing this.
 ./dependency/install_dependencies.sh
 
 # Compile a custom fork of PostgreSQL, load TPC-H, train the Proto-X agent, and tune.
-./scripts/quickstart.sh postgres dir/to/put/dbdata/in/ tpch 0.01 protox
+./scripts/quickstart.sh postgres tpch 0.01 protox
 ```
 
 ## Overview
