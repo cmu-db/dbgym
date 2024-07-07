@@ -12,7 +12,7 @@ These steps were tested on a fresh repository clone, Ubuntu 22.04.
 # You may want to create a Python virtual environment (e.g. with conda) before doing this.
 ./dependency/install_dependencies.sh
 
-# Compile a custom fork of PostgreSQL, load TPC-H, train the Proto-X agent, and tune.
+# Compile a custom fork of PostgreSQL, load TPC-H (SF 0.01), train the Proto-X agent, and tune.
 ./scripts/quickstart.sh postgres tpch 0.01 protox
 ```
 
@@ -30,7 +30,7 @@ allowing researchers to mix-and-match the different pipeline components.
 It draws inspiration from the Farama Foundation's Gymnasium (formerly OpenAI Gym), which
 accelerates the development and comparison of reinforcement learning algorithms by providing a set
 of agents, environments, and a standardized API for communicating between them.
-Through the database gym, we hope to save other people time and re-implementation effort by
+Through the database gym, we hope to save other people time and reimplementation effort by
 providing an extensible open-source platform for autonomous DBMS research.
 
 This project is under active development.
@@ -45,15 +45,15 @@ Currently, we decompose the database tuning pipeline into the following componen
 `task.py` is the entrypoint for all tasks.
 The tasks are grouped into categories that correspond to the top-level directories of the repository:
 
-- `benchmark` - tasks to generate data and queries for different benchmarks (e.g., TPC-H, JOB).
-- `dbms` - tasks to build and start DBMSs (e.g., PostgreSQL).
-- `tune` - tasks to train autonomous database tuning agents.
+- `benchmark` - tasks to generate data and queries for different benchmarks (e.g., TPC-H, JOB)
+- `dbms` - tasks to build and start DBMSs (e.g., PostgreSQL)
+- `tune` - tasks to train autonomous database tuning agents
 
 ## Credits
 
 The Database Gym project rose from the ashes of the [NoisePage](https://db.cs.cmu.edu/projects/noisepage/) self-driving DBMS project.
 
-The first prototype was written by [Patrick Wang](https://github.com/wangpatrick57), integrating [Boot](https://github.com/lmwnshn/boot) and [Proto-X](https://github.com/17zhangw/protox) into a cohesive system.
+The first prototype was written by [Patrick Wang](https://github.com/wangpatrick57), integrating [Boot (VLDB 2024)](https://github.com/lmwnshn/boot) and [Proto-X (VLDB 2024)](https://github.com/17zhangw/protox) into a cohesive system.
 
 ## Citing This Repository
 
