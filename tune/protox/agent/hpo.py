@@ -13,7 +13,6 @@ from datetime import datetime
 from typing import Any, Optional, Union
 import random
 import click
-import ssd_checker
 import ray
 from ray.tune import Trainable
 from ray.tune.schedulers import FIFOScheduler
@@ -23,22 +22,22 @@ from ray.air import RunConfig, FailureConfig
 from ray.train import SyncConfig
 
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_pgdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_pgdata_parent_dpath, default_hpoed_agent_params_fname
+from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_dbdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_dbdata_parent_dpath, default_hpoed_agent_params_fname, is_ssd
 
 
 METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot):
+    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
         self.benchmark_config_path = benchmark_config_path
         self.benchbase_config_path = benchbase_config_path
         self.sysknobs_path = sysknobs_path
-        self.pristine_pgdata_snapshot_path = pristine_pgdata_snapshot_path
-        self.pgdata_parent_dpath = pgdata_parent_dpath
+        self.pristine_dbdata_snapshot_path = pristine_dbdata_snapshot_path
+        self.dbdata_parent_dpath = dbdata_parent_dpath
         self.pgbin_path = pgbin_path
         self.workload_path = workload_path
         self.seed = seed
@@ -91,28 +90,22 @@ class AgentHPOArgs:
     help=f"The path to the file configuring the space of system knobs the tuner can tune.",
 )
 @click.option(
-    "--pristine-pgdata-snapshot-path",
+    "--pristine-dbdata-snapshot-path",
     default=None,
     type=Path,
-    help=f"The path to the .tgz snapshot of the pgdata directory to use as a starting point for tuning. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
-    "--pristine-pgdata-snapshot-path",
-    default=None,
-    type=Path,
-    help=f"The path to the .tgz snapshot of the pgdata directory to use as a starting point for tuning. The default is {default_pristine_pgdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
-)
-@click.option(
-    "--intended-pgdata-hardware",
+    "--intended-dbdata-hardware",
     type=click.Choice(["hdd", "ssd"]),
     default="hdd",
-    help=f"The intended hardware pgdata should be on. Used as a sanity check for --pgdata-parent-dpath.",
+    help=f"The intended hardware dbdata should be on. Used as a sanity check for --dbdata-parent-dpath.",
 )
 @click.option(
-    "--pgdata-parent-dpath",
+    "--dbdata-parent-dpath",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the pgdata which will be actively tuned. The default is {default_pgdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
@@ -199,9 +192,9 @@ def hpo(
     benchmark_config_path,
     benchbase_config_path,
     sysknobs_path,
-    pristine_pgdata_snapshot_path,
-    intended_pgdata_hardware,
-    pgdata_parent_dpath,
+    pristine_dbdata_snapshot_path,
+    intended_dbdata_hardware,
+    dbdata_parent_dpath,
     pgbin_path,
     workload_path,
     seed,
@@ -223,10 +216,10 @@ def hpo(
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if benchbase_config_path == None:
         benchbase_config_path = default_benchbase_config_path(benchmark_name)
-    if pristine_pgdata_snapshot_path == None:
-        pristine_pgdata_snapshot_path = default_pristine_pgdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
-    if pgdata_parent_dpath == None:
-        pgdata_parent_dpath = default_pgdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
+    if pristine_dbdata_snapshot_path == None:
+        pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
+    if dbdata_parent_dpath == None:
+        dbdata_parent_dpath = default_dbdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
     if pgbin_path == None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path == None:
@@ -239,22 +232,22 @@ def hpo(
     benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
     sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
-    pristine_pgdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_pgdata_snapshot_path)
-    pgdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, pgdata_parent_dpath)
+    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_dbdata_snapshot_path)
+    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
     boot_config_fpath_during_hpo = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath_during_hpo)
 
     # Check assertions on args
-    if intended_pgdata_hardware == "hdd":
-        assert not ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is HDD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an SSD"
-    elif intended_pgdata_hardware == "ssd":
-        assert ssd_checker.is_ssd(pgdata_parent_dpath), f"Intended hardware is SSD but pgdata_parent_dpath ({pgdata_parent_dpath}) is an HDD"
+    if intended_dbdata_hardware == "hdd":
+        assert not is_ssd(dbdata_parent_dpath), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
+    elif intended_dbdata_hardware == "ssd":
+        assert is_ssd(dbdata_parent_dpath), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
     else:
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_pgdata_snapshot_path, pgdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot)
+    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot)
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -607,8 +600,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         hpo_args.workload_path,
         embedder_path,
         pgconn_info={
-            "pristine_pgdata_snapshot_path": hpo_args.pristine_pgdata_snapshot_path,
-            "pgdata_parent_dpath": hpo_args.pgdata_parent_dpath,
+            "pristine_dbdata_snapshot_path": hpo_args.pristine_dbdata_snapshot_path,
+            "dbdata_parent_dpath": hpo_args.dbdata_parent_dpath,
             "pgbin_path": hpo_args.pgbin_path,
         },
         benchbase_config=benchbase_config,
