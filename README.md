@@ -19,7 +19,7 @@ These steps were tested on a fresh repository clone, Ubuntu 22.04.
 ## Overview
 
 Autonomous DBMS research often involves more engineering than research.
-As new advances in state-of-the-art technology are made, it is common to find that they have have
+As new advances in state-of-the-art technology are made, it is common to find that they have
 reimplemented the database tuning pipeline from scratch: workload capture, database setup,
 training data collection, model creation, model deployment, and more.
 Moreover, these bespoke pipelines make it difficult to combine different techniques even when they
