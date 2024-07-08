@@ -11,7 +11,7 @@ from tune.protox.env.workload import Workload
 class IndexSpaceTests(unittest.TestCase):
     @staticmethod
     def load(
-        config_path=Path("tune/protox/test/unittest_benchmark_configs/unittest_tpch.yaml"),
+        config_path=Path("tune/protox/test/unittest_benchmark_configs/unittest_tpch.yaml").resolve(),
         aux_type=True,
         aux_include=True,
     ):
@@ -27,7 +27,7 @@ class IndexSpaceTests(unittest.TestCase):
             tables=benchmark_config["tables"],
             attributes=benchmark_config["attributes"],
             query_spec=benchmark_config["query_spec"],
-            workload_path=Path("tune/protox/test/unittest_tpch_dir"),
+            workload_path=Path("tune/protox/test/unittest_tpch_dir").resolve(),
             pid=None,
             workload_timeout=0,
             workload_timeout_penalty=1.0,
