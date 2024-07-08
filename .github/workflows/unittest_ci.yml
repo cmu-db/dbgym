@@ -1,4 +1,4 @@
-name: CI for Unit Tests
+name: Unit Tests
 
 on:
   push: {}
@@ -12,20 +12,20 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # We could choose to set up dependencies manually in the GHA runner
-    # instead of installing them during the GHA.
-    #
-    # However, I think it's better to do them in the GHA itself so that
-    # we're testing our dependency installation step in addition to our
-    # actual code.
-    #
-    # This also removes the need to manually reinstall dependencies on
-    # the GHA runners every time we add a new dependency.
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
+    # We could choose to set up dependencies manually in the GHA runner instead of installing them during the GHA.
+    #
+    # However, I think it's better to do them in the GHA itself so that we're testing our dependency installation step
+    # in addition to our actual code. It also removes the need to manually reinstall dependencies on the GHA runners
+    # every time we add a new dependency.
+    #
+    # Note that the GHA runners are stateful. Dependencies installed from previous runs will still be on the runner.
+    # This means this step will usually be pretty fast as most dependencies will already be cached. However, it also
+    # means that past runs might interfere with the current run, so you sometimes may need to restart the GHA runners.
     - name: Install dependencies
       run: |
         ./dependency/install_dependencies.sh
