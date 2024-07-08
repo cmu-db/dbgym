@@ -12,5 +12,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
     - name: Run a script
       run: python scripts/run_unittests.py
