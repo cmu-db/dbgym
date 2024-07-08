@@ -4,7 +4,6 @@ import sys
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suite = loader.discover(".")
-    print(f"suite={suite}")
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
     if not result.wasSuccessful():
