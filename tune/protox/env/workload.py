@@ -223,7 +223,6 @@ class Workload(object):
         workload_timeout_penalty: float = 1.0,
         logger: Optional[Logger] = None,
     ) -> None:
-
         self.dbgym_cfg = dbgym_cfg
         self.workload_path = workload_path
         # Whether we should use benchbase or not.
@@ -257,7 +256,7 @@ class Workload(object):
             sqls = [
                 (
                     line.split(",")[0],
-                    Path(line.split(",")[1]),
+                    self.workload_path / Path(line.split(",")[1]),
                     1.0,
                 )
                 for line in lines
@@ -271,7 +270,7 @@ class Workload(object):
                 sqls = [
                     (
                         split[0],
-                        Path(split[1]),
+                        self.workload_path / Path(split[1]),
                         float(split[2]),
                     )
                     for split in splits
