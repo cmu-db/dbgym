@@ -89,7 +89,7 @@ def manage_standardize(dbgym_cfg):
     help="The mode to clean the workspace (default=\"safe\"). \"aggressive\" means \"only keep run_*/ folders referenced by a file in symlinks/\". \"safe\" means \"in addition to that, recursively keep any run_*/ folders referenced by any symlinks in run_*/ folders we are keeping.\""
 )
 def manage_clean(dbgym_cfg: DBGymConfig, mode: str):
-    clean_workspace(dbgym_cfg, mode)
+    clean_workspace(dbgym_cfg, mode=mode, verbose=True)
 
 
 @click.command("count")
@@ -128,7 +128,7 @@ def _count_files_in_workspace(dbgym_cfg: DBGymConfig) -> int:
     return total_count
 
 
-def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
+def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe", verbose=False) -> None:
     """
     Clean all [workspace]/task_runs/run_*/ directories that are not referenced by any "active symlinks".
     If mode is "aggressive", "active symlinks" means *only* the symlinks directly in [workspace]/symlinks/.
@@ -205,8 +205,10 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe") -> None:
                 else:
                     os.remove(child_fordpath)
     ending_num_files = _count_files_in_workspace(dbgym_cfg)
-    print(f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files")
-    print(f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}")
+
+    if verbose:
+        print(f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files")
+        print(f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}")
 
 
 manage_group.add_command(manage_show)

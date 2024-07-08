@@ -153,7 +153,7 @@ class PostgresConn:
                 #   still have the previous checkpoint available to us
                 f"{self.checkpoint_dbdata_snapshot_fpath}.tmp",
                 "-C",
-                parent_dir(self.dbdata_dpath),
+                parent_dpath_of_path(self.dbdata_dpath),
                 self.dbdata_dpath,
             ].run()
 
