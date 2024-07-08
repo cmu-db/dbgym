@@ -30,6 +30,12 @@ def _mutilate_action_with_metrics(
     query_metric_data: Optional[dict[str, BestQueryRun]],
     timeout_qknobs: Optional[QuerySpaceKnobAction] = None,
 ) -> HolonAction:
+    """
+    Modify action to make it the one with the best query knobs out
+        of all variations we tried.
+    """
+
+    # At the start of the function, the query knobs in `action` are those selected by the agent.
 
     if query_metric_data is not None:
         extract_q_knobs = action_space.extract_query(action)
@@ -37,16 +43,21 @@ def _mutilate_action_with_metrics(
 
         processed = set()
         for q, data in query_metric_data.items():
-            if not data.timeout:
+            # For queries where at least one variation didn't time out, modify the query knobs in `action`
+            #   to be that from the best variation.
+            if not data.timed_out:
                 assert data.query_run
-                pqk = data.query_run.qknobs
                 for k, v in data.query_run.qknobs.items():
                     # Implant the best.
                     extract_q_knobs[k] = v
+            # For all queries that we ran, even if all their variations time out, add them to `processed`.
+            # By doing so, the next part of the function will not affect queries where all variations timed
+            #   out and will leave their knobs equal to the ones selected by the agent.
             processed.add(q)
 
+        # If we have set `timeout_qknobs`, then use those knobs for the queries that we didn't run at all.
+        # Usually, these `timeout_qknobs` are those of the "PrevDual" variation.
         if timeout_qknobs:
-            qspace = action_space.get_query_space()
             assert timeout_qknobs
 
             all_qids = set([k.query_name for k in timeout_qknobs.keys()]) - processed
@@ -61,6 +72,16 @@ def _mutilate_action_with_metrics(
                     extract_q_knobs[k] = v
 
         action = action_space.replace_query(action, extract_q_knobs)
+
+    # There are three types of queries we handle in different ways.
+    # For queries that executed where at least one variation didn't time out, we can safely use the
+    #   query knobs of their best variation.
+    # For queries that executed where all their variations timed out, we don't want to use the knobs
+    #   in `timeout_qknobs` since those are known to be bad. Instead, we just use the knobs selected by
+    #   by the agent, which may be different from the knobs of *all* variations. 
+    # Finally, for queries that didn't execute, we'll assume that some arbitrary variation ("PrevDual")
+    #   is probably better than the knobs set by the agent.
+
     return action
 
 
@@ -114,7 +135,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         workload_eval_mode: str,
         workload_eval_inverse: bool,
         workload_eval_reset: bool,
-        pqt: int,
+        query_timeout: int,
         benchbase_config: dict[str, Any],
         env: gym.Env[Any, Any],
         logger: Optional[Logger],
@@ -136,25 +157,25 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.workload_eval_mode = workload_eval_mode
         self.workload_eval_inverse = workload_eval_inverse
         self.workload_eval_reset = workload_eval_reset
-        self.pqt = pqt
+        self.query_timeout = query_timeout
         self.benchbase_config = benchbase_config
         self.best_observed: dict[str, BestQueryRun] = {}
         self.logger = logger
 
     def _update_best_observed(self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False) -> None:
         if query_metric_data is not None:
-            for q, data in query_metric_data.items():
-                if q not in self.best_observed or force_overwrite:
-                    self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+            for qid, best_run in query_metric_data.items():
+                if qid not in self.best_observed or force_overwrite:
+                    self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
                     if self.logger:
-                        self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6} (force: {force_overwrite})")
-                elif not data.timeout:
-                    qobs = self.best_observed[q]
-                    assert qobs.runtime and data.runtime
-                    if data.runtime < qobs.runtime:
-                        self.best_observed[q] = BestQueryRun(data.query_run, data.runtime, data.timeout, None, None)
+                        self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})")
+                elif not best_run.timed_out:
+                    qobs = self.best_observed[qid]
+                    assert qobs.runtime and best_run.runtime
+                    if best_run.runtime < qobs.runtime:
+                        self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
                         if self.logger:
-                            self.logger.get_logger(__name__).debug(f"[best_observe] {q}: {data.runtime/1e6}")
+                            self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
 
     def step(  # type: ignore
         self,
@@ -191,7 +212,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         if self.workload_eval_mode in ["all", "all_enum", "global_dual"]:
             # Load the global (optimizer) knobs.
             qid_ams = parse_access_methods(
-                self.unwrapped.pgconn.conn(), self.unwrapped.workload.queries
+                self.unwrapped.pg_conn.conn(), self.unwrapped.workload.queries
             )
             runs.append(
                 (
@@ -268,19 +289,20 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
         # Execute.
+        self.logger.get_logger(__name__).info("MQOWrapper called step_execute()")
         success, info = self.unwrapped.step_execute(success, runs, info)
         if info["query_metric_data"]:
             self._update_best_observed(info["query_metric_data"])
 
-        action = _mutilate_action_with_metrics(
+        best_observed_holon_action = _mutilate_action_with_metrics(
             self.action_space, action, info["query_metric_data"], timeout_qknobs
         )
 
         with torch.no_grad():
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
-            info["action_json"] = json.dumps(self.action_space.to_jsonable([action]))
-            info["maximal_embed"] = self.action_space.to_latent([action])
+            info["actions_info"]["best_observed_holon_action"] = best_observed_holon_action
+            info["maximal_embed"] = self.action_space.to_latent([best_observed_holon_action])
 
         return self.unwrapped.step_post_execute(success, action, info)
 
@@ -326,18 +348,18 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 success,
                 metric,
                 _,
-                results,
+                results_dpath,
                 _,
                 target_metric_data,
             ) = self.unwrapped.workload.execute(
-                pgconn=self.unwrapped.pgconn,
+                pg_conn=self.unwrapped.pg_conn,
                 reward_utility=self.unwrapped.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 actions=[r[1] for r in runs],
-                actions_names=[r[0] for r in runs],
+                variation_names=[r[0] for r in runs],
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
+                query_timeout=self.query_timeout,
                 reset_metrics=kwargs["options"]["query_metric_data"],
                 update=False,
                 first=False,
@@ -358,7 +380,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
             # Reward should be irrelevant. If we do accidentally use it, cause an error.
             # Similarly, metric should be irrelevant. Do not shift the workload timeout.
-            info = EnvInfoDict({"metric": None, "reward": None, "results": results})
+            info = EnvInfoDict({"metric": None, "reward": None, "results_dpath": results_dpath})
             # Use this to adjust the container and state but don't shift the step.
             state, _, _, _, info = self.unwrapped.step_post_execute(
                 True, action, info, soft=True

@@ -53,6 +53,7 @@ class Wolp(OffPolicyAlgorithm):
         target_action_noise: Optional[ActionNoise] = None,
         seed: Optional[int] = None,
         neighbor_parameters: Dict[str, Any] = {},
+        ray_trial_id: Optional[str] = None,
     ):
         super().__init__(
             policy,
@@ -63,6 +64,7 @@ class Wolp(OffPolicyAlgorithm):
             gradient_steps,
             action_noise=action_noise,
             seed=seed,
+            ray_trial_id=ray_trial_id,
         )
 
         self.target_action_noise = target_action_noise

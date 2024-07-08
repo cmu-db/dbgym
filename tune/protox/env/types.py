@@ -136,7 +136,7 @@ BestQueryRun = NamedTuple(
     [
         ("query_run", Optional[QueryRun]),
         ("runtime", Optional[float]),
-        ("timeout", bool),
+        ("timed_out", bool),
         ("explain_data", Optional[Any]),
         ("metric_data", Optional[dict[str, Any]]),
     ],
@@ -174,7 +174,7 @@ class EnvInfoDict(TypedDict, total=False):
     # Data generated from each run.
     best_query_run_data: dict[str, BestQueryRun]
     # Path to run artifacts.
-    results: Optional[Union[str, Path]]
+    results_dpath: Optional[Union[str, Path]]
 
     # Previous state container.
     prior_state_container: Optional[HolonStateContainer]
@@ -188,12 +188,13 @@ class EnvInfoDict(TypedDict, total=False):
     metric: float
     # Reward of this step.
     reward: float
-    # Whether any queries timed out during this step's evaluation.
-    q_timeout: bool
+    # Whether any queries timed out or the workload as a whole timed out.
+    did_anything_time_out: bool
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
-    # JSON of the action that was executed.
-    action_json: Optional[str]
+    # Information about the actions that were executed this step.
+    # The actions are in a format usable by replay. (TODO(phw2))
+    actions_info: Tuple["KnobSpaceAction", "IndexAction", "QuerySpaceAction"]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction
 

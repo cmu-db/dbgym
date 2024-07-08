@@ -14,11 +14,10 @@ from manage.cli import manage_group
 
 @click.group()
 @click.option("--config-path", default="config.yaml")
-@click.option("--no-startup-check", is_flag=True)
 @click.pass_context
-def task(ctx, config_path, no_startup_check):
+def task(ctx, config_path):
     """💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩"""
-    ctx.obj = DBGymConfig(config_path, startup_check=not no_startup_check)
+    ctx.obj = DBGymConfig(config_path)
 
 
 if __name__ == "__main__":

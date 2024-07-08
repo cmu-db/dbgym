@@ -8,10 +8,11 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
-from misc.utils import DBGymConfig
+from misc.utils import DBGymConfig, TuningMode
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
+from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import (
     EnvInfoDict,
     HolonAction,
@@ -27,21 +28,21 @@ class PostgresEnv(gym.Env[Any, Any]):
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
+        tuning_mode: TuningMode,
         observation_space: StateSpace,
         action_space: HolonSpace,
         workload: Workload,
         horizon: int,
         reward_utility: RewardUtility,
-        pgconn: PostgresConn,
-        pqt: int,
+        pg_conn: PostgresConn,
+        query_timeout: int,
         benchbase_config: dict[str, Any],
         logger: Optional[Logger] = None,
-        replay: bool = False,
     ):
         super().__init__()
 
         self.dbgym_cfg = dbgym_cfg
-        self.replay = replay
+        self.tuning_mode = tuning_mode
         self.logger = logger
         self.action_space = action_space
         self.observation_space = observation_space
@@ -50,8 +51,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         self.reward_utility = reward_utility
 
         self.benchbase_config = benchbase_config
-        self.pgconn = pgconn
-        self.pqt = pqt
+        self.pg_conn = pg_conn
+        self.query_timeout = query_timeout
 
         self.current_state: Optional[Any] = None
         self.baseline_metric: Optional[float] = None
@@ -59,13 +60,13 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def _restore_last_snapshot(self) -> None:
         assert self.horizon > 1 and self.workload.oltp_workload
-        assert self.pgconn.restore_checkpointed_snapshot()
+        assert self.pg_conn.restore_checkpointed_snapshot()
         assert isinstance(self.action_space, HolonSpace)
 
         self.state_container = self.action_space.generate_state_container(
             self.state_container,
             None,
-            self.pgconn.conn(),
+            self.pg_conn.conn(),
             self.workload.queries,
         )
 
@@ -105,24 +106,26 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             if self.workload.oltp_workload and self.horizon == 1:
                 # Restore a pristine snapshot of the world if OTLP and horizon = 1
-                self.pgconn.restore_pristine_snapshot()
+                self.pg_conn.restore_pristine_snapshot()
             else:
                 # Instead of restoring a pristine snapshot, just reset the knobs.
                 # This in effect "resets" the baseline knob settings.
-                self.pgconn.start_with_changes(conf_changes=[])
+                self.pg_conn.start_with_changes(conf_changes=[])
 
             # Maneuver the state into the requested state/config.
             assert isinstance(self.action_space, HolonSpace)
             sc = self.action_space.generate_state_container(
                 self.state_container,
                 None,
-                self.pgconn.conn(),
+                self.pg_conn.conn(),
                 self.workload.queries,
             )
             config_changes, sql_commands = self.action_space.generate_plan_from_config(
                 config, sc
             )
-            assert self.shift_state(config_changes, sql_commands)
+            # Don't dump the page cache because we want to keep it warm to see the performance of
+            #   workloads under a warm cache.
+            assert self.shift_state(config_changes, sql_commands, dump_page_cache=False)
 
             # Note that we do not actually update the baseline metric/reward used by the reward
             # utility. This is so the reward is not stochastic with respect to the starting state.
@@ -142,8 +145,8 @@ class PostgresEnv(gym.Env[Any, Any]):
 
         else:
             # Restore a pristine snapshot of the world.
-            self.pgconn.restore_pristine_snapshot()
-            assert not self.replay
+            self.pg_conn.restore_pristine_snapshot()
+            assert self.tuning_mode != TuningMode.REPLAY
 
             # On the first time, run the benchmark to get the baseline.
             assert isinstance(self.observation_space, StateSpace)
@@ -151,19 +154,19 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             # Get the stock state container.
             sc = self.action_space.generate_state_container(
-                None, None, self.pgconn.conn(), self.workload.queries
+                None, None, self.pg_conn.conn(), self.workload.queries
             )
             default_action = self.action_space.null_action(sc)
 
-            success, metric, _, results, _, query_metric_data = self.workload.execute(
-                pgconn=self.pgconn,
+            success, metric, _, results_dpath, _, query_metric_data = self.workload.execute(
+                pg_conn=self.pg_conn,
                 reward_utility=self.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 actions=[default_action],
-                actions_names=["GlobalDual"],
+                variation_names=["GlobalDual"],
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
+                query_timeout=self.query_timeout,
                 update=False,
                 first=True,
             )
@@ -174,11 +177,11 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.state_container = self.action_space.generate_state_container(
                 self.state_container,
                 None,
-                self.pgconn.conn(),
+                self.pg_conn.conn(),
                 self.workload.queries,
             )
             state = self.observation_space.construct_offline(
-                self.pgconn.conn(), results, self.state_container
+                self.pg_conn.conn(), results_dpath, self.state_container
             )
 
             # Set the metric workload.
@@ -194,10 +197,10 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "baseline_metric": metric,
                     "baseline_reward": reward,
                     "query_metric_data": query_metric_data,
-                    "results": results,
+                    "results_dpath": results_dpath,
                     "prior_state_container": None,
                     "prior_pgconf": None,
-                    "action_json": None,
+                    "actions_info": None,
                 }
             )
             self.baseline_metric = metric
@@ -217,8 +220,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
         # Save the old configuration file.
-        old_conf_path = f"{self.pgconn.pgdata_dpath}/postgresql.auto.conf"
-        conf_path = f"{self.pgconn.pgdata_dpath}/postgresql.auto.old"
+        old_conf_path = f"{self.pg_conn.dbdata_dpath}/postgresql.auto.conf"
+        conf_path = f"{self.pg_conn.dbdata_dpath}/postgresql.auto.old"
         local["cp"][old_conf_path, conf_path].run()
 
         # Figure out what we have to change to get to the new configuration.
@@ -228,7 +231,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             action, prior_state
         )
         # Attempt to maneuver to the new state.
-        success = self.shift_state(config_changes, sql_commands)
+        # Don't dump the page cache in shift_state() in order to see how the workload performs in
+        #   a warm cache scenario.
+        success = self.shift_state(config_changes, sql_commands, dump_page_cache=False)
         return success, EnvInfoDict(
             {
                 "attempted_changes": (config_changes, sql_commands),
@@ -241,30 +246,32 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step_execute(
         self,
         setup_success: bool,
-        actions: list[Tuple[str, HolonAction]],
+        all_holon_action_variations: list[Tuple[str, HolonAction]],
         info: EnvInfoDict,
     ) -> Tuple[bool, EnvInfoDict]:
         if setup_success:
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            start_time = time.time()
+            self.logger.get_logger(__name__).info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n")
+            self.logger.get_logger(__name__).info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n")
+            self.logger.get_logger(__name__).info(f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n")
             (
                 success,
                 metric,
                 reward,
-                results,
-                q_timeout,
+                results_dpath,
+                did_anything_time_out,
                 query_metric_data,
             ) = self.workload.execute(
-                pgconn=self.pgconn,
+                pg_conn=self.pg_conn,
                 reward_utility=self.reward_utility,
-                obs_space=self.observation_space,
+                observation_space=self.observation_space,
                 action_space=self.action_space,
                 benchbase_config=self.benchbase_config,
-                pqt=self.pqt,
-                actions=[a[1] for a in actions],
-                actions_names=[a[0] for a in actions],
+                query_timeout=self.query_timeout,
+                actions=[a[1] for a in all_holon_action_variations],
+                variation_names=[a[0] for a in all_holon_action_variations],
                 update=True,
             )
         else:
@@ -276,19 +283,20 @@ class PostgresEnv(gym.Env[Any, Any]):
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
-            results, q_timeout, query_metric_data = None, True, None
+            results_dpath, did_anything_time_out, query_metric_data = None, True, None
 
+        # Build EnvInfoDict
         info.update(
             EnvInfoDict(
                 {
                     "metric": metric,
-                    "q_timeout": q_timeout,
+                    "did_anything_time_out": did_anything_time_out,
                     "query_metric_data": query_metric_data,
                     "reward": reward,
-                    "results": results,
-                    "action_json": json.dumps(
-                        self.action_space.to_jsonable([a[1] for a in actions])
-                    ),
+                    "results_dpath": results_dpath,
+                    "actions_info": {
+                        "all_holon_action_variations": all_holon_action_variations,
+                    },
                 }
             )
         )
@@ -319,14 +327,14 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.state_container = self.action_space.generate_state_container(
                 self.state_container,
                 action,
-                self.pgconn.conn(),
+                self.pg_conn.conn(),
                 self.workload.queries,
             )
 
             # Now. The state container should be accurate.
             assert isinstance(self.observation_space, StateSpace)
             next_state = self.observation_space.construct_offline(
-                self.pgconn.conn(), info["results"], self.state_container
+                self.pg_conn.conn(), info["results_dpath"], self.state_container
             )
         else:
             assert self.current_state
@@ -346,7 +354,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step(  # type: ignore
         self, action: HolonAction
     ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
-        assert not self.replay
+        assert self.tuning_mode != TuningMode.REPLAY
         success, info = self.step_before_execution(action)
         success, info = self.step_execute(success, [("PerQuery", action)], info)
         return self.step_post_execute(success, action, info)
@@ -357,7 +365,6 @@ class PostgresEnv(gym.Env[Any, Any]):
         config_changes: list[str],
         sql_commands: list[str],
         dump_page_cache: bool = False,
-        ignore_error: bool = False,
     ) -> bool:
         def attempt_checkpoint(conn_str: str) -> None:
             # CHECKPOINT to prevent the DBMS from entering a super slow shutdown
@@ -389,7 +396,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     f"Executing {sql} [{i+1}/{len(sql_commands)}]"
                 )
 
-            ret, stderr = self.pgconn.psql(sql)
+            ret, stderr = self.pg_conn.psql(sql)
             if ret == -1:
                 if stderr:
                     print(stderr, flush=True)
@@ -399,23 +406,23 @@ class PostgresEnv(gym.Env[Any, Any]):
                         # We've killed the index operation.
                         or "operational" in stderr
                     )
-                    attempt_checkpoint(self.pgconn.get_connstr())
+                    attempt_checkpoint(self.pg_conn.get_connstr())
                 return False
 
             assert ret == 0, print(stderr)
 
         # Now try and perform the configuration changes.
-        return self.pgconn.start_with_changes(
+        return self.pg_conn.start_with_changes(
             conf_changes=config_changes,
             dump_page_cache=dump_page_cache,
             save_checkpoint=self.workload.oltp_workload and self.horizon > 1,
         )
 
     def close(self) -> None:
-        self.pgconn.shutdown_postgres()
+        self.pg_conn.shutdown_postgres()
         # This file may not be in in [workspace]/tmp/, so it's important to delete it
-        local["rm"]["-rf", self.pgconn.pgdata_dpath].run()
+        local["rm"]["-rf", self.pg_conn.dbdata_dpath].run()
         # Even though these files get deleted because [workspace]/tmp/ gets deleted,
         #   we'll just delete them here anyways because why not
-        local["rm"]["-f", self.pgconn.checkpoint_pgdata_snapshot_fpath].run()
-        local["rm"]["-f", f"{self.pgconn.checkpoint_pgdata_snapshot_fpath}.tmp"].run()
+        local["rm"]["-f", self.pg_conn.checkpoint_dbdata_snapshot_fpath].run()
+        local["rm"]["-f", f"{self.pg_conn.checkpoint_dbdata_snapshot_fpath}.tmp"].run()

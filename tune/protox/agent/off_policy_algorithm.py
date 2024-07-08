@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
+from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
@@ -46,10 +47,12 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
         seed: Optional[int] = None,
+        ray_trial_id: Optional[str] = None,
     ):
         super().__init__(seed=seed)
         self.policy = policy
         self.replay_buffer = replay_buffer
+        self.ray_trial_id = ray_trial_id
 
         self.batch_size = batch_size
         self.learning_starts = learning_starts
@@ -137,6 +140,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
     def collect_rollouts(
         self,
+        tuning_mode: TuningMode,
         env: AgentEnv,
         train_freq: TrainFreq,
         replay_buffer: ReplayBuffer,
@@ -182,8 +186,11 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # Rescale and perform action
             new_obs, rewards, terms, truncs, infos = env.step(actions)
             dones = terms or truncs
+            # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
+            #   stashed in the same directory and potentially cause a race condition.
             if self.logger:
-                self.logger.stash_results(infos)
+                assert self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True, "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
+                self.logger.stash_results(infos, ray_trial_id=self.ray_trial_id)
 
             self.num_timesteps += 1
             num_collected_steps += 1
@@ -210,17 +217,18 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             num_collected_steps, num_collected_episodes, continue_training
         )
 
-    def learn(self, env: AgentEnv, total_timesteps: int) -> None:
+    def learn(self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode) -> None:
         assert isinstance(env, AgentEnv)
         total_timesteps = self._setup_learn(env, total_timesteps)
 
         while self.num_timesteps < total_timesteps:
             rollout = self.collect_rollouts(
+                tuning_mode,
                 env,
                 train_freq=self.train_freq,
+                replay_buffer=self.replay_buffer,
                 action_noise=self.action_noise,
                 learning_starts=self.learning_starts,
-                replay_buffer=self.replay_buffer,
             )
 
             if rollout.continue_training is False:

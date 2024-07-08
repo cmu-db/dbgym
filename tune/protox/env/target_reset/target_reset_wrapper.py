@@ -41,12 +41,12 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
         obs, rews, terms, truncs, infos = self.env.step(*args, **kwargs)
         query_metric_data = infos.get("query_metric_data", None)
         assert self.best_metric is not None
-        q_timeout = infos.get("q_timeout", False)
+        did_anything_time_out = infos.get("did_anything_time_out", False)
 
         metric = infos["metric"]
         if self.reward_utility.is_perf_better(metric, self.best_metric):
             self.best_metric = infos["metric"]
-            if not q_timeout:
+            if not did_anything_time_out:
                 self.real_best_metric = self.best_metric
 
             if self.maximize_state:
