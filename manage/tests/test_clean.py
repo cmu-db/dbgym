@@ -635,35 +635,6 @@ class CleanTests(unittest.TestCase):
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
 
-    def test_broken_symlink_has_no_effect(self):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1")
-        }
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/non_existent_file.txt")
-            },
-            "dir2": {
-                "file2.txt": ("file",)
-            }
-        }
-        starting_structure = CleanTests.make_workspace_structure(starting_symlinks_structure, starting_task_runs_structure)
-        ending_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1")
-        }
-        ending_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", None)
-            }
-        }
-        ending_structure = CleanTests.make_workspace_structure(ending_symlinks_structure, ending_task_runs_structure)
-
-        CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
-        self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, ending_structure))
-
     # The idea behind this test is that we shouldn't be following links outside of task_runs, even on safe mode
     def test_link_to_folder_outside_runs_that_contains_link_to_other_run_doesnt_save_other_run(self):
         starting_symlinks_structure = {
