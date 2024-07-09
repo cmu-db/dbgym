@@ -115,10 +115,8 @@ class CleanTests(unittest.TestCase):
             shutil.rmtree(self.scratchspace_path)
 
     def tearDown(self):
-        # DEBUG(phw2)
-        # if self.scratchspace_path.exists():
-        #     shutil.rmtree(self.scratchspace_path)
-        pass
+        if self.scratchspace_path.exists():
+            shutil.rmtree(self.scratchspace_path)
 
     def test_structure_helpers(self):
         structure = {
