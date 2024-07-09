@@ -24,8 +24,8 @@ class MockDBGymConfig:
 
 class CleanTests(unittest.TestCase):
     """
-    I deemed "clean" important enough to write unittests before because I'm really paranoid
-      about losing files that took 30 hours to build.
+    I deemed "clean" important enough to write extensive unit tests for because a bug could lead to
+    losing important files.
     """
     @staticmethod
     def create_structure(root_path: Path, structure: dict) -> None:
