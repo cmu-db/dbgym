@@ -28,7 +28,7 @@ jobs:
     # means that past runs might interfere with the current run, so you sometimes may need to restart the GHA runners.
     - name: Install dependencies
       run: |
-        ./dependency/install_dependencies.sh
+        ./dependencies/install_dependencies.sh
         . "$HOME/.cargo/env"
 
     - name: Run unit tests
