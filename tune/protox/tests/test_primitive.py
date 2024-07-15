@@ -98,7 +98,7 @@ class PrimitivesTests(unittest.TestCase):
         IndexAction.index_counter = 0
         self.assertEqual(
             ia1.sql(add=True),
-            "CREATE INDEX  index1 ON tbl USING btree (a,b,c) INCLUDE (d,e)",
+            "CREATE INDEX  index0 ON tbl USING btree (a,b,c) INCLUDE (d,e)",
         )
 
         ia2 = IndexAction(

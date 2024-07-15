@@ -56,7 +56,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_tpch.yaml", Path("tune/protox/tests/unittest_tpch_dir"))
+        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_tpch.yaml", Path("tune/protox/tests/unittest_tpch_dir").resolve())
         self.assertEqual(i.class_mapping, ref)
 
     def test_job(self):
@@ -68,7 +68,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_job_full.yaml", Path("tune/protox/tests/unittest_job_full_dir"))
+        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_job_full.yaml", Path("tune/protox/tests/unittest_job_full_dir").resolve())
         self.assertEqual(i.class_mapping, ref)
 
     def test_dsb(self):
@@ -80,7 +80,7 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_dsb.yaml", Path("tune/protox/tests/unittest_dsb_dir"))
+        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_dsb.yaml", Path("tune/protox/tests/unittest_dsb_dir").resolve())
         self.diff_classmapping(ref, i.class_mapping)
 
     def test_tpcc(self):
@@ -92,5 +92,5 @@ class WorkloadTests(unittest.TestCase):
                 for k, v in ref.items()
             }
 
-        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_tpcc.yaml", Path("tune/protox/tests/unittest_tpcc_dir"))
+        w, i = WorkloadTests.load("tune/protox/tests/unittest_benchmark_configs/unittest_tpcc.yaml", Path("tune/protox/tests/unittest_tpcc_dir").resolve())
         self.assertEqual(i.class_mapping, ref)
