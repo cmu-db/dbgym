@@ -19,7 +19,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 import yaml
 
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, link_result, open_and_save, parent_dir
+from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES
 
 
@@ -153,7 +153,7 @@ class PostgresConn:
                 #   still have the previous checkpoint available to us
                 f"{self.checkpoint_dbdata_snapshot_fpath}.tmp",
                 "-C",
-                parent_dir(self.dbdata_dpath),
+                parent_dpath_of_path(self.dbdata_dpath),
                 self.dbdata_dpath,
             ].run()
 
