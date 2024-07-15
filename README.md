@@ -9,7 +9,7 @@ These steps were tested on a fresh repository clone, Ubuntu 22.04.
 
 ```
 # Setup dependencies.
-# You may want to create a Python virtual environment (e.g. with conda) before doing this.
+# You may want to create a Python 3.10 virtual environment (e.g. with conda) before doing this.
 ./dependency/install_dependencies.sh
 
 # Compile a custom fork of PostgreSQL, load TPC-H (SF 0.01), train the Proto-X agent, and tune.
