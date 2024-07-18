@@ -416,6 +416,7 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
     The task_runs/ folder is organized like task_runs/run_*/[codebase]/[org]/any/path/you/want.
     This function extracts the [codebase] and [org] components
     """
+    assert isinstance(task_run_fordpath, Path)
     assert not task_run_fordpath.is_symlink()
     parent_dpath = os.path.dirname(task_run_fordpath)
     assert not os.path.samefile(
@@ -536,6 +537,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
         version of a file.
     This function will return the path to the symlink that was created.
     """
+    assert isinstance(result_fordpath, Path)
     assert is_fully_resolved(result_fordpath), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
     result_fordpath = conv_inputpath_to_realabspath(dbgym_cfg, result_fordpath)
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)

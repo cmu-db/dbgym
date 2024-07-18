@@ -35,4 +35,5 @@ jobs:
       run: python scripts/run_unittests.py
 
     - name: Run integration test
+      # TODO(phw2): delete workspace before running
       run: ./scripts/quickstart.sh postgres tpch 0.01 protox
