@@ -443,6 +443,7 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
     return codebase_dpath, codebase_dname, org_dpath, org_dname
 
 
+# TODO(phw2): really look at the clean PR to see what it changed
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
 def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
     """
@@ -474,9 +475,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
         os.makedirs(this_run_save_dpath, exist_ok=True)
 
         # if the fpath file is directly in org_dpath, we symlink the file directly
-        parent_dpath = os.path.dirname(fpath)
-        if os.path.samefile(parent_dpath, org_dpath):
-            fname = os.path.basename(fpath)
+        parent_dpath = parent_dpath_of_path(fpath)
+        if parent_dpath.samefile(org_dpath):
+            fname = basename_of_path(fpath)
             symlink_fpath = this_run_save_dpath / (fname + ".link")
             try_create_symlink(fpath, symlink_fpath)
         # else, we know the fpath file is _not_ directly inside org_dpath dir
@@ -485,7 +486,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
         else:
             # set base_dpath such that its parent is org_dpath
             base_dpath = parent_dpath
-            while not os.path.samefile(parent_dpath_of_path(base_dpath), org_dpath):
+            while not parent_dpath_of_path(base_dpath).samefile(org_dpath):
                 base_dpath = parent_dpath_of_path(base_dpath)
 
             # create symlink
@@ -497,7 +498,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
         # since we don't know where the file is at all, the location is "unknown" and the org is "all"
         this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / "unknown" / "all"
         os.makedirs(this_run_save_dpath, exist_ok=True)
-        fname = os.path.basename(fpath)
+        fname = basename_of_path(fpath)
         # in this case, we want to copy instead of symlinking since it might disappear in the future
         copy_fpath = this_run_save_dpath / fname
         shutil.copy(fpath, copy_fpath)
@@ -525,7 +526,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
         result_name = custom_result_name
     else:
         if os.path.isfile(result_fordpath):
-            result_name = os.path.basename(result_fordpath) + ".link"
+            result_name = basename_of_path(result_fordpath) + ".link"
         elif os.path.isdir(result_fordpath):
             result_name = basename_of_path(result_fordpath) + ".link"
         else:
