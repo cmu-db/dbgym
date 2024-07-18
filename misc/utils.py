@@ -549,9 +549,9 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
         result_name = custom_result_name
     else:
         if os.path.isfile(result_fordpath):
-            result_name = os.path.basename(result_fordpath)
+            result_name = os.path.basename(result_fordpath) + ".link"
         elif os.path.isdir(result_fordpath):
-            result_name = basename_of_path(result_fordpath)
+            result_name = basename_of_path(result_fordpath) + ".link"
         else:
             raise AssertionError("result_fordpath must be either a file or dir")
 
