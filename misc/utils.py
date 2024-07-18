@@ -418,7 +418,7 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
     """
     assert isinstance(task_run_fordpath, Path)
     assert not task_run_fordpath.is_symlink()
-    parent_dpath = os.path.dirname(task_run_fordpath)
+    parent_dpath = task_run_fordpath.parent
     assert not os.path.samefile(
         parent_dpath, dbgym_cfg.dbgym_runs_path
     ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
@@ -564,7 +564,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
     # Note that in a multi-threaded setting, this might remove one created by a process in the same run,
     #   meaning it's not "old" by our definition of "old". However, we'll always end up with a symlink
     #   file of the current run regardless of the order of threads.
-    assert result_name.endswith(".link") and not result_name.endswith(".link.link"), "result_name ({result_name}) should end with \".link\""
+    assert result_name.endswith(".link") and not result_name.endswith(".link.link"), f"result_name ({result_name}) should end with \".link\""
     symlink_path = symlink_parent_dpath / result_name
     try_remove_file(symlink_path)
     try_create_symlink(result_fordpath, symlink_path)
