@@ -395,7 +395,8 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
      - If you open two "config" files of the same name but different paths, only the first open will be saved.
         - Opening two "dependency" files of the same name but different paths will lead to two different "base dirs" being symlinked.
     """
-    # process/validate open_fpath
+    # validate open_fpath
+    assert isinstance(open_fpath, Path)
     assert is_fully_resolved(
         open_fpath
     ), f"open_and_save(): open_fpath ({open_fpath}) should be a fully resolved path"
