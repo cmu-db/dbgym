@@ -454,12 +454,8 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
     We create a symlink if it is a "dependency", meaning a task.py command was run to generate it
         In these cases we create a symlink so we have full provenance for how the dependency was created
     """
-    # process fpath and ensure that it's a file at the end
-    fpath = conv_inputpath_to_realabspath(dbgym_cfg, fpath)
-    fpath = os.path.realpath(fpath)  # traverse symlinks
-    assert is_fully_resolved(
-        fpath
-    ), f"fpath ({fpath}) should be a fully resolved path"
+    # validate fpath
+    assert isinstance(fpath, Path)
     assert not os.path.islink(fpath), f"fpath ({fpath}) should not be a symlink"
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
