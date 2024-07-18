@@ -67,7 +67,7 @@ def _clone(dbgym_cfg: DBGymConfig):
         f"./tpch_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
     )
     symlink_dpath = link_result(dbgym_cfg, real_build_path / "tpch-kit")
-    assert os.path.samefile(expected_symlink_dpath, symlink_dpath)
+    assert expected_symlink_dpath.samefile(symlink_dpath)
     benchmark_tpch_logger.info(f"Cloned: {expected_symlink_dpath}")
 
 
@@ -97,7 +97,7 @@ def _generate_queries(dbgym_cfg: DBGymConfig, seed_start: int, seed_end: int, sc
                 verbose=False,
             )
         queries_symlink_dpath = link_result(dbgym_cfg, real_dir)
-        assert os.path.samefile(queries_symlink_dpath, expected_queries_symlink_dpath)
+        assert queries_symlink_dpath.samefile(expected_queries_symlink_dpath)
     benchmark_tpch_logger.info(
         f"Generated queries: {data_path} [{seed_start}, {seed_end}]"
     )
@@ -119,7 +119,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=tpch_kit_dpath / "dbgen")
 
     tables_symlink_dpath = link_result(dbgym_cfg, real_dir)
-    assert os.path.samefile(tables_symlink_dpath, expected_tables_symlink_dpath)
+    assert tables_symlink_dpath.samefile(expected_tables_symlink_dpath)
     benchmark_tpch_logger.info(f"Generated: {expected_tables_symlink_dpath}")
 
 

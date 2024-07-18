@@ -104,7 +104,7 @@ def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
 
     # only link at the end so that the link only ever points to a complete repo
     repo_symlink_dpath = link_result(dbgym_cfg, repo_real_dpath)
-    assert os.path.samefile(expected_repo_symlink_dpath, repo_symlink_dpath)
+    assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
     dbms_postgres_logger.info(f"Set up repo in {expected_repo_symlink_dpath}")
 
 

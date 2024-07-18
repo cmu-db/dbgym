@@ -320,7 +320,7 @@ def is_fully_resolved(path: Path) -> bool:
     assert isinstance(path, Path)
     resolved_path = path.resolve()
     # Converting them to strings is the most unambiguously strict way of checking equality.
-    # Stuff like Path.__eq__() or os.path.samefile() might be more lenient.
+    # Stuff like Path.__eq__() or Path.samefile() might be more lenient.
     return str(resolved_path) == str(path)
 
 
@@ -362,6 +362,7 @@ def basename_of_path(dpath: Path) -> str:
         return dpath_basename
 
 
+# TODO(phw2): refactor to use Path
 def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
     """
     Checks whether child_path refers to a file/dir/link that is a child of the dir referred to by parent_dpath
@@ -419,19 +420,20 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
     assert isinstance(task_run_fordpath, Path)
     assert not task_run_fordpath.is_symlink()
     parent_dpath = task_run_fordpath.parent
-    assert not os.path.samefile(
-        parent_dpath, dbgym_cfg.dbgym_runs_path
+    # TODO(phw2): make this a common function
+    assert not parent_dpath.samefile(
+        dbgym_cfg.dbgym_runs_path
     ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
-    assert not os.path.samefile(
-        parent_dpath_of_path(parent_dpath), dbgym_cfg.dbgym_runs_path
+    assert not parent_dpath_of_path(parent_dpath).samefile(
+        dbgym_cfg.dbgym_runs_path
     ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
-    assert not os.path.samefile(
-        parent_dpath_of_path(parent_dpath_of_path(parent_dpath)), dbgym_cfg.dbgym_runs_path
+    assert not parent_dpath_of_path(parent_dpath_of_path(parent_dpath)).samefile(
+        dbgym_cfg.dbgym_runs_path
     ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
     # org_dpath is the run_*/[codebase]/[organization]/ dir that task_run_fordpath is in
     org_dpath = parent_dpath
-    while not os.path.samefile(
-        parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))), dbgym_cfg.dbgym_runs_path
+    while not parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))).samefile(
+        dbgym_cfg.dbgym_runs_path
     ):
         org_dpath = parent_dpath_of_path(org_dpath)
     org_dname = basename_of_path(org_dpath)
@@ -472,19 +474,19 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
     if is_child_path(fpath, dbgym_cfg.dbgym_runs_path):
         # get paths we'll need later.
         parent_dpath = os.path.dirname(fpath)
-        assert not os.path.samefile(
-            parent_dpath, dbgym_cfg.dbgym_runs_path
+        assert not parent_dpath.samefile(
+            dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
-        assert not os.path.samefile(
-            parent_dpath_of_path(parent_dpath), dbgym_cfg.dbgym_runs_path
+        assert not parent_dpath_of_path(parent_dpath).samefile(
+            dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
-        assert not os.path.samefile(
-            parent_dpath_of_path(parent_dpath_of_path(parent_dpath)), dbgym_cfg.dbgym_runs_path
+        assert not parent_dpath_of_path(parent_dpath_of_path(parent_dpath)).samefile(
+            dbgym_cfg.dbgym_runs_path
         ), f"fpath ({fpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
         # org_dpath is the run_*/[codebase]/[organization]/ dir that fpath is in
         org_dpath = parent_dpath
-        while not os.path.samefile(
-            parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))), dbgym_cfg.dbgym_runs_path
+        while not parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))).samefile(
+            dbgym_cfg.dbgym_runs_path
         ):
             org_dpath = parent_dpath_of_path(org_dpath)
         org_dname = basename_of_path(org_dpath)
@@ -497,7 +499,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
 
         # if the fpath file is directly in org_dpath, we symlink the file directly
         parent_dpath = os.path.dirname(fpath)
-        if os.path.samefile(parent_dpath, org_dpath):
+        if parent_dpath.samefile(org_dpath):
             fname = os.path.basename(fpath)
             symlink_fpath = this_run_save_dpath / (fname + ".link")
             try_create_symlink(fpath, symlink_fpath)
@@ -507,7 +509,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
         else:
             # set base_dpath such that its parent is org_dpath
             base_dpath = parent_dpath
-            while not os.path.samefile(parent_dpath_of_path(base_dpath), org_dpath):
+            while not parent_dpath_of_path(base_dpath).samefile(org_dpath):
                 base_dpath = parent_dpath_of_path(base_dpath)
 
             # create symlink
@@ -556,7 +558,7 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
     # Figure out the parent directory path of the symlink
     codebase_dpath, codebase_dname, _, org_dname = extract_from_task_run_fordpath(dbgym_cfg, result_fordpath)
     # We're only supposed to save files generated by us, which means they should be in cur_task_runs_path()
-    assert os.path.samefile(codebase_dpath, dbgym_cfg.cur_task_runs_path()), f"link_result should only be called on files generated by this invocation to task.py"
+    assert codebase_dpath.samefile(dbgym_cfg.cur_task_runs_path()), f"link_result should only be called on files generated by this invocation to task.py"
     symlink_parent_dpath = dbgym_cfg.dbgym_symlinks_path / codebase_dname / org_dname
     symlink_parent_dpath.mkdir(parents=True, exist_ok=True)
 
