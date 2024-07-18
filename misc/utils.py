@@ -536,18 +536,18 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
         version of a file.
     This function will return the path to the symlink that was created.
     """
-    assert is_fully_resolved(result_path), f"result_path ({result_path}) should be a fully resolved path"
-    result_path = conv_inputpath_to_realabspath(dbgym_cfg, result_path)
-    assert is_child_path(result_path, dbgym_cfg.dbgym_this_run_path)
-    assert not os.path.islink(result_path)
+    assert is_fully_resolved(result_fordpath), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
+    result_fordpath = conv_inputpath_to_realabspath(dbgym_cfg, result_fordpath)
+    assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
+    assert not os.path.islink(result_fordpath)
 
     if custom_result_name != None:
         result_name = custom_result_name
     else:
-        if os.path.isfile(result_path):
-            result_name = os.path.basename(result_path)
-        elif os.path.isdir(result_path):
-            result_name = basename_of_path(result_path)
+        if os.path.isfile(result_fordpath):
+            result_name = os.path.basename(result_fordpath)
+        elif os.path.isdir(result_fordpath):
+            result_name = basename_of_path(result_fordpath)
         else:
             raise AssertionError("result_fordpath must be either a file or dir")
 
