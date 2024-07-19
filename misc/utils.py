@@ -580,7 +580,7 @@ def try_remove_file(path: Path) -> None:
         pass
 
 
-def restart_ray(redis_port: int):
+def restart_ray(redis_port: int) -> None:
     """
     Stop and start Ray.
     This is good to do between each stage to avoid bugs from carrying over across stages
@@ -593,7 +593,7 @@ def restart_ray(redis_port: int):
     )
 
 
-def make_redis_started(port: int):
+def make_redis_started(port: int) -> None:
     """
     Start Redis if it's not already started.
     Note that Ray uses Redis but does *not* use this function. It starts Redis on its own.
