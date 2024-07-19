@@ -168,13 +168,18 @@ class DBGymConfig:
     """
     Global configurations that apply to all parts of DB-Gym
     """
+    num_times_created_this_run: int = 0
 
-    def __init__(self, config_path):
+    def __init__(self, config_path: Path):
         """
         Parameters
         ----------
         config_path : Path
         """
+        # The logic around dbgym_tmp_path assumes that DBGymConfig is only constructed once.
+        DBGymConfig.num_times_created_this_run += 1
+        assert DBGymConfig.num_times_created_this_run == 1, f"DBGymConfig has been created {DBGymConfig.num_times_created_this_run} times. It should only be created once per run."
+
         assert is_base_git_dir(
             os.getcwd()
         ), "This script should be invoked from the root of the dbgym repo."
@@ -204,11 +209,14 @@ class DBGymConfig:
             self.dbgym_workspace_path
         )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
-        # tmp is a workspace for this run only
-        # one use for it is to place the unzipped dbdata
-        # there's no need to save the actual dbdata dir in run_*/ because we just save a symlink to
-        #   the .tgz file we unzipped
+        # tmp/ is a workspace for this run only
+        # One use for it is to place the unzipped dbdata.
+        # There's no need to save the actual dbdata dir in run_*/ because we just save a symlink to
+        #   the .tgz file we unzipped.
         self.dbgym_tmp_path = get_tmp_path_from_workspace_path(self.dbgym_workspace_path)
+        # The best place to delete the old dbgym_tmp_path is in DBGymConfig.__init__().
+        # This is better than deleting the dbgym_tmp_path is in DBGymConfig.__del__() because DBGymConfig may get deleted before execution has completed.
+        # Also, by keeping the tmp directory around, you can look at it to debug issues.
         if self.dbgym_tmp_path.exists():
             shutil.rmtree(self.dbgym_tmp_path)
         self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
@@ -217,14 +225,10 @@ class DBGymConfig:
         self.dbgym_this_run_path = (
             self.dbgym_runs_path / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
-        # exist_ok is False because we don't want to override a previous task run's data.
+        # `exist_ok` is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
 
-    def __del__(self):
-        if self.dbgym_tmp_path.exists():
-            shutil.rmtree(self.dbgym_tmp_path)
-
-    # append_group() is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
+    # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
     def append_group(self, name) -> None:
         self.cur_path_list.append(name)
@@ -285,15 +289,15 @@ def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
     Raises RuntimeError for errors
     """
-    # for simplicity we only process Path objects
+    # For simplicity, we only process Path objects.
     realabspath = Path(inputpath)
-    # expanduser() is always "ok" to call first
+    # `expanduser()` is always "ok" to call first.
     realabspath = realabspath.expanduser()
-    # the reason we don't call Path.absolute() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
-    #   which is not necessary where cwd() points at the time of calling this function
+    # The reason we don't call Path.absolute() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
+    #   which is not necessary where cwd() points at the time of calling this function.
     if not realabspath.is_absolute():
         realabspath = dbgym_cfg.dbgym_repo_path / realabspath
-    # resolve has two uses: normalize the path (remove ..) and resolve symlinks
+    # `resolve()` has two uses: normalize the path (remove ..) and resolve symlinks.
     # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
     #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
     realabspath = realabspath.resolve()
