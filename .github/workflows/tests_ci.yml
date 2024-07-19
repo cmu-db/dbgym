@@ -32,8 +32,8 @@ jobs:
         . "$HOME/.cargo/env"
 
     - name: Run unit tests
-      run: python scripts/run_unittests.py
+      run: python scripts/run_unit_tests.py
 
     - name: Run integration test
       # TODO(phw2): delete workspace before running
-      run: ./scripts/quickstart.sh postgres tpch 0.01 protox
+      run: ./scripts/integration_test.sh
