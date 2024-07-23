@@ -1,0 +1,3 @@
+dbgym_workspace_path: ../dbgym_integtest_workspace
+boot_redis_port: 7379
+ray_gcs_port: 7380

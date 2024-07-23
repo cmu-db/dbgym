@@ -35,5 +35,8 @@ jobs:
       run: python scripts/run_unit_tests.py
 
     - name: Run integration test
-      # TODO(phw2): delete workspace before running
-      run: ./scripts/integration_test.sh
+      # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
+      run: |
+        rm -rf ../dbgym_integtest_workspace
+        ./scripts/integration_test.sh
+        ./scripts/integration_test.sh

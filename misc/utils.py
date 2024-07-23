@@ -170,12 +170,7 @@ class DBGymConfig:
     """
     num_times_created_this_run: int = 0
 
-    def __init__(self, config_path: Path):
-        """
-        Parameters
-        ----------
-        config_path : Path
-        """
+    def __init__(self, dbgym_config_path: Path):
         # The logic around dbgym_tmp_path assumes that DBGymConfig is only constructed once.
         DBGymConfig.num_times_created_this_run += 1
         assert DBGymConfig.num_times_created_this_run == 1, f"DBGymConfig has been created {DBGymConfig.num_times_created_this_run} times. It should only be created once per run."
@@ -185,7 +180,7 @@ class DBGymConfig:
         ), "This script should be invoked from the root of the dbgym repo."
 
         # Parse the YAML file.
-        contents: str = Path(config_path).read_text()
+        contents: str = dbgym_config_path.read_text()
         yaml_config: dict = yaml.safe_load(contents)
 
         # Require dbgym_workspace_path to be absolute.
@@ -194,7 +189,7 @@ class DBGymConfig:
             Path(yaml_config["dbgym_workspace_path"]).resolve().absolute()
         )
 
-        self.path: Path = config_path
+        self.path: Path = dbgym_config_path
         self.cur_path_list: list[str] = ["dbgym"]
         self.root_yaml: dict = yaml_config
         self.cur_yaml: dict = self.root_yaml
