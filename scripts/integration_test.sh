@@ -6,7 +6,8 @@ DBMS=postgres
 BENCHMARK=tpch
 SCALE_FACTOR=0.01
 AGENT=protox
-DBGYM_CONFIG_PATH=scripts/integtest_dbgym_config.yaml
+
+export DBGYM_CONFIG_PATH=scripts/integtest_dbgym_config.yaml
 
 # Benchmark
 python3 task.py benchmark $BENCHMARK data $SCALE_FACTOR
