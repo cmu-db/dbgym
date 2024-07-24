@@ -26,20 +26,21 @@ jobs:
     # Note that the GHA runners are stateful. Dependencies installed from previous runs will still be on the runner.
     # This means this step will usually be pretty fast as most dependencies will already be cached. However, it also
     # means that past runs might interfere with the current run, so you sometimes may need to restart the GHA runners.
+    #
+    # Note that we need to do `. "$HOME/.cargo/env"` in each step for some reason.
     - name: Install dependencies
       run: |
         ./dependencies/install_dependencies.sh
-        . "$HOME/.cargo/env"
-        cargo -v
 
     - name: Run unit tests
-      run: python scripts/run_unit_tests.py
+      run: |
+        . "$HOME/.cargo/env"
+        python scripts/run_unit_tests.py
 
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       run: |
         . "$HOME/.cargo/env"
-        cargo -v
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh
         ./scripts/integration_test.sh

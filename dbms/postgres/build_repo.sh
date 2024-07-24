@@ -25,7 +25,7 @@ make install -j
 cd "${REPO_REAL_PARENT_DPATH}/boot"
 
 # Download and make hypopg.
-git clone git@github.com:HypoPG/hypopg.git
+git clone https://github.com/HypoPG/hypopg.git
 cd ./hypopg
 PG_CONFIG="${REPO_REAL_PARENT_DPATH}/boot/build/postgres/bin/pg_config" make install
 cd "${REPO_REAL_PARENT_DPATH}/boot"
