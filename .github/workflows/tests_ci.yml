@@ -42,5 +42,5 @@ jobs:
       run: |
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
-        ./scripts/integration_test.sh
-        ./scripts/integration_test.sh
+        ./scripts/integration_test.sh ssd
+        ./scripts/integration_test.sh ssd
