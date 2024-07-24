@@ -38,6 +38,7 @@ jobs:
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       run: |
+        . "$HOME/.cargo/env"
         cargo -v
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh
