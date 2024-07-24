@@ -26,21 +26,29 @@ jobs:
     # Note that the GHA runners are stateful. Dependencies installed from previous runs will still be on the runner.
     # This means this step will usually be pretty fast as most dependencies will already be cached. However, it also
     # means that past runs might interfere with the current run, so you sometimes may need to restart the GHA runners.
+
+    # We need to do `. "$HOME/.cargo/env"` in each step for it to work.
     #
-    # Note that we need to do `. "$HOME/.cargo/env"` in each step for some reason.
+    # We need to switch to a non-root user to run Postgres.
     - name: Install dependencies
       run: |
+        su - phw2
         ./dependencies/install_dependencies.sh
+        exit
 
     - name: Run unit tests
       run: |
+        su - phw2
         . "$HOME/.cargo/env"
         python scripts/run_unit_tests.py
+        exit
 
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       run: |
+        su - phw2
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh ssd
         ./scripts/integration_test.sh ssd
+        exit
