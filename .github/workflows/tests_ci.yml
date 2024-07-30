@@ -32,6 +32,7 @@ jobs:
     # We need to switch to a non-root user to run Postgres.
     - name: Install dependencies
       run: |
+        cut -d: -f1 /etc/passwd
         su - phw2
         ./dependencies/install_dependencies.sh
         exit
