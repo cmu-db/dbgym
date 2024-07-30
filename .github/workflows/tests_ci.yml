@@ -32,14 +32,12 @@ jobs:
     # We need to switch to a non-root user to run Postgres.
     - name: Install dependencies
       run: |
-        cut -d: -f1 /etc/passwd
-        su - phw2
+        su - runner
         ./dependencies/install_dependencies.sh
         exit
 
     - name: Run unit tests
       run: |
-        su - phw2
         . "$HOME/.cargo/env"
         python scripts/run_unit_tests.py
         exit
@@ -47,7 +45,7 @@ jobs:
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       run: |
-        su - phw2
+        su - runner
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh ssd
