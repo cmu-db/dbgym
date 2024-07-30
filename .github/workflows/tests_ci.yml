@@ -40,7 +40,7 @@ jobs:
         exit
 
     - name: Run integration test
-      # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
+      # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace. 
       # Need to run with a non-root user in order to start Postgres.
       run: |
         . "$HOME/.cargo/env"
