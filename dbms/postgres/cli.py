@@ -125,6 +125,7 @@ def _create_dbdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: fl
 
     # Call initdb.
     # Save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run.
+    subprocess_run("whoami") # DEBUG(phw2)
     save_file(dbgym_cfg, pgbin_path / "initdb")
     subprocess_run(f'./initdb -D "{dbdata_dpath}"', cwd=pgbin_path)
 

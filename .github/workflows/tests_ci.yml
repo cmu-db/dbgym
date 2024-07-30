@@ -28,11 +28,8 @@ jobs:
     # means that past runs might interfere with the current run, so you sometimes may need to restart the GHA runners.
 
     # We need to do `. "$HOME/.cargo/env"` in each step for it to work.
-    #
-    # We need to switch to a non-root user to run Postgres.
     - name: Install dependencies
       run: |
-        su - runner
         ./dependencies/install_dependencies.sh
         exit
 
@@ -44,8 +41,11 @@ jobs:
 
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
+      # Need to run with a non-root user in order to start Postgres.
       run: |
+        whoami
         su - runner
+        whoami
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh ssd
