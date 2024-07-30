@@ -43,9 +43,6 @@ jobs:
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       # Need to run with a non-root user in order to start Postgres.
       run: |
-        whoami
-        sudo -u runner /bin/bash <<'EOF'
-        whoami
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh ssd
