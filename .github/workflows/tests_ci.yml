@@ -31,13 +31,11 @@ jobs:
     - name: Install dependencies
       run: |
         ./dependencies/install_dependencies.sh
-        exit
 
     - name: Run unit tests
       run: |
         . "$HOME/.cargo/env"
         python scripts/run_unit_tests.py
-        exit
 
     - name: Run integration test
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
@@ -47,4 +45,3 @@ jobs:
         rm -rf ../dbgym_integtest_workspace
         ./scripts/integration_test.sh ssd
         ./scripts/integration_test.sh ssd
-        exit
