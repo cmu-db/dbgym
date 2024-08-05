@@ -7,7 +7,7 @@ REPO_REAL_PARENT_DPATH="$1"
 # Download and make postgres from the boot repository.
 mkdir -p "${REPO_REAL_PARENT_DPATH}"
 cd "${REPO_REAL_PARENT_DPATH}"
-git clone git@github.com:lmwnshn/boot.git --single-branch --branch vldb_2024 --depth 1
+git clone https://github.com/lmwnshn/boot.git --single-branch --branch vldb_2024 --depth 1
 cd ./boot
 ./cmudb/build/configure.sh release "${REPO_REAL_PARENT_DPATH}/boot/build/postgres"
 make clean
@@ -25,7 +25,7 @@ make install -j
 cd "${REPO_REAL_PARENT_DPATH}/boot"
 
 # Download and make hypopg.
-git clone git@github.com:HypoPG/hypopg.git
+git clone https://github.com/HypoPG/hypopg.git
 cd ./hypopg
 PG_CONFIG="${REPO_REAL_PARENT_DPATH}/boot/build/postgres/bin/pg_config" make install
 cd "${REPO_REAL_PARENT_DPATH}/boot"

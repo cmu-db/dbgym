@@ -169,11 +169,11 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe", verbose=False) -> 
             if not is_child_path(real_fordpath, dbgym_cfg.dbgym_runs_path):
                 continue
 
-            assert not os.path.samefile(real_fordpath, dbgym_cfg.dbgym_runs_path)
+            assert not real_fordpath.samefile(dbgym_cfg.dbgym_runs_path)
 
             # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
             task_run_child_fordpath = None
-            if os.path.samefile(parent_dpath_of_path(real_fordpath), dbgym_cfg.dbgym_runs_path):
+            if parent_dpath_of_path(real_fordpath).samefile(dbgym_cfg.dbgym_runs_path):
                 # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
                 #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
                 #   the structure somehow, it's just a good idea not to delete it.
@@ -183,10 +183,10 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str="safe", verbose=False) -> 
                 #   However, as with above, we won't just nuke files if the workspace doesn't follow this rule for
                 #   some reason.
                 task_run_child_fordpath = real_fordpath
-                while not os.path.samefile(parent_dpath_of_path(task_run_child_fordpath), dbgym_cfg.dbgym_runs_path):
+                while not parent_dpath_of_path(task_run_child_fordpath).samefile(dbgym_cfg.dbgym_runs_path):
                     task_run_child_fordpath = parent_dpath_of_path(task_run_child_fordpath)
             assert task_run_child_fordpath != None
-            assert os.path.samefile(parent_dpath_of_path(task_run_child_fordpath), dbgym_cfg.dbgym_runs_path), f"task_run_child_fordpath ({task_run_child_fordpath}) is not a direct child of dbgym_cfg.dbgym_runs_path"
+            assert parent_dpath_of_path(task_run_child_fordpath).samefile(dbgym_cfg.dbgym_runs_path), f"task_run_child_fordpath ({task_run_child_fordpath}) is not a direct child of dbgym_cfg.dbgym_runs_path"
             task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
                 
             # If on safe mode, add symlinks inside the task_run_child_fordpath to be processed
