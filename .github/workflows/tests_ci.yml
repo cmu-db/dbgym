@@ -32,6 +32,10 @@ jobs:
       run: |
         ./dependencies/install_dependencies.sh
 
+    - name: Check formatting
+      run: |
+        ./scripts/check_format.sh
+
     - name: Run unit tests
       run: |
         . "$HOME/.cargo/env"
