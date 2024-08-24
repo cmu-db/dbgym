@@ -8,8 +8,11 @@ from gymnasium.spaces import Box
 from torch.nn.functional import softmax
 
 from tune.protox.env.space.primitive.index import IndexAction
-from tune.protox.env.types import (IndexSpaceRawSample, TableAttrAccessSetsMap,
-                                   TableAttrListMap)
+from tune.protox.env.types import (
+    IndexSpaceRawSample,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+)
 
 
 class IndexPolicy:

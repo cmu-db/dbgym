@@ -6,21 +6,32 @@ import click
 import numpy as np
 import torch
 
-from misc.utils import (BENCHMARK_NAME_PLACEHOLDER, DEFAULT_HPO_SPACE_PATH,
-                        WORKLOAD_NAME_PLACEHOLDER, WORKSPACE_PATH_PLACEHOLDER,
-                        conv_inputpath_to_realabspath,
-                        default_benchmark_config_path, default_traindata_path,
-                        default_workload_path, workload_name_fn)
-from tune.protox.embedding.analyze import (RANGES_FNAME, STATS_FNAME,
-                                           analyze_all_embeddings_parts,
-                                           compute_num_parts,
-                                           redist_trained_models)
+from misc.utils import (
+    BENCHMARK_NAME_PLACEHOLDER,
+    DEFAULT_HPO_SPACE_PATH,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    conv_inputpath_to_realabspath,
+    default_benchmark_config_path,
+    default_traindata_path,
+    default_workload_path,
+    workload_name_fn,
+)
+from tune.protox.embedding.analyze import (
+    RANGES_FNAME,
+    STATS_FNAME,
+    analyze_all_embeddings_parts,
+    compute_num_parts,
+    redist_trained_models,
+)
 from tune.protox.embedding.select import select_best_embeddings
 from tune.protox.embedding.train_all import train_all_embeddings
-from tune.protox.embedding.train_args import (EmbeddingAnalyzeArgs,
-                                              EmbeddingSelectArgs,
-                                              EmbeddingTrainAllArgs,
-                                              EmbeddingTrainGenericArgs)
+from tune.protox.embedding.train_args import (
+    EmbeddingAnalyzeArgs,
+    EmbeddingSelectArgs,
+    EmbeddingTrainAllArgs,
+    EmbeddingTrainGenericArgs,
+)
 
 
 # click setup

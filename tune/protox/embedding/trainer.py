@@ -7,8 +7,7 @@ import torch
 import tqdm
 from numpy.typing import NDArray
 from pytorch_metric_learning import trainers  # type: ignore
-from pytorch_metric_learning.utils import \
-    common_functions as c_f  # type: ignore
+from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
 from torch.utils.data import Sampler
 
 

@@ -16,14 +16,18 @@ import yaml
 from misc.utils import DBGymConfig, open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
-    create_vae_model, fetch_index_parameters,
-    fetch_vae_parameters_from_workload, load_input_data)
-from tune.protox.embedding.train_args import (EmbeddingAnalyzeArgs,
-                                              EmbeddingTrainGenericArgs)
+    create_vae_model,
+    fetch_index_parameters,
+    fetch_vae_parameters_from_workload,
+    load_input_data,
+)
+from tune.protox.embedding.train_args import (
+    EmbeddingAnalyzeArgs,
+    EmbeddingTrainGenericArgs,
+)
 from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
-from tune.protox.env.space.latent_space.latent_index_space import \
-    LatentIndexSpace
+from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
 from tune.protox.env.workload import Workload
 
 STATS_FNAME = "stats.txt"

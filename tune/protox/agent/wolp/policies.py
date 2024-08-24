@@ -14,8 +14,11 @@ from tune.protox.agent.policies import Actor, BaseModel, ContinuousCritic
 from tune.protox.agent.utils import polyak_update
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.types import (DEFAULT_NEIGHBOR_PARAMETERS, HolonAction,
-                                   NeighborParameters)
+from tune.protox.env.types import (
+    DEFAULT_NEIGHBOR_PARAMETERS,
+    HolonAction,
+    NeighborParameters,
+)
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
     "knob_num_nearest": 1,

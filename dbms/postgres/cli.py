@@ -16,15 +16,29 @@ from sqlalchemy import Connection
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import (WORKSPACE_PATH_PLACEHOLDER, DBGymConfig,
-                        conv_inputpath_to_realabspath,
-                        default_dbdata_parent_dpath, default_pgbin_path,
-                        get_dbdata_tgz_name, is_ssd, link_result,
-                        open_and_save, save_file)
-from util.pg import (DBGYM_POSTGRES_DBNAME, DBGYM_POSTGRES_PASS,
-                     DBGYM_POSTGRES_USER, DEFAULT_POSTGRES_DBNAME,
-                     DEFAULT_POSTGRES_PORT, SHARED_PRELOAD_LIBRARIES,
-                     conn_execute, create_conn, sql_file_execute)
+from misc.utils import (
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    conv_inputpath_to_realabspath,
+    default_dbdata_parent_dpath,
+    default_pgbin_path,
+    get_dbdata_tgz_name,
+    is_ssd,
+    link_result,
+    open_and_save,
+    save_file,
+)
+from util.pg import (
+    DBGYM_POSTGRES_DBNAME,
+    DBGYM_POSTGRES_PASS,
+    DBGYM_POSTGRES_USER,
+    DEFAULT_POSTGRES_DBNAME,
+    DEFAULT_POSTGRES_PORT,
+    SHARED_PRELOAD_LIBRARIES,
+    conn_execute,
+    create_conn,
+    sql_file_execute,
+)
 from util.shell import subprocess_run
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")

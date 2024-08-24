@@ -1,7 +1,16 @@
 from enum import Enum, unique
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, NamedTuple, NewType, Optional, Tuple,
-                    TypeAlias, TypedDict, Union)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    NewType,
+    Optional,
+    Tuple,
+    TypeAlias,
+    TypedDict,
+    Union,
+)
 
 import torch
 

@@ -4,8 +4,7 @@ import gymnasium as gym
 
 from tune.protox.env.logger import Logger
 from tune.protox.env.lsc.lsc import LSC
-from tune.protox.env.target_reset.target_reset_wrapper import \
-    TargetResetWrapper
+from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 
 
 class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):

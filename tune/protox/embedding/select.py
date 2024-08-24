@@ -9,8 +9,10 @@ import tqdm
 
 from misc.utils import DBGymConfig, default_embedder_dname, link_result
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
-from tune.protox.embedding.train_args import (EmbeddingSelectArgs,
-                                              EmbeddingTrainGenericArgs)
+from tune.protox.embedding.train_args import (
+    EmbeddingSelectArgs,
+    EmbeddingTrainGenericArgs,
+)
 
 
 class DotDict(dict):

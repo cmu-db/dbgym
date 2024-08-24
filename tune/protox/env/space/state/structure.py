@@ -9,14 +9,15 @@ from gymnasium import spaces
 
 from misc.utils import DBGymConfig
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.latent_space import (LatentIndexSpace,
-                                                LatentKnobSpace,
-                                                LatentQuerySpace)
+from tune.protox.env.space.latent_space import (
+    LatentIndexSpace,
+    LatentKnobSpace,
+    LatentQuerySpace,
+)
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import check_subspace
-from tune.protox.env.types import (IndexSpaceRawSample, KnobSpaceAction,
-                                   QuerySpaceAction)
+from tune.protox.env.types import IndexSpaceRawSample, KnobSpaceAction, QuerySpaceAction
 
 
 class StructureStateSpace(StateSpace, spaces.Dict):

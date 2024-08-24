@@ -9,8 +9,13 @@ from psycopg.errors import QueryCanceled
 from tune.protox.env.logger import Logger
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.types import (BestQueryRun, KnobSpaceAction,
-                                   KnobSpaceContainer, QueryRun, QueryType)
+from tune.protox.env.types import (
+    BestQueryRun,
+    KnobSpaceAction,
+    KnobSpaceContainer,
+    QueryRun,
+    QueryType,
+)
 
 
 def _force_statement_timeout(

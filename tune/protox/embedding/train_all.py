@@ -30,14 +30,19 @@ from typing_extensions import ParamSpec
 
 from misc.utils import DBGymConfig, open_and_save, restart_ray, save_file
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
-from tune.protox.embedding.train_args import (EmbeddingTrainAllArgs,
-                                              EmbeddingTrainGenericArgs)
+from tune.protox.embedding.train_args import (
+    EmbeddingTrainAllArgs,
+    EmbeddingTrainGenericArgs,
+)
 from tune.protox.embedding.trainer import StratifiedRandomSampler, VAETrainer
 from tune.protox.embedding.utils import f_unpack_dict, parse_hyperopt_config
 from tune.protox.embedding.vae import VAE, VAELoss, gen_vae_collate
 from tune.protox.env.space.primitive_space import IndexSpace
-from tune.protox.env.types import (TableAttrAccessSetsMap, TableAttrListMap,
-                                   TableColTuple)
+from tune.protox.env.types import (
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableColTuple,
+)
 from tune.protox.env.workload import Workload
 
 

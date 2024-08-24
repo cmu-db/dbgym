@@ -4,8 +4,11 @@ from typing import Any, Iterable, NamedTuple, Optional, Type
 
 import torch as th
 
-from tune.protox.agent.noise import (ActionNoise, NormalActionNoise,
-                                     OrnsteinUhlenbeckActionNoise)
+from tune.protox.agent.noise import (
+    ActionNoise,
+    NormalActionNoise,
+    OrnsteinUhlenbeckActionNoise,
+)
 
 
 class RolloutReturn(NamedTuple):

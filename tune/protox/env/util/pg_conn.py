@@ -19,11 +19,14 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from misc.utils import (DBGymConfig, link_result, open_and_save,
-                        parent_dpath_of_path)
+from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 from tune.protox.env.logger import Logger, time_record
-from util.pg import (DBGYM_POSTGRES_DBNAME, DBGYM_POSTGRES_PASS,
-                     DBGYM_POSTGRES_USER, SHARED_PRELOAD_LIBRARIES)
+from util.pg import (
+    DBGYM_POSTGRES_DBNAME,
+    DBGYM_POSTGRES_PASS,
+    DBGYM_POSTGRES_USER,
+    SHARED_PRELOAD_LIBRARIES,
+)
 
 
 class PostgresConn:

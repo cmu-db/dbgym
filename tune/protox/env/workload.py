@@ -14,22 +14,35 @@ from plumbum import local
 from misc.utils import DBGymConfig, open_and_save
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.latent_space import (LatentKnobSpace,
-                                                LatentQuerySpace)
+from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.types import (AttrTableListMap, BestQueryRun, HolonAction,
-                                   KnobSpaceAction, QueryMap, QueryRun,
-                                   QuerySpaceAction, QuerySpaceKnobAction,
-                                   QuerySpec, QueryType,
-                                   TableAttrAccessSetsMap, TableAttrListMap,
-                                   TableAttrSetMap, TableColTuple)
-from tune.protox.env.util.execute import (_acquire_metrics_around_query,
-                                          execute_variations)
+from tune.protox.env.types import (
+    AttrTableListMap,
+    BestQueryRun,
+    HolonAction,
+    KnobSpaceAction,
+    QueryMap,
+    QueryRun,
+    QuerySpaceAction,
+    QuerySpaceKnobAction,
+    QuerySpec,
+    QueryType,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+    TableAttrSetMap,
+    TableColTuple,
+)
+from tune.protox.env.util.execute import (
+    _acquire_metrics_around_query,
+    execute_variations,
+)
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
-from tune.protox.env.util.workload_analysis import (extract_aliases,
-                                                    extract_columns,
-                                                    extract_sqltypes)
+from tune.protox.env.util.workload_analysis import (
+    extract_aliases,
+    extract_columns,
+    extract_sqltypes,
+)
 
 
 class Workload(object):

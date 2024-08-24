@@ -14,8 +14,13 @@ from gymnasium.wrappers import FlattenObservation  # type: ignore
 from gymnasium.wrappers import NormalizeObservation, NormalizeReward
 from torch import nn
 
-from misc.utils import (DBGymConfig, TuningMode, make_redis_started,
-                        open_and_save, save_file)
+from misc.utils import (
+    DBGymConfig,
+    TuningMode,
+    make_redis_started,
+    open_and_save,
+    save_file,
+)
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -24,22 +29,20 @@ from tune.protox.agent.utils import parse_noise_type
 from tune.protox.agent.wolp.policies import WolpPolicy
 from tune.protox.agent.wolp.wolp import Wolp
 from tune.protox.embedding.train_all import (
-    create_vae_model, fetch_vae_parameters_from_workload)
+    create_vae_model,
+    fetch_vae_parameters_from_workload,
+)
 from tune.protox.env.logger import Logger
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.latent_space.latent_knob_space import \
-    LatentKnobSpace
-from tune.protox.env.space.latent_space.latent_query_space import \
-    LatentQuerySpace
+from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
+from tune.protox.env.space.latent_space.latent_query_space import LatentQuerySpace
 from tune.protox.env.space.latent_space.lsc_index_space import LSCIndexSpace
-from tune.protox.env.space.state import (LSCMetricStateSpace,
-                                         LSCStructureStateSpace)
+from tune.protox.env.space.state import LSCMetricStateSpace, LSCStructureStateSpace
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.target_reset.target_reset_wrapper import \
-    TargetResetWrapper
+from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility

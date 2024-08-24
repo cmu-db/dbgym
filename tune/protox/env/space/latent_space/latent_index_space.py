@@ -10,10 +10,16 @@ from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace, fetch_server_indexes
-from tune.protox.env.types import (DEFAULT_NEIGHBOR_PARAMETERS,
-                                   IndexSpaceContainer, IndexSpaceRawSample,
-                                   NeighborParameters, ProtoAction, QueryMap,
-                                   TableAttrAccessSetsMap, TableAttrListMap)
+from tune.protox.env.types import (
+    DEFAULT_NEIGHBOR_PARAMETERS,
+    IndexSpaceContainer,
+    IndexSpaceRawSample,
+    NeighborParameters,
+    ProtoAction,
+    QueryMap,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+)
 
 
 class LatentIndexSpace(IndexSpace):

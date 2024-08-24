@@ -4,8 +4,12 @@ import shutil
 
 import click
 
-from misc.utils import (DBGymConfig, get_scale_factor_string, link_result,
-                        workload_name_fn)
+from misc.utils import (
+    DBGymConfig,
+    get_scale_factor_string,
+    link_result,
+    workload_name_fn,
+)
 from util.pg import *
 from util.shell import subprocess_run
 
