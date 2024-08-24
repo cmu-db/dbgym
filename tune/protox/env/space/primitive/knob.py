@@ -6,12 +6,8 @@ from gymnasium.spaces import Box, Discrete, Space
 from gymnasium.spaces.utils import flatdim, flatten, flatten_space, unflatten
 from numpy.typing import NDArray
 
-from tune.protox.env.space.primitive import (
-    KnobClass,
-    SettingType,
-    is_boolean,
-    is_knob_enum,
-)
+from tune.protox.env.space.primitive import (KnobClass, SettingType,
+                                             is_boolean, is_knob_enum)
 
 
 def full_knob_name(

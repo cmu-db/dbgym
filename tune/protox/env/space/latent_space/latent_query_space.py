@@ -3,14 +3,11 @@ from typing import Any, Optional, Tuple
 import psycopg
 
 from tune.protox.env.logger import Logger
-from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
+from tune.protox.env.space.latent_space.latent_knob_space import \
+    LatentKnobSpace
 from tune.protox.env.space.primitive_space import QuerySpace
-from tune.protox.env.types import (
-    QueryMap,
-    QuerySpaceAction,
-    QuerySpaceContainer,
-    QuerySpaceKnobAction,
-)
+from tune.protox.env.types import (QueryMap, QuerySpaceAction,
+                                   QuerySpaceContainer, QuerySpaceKnobAction)
 
 
 class LatentQuerySpace(LatentKnobSpace, QuerySpace):

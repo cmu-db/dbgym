@@ -1,7 +1,6 @@
 from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, get_scale_factor_string
 
-
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
 TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
 
@@ -39,11 +38,17 @@ class TpchLoadInfo(LoadInfoBaseClass):
         ), f"self._constraints_fpath ({self._constraints_fpath}) does not exist"
 
         # tables
-        data_root_dpath = dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
-        tables_symlink_dpath = data_root_dpath / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
+        data_root_dpath = (
+            dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
+        )
+        tables_symlink_dpath = (
+            data_root_dpath / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
+        )
         tables_dpath = tables_symlink_dpath.resolve()
         assert (
-            tables_dpath.exists() and tables_dpath.is_absolute() and not tables_dpath.is_symlink()
+            tables_dpath.exists()
+            and tables_dpath.is_absolute()
+            and not tables_dpath.is_symlink()
         ), f"tables_dpath ({tables_dpath}) should be an existent real absolute path. Make sure you have generated the TPC-H data"
         self._tables_and_fpaths = []
         for table in TpchLoadInfo.TABLES:

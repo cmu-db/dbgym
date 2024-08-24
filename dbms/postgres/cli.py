@@ -4,20 +4,28 @@ On the other hand, the goal of tune.protox.env.util.postgres is to provide helpe
     a Postgres instance during agent tuning.
 util.pg provides helpers used by *both* of the above files (as well as other files).
 """
+
 import logging
 import os
 import shutil
 import subprocess
 from pathlib import Path
+
 import click
+from sqlalchemy import Connection
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, conv_inputpath_to_realabspath, link_result, open_and_save, save_file, get_dbdata_tgz_name, default_pgbin_path, WORKSPACE_PATH_PLACEHOLDER, default_dbdata_parent_dpath, is_ssd
+from misc.utils import (WORKSPACE_PATH_PLACEHOLDER, DBGymConfig,
+                        conv_inputpath_to_realabspath,
+                        default_dbdata_parent_dpath, default_pgbin_path,
+                        get_dbdata_tgz_name, is_ssd, link_result,
+                        open_and_save, save_file)
+from util.pg import (DBGYM_POSTGRES_DBNAME, DBGYM_POSTGRES_PASS,
+                     DBGYM_POSTGRES_USER, DEFAULT_POSTGRES_DBNAME,
+                     DEFAULT_POSTGRES_PORT, SHARED_PRELOAD_LIBRARIES,
+                     conn_execute, create_conn, sql_file_execute)
 from util.shell import subprocess_run
-from sqlalchemy import Connection
-from util.pg import SHARED_PRELOAD_LIBRARIES, conn_execute, sql_file_execute, DBGYM_POSTGRES_DBNAME, create_conn, DEFAULT_POSTGRES_PORT, DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DEFAULT_POSTGRES_DBNAME
-
 
 dbms_postgres_logger = logging.getLogger("dbms/postgres")
 dbms_postgres_logger.setLevel(logging.INFO)
@@ -34,7 +42,11 @@ def postgres_group(dbgym_cfg: DBGymConfig):
     help="Download and build the Postgres repository and all necessary extensions/shared libraries. Does not create dbdata.",
 )
 @click.pass_obj
-@click.option("--rebuild", is_flag=True, help="Include this flag to rebuild Postgres even if it already exists.")
+@click.option(
+    "--rebuild",
+    is_flag=True,
+    help="Include this flag to rebuild Postgres even if it already exists.",
+)
 def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool):
     _build_repo(dbgym_cfg, rebuild)
 
@@ -46,7 +58,12 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool):
 @click.pass_obj
 @click.argument("benchmark_name", type=str)
 @click.option("--scale-factor", type=float, default=1)
-@click.option("--pgbin-path", type=Path, default=None, help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.")
+@click.option(
+    "--pgbin-path",
+    type=Path,
+    default=None,
+    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+)
 @click.option(
     "--intended-dbdata-hardware",
     type=click.Choice(["hdd", "ssd"]),
@@ -59,12 +76,21 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool):
     type=Path,
     help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
-def postgres_dbdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path, intended_dbdata_hardware: str, dbdata_parent_dpath: Path):
+def postgres_dbdata(
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    scale_factor: float,
+    pgbin_path: Path,
+    intended_dbdata_hardware: str,
+    dbdata_parent_dpath: Path,
+):
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path == None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if dbdata_parent_dpath == None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
+        dbdata_parent_dpath = default_dbdata_parent_dpath(
+            dbgym_cfg.dbgym_workspace_path
+        )
 
     # Convert all input paths to absolute paths
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
@@ -72,18 +98,26 @@ def postgres_dbdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: f
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
-        assert not is_ssd(dbdata_parent_dpath), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
+        assert not is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
     elif intended_dbdata_hardware == "ssd":
-        assert is_ssd(dbdata_parent_dpath), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
+        assert is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
     else:
         assert False
 
     # Create dbdata
-    _create_dbdata(dbgym_cfg, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath)
+    _create_dbdata(
+        dbgym_cfg, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath
+    )
 
 
 def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo.link", "boot", "build", "postgres", "bin")
+    return dbgym_cfg.cur_symlinks_build_path(
+        "repo.link", "boot", "build", "postgres", "bin"
+    )
 
 
 def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
@@ -93,7 +127,9 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
     expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
     if not rebuild and expected_repo_symlink_dpath.exists():
-        dbms_postgres_logger.info(f"Skipping _build_repo: {expected_repo_symlink_dpath}")
+        dbms_postgres_logger.info(
+            f"Skipping _build_repo: {expected_repo_symlink_dpath}"
+        )
         return
 
     dbms_postgres_logger.info(f"Setting up repo in {expected_repo_symlink_dpath}")
@@ -108,7 +144,13 @@ def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
     dbms_postgres_logger.info(f"Set up repo in {expected_repo_symlink_dpath}")
 
 
-def _create_dbdata(dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float, pgbin_path: Path, dbdata_parent_dpath: Path) -> None:
+def _create_dbdata(
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    scale_factor: float,
+    pgbin_path: Path,
+    dbdata_parent_dpath: Path,
+) -> None:
     """
     I chose *not* for this function to skip by default if dbdata_tgz_symlink_path already exists. This
       is because, while the generated data is deterministic given benchmark_name and scale_factor, any
@@ -177,7 +219,7 @@ def _generic_dbdata_setup(dbgym_cfg: DBGymConfig):
         subprocess_run(
             # You have to use TO and you can't put single quotes around the libraries (https://postgrespro.com/list/thread-id/2580120)
             # The method I wrote here works for both one library and multiple libraries
-            f"./psql -c \"ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
+            f'./psql -c "ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
             cwd=pgbin_real_dpath,
         )
 
@@ -203,7 +245,9 @@ def _load_benchmark_into_dbdata(
         _load_into_dbdata(dbgym_cfg, conn, load_info)
 
 
-def _load_into_dbdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass):
+def _load_into_dbdata(
+    dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass
+):
     sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
 
     # truncate all tables first before even loading a single one
@@ -222,7 +266,9 @@ def _load_into_dbdata(dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadI
         sql_file_execute(dbgym_cfg, conn, constraints_fpath)
 
 
-def start_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path) -> None:
+def start_postgres(
+    dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path
+) -> None:
     _start_or_stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath, True)
 
 
@@ -230,7 +276,9 @@ def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path) 
     _start_or_stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath, False)
 
 
-def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path, is_start: bool) -> None:
+def _start_or_stop_postgres(
+    dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path, is_start: bool
+) -> None:
     # They should be absolute paths and should exist
     assert pgbin_path.is_absolute() and pgbin_path.exists()
     assert dbdata_dpath.is_absolute() and dbdata_dpath.exists()
@@ -244,7 +292,14 @@ def _start_or_stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpa
         # We use subprocess.run() because subprocess_run() never returns when running "pg_ctl start".
         # The reason subprocess_run() never returns is because pg_ctl spawns a postgres process so .poll() always returns None.
         # On the other hand, subprocess.run() does return normally, like calling `./pg_ctl` on the command line would do.
-        result = subprocess.run(f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' start", cwd=pgbin_real_dpath, shell=True)
+        result = subprocess.run(
+            f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' start",
+            cwd=pgbin_real_dpath,
+            shell=True,
+        )
         result.check_returncode()
     else:
-        subprocess_run(f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' stop", cwd=pgbin_real_dpath)
+        subprocess_run(
+            f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' stop",
+            cwd=pgbin_real_dpath,
+        )

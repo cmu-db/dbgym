@@ -1,36 +1,26 @@
 import logging
 import random
 from pathlib import Path
+
 import click
 import numpy as np
 import torch
 
-from misc.utils import (
-    BENCHMARK_NAME_PLACEHOLDER,
-    DEFAULT_HPO_SPACE_PATH,
-    WORKLOAD_NAME_PLACEHOLDER,
-    WORKSPACE_PATH_PLACEHOLDER,
-    conv_inputpath_to_realabspath,
-    default_benchmark_config_path,
-    default_traindata_path,
-    default_workload_path,
-    workload_name_fn,
-)
-from tune.protox.embedding.analyze import (
-    RANGES_FNAME,
-    STATS_FNAME,
-    analyze_all_embeddings_parts,
-    compute_num_parts,
-    redist_trained_models,
-)
+from misc.utils import (BENCHMARK_NAME_PLACEHOLDER, DEFAULT_HPO_SPACE_PATH,
+                        WORKLOAD_NAME_PLACEHOLDER, WORKSPACE_PATH_PLACEHOLDER,
+                        conv_inputpath_to_realabspath,
+                        default_benchmark_config_path, default_traindata_path,
+                        default_workload_path, workload_name_fn)
+from tune.protox.embedding.analyze import (RANGES_FNAME, STATS_FNAME,
+                                           analyze_all_embeddings_parts,
+                                           compute_num_parts,
+                                           redist_trained_models)
 from tune.protox.embedding.select import select_best_embeddings
 from tune.protox.embedding.train_all import train_all_embeddings
-from tune.protox.embedding.train_args import (
-    EmbeddingAnalyzeArgs,
-    EmbeddingSelectArgs,
-    EmbeddingTrainAllArgs,
-    EmbeddingTrainGenericArgs,
-)
+from tune.protox.embedding.train_args import (EmbeddingAnalyzeArgs,
+                                              EmbeddingSelectArgs,
+                                              EmbeddingTrainAllArgs,
+                                              EmbeddingTrainGenericArgs)
 
 
 # click setup
@@ -39,8 +29,18 @@ from tune.protox.embedding.train_args import (
 
 # generic args
 @click.argument("benchmark-name", type=str)
-@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
-@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-start",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
+)
+@click.option(
+    "--seed-end",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
+)
 @click.option(
     "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
@@ -201,7 +201,9 @@ def train(
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
-    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, benchmark_config_path
+    )
     traindata_path = conv_inputpath_to_realabspath(dbgym_cfg, traindata_path)
     hpo_space_path = conv_inputpath_to_realabspath(dbgym_cfg, hpo_space_path)
 
@@ -211,12 +213,21 @@ def train(
     torch.manual_seed(seed)
     logging.getLogger().setLevel(logging.INFO)
 
-    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, default_workload_path(
-        dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
-    ))
+    workload_path = conv_inputpath_to_realabspath(
+        dbgym_cfg,
+        default_workload_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        ),
+    )
     # group args. see comment in datagen.py:datagen()
     generic_args = EmbeddingTrainGenericArgs(
-        benchmark_name, workload_name, scale_factor, benchmark_config_path, traindata_path, seed, workload_path
+        benchmark_name,
+        workload_name,
+        scale_factor,
+        benchmark_config_path,
+        traindata_path,
+        seed,
+        workload_path,
     )
     train_args = EmbeddingTrainAllArgs(
         hpo_space_path,

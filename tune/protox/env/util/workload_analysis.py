@@ -5,13 +5,8 @@ import pglast  # type: ignore
 from pglast import stream
 from pglast.visitors import Continue, Visitor  # type: ignore
 
-from tune.protox.env.types import (
-    AttrTableListMap,
-    QueryType,
-    TableAliasMap,
-    TableAttrSetMap,
-    TableColTuple,
-)
+from tune.protox.env.types import (AttrTableListMap, QueryType, TableAliasMap,
+                                   TableAttrSetMap, TableColTuple)
 
 
 def traverse(stmt: pglast.ast.Node) -> Iterator[pglast.ast.Node]:

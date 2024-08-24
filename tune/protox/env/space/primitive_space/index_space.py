@@ -6,12 +6,8 @@ from gymnasium import spaces
 
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.primitive_space.index_policy import IndexPolicy
-from tune.protox.env.types import (
-    IndexSpaceRawSample,
-    TableAttrAccessSetsMap,
-    TableAttrListMap,
-    TableColTuple,
-)
+from tune.protox.env.types import (IndexSpaceRawSample, TableAttrAccessSetsMap,
+                                   TableAttrListMap, TableColTuple)
 
 
 class IndexSpace(spaces.Tuple):

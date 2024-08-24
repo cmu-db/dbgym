@@ -9,12 +9,9 @@ from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ActionNoise
-from tune.protox.agent.utils import (
-    RolloutReturn,
-    TrainFreq,
-    TrainFrequencyUnit,
-    should_collect_more_steps,
-)
+from tune.protox.agent.utils import (RolloutReturn, TrainFreq,
+                                     TrainFrequencyUnit,
+                                     should_collect_more_steps)
 
 
 class OffPolicyAlgorithm(BaseAlgorithm):
@@ -189,7 +186,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially cause a race condition.
             if self.logger:
-                assert self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True, "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
+                assert (
+                    self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True
+                ), "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
                 self.logger.stash_results(infos, ray_trial_id=self.ray_trial_id)
 
             self.num_timesteps += 1
@@ -217,7 +216,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             num_collected_steps, num_collected_episodes, continue_training
         )
 
-    def learn(self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode) -> None:
+    def learn(
+        self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode
+    ) -> None:
         assert isinstance(env, AgentEnv)
         total_timesteps = self._setup_learn(env, total_timesteps)
 

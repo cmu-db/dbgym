@@ -9,10 +9,8 @@ from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.off_policy_algorithm import OffPolicyAlgorithm
-from tune.protox.agent.wolp.policies import (
-    DETERMINISTIC_NEIGHBOR_PARAMETERS,
-    WolpPolicy,
-)
+from tune.protox.agent.wolp.policies import (DETERMINISTIC_NEIGHBOR_PARAMETERS,
+                                             WolpPolicy)
 
 
 class Wolp(OffPolicyAlgorithm):

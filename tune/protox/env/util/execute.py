@@ -9,13 +9,8 @@ from psycopg.errors import QueryCanceled
 from tune.protox.env.logger import Logger
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.types import (
-    BestQueryRun,
-    KnobSpaceAction,
-    KnobSpaceContainer,
-    QueryRun,
-    QueryType,
-)
+from tune.protox.env.types import (BestQueryRun, KnobSpaceAction,
+                                   KnobSpaceContainer, QueryRun, QueryType)
 
 
 def _force_statement_timeout(
@@ -85,7 +80,9 @@ def _acquire_metrics_around_query(
     if query_timeout > 0:
         _force_statement_timeout(connection, query_timeout * 1000)
     else:
-        assert query_timeout == 0, f"Setting query_timeout to 0 indicates \"timeout\". However, setting query_timeout ({query_timeout}) < 0 is a bug."
+        assert (
+            query_timeout == 0
+        ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
     qid_runtime, did_time_out, explain_data = _time_query(
         logger, prefix, connection, query, query_timeout

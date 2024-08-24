@@ -8,22 +8,16 @@ import torch
 from psycopg import Connection
 
 from tune.protox.env.logger import Logger, time_record
-from tune.protox.env.space.primitive import KnobClass, SettingType, is_knob_enum
+from tune.protox.env.space.primitive import (KnobClass, SettingType,
+                                             is_knob_enum)
 from tune.protox.env.space.primitive.knob import resolve_enum_value
-from tune.protox.env.space.primitive.latent_knob import (
-    LatentCategoricalKnob,
-    LatentKnob,
-)
+from tune.protox.env.space.primitive.latent_knob import (LatentCategoricalKnob,
+                                                         LatentKnob)
 from tune.protox.env.space.primitive_space import KnobSpace
 from tune.protox.env.space.utils import check_subspace, fetch_server_knobs
-from tune.protox.env.types import (
-    DEFAULT_NEIGHBOR_PARAMETERS,
-    KnobSpaceAction,
-    KnobSpaceContainer,
-    NeighborParameters,
-    ProtoAction,
-    QueryMap,
-)
+from tune.protox.env.types import (DEFAULT_NEIGHBOR_PARAMETERS,
+                                   KnobSpaceAction, KnobSpaceContainer,
+                                   NeighborParameters, ProtoAction, QueryMap)
 
 
 class LatentKnobSpace(KnobSpace):

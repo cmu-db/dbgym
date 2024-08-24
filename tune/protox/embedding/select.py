@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from misc.utils import DBGymConfig, link_result, default_embedder_dname
-from tune.protox.embedding.train_args import EmbeddingTrainGenericArgs, EmbeddingSelectArgs
+from misc.utils import DBGymConfig, default_embedder_dname, link_result
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
+from tune.protox.embedding.train_args import (EmbeddingSelectArgs,
+                                              EmbeddingTrainGenericArgs)
 
 
 class DotDict(dict):
@@ -18,7 +19,11 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainGenericArgs, select_args: EmbeddingSelectArgs) -> None:
+def select_best_embeddings(
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingTrainGenericArgs,
+    select_args: EmbeddingSelectArgs,
+) -> None:
     data = _load_data(dbgym_cfg, select_args)
 
     if generic_args.traindata_path is not None and os.path.exists(
@@ -28,10 +33,10 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
         data = _attach(data, raw_data, select_args.idx_limit)
 
     curated_dpath = dbgym_cfg.cur_task_runs_data_path("curated", mkdir=True)
-    curated_results_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "curated_results.csv"
-    data.to_csv(
-        curated_results_fpath, index=False
+    curated_results_fpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "curated_results.csv"
     )
+    data.to_csv(curated_results_fpath, index=False)
 
     if "idx_class_total_error" in data:
         data["elbo"] = data.elbo + data.idx_class_total_error
@@ -64,9 +69,7 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
         for loop_i, tup in enumerate(df.itertuples()):
             epoch = int(str(tup.path).split("epoch")[-1])
             model_dpath = curated_dpath / f"model{idx}"
-            shutil.copytree(
-                tup.path, model_dpath
-            )
+            shutil.copytree(tup.path, model_dpath)
             shutil.copy(
                 Path(tup.root) / "config",
                 model_dpath / "config",
@@ -77,7 +80,14 @@ def select_best_embeddings(dbgym_cfg: DBGymConfig, generic_args: EmbeddingTrainG
             )
 
             if loop_i == 0:
-                link_result(dbgym_cfg, model_dpath, custom_result_name=default_embedder_dname(generic_args.benchmark_name, generic_args.workload_name) + ".link")
+                link_result(
+                    dbgym_cfg,
+                    model_dpath,
+                    custom_result_name=default_embedder_dname(
+                        generic_args.benchmark_name, generic_args.workload_name
+                    )
+                    + ".link",
+                )
 
             info_txt.write(f"model{idx}/embedder.pth\n")
             idx += 1

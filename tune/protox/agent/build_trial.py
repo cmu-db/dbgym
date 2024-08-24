@@ -10,14 +10,12 @@ from typing import Any, Callable, Optional, Tuple, Union
 import gymnasium as gym
 import numpy as np
 import torch
-from gymnasium.wrappers import (  # type: ignore
-    FlattenObservation,
-    NormalizeObservation,
-    NormalizeReward,
-)
+from gymnasium.wrappers import (FlattenObservation,  # type: ignore
+                                NormalizeObservation, NormalizeReward)
 from torch import nn
 
-from misc.utils import DBGymConfig, TuningMode, open_and_save, make_redis_started, save_file
+from misc.utils import (DBGymConfig, TuningMode, make_redis_started,
+                        open_and_save, save_file)
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -26,20 +24,22 @@ from tune.protox.agent.utils import parse_noise_type
 from tune.protox.agent.wolp.policies import WolpPolicy
 from tune.protox.agent.wolp.wolp import Wolp
 from tune.protox.embedding.train_all import (
-    create_vae_model,
-    fetch_vae_parameters_from_workload,
-)
+    create_vae_model, fetch_vae_parameters_from_workload)
 from tune.protox.env.logger import Logger
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
 from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
-from tune.protox.env.space.latent_space.latent_query_space import LatentQuerySpace
+from tune.protox.env.space.latent_space.latent_knob_space import \
+    LatentKnobSpace
+from tune.protox.env.space.latent_space.latent_query_space import \
+    LatentQuerySpace
 from tune.protox.env.space.latent_space.lsc_index_space import LSCIndexSpace
-from tune.protox.env.space.state import LSCMetricStateSpace, LSCStructureStateSpace
+from tune.protox.env.space.state import (LSCMetricStateSpace,
+                                         LSCStructureStateSpace)
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
+from tune.protox.env.target_reset.target_reset_wrapper import \
+    TargetResetWrapper
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
@@ -93,9 +93,13 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
     raise IOError("No free ports to bind postgres to.")
 
 
-def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpo_params: dict[str, Any]) -> None:
+def _modify_benchbase_config(
+    dbgym_cfg: DBGymConfig, port: int, hpo_params: dict[str, Any]
+) -> None:
     if hpo_params["benchmark_config"]["query_spec"]["oltp_workload"]:
-        conf_etree = ET.parse(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
+        conf_etree = ET.parse(
+            dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml"
+        )
         jdbc = f"jdbc:postgresql://localhost:{port}/benchbase?preferQueryMode=extended"
         conf_etree.getroot().find("url").text = jdbc  # type: ignore
 
@@ -110,7 +114,9 @@ def _modify_benchbase_config(dbgym_cfg: DBGymConfig, port: int, hpo_params: dict
                 conf_etree.getroot().find("works").find("work").find("time").text = str(oltp_config["oltp_duration"])  # type: ignore
             if works.find("warmup") is not None:  # type: ignore
                 conf_etree.getroot().find("works").find("work").find("warmup").text = str(oltp_config["oltp_warmup"])  # type: ignore
-        conf_etree.write(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml")
+        conf_etree.write(
+            dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "benchmark.xml"
+        )
 
 
 def _gen_noise_scale(
@@ -130,7 +136,10 @@ def _gen_noise_scale(
 
 
 def _build_utilities(
-    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, pgport: int, hpo_params: dict[str, Any]
+    dbgym_cfg: DBGymConfig,
+    tuning_mode: TuningMode,
+    pgport: int,
+    hpo_params: dict[str, Any],
 ) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
@@ -158,7 +167,9 @@ def _build_utilities(
     pg_conn = PostgresConn(
         dbgym_cfg=dbgym_cfg,
         pgport=pgport,
-        pristine_dbdata_snapshot_fpath=Path(hpo_params["pgconn_info"]["pristine_dbdata_snapshot_path"]),
+        pristine_dbdata_snapshot_fpath=Path(
+            hpo_params["pgconn_info"]["pristine_dbdata_snapshot_path"]
+        ),
         dbdata_parent_dpath=Path(hpo_params["pgconn_info"]["dbdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
@@ -183,7 +194,11 @@ def _build_utilities(
 
 
 def _build_actions(
-    dbgym_cfg: DBGymConfig, seed: int, hpo_params: dict[str, Any], workload: Workload, logger: Logger
+    dbgym_cfg: DBGymConfig,
+    seed: int,
+    hpo_params: dict[str, Any],
+    workload: Workload,
+    logger: Logger,
 ) -> Tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
@@ -274,7 +289,11 @@ def _build_actions(
 
 
 def _build_observation_space(
-    dbgym_cfg: DBGymConfig, action_space: HolonSpace, lsc: LSC, hpo_params: dict[str, Any], seed: int
+    dbgym_cfg: DBGymConfig,
+    action_space: HolonSpace,
+    lsc: LSC,
+    hpo_params: dict[str, Any],
+    seed: int,
 ) -> StateSpace:
     if hpo_params["metric_state"] == "metric":
         return LSCMetricStateSpace(
@@ -512,16 +531,24 @@ def _build_agent(
 
 
 def build_trial(
-    dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, seed: int, hpo_params: dict[str, Any], ray_trial_id: Optional[str]=None
+    dbgym_cfg: DBGymConfig,
+    tuning_mode: TuningMode,
+    seed: int,
+    hpo_params: dict[str, Any],
+    ray_trial_id: Optional[str] = None,
 ) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pg_conn, workload = _build_utilities(dbgym_cfg, tuning_mode, port, hpo_params)
+    logger, reward_utility, pg_conn, workload = _build_utilities(
+        dbgym_cfg, tuning_mode, port, hpo_params
+    )
     holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
-    observation_space = _build_observation_space(dbgym_cfg, holon_space, lsc, hpo_params, seed)
+    observation_space = _build_observation_space(
+        dbgym_cfg, holon_space, lsc, hpo_params, seed
+    )
     target_reset, env = _build_env(
         dbgym_cfg,
         tuning_mode,
@@ -535,5 +562,7 @@ def build_trial(
         logger,
     )
 
-    agent = _build_agent(seed, hpo_params, observation_space, holon_space, logger, ray_trial_id)
+    agent = _build_agent(
+        seed, hpo_params, observation_space, holon_space, logger, ray_trial_id
+    )
     return logger, target_reset, env, agent, signal

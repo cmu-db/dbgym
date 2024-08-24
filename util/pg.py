@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import List
+
 import pglast
-from sqlalchemy import Connection, Engine, text, create_engine
-from sqlalchemy.engine import CursorResult
 import psycopg
+from sqlalchemy import Connection, Engine, create_engine, text
+from sqlalchemy.engine import CursorResult
 
 from misc.utils import DBGymConfig, open_and_save
 
@@ -39,7 +40,7 @@ def sql_file_execute(dbgym_cfg: DBGymConfig, conn: Connection, filepath: Path) -
 
 # The reason pgport is an argument is because when doing agnet HPO, we want to run multiple instances of Postgres
 #   at the same time. In this situation, they need to have different ports
-def get_connstr(pgport: int=DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
+def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
     connstr_suffix = f"{DBGYM_POSTGRES_USER}:{DBGYM_POSTGRES_PASS}@localhost:{pgport}/{DBGYM_POSTGRES_DBNAME}"
     # use_psycopg means whether or not we use the psycopg.connect() function
     # counterintuively, you *don't* need psycopg in the connection string if you *are*
@@ -48,12 +49,10 @@ def get_connstr(pgport: int=DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
     return connstr_prefix + "://" + connstr_suffix
 
 
-def create_conn(pgport: int=DEFAULT_POSTGRES_PORT, use_psycopg=True) -> Connection:
+def create_conn(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg=True) -> Connection:
     connstr = get_connstr(use_psycopg=use_psycopg, pgport=pgport)
     if use_psycopg:
-        return psycopg.connect(
-            connstr, autocommit=True, prepare_threshold=None
-        )
+        return psycopg.connect(connstr, autocommit=True, prepare_threshold=None)
     else:
         engine: Engine = create_engine(
             connstr,

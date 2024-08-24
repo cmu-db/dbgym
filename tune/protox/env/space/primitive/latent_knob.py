@@ -4,7 +4,8 @@ import gymnasium as gym
 import numpy as np
 
 from tune.protox.env.space.primitive import SettingType, is_boolean
-from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob, KnobMetadata
+from tune.protox.env.space.primitive.knob import (CategoricalKnob, Knob,
+                                                  KnobMetadata)
 
 
 class LatentKnob(Knob):

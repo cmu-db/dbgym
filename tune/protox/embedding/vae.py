@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_metric_learning import losses, reducers  # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
+from pytorch_metric_learning.utils import \
+    common_functions as c_f  # type: ignore
 
 
 def gen_vae_collate(

@@ -12,13 +12,10 @@ from misc.utils import DBGymConfig, TuningMode
 from tune.protox.env.logger import Logger, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
-from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import (
-    EnvInfoDict,
-    HolonAction,
-    HolonStateContainer,
-    TargetResetConfig,
-)
+from tune.protox.env.space.utils import (fetch_server_indexes,
+                                         fetch_server_knobs)
+from tune.protox.env.types import (EnvInfoDict, HolonAction,
+                                   HolonStateContainer, TargetResetConfig)
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
@@ -158,17 +155,19 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
             default_action = self.action_space.null_action(sc)
 
-            success, metric, _, results_dpath, _, query_metric_data = self.workload.execute(
-                pg_conn=self.pg_conn,
-                reward_utility=self.reward_utility,
-                observation_space=self.observation_space,
-                action_space=self.action_space,
-                actions=[default_action],
-                variation_names=["GlobalDual"],
-                benchbase_config=self.benchbase_config,
-                query_timeout=self.query_timeout,
-                update=False,
-                first=True,
+            success, metric, _, results_dpath, _, query_metric_data = (
+                self.workload.execute(
+                    pg_conn=self.pg_conn,
+                    reward_utility=self.reward_utility,
+                    observation_space=self.observation_space,
+                    action_space=self.action_space,
+                    actions=[default_action],
+                    variation_names=["GlobalDual"],
+                    benchbase_config=self.benchbase_config,
+                    query_timeout=self.query_timeout,
+                    update=False,
+                    first=True,
+                )
             )
 
             # Ensure that the first run succeeds.
@@ -253,9 +252,15 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            self.logger.get_logger(__name__).info(f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n")
-            self.logger.get_logger(__name__).info(f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n")
-            self.logger.get_logger(__name__).info(f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n")
+            self.logger.get_logger(__name__).info(
+                f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
+            )
+            self.logger.get_logger(__name__).info(
+                f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n"
+            )
+            self.logger.get_logger(__name__).info(
+                f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n"
+            )
             (
                 success,
                 metric,
@@ -376,16 +381,20 @@ class PostgresEnv(gym.Env[Any, Any]):
                         conn_str, autocommit=True, prepare_threshold=None
                     ) as conn:
                         conn.execute("CHECKPOINT")
-                    
+
                     break
                 except psycopg.OperationalError as e:
                     attempts += 1
 
                     if attempts >= 5:
-                        assert False, f"attempt_checkpoint() failed after 5 attempts with {e}"
+                        assert (
+                            False
+                        ), f"attempt_checkpoint() failed after 5 attempts with {e}"
 
                     if self.logger:
-                        self.logger.get_logger(__name__).debug(f"[attempt_checkpoint]: {e}")
+                        self.logger.get_logger(__name__).debug(
+                            f"[attempt_checkpoint]: {e}"
+                        )
                     time.sleep(5)
 
         shift_start = time.time()

@@ -10,17 +10,12 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 from tune.protox.env.space.primitive import KnobClass, SettingType
-from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob, full_knob_name
-from tune.protox.env.types import (
-    KnobMap,
-    KnobSpaceContainer,
-    QueryMap,
-    QueryTableAccessMap,
-    QueryType,
-    ServerIndexMetadata,
-    ServerTableIndexMetadata,
-    TableAttrListMap,
-)
+from tune.protox.env.space.primitive.knob import (CategoricalKnob, Knob,
+                                                  full_knob_name)
+from tune.protox.env.types import (KnobMap, KnobSpaceContainer, QueryMap,
+                                   QueryTableAccessMap, QueryType,
+                                   ServerIndexMetadata,
+                                   ServerTableIndexMetadata, TableAttrListMap)
 
 
 def check_subspace(space: Union[Dict, spaces.Tuple], action: Any) -> bool:

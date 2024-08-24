@@ -5,6 +5,7 @@ On the other hand, the goal of dbms.postgres.cli is to (1) install+build postgre
     create dbdata.
 util.pg provides helpers used by *both* of the above files (as well as other files).
 """
+
 import os
 import shutil
 import threading
@@ -14,13 +15,15 @@ from typing import Any, Optional, Tuple, Union
 
 import psutil
 import psycopg
+import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
-import yaml
 
+from misc.utils import (DBGymConfig, link_result, open_and_save,
+                        parent_dpath_of_path)
 from tune.protox.env.logger import Logger, time_record
-from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
-from util.pg import DBGYM_POSTGRES_USER, DBGYM_POSTGRES_PASS, DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES
+from util.pg import (DBGYM_POSTGRES_DBNAME, DBGYM_POSTGRES_PASS,
+                     DBGYM_POSTGRES_USER, SHARED_PRELOAD_LIBRARIES)
 
 
 class PostgresConn:
@@ -54,7 +57,9 @@ class PostgresConn:
         # checkpoint_dbdata_snapshot_fpath is the .tgz snapshot that represents the current
         #   state of the database as it is being tuned. It is generated while tuning and is
         #   discarded once tuning is completed.
-        self.checkpoint_dbdata_snapshot_fpath = dbgym_cfg.dbgym_tmp_path / "checkpoint_dbdata.tgz"
+        self.checkpoint_dbdata_snapshot_fpath = (
+            dbgym_cfg.dbgym_tmp_path / "checkpoint_dbdata.tgz"
+        )
         # dbdata_parent_dpath is the parent directory of the dbdata that is *actively being tuned*.
         #   Setting this lets us control the hardware device dbdata is built on (e.g. HDD vs. SSD).
         self.dbdata_parent_dpath = dbdata_parent_dpath
@@ -79,13 +84,16 @@ class PostgresConn:
             self._conn = None
 
     def move_log(self) -> None:
-        pglog_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log"
-        pglog_this_step_fpath = self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log.{self.log_step}"
+        pglog_fpath = (
+            self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+            / f"pg{self.pgport}.log"
+        )
+        pglog_this_step_fpath = (
+            self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+            / f"pg{self.pgport}.log.{self.log_step}"
+        )
         if pglog_fpath.exists():
-            shutil.move(
-                pglog_fpath,
-                pglog_this_step_fpath
-            )
+            shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
     @time_record("shutdown")
@@ -134,11 +142,16 @@ class PostgresConn:
             if SHARED_PRELOAD_LIBRARIES:
                 # This way of doing it works for both single or multiple libraries. An example of a way
                 # that *doesn't* work is `f"shared_preload_libraries='"{SHARED_PRELOAD_LIBRARIES}"'"`
-                conf_changes.append(f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'")
+                conf_changes.append(
+                    f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'"
+                )
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
-            save_auto_conf_path = self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True) / "postgresql.auto.conf"         
+            save_auto_conf_path = (
+                self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True)
+                / "postgresql.auto.conf"
+            )
             local["cp"][dbdata_auto_conf_path, save_auto_conf_path].run()
             link_result(self.dbgym_cfg, save_auto_conf_path)
 
@@ -177,7 +190,8 @@ class PostgresConn:
                 "-l",
                 # We log to pg{self.pgport}.log instead of pg.log so that different PostgresConn objects
                 #   don't all try to write to the same file.
-                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"pg{self.pgport}.log",
+                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+                / f"pg{self.pgport}.log",
                 "start",
             ].run(retcode=None)
 
@@ -227,7 +241,7 @@ class PostgresConn:
             # don't crash if enable_boot is off and the file doesn't exist.
             with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
-                
+
             self._set_up_boot(
                 boot_config["intelligent_cache"],
                 boot_config["early_stop"],
@@ -245,7 +259,17 @@ class PostgresConn:
 
         return True
 
-    def _set_up_boot(self, intelligent_cache: bool, early_stop: bool, seq_sample: bool, seq_sample_pct: int, seq_sample_seed: int, mu_hyp_opt: float, mu_hyp_time: int, mu_hyp_stdev: float):
+    def _set_up_boot(
+        self,
+        intelligent_cache: bool,
+        early_stop: bool,
+        seq_sample: bool,
+        seq_sample_pct: int,
+        seq_sample_seed: int,
+        mu_hyp_opt: float,
+        mu_hyp_time: int,
+        mu_hyp_stdev: float,
+    ):
         """
         Sets up Boot on the currently running Postgres instances.
         Uses instance vars of PostgresConn for configuration.
@@ -330,7 +354,7 @@ class PostgresConn:
 
         self.disconnect()
         return 0, None
-    
+
     def restore_pristine_snapshot(self):
         self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
 
@@ -339,7 +363,8 @@ class PostgresConn:
 
     @time_record("restore")
     def _restore_snapshot(
-        self, dbdata_snapshot_path: Path,
+        self,
+        dbdata_snapshot_path: Path,
     ) -> bool:
         self.shutdown_postgres()
 
@@ -349,7 +374,12 @@ class PostgresConn:
         # Strip the "dbdata" so we can implant directly into the target dbdata_dpath.
         assert dbdata_snapshot_path.exists()
         local["tar"][
-            "xf", dbdata_snapshot_path, "-C", self.dbdata_dpath, "--strip-components", "1"
+            "xf",
+            dbdata_snapshot_path,
+            "-C",
+            self.dbdata_dpath,
+            "--strip-components",
+            "1",
         ].run()
         # Imprint the required port.
         (

@@ -1,10 +1,13 @@
 from typing import Any
+
 import yaml
 
 from misc.utils import DBGymConfig, TuningMode, open_and_save
 
 
-def coerce_config(dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_params: dict[str, Any]) -> dict[str, Any]:
+def coerce_config(
+    dbgym_cfg: DBGymConfig, space: dict[str, Any], hpo_params: dict[str, Any]
+) -> dict[str, Any]:
     if "space_version" not in hpo_params:
         # This is an old version. Coerce the params file.
         new_config = {}

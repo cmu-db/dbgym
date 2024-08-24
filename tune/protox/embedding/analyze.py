@@ -16,19 +16,15 @@ import yaml
 from misc.utils import DBGymConfig, open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
-    create_vae_model,
-    fetch_index_parameters,
-    load_input_data,
-    fetch_vae_parameters_from_workload
-)
+    create_vae_model, fetch_index_parameters,
+    fetch_vae_parameters_from_workload, load_input_data)
+from tune.protox.embedding.train_args import (EmbeddingAnalyzeArgs,
+                                              EmbeddingTrainGenericArgs)
 from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
-from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
+from tune.protox.env.space.latent_space.latent_index_space import \
+    LatentIndexSpace
 from tune.protox.env.workload import Workload
-from tune.protox.embedding.train_args import (
-    EmbeddingAnalyzeArgs,
-    EmbeddingTrainGenericArgs,
-)
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"
@@ -46,7 +42,9 @@ def redist_trained_models(dbgym_cfg: DBGymConfig, num_parts: int):
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     """
     inputs = [
-        f for f in dbgym_cfg.cur_task_runs_data_path(mkdir=True).glob("embeddings*") if os.path.isdir(f)
+        f
+        for f in dbgym_cfg.cur_task_runs_data_path(mkdir=True).glob("embeddings*")
+        if os.path.isdir(f)
     ]
 
     for part_i in range(num_parts):
@@ -57,7 +55,12 @@ def redist_trained_models(dbgym_cfg: DBGymConfig, num_parts: int):
         shutil.move(emb, _get_part_i_dpath(dbgym_cfg, part_i))
 
 
-def analyze_all_embeddings_parts(dbgym_cfg: DBGymConfig, num_parts: int, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
+def analyze_all_embeddings_parts(
+    dbgym_cfg: DBGymConfig,
+    num_parts: int,
+    generic_args: EmbeddingTrainGenericArgs,
+    analyze_args: EmbeddingAnalyzeArgs,
+):
     """
     Analyze all part*/ dirs _in parallel_
     """
@@ -71,7 +74,12 @@ def analyze_all_embeddings_parts(dbgym_cfg: DBGymConfig, num_parts: int, generic
         f.write(f"{analyze_all_parts_duration}")
 
 
-def _analyze_embeddings_part(dbgym_cfg: DBGymConfig, part_i: int, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
+def _analyze_embeddings_part(
+    dbgym_cfg: DBGymConfig,
+    part_i: int,
+    generic_args: EmbeddingTrainGenericArgs,
+    analyze_args: EmbeddingAnalyzeArgs,
+):
     """
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     """
@@ -90,7 +98,12 @@ def _analyze_embeddings_part(dbgym_cfg: DBGymConfig, part_i: int, generic_args: 
         f.write(f"{create_range_duration}")
 
 
-def _create_stats_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
+def _create_stats_for_part(
+    dbgym_cfg: DBGymConfig,
+    part_dpath: Path,
+    generic_args: EmbeddingTrainGenericArgs,
+    analyze_args: EmbeddingAnalyzeArgs,
+):
     """
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -298,7 +311,12 @@ def _create_stats_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_arg
                 gc.collect()
 
 
-def _create_ranges_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
+def _create_ranges_for_part(
+    dbgym_cfg: DBGymConfig,
+    part_dpath: Path,
+    generic_args: EmbeddingTrainGenericArgs,
+    analyze_args: EmbeddingAnalyzeArgs,
+):
     """
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -306,11 +324,7 @@ def _create_ranges_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_ar
     # Unlike for training, we're safe to use all threads for creating ranges
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
     paths = sorted(
-        [
-            f
-            for f in part_dpath.rglob("embedder_*.pth")
-            if "optimizer" not in str(f)
-        ]
+        [f for f in part_dpath.rglob("embedder_*.pth") if "optimizer" not in str(f)]
     )
     for embedder_fpath in tqdm.tqdm(paths):
         _create_ranges_for_embedder(
@@ -318,7 +332,12 @@ def _create_ranges_for_part(dbgym_cfg: DBGymConfig, part_dpath: Path, generic_ar
         )
 
 
-def _create_ranges_for_embedder(dbgym_cfg: DBGymConfig, embedder_fpath: Path, generic_args: EmbeddingTrainGenericArgs, analyze_args: EmbeddingAnalyzeArgs):
+def _create_ranges_for_embedder(
+    dbgym_cfg: DBGymConfig,
+    embedder_fpath: Path,
+    generic_args: EmbeddingTrainGenericArgs,
+    analyze_args: EmbeddingAnalyzeArgs,
+):
     """
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     """
@@ -337,21 +356,29 @@ def _create_ranges_for_embedder(dbgym_cfg: DBGymConfig, embedder_fpath: Path, ge
     attributes = benchmark_config["attributes"]
     query_spec = benchmark_config["query_spec"]
 
-    workload = Workload(dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None)
+    workload = Workload(
+        dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
+    )
     modified_attrs = workload.column_usages()
 
     # Load VAE.
     embeddings_dpath = embedder_fpath.parent.parent.parent  # part*/embeddings_*/
-    embeddings_config_fpath = embeddings_dpath / "config" # part*/embeddings_*/config
+    embeddings_config_fpath = embeddings_dpath / "config"  # part*/embeddings_*/config
     # don't use open_and_save() because we generated embeddings_config_fpath in this run
     with open(embeddings_config_fpath, "r") as f:
         config = json.load(f)
         assert config["mean_output_act"] == "sigmoid"
-        index_output_transform = lambda x: torch.nn.Sigmoid()(x) * config["output_scale"]
+        index_output_transform = (
+            lambda x: torch.nn.Sigmoid()(x) * config["output_scale"]
+        )
+
         def index_noise_scale(x, n):
             assert n is None
-            return torch.clamp(x, 0., config["output_scale"])
-        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(workload, len(tables))
+            return torch.clamp(x, 0.0, config["output_scale"])
+
+        max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
+            workload, len(tables)
+        )
         vae = create_vae_model(config, max_attrs, max_cat_features)
         # don't call save_file() because we generated embedder_fpath in this run
         vae.load_state_dict(torch.load(embedder_fpath))
@@ -373,39 +400,61 @@ def _create_ranges_for_embedder(dbgym_cfg: DBGymConfig, embedder_fpath: Path, ge
         index_output_transform=index_output_transform,
         # No-op noise.
         index_noise_scale=index_noise_scale,
-        logger=None)
+        logger=None,
+    )
 
     output_scale = config["metric_loss_md"]["output_scale"]
     bias_separation = config["metric_loss_md"]["bias_separation"]
     num_segments = min(analyze_args.max_segments, math.ceil(1.0 / bias_separation))
 
     base = 0
-    epoch_dpath = embeddings_dpath / "models" / f"epoch{epoch_i}" # part*/embeddings_*/models/epoch*/
+    epoch_dpath = (
+        embeddings_dpath / "models" / f"epoch{epoch_i}"
+    )  # part*/embeddings_*/models/epoch*/
     ranges_fpath = epoch_dpath / RANGES_FNAME
     with open(ranges_fpath, "w") as f:
         for _ in tqdm.tqdm(range(num_segments), total=num_segments, leave=False):
             classes = {}
             with torch.no_grad():
-                points = torch.rand(analyze_args.num_points_to_sample, config["latent_dim"]) * output_scale + base
+                points = (
+                    torch.rand(analyze_args.num_points_to_sample, config["latent_dim"])
+                    * output_scale
+                    + base
+                )
                 protos = idxs.from_latent(points)
-                neighbors = [idxs.neighborhood(proto, neighbor_parameters={
-                    "knob_num_nearest": 100,
-                    "knob_span": 1,
-                    "index_num_samples": 1,
-                    "index_rules": False,
-                })[0] for proto in protos]
+                neighbors = [
+                    idxs.neighborhood(
+                        proto,
+                        neighbor_parameters={
+                            "knob_num_nearest": 100,
+                            "knob_span": 1,
+                            "index_num_samples": 1,
+                            "index_rules": False,
+                        },
+                    )[0]
+                    for proto in protos
+                ]
 
                 for n in neighbors:
                     idx_class = idxs.get_index_class(n)
                     if idx_class not in classes:
                         classes[idx_class] = 0
                     classes[idx_class] += 1
-            classes = sorted([(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True)
+            classes = sorted(
+                [(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True
+            )
             if analyze_args.num_classes_to_keep != 0:
-                classes = classes[:analyze_args.num_classes_to_keep]
+                classes = classes[: analyze_args.num_classes_to_keep]
 
             f.write(f"Generating range {base} - {base + output_scale}\n")
-            f.write("\n".join([f"{k}: {v / analyze_args.num_points_to_sample}" for (k, v) in classes]))
+            f.write(
+                "\n".join(
+                    [
+                        f"{k}: {v / analyze_args.num_points_to_sample}"
+                        for (k, v) in classes
+                    ]
+                )
+            )
             f.write("\n")
             base += output_scale
 

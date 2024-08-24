@@ -3,11 +3,8 @@ from typing import cast
 import gymnasium as gym
 from gymnasium.spaces import Dict
 
-from tune.protox.env.space.primitive.knob import (
-    CategoricalKnob,
-    KnobMetadata,
-    _create_knob,
-)
+from tune.protox.env.space.primitive.knob import (CategoricalKnob,
+                                                  KnobMetadata, _create_knob)
 from tune.protox.env.space.primitive.latent_knob import _create_latent_knob
 from tune.protox.env.types import KnobMap, QueryTableAliasMap
 
