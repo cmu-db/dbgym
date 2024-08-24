@@ -2,4 +2,4 @@
 set -euxo pipefail
 
 black .
-isort .
+isort . --profile black
