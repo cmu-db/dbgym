@@ -10,8 +10,8 @@ from typing import Any, Callable, Optional, Tuple, Union
 import gymnasium as gym
 import numpy as np
 import torch
-from gymnasium.wrappers import (FlattenObservation,  # type: ignore
-                                NormalizeObservation, NormalizeReward)
+from gymnasium.wrappers import FlattenObservation  # type: ignore
+from gymnasium.wrappers import NormalizeObservation, NormalizeReward
 from torch import nn
 
 from misc.utils import (DBGymConfig, TuningMode, make_redis_started,
