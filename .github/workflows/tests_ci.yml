@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  ci:
     runs-on: self-hosted
 
     steps:

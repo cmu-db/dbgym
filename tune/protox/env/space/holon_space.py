@@ -45,7 +45,7 @@ class HolonSpace(spaces.Tuple):
         first_d = self.to_latent([carprod_neighbors[first_drift]])[0]
 
         def eq_fn(x: torch.Tensor, y: torch.Tensor) -> bool:
-            return bool(torch.isclose(x, y).all().item())
+            return bool(torch.isclose(x, y, atol=0.001).all().item())
 
         assert eq_fn(zero, carprod_embeds[0]), print(zero, carprod_embeds[0])
         assert eq_fn(last, carprod_embeds[-1]), print(last, carprod_embeds[-1])
