@@ -78,7 +78,7 @@ def _mutilate_action_with_metrics(
     #   query knobs of their best variation.
     # For queries that executed where all their variations timed out, we don't want to use the knobs
     #   in `timeout_qknobs` since those are known to be bad. Instead, we just use the knobs selected by
-    #   by the agent, which may be different from the knobs of *all* variations. 
+    #   by the agent, which may be different from the knobs of *all* variations.
     # Finally, for queries that didn't execute, we'll assume that some arbitrary variation ("PrevDual")
     #   is probably better than the knobs set by the agent.
 
@@ -162,20 +162,38 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.best_observed: dict[str, BestQueryRun] = {}
         self.logger = logger
 
-    def _update_best_observed(self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False) -> None:
+    def _update_best_observed(
+        self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False
+    ) -> None:
         if query_metric_data is not None:
             for qid, best_run in query_metric_data.items():
                 if qid not in self.best_observed or force_overwrite:
-                    self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
+                    self.best_observed[qid] = BestQueryRun(
+                        best_run.query_run,
+                        best_run.runtime,
+                        best_run.timed_out,
+                        None,
+                        None,
+                    )
                     if self.logger:
-                        self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})")
+                        self.logger.get_logger(__name__).debug(
+                            f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})"
+                        )
                 elif not best_run.timed_out:
                     qobs = self.best_observed[qid]
                     assert qobs.runtime and best_run.runtime
                     if best_run.runtime < qobs.runtime:
-                        self.best_observed[qid] = BestQueryRun(best_run.query_run, best_run.runtime, best_run.timed_out, None, None)
+                        self.best_observed[qid] = BestQueryRun(
+                            best_run.query_run,
+                            best_run.runtime,
+                            best_run.timed_out,
+                            None,
+                            None,
+                        )
                         if self.logger:
-                            self.logger.get_logger(__name__).debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
+                            self.logger.get_logger(__name__).debug(
+                                f"[best_observe] {qid}: {best_run.runtime/1e6}"
+                            )
 
     def step(  # type: ignore
         self,
@@ -301,8 +319,12 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         with torch.no_grad():
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
-            info["actions_info"]["best_observed_holon_action"] = best_observed_holon_action
-            info["maximal_embed"] = self.action_space.to_latent([best_observed_holon_action])
+            info["actions_info"][
+                "best_observed_holon_action"
+            ] = best_observed_holon_action
+            info["maximal_embed"] = self.action_space.to_latent(
+                [best_observed_holon_action]
+            )
 
         return self.unwrapped.step_post_execute(success, action, info)
 
@@ -380,7 +402,9 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
             # Reward should be irrelevant. If we do accidentally use it, cause an error.
             # Similarly, metric should be irrelevant. Do not shift the workload timeout.
-            info = EnvInfoDict({"metric": None, "reward": None, "results_dpath": results_dpath})
+            info = EnvInfoDict(
+                {"metric": None, "reward": None, "results_dpath": results_dpath}
+            )
             # Use this to adjust the container and state but don't shift the step.
             state, _, _, _, info = self.unwrapped.step_post_execute(
                 True, action, info, soft=True
@@ -389,7 +413,8 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             # Update the reward baseline.
             if self.unwrapped.reward_utility:
                 self.unwrapped.reward_utility.set_relative_baseline(
-                    self.unwrapped.baseline_metric, prev_result=metric,
+                    self.unwrapped.baseline_metric,
+                    prev_result=metric,
                 )
 
             if self.logger:

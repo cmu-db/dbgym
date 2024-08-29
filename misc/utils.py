@@ -1,19 +1,20 @@
-from enum import Enum
 import os
 import shutil
 import subprocess
 import sys
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Tuple
+
 import click
-import yaml
 import redis
+import yaml
 
 from util.shell import subprocess_run
 
 # Enums
-TuningMode = Enum('TuningMode', ['HPO', 'TUNE', 'REPLAY'])
+TuningMode = Enum("TuningMode", ["HPO", "TUNE", "REPLAY"])
 
 # Default values
 DEFAULT_WORKLOAD_TIMEOUT = 600
@@ -35,11 +36,15 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 # Helper functions that both this file and other files use
 def get_symlinks_path_from_workspace_path(workspace_path):
     return workspace_path / "symlinks"
+
+
 def get_tmp_path_from_workspace_path(workspace_path):
     return workspace_path / "tmp"
 
+
 def get_runs_path_from_workspace_path(workspace_path):
     return workspace_path / "task_runs"
+
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
     assert type(scale_factor) is float or type(scale_factor) is str
@@ -50,7 +55,8 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
             return str(int(scale_factor))
         else:
             return str(scale_factor).replace(".", "point")
-    
+
+
 def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
 
@@ -76,7 +82,7 @@ default_benchbase_config_path = (
 
 # Generally useful functions
 workload_name_fn = (
-    lambda scale_factor, seed_start, seed_end, query_subset : f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
+    lambda scale_factor, seed_start, seed_end, query_subset: f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 )
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
@@ -124,7 +130,9 @@ default_embedder_path = (
     / (default_embedder_dname(benchmark_name, workload_name) + ".link")
 )
 default_hpoed_agent_params_path = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(workspace_path)
+    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
     / "dbgym_tune_protox_agent"
     / "data"
     / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
@@ -145,22 +153,31 @@ default_pristine_dbdata_snapshot_path = (
     / "data"
     / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
 )
-default_dbdata_parent_dpath = (
-    lambda workspace_path: get_tmp_path_from_workspace_path(
-        workspace_path
-    )
+default_dbdata_parent_dpath = lambda workspace_path: get_tmp_path_from_workspace_path(
+    workspace_path
 )
 default_pgbin_path = (
-    lambda workspace_path: get_symlinks_path_from_workspace_path(
-        workspace_path
-    )
-    / "dbgym_dbms_postgres" / "build" / "repo.link" / "boot"/ "build" / "postgres" / "bin"
+    lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
+    / "dbgym_dbms_postgres"
+    / "build"
+    / "repo.link"
+    / "boot"
+    / "build"
+    / "postgres"
+    / "bin"
 )
 default_tuning_steps_dpath = (
     lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
         workspace_path
     )
-    / "dbgym_tune_protox_agent" / "artifacts" / (default_tuning_steps_dname(benchmark_name, workload_name, boot_enabled_during_tune) + ".link")
+    / "dbgym_tune_protox_agent"
+    / "artifacts"
+    / (
+        default_tuning_steps_dname(
+            benchmark_name, workload_name, boot_enabled_during_tune
+        )
+        + ".link"
+    )
 )
 
 
@@ -168,12 +185,15 @@ class DBGymConfig:
     """
     Global configurations that apply to all parts of DB-Gym
     """
+
     num_times_created_this_run: int = 0
 
     def __init__(self, dbgym_config_path: Path):
         # The logic around dbgym_tmp_path assumes that DBGymConfig is only constructed once.
         DBGymConfig.num_times_created_this_run += 1
-        assert DBGymConfig.num_times_created_this_run == 1, f"DBGymConfig has been created {DBGymConfig.num_times_created_this_run} times. It should only be created once per run."
+        assert (
+            DBGymConfig.num_times_created_this_run == 1
+        ), f"DBGymConfig has been created {DBGymConfig.num_times_created_this_run} times. It should only be created once per run."
 
         assert is_base_git_dir(
             os.getcwd()
@@ -208,7 +228,9 @@ class DBGymConfig:
         # One use for it is to place the unzipped dbdata.
         # There's no need to save the actual dbdata dir in run_*/ because we just save a symlink to
         #   the .tgz file we unzipped.
-        self.dbgym_tmp_path = get_tmp_path_from_workspace_path(self.dbgym_workspace_path)
+        self.dbgym_tmp_path = get_tmp_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
         # The best place to delete the old dbgym_tmp_path is in DBGymConfig.__init__().
         # This is better than deleting the dbgym_tmp_path is in DBGymConfig.__del__() because DBGymConfig may get deleted before execution has completed.
         # Also, by keeping the tmp directory around, you can look at it to debug issues.
@@ -275,7 +297,9 @@ class DBGymConfig:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
-def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike) -> Path:
+def conv_inputpath_to_realabspath(
+    dbgym_cfg: DBGymConfig, inputpath: os.PathLike
+) -> Path:
     """
     Convert any user inputted path to a real, absolute path
     For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
@@ -296,8 +320,12 @@ def conv_inputpath_to_realabspath(dbgym_cfg: DBGymConfig, inputpath: os.PathLike
     # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
     #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
     realabspath = realabspath.resolve()
-    assert realabspath.is_absolute(), f"after being processed, realabspath ({realabspath}) is still not absolute"
-    assert realabspath.exists(), f"after being processed, realabspath ({realabspath}) is still a non-existent path"
+    assert (
+        realabspath.is_absolute()
+    ), f"after being processed, realabspath ({realabspath}) is still not absolute"
+    assert (
+        realabspath.exists()
+    ), f"after being processed, realabspath ({realabspath}) is still a non-existent path"
     return realabspath
 
 
@@ -341,7 +369,9 @@ def parent_dpath_of_path(dpath: Path) -> Path:
     This function only calls Path.parent, but in a safer way.
     """
     assert isinstance(dpath, Path)
-    assert is_fully_resolved(dpath), f"dpath must be fully resolved because Path.parent has weird behavior on non-resolved paths (see https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.parent)"
+    assert is_fully_resolved(
+        dpath
+    ), f"dpath must be fully resolved because Path.parent has weird behavior on non-resolved paths (see https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.parent)"
     parent_dpath = dpath.parent
     assert isinstance(parent_dpath, Path)
     return parent_dpath
@@ -352,7 +382,9 @@ def basename_of_path(dpath: Path) -> str:
     This function only calls Path.name, but in a safer way.
     """
     assert isinstance(dpath, Path)
-    assert is_fully_resolved(dpath), f"dpath must be fully resolved because Path.name has weird behavior on non-resolved paths (like giving \"..\" if the path ends with a \"..\")"
+    assert is_fully_resolved(
+        dpath
+    ), f'dpath must be fully resolved because Path.name has weird behavior on non-resolved paths (like giving ".." if the path ends with a "..")'
     dpath_dirname, dpath_basename = os.path.split(dpath)
     # this means the path ended with a '/' so all os.path.split() does is get rid of the slash
     if dpath_basename == "":
@@ -399,7 +431,9 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
     assert is_fully_resolved(
         open_fpath
     ), f"open_and_save(): open_fpath ({open_fpath}) should be a fully resolved path"
-    assert not os.path.islink(open_fpath), f"open_fpath ({open_fpath}) should not be a symlink"
+    assert not os.path.islink(
+        open_fpath
+    ), f"open_fpath ({open_fpath}) should not be a symlink"
     assert os.path.exists(open_fpath), f"open_fpath ({open_fpath}) does not exist"
     # open_and_save *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
     #   a file though. we sometimes save a directory (see save_file() for details)
@@ -412,7 +446,9 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
     return open(open_fpath, mode=mode)
 
 
-def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Path) -> Tuple[Path, str, Path, str]:
+def extract_from_task_run_fordpath(
+    dbgym_cfg: DBGymConfig, task_run_fordpath: Path
+) -> Tuple[Path, str, Path, str]:
     """
     The task_runs/ folder is organized like task_runs/run_*/[codebase]/[org]/any/path/you/want.
     This function extracts the [codebase] and [org] components
@@ -432,9 +468,9 @@ def extract_from_task_run_fordpath(dbgym_cfg: DBGymConfig, task_run_fordpath: Pa
     ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
     # org_dpath is the run_*/[codebase]/[organization]/ dir that task_run_fordpath is in
     org_dpath = parent_dpath
-    while not parent_dpath_of_path(parent_dpath_of_path(parent_dpath_of_path(org_dpath))).samefile(
-        dbgym_cfg.dbgym_runs_path
-    ):
+    while not parent_dpath_of_path(
+        parent_dpath_of_path(parent_dpath_of_path(org_dpath))
+    ).samefile(dbgym_cfg.dbgym_runs_path):
         org_dpath = parent_dpath_of_path(org_dpath)
     org_dname = basename_of_path(org_dpath)
     codebase_dpath = parent_dpath_of_path(org_dpath)
@@ -470,7 +506,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
     #   2. files or dirs generated by a run may be very large (up to 100s of GBs) so we don't want to copy them
     if is_child_path(fpath, dbgym_cfg.dbgym_runs_path):
         # get paths we'll need later.
-        _, codebase_dname, org_dpath, org_dname = extract_from_task_run_fordpath(dbgym_cfg, fpath)
+        _, codebase_dname, org_dpath, org_dname = extract_from_task_run_fordpath(
+            dbgym_cfg, fpath
+        )
         this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / codebase_dname / org_dname
         os.makedirs(this_run_save_dpath, exist_ok=True)
 
@@ -505,7 +543,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
 
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
-def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: str | None=None) -> Path:
+def link_result(
+    dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: str | None = None
+) -> Path:
     """
     result_fordpath must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path.
     Further, result_fordpath must have been generated by this invocation to task.py. This also means that
@@ -517,7 +557,9 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
     This function will return the path to the symlink that was created.
     """
     assert isinstance(result_fordpath, Path)
-    assert is_fully_resolved(result_fordpath), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
+    assert is_fully_resolved(
+        result_fordpath
+    ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
     result_fordpath = conv_inputpath_to_realabspath(dbgym_cfg, result_fordpath)
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
@@ -533,9 +575,13 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
             raise AssertionError("result_fordpath must be either a file or dir")
 
     # Figure out the parent directory path of the symlink
-    codebase_dpath, codebase_dname, _, org_dname = extract_from_task_run_fordpath(dbgym_cfg, result_fordpath)
+    codebase_dpath, codebase_dname, _, org_dname = extract_from_task_run_fordpath(
+        dbgym_cfg, result_fordpath
+    )
     # We're only supposed to save files generated by us, which means they should be in cur_task_runs_path()
-    assert codebase_dpath.samefile(dbgym_cfg.cur_task_runs_path()), f"link_result should only be called on files generated by this invocation to task.py"
+    assert codebase_dpath.samefile(
+        dbgym_cfg.cur_task_runs_path()
+    ), f"link_result should only be called on files generated by this invocation to task.py"
     symlink_parent_dpath = dbgym_cfg.dbgym_symlinks_path / codebase_dname / org_dname
     symlink_parent_dpath.mkdir(parents=True, exist_ok=True)
 
@@ -543,7 +589,9 @@ def link_result(dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_nam
     # Note that in a multi-threaded setting, this might remove one created by a process in the same run,
     #   meaning it's not "old" by our definition of "old". However, we'll always end up with a symlink
     #   file of the current run regardless of the order of threads.
-    assert result_name.endswith(".link") and not result_name.endswith(".link.link"), f"result_name ({result_name}) should end with \".link\""
+    assert result_name.endswith(".link") and not result_name.endswith(
+        ".link.link"
+    ), f'result_name ({result_name}) should end with ".link"'
     symlink_path = symlink_parent_dpath / result_name
     try_remove_file(symlink_path)
     try_create_symlink(result_fordpath, symlink_path)
@@ -602,7 +650,7 @@ def make_redis_started(port: int) -> None:
     except (redis.ConnectionError, redis.TimeoutError):
         # This means Redis is not running, so we start it
         do_start_redis = True
-    
+
     # I'm starting Redis outside of except so that errors in r.ping get propagated correctly
     if do_start_redis:
         subprocess_run(f"redis-server --port {port} --daemonize yes")
@@ -613,10 +661,14 @@ def make_redis_started(port: int) -> None:
 
 def is_ssd(path: Path) -> bool:
     try:
-        device = subprocess.check_output(['df', path]).decode().split('\n')[1].split()[0]
+        device = (
+            subprocess.check_output(["df", path]).decode().split("\n")[1].split()[0]
+        )
         device_basename = os.path.basename(device)
-        lsblk_output = subprocess.check_output(['lsblk', '-d', '-o', 'name,rota']).decode()
-        for line in lsblk_output.split('\n')[1:]:
+        lsblk_output = subprocess.check_output(
+            ["lsblk", "-d", "-o", "name,rota"]
+        ).decode()
+        for line in lsblk_output.split("\n")[1:]:
             parts = line.split()
             if parts and parts[0] == device_basename:
                 is_ssd = int(parts[1]) == 0

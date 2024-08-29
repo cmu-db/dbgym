@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  ci:
     runs-on: self-hosted
 
     steps:
@@ -32,12 +32,16 @@ jobs:
       run: |
         ./dependencies/install_dependencies.sh
 
+    - name: Check formatting
+      run: |
+        ./scripts/check_format.sh
+
     - name: Run unit tests
       run: |
         . "$HOME/.cargo/env"
         python scripts/run_unit_tests.py
 
-    - name: Run integration test
+    - name: Run integration tests
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
       # Need to run with a non-root user in order to start Postgres.
       run: |

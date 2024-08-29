@@ -1,35 +1,80 @@
+import json
+import os
+import random
 import shutil
 import sys
 import time
-import json
-import yaml
-from pathlib import Path
-from ray import tune
-import numpy as np
-import torch
-import os
-import pandas as pd
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional, Union
-import random
+
 import click
+import numpy as np
+import pandas as pd
 import ray
-from ray.tune import Trainable
+import torch
+import yaml
+from ray import tune
+from ray.air import FailureConfig, RunConfig
+from ray.train import SyncConfig
+from ray.tune import Trainable, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
-from ray.tune import TuneConfig
-from ray.air import RunConfig, FailureConfig
-from ray.train import SyncConfig
 
+from misc.utils import (
+    BENCHMARK_NAME_PLACEHOLDER,
+    DEFAULT_BOOT_CONFIG_FPATH,
+    DEFAULT_SYSKNOBS_PATH,
+    DEFAULT_WORKLOAD_TIMEOUT,
+    SCALE_FACTOR_PLACEHOLDER,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    TuningMode,
+    conv_inputpath_to_realabspath,
+    default_benchbase_config_path,
+    default_benchmark_config_path,
+    default_dbdata_parent_dpath,
+    default_embedder_path,
+    default_hpoed_agent_params_fname,
+    default_pgbin_path,
+    default_pristine_dbdata_snapshot_path,
+    default_workload_path,
+    is_ssd,
+    link_result,
+    open_and_save,
+    restart_ray,
+    workload_name_fn,
+)
 from tune.protox.agent.build_trial import build_trial
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, DEFAULT_WORKLOAD_TIMEOUT, DBGymConfig, TuningMode, link_result, open_and_save, restart_ray, conv_inputpath_to_realabspath, default_pristine_dbdata_snapshot_path, default_workload_path, default_embedder_path, default_benchmark_config_path, default_benchbase_config_path, WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER, DEFAULT_SYSKNOBS_PATH, default_pgbin_path, workload_name_fn, default_dbdata_parent_dpath, default_hpoed_agent_params_fname, is_ssd
-
 
 METRIC_NAME = "Best Metric"
 
 
 class AgentHPOArgs:
-    def __init__(self, benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot):
+    def __init__(
+        self,
+        benchmark_name,
+        workload_name,
+        embedder_path,
+        benchmark_config_path,
+        benchbase_config_path,
+        sysknobs_path,
+        pristine_dbdata_snapshot_path,
+        dbdata_parent_dpath,
+        pgbin_path,
+        workload_path,
+        seed,
+        agent,
+        max_concurrent,
+        num_samples,
+        tune_duration_during_hpo,
+        workload_timeout,
+        query_timeout,
+        enable_boot_during_hpo,
+        boot_config_fpath_during_hpo,
+        build_space_good_for_boot,
+    ):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.embedder_path = embedder_path
@@ -55,8 +100,18 @@ class AgentHPOArgs:
 @click.command()
 @click.pass_obj
 @click.argument("benchmark-name")
-@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
-@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-start",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
+)
+@click.option(
+    "--seed-end",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
+)
 @click.option(
     "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
@@ -139,7 +194,10 @@ class AgentHPOArgs:
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
 @click.option(
-    "--tune-duration-during-hpo", default=4, type=float, help="The number of hours to run each hyperparamer config tuning trial for."
+    "--tune-duration-during-hpo",
+    default=4,
+    type=float,
+    help="The number of hours to run each hyperparamer config tuning trial for.",
 )
 @click.option(
     "--workload-timeout",
@@ -211,43 +269,84 @@ def hpo(
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if embedder_path == None:
-        embedder_path = default_embedder_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+        embedder_path = default_embedder_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     if benchmark_config_path == None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if benchbase_config_path == None:
         benchbase_config_path = default_benchbase_config_path(benchmark_name)
     if pristine_dbdata_snapshot_path == None:
-        pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor)
+        pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
+        )
     if dbdata_parent_dpath == None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
+        dbdata_parent_dpath = default_dbdata_parent_dpath(
+            dbgym_cfg.dbgym_workspace_path
+        )
     if pgbin_path == None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path == None:
-        workload_path = default_workload_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+        workload_path = default_workload_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
     if seed == None:
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
     embedder_path = conv_inputpath_to_realabspath(dbgym_cfg, embedder_path)
-    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
-    benchbase_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchbase_config_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, benchmark_config_path
+    )
+    benchbase_config_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, benchbase_config_path
+    )
     sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
-    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_dbdata_snapshot_path)
+    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, pristine_dbdata_snapshot_path
+    )
     dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    boot_config_fpath_during_hpo = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath_during_hpo)
+    boot_config_fpath_during_hpo = conv_inputpath_to_realabspath(
+        dbgym_cfg, boot_config_fpath_during_hpo
+    )
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
-        assert not is_ssd(dbdata_parent_dpath), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
+        assert not is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
     elif intended_dbdata_hardware == "ssd":
-        assert is_ssd(dbdata_parent_dpath), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
+        assert is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
     else:
         assert False
 
     # Create args object
-    hpo_args = AgentHPOArgs(benchmark_name, workload_name, embedder_path, benchmark_config_path, benchbase_config_path, sysknobs_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath, pgbin_path, workload_path, seed, agent, max_concurrent, num_samples, tune_duration_during_hpo, workload_timeout, query_timeout, enable_boot_during_hpo, boot_config_fpath_during_hpo, build_space_good_for_boot)
+    hpo_args = AgentHPOArgs(
+        benchmark_name,
+        workload_name,
+        embedder_path,
+        benchmark_config_path,
+        benchbase_config_path,
+        sysknobs_path,
+        pristine_dbdata_snapshot_path,
+        dbdata_parent_dpath,
+        pgbin_path,
+        workload_path,
+        seed,
+        agent,
+        max_concurrent,
+        num_samples,
+        tune_duration_during_hpo,
+        workload_timeout,
+        query_timeout,
+        enable_boot_during_hpo,
+        boot_config_fpath_during_hpo,
+        build_space_good_for_boot,
+    )
     _tune_hpo(dbgym_cfg, hpo_args)
 
 
@@ -260,14 +359,14 @@ def build_space(
     workload_path: Path,
     embedder_path: list[Path],
     pgconn_info: dict[str, str],
-    benchbase_config: dict[str, Any]={},
-    tune_duration_during_hpo: int=30,
-    seed: int=0,
-    enable_boot_during_hpo: bool=False,
-    boot_config_fpath_during_hpo: Path=None,
+    benchbase_config: dict[str, Any] = {},
+    tune_duration_during_hpo: int = 30,
+    seed: int = 0,
+    enable_boot_during_hpo: bool = False,
+    boot_config_fpath_during_hpo: Path = None,
     build_space_good_for_boot: bool = False,
-    workload_timeouts: list[int]=[600],
-    query_timeouts: list[int]=[30],
+    workload_timeouts: list[int] = [600],
+    query_timeouts: list[int] = [30],
 ) -> dict[str, Any]:
 
     return {
@@ -286,7 +385,6 @@ def build_space(
         "boot_config_fpath": {
             str(TuningMode.HPO): boot_config_fpath_during_hpo,
         },
-        
         # Timeouts.
         "tune_duration": {
             str(TuningMode.HPO): tune_duration_during_hpo,
@@ -295,7 +393,6 @@ def build_space(
             str(TuningMode.HPO): tune.choice(workload_timeouts),
         },
         "query_timeout": tune.choice(query_timeouts),
-
         # Paths.
         "workload_path": str(workload_path),
         "pgconn_info": pgconn_info,
@@ -303,31 +400,34 @@ def build_space(
         "benchbase_config": benchbase_config,
         # Embeddings.
         "embedder_path": tune.choice(map(str, embedder_path)),
-
         # Default quantization factor to use.
         "default_quantization_factor": 100,
         "system_knobs": sysknobs,
-
         # Horizon before resetting.
         "horizon": 5,
-
         # Workload Eval.
         "workload_eval_mode": tune.choice(["all", "all_enum"]),
         "workload_eval_inverse": tune.choice([False, True]),
         "workload_eval_reset": True,
-
         # Reward.
         "reward": tune.choice(["multiplier", "relative"]),
         "reward_scaler": tune.choice([1, 2, 10]),
         "workload_timeout_penalty": 1,
         "normalize_reward": tune.choice([False, True]),
-
         # State.
-        "metric_state": tune.choice(([] if build_space_good_for_boot else ["metric"]) + ["structure", "structure_normalize"]),
+        "metric_state": tune.choice(
+            ([] if build_space_good_for_boot else ["metric"])
+            + ["structure", "structure_normalize"]
+        ),
         "maximize_state": not benchmark_config.get("oltp_workload", False),
         # Whether to normalize state or not.
-        "normalize_state": tune.sample_from(lambda spc: False if spc["config"]["metric_state"] == "structure_normalize" else True),
-
+        "normalize_state": tune.sample_from(
+            lambda spc: (
+                False
+                if spc["config"]["metric_state"] == "structure_normalize"
+                else True
+            )
+        ),
         # LSC Parameters. The units for these are based on the embedding itself.
         # TODO(): Set these parameters based on the workload/embedding structure itself.
         "lsc": {
@@ -343,7 +443,6 @@ def build_space(
             # How many episodes to start.
             "shift_after": 3,
         },
-
         # RL Agent Parameters.
         # Number of warmup steps.
         "learning_starts": 0,
@@ -363,11 +462,9 @@ def build_space(
         "grad_clip": tune.choice([1.0, 5.0, 10.0]),
         # Gradient steps per sample.
         "gradient_steps": tune.choice([1, 2, 4]),
-
         # Training steps.
         "train_freq_unit": tune.choice(["step", "episode"]),
         "train_freq_frequency": 1,
-
         # Target noise.
         "target_noise": {
             "target_noise_clip": tune.choice([0.05, 0.1, 0.15]),
@@ -379,7 +476,6 @@ def build_space(
             "noise_sigma": tune.choice([0.05, 0.1, 0.15]),
         },
         "scale_noise_perturb": True,
-
         # Neighbor parameters.
         "neighbor_parameters": {
             "knob_num_nearest": tune.choice([10, 100]),
@@ -403,7 +499,7 @@ class TuneTimeoutChecker(object):
         self.limit = (tune_duration * 3600) > 0
         self.remain = int(tune_duration * 3600)
         self.running = False
-        self.start = 0.
+        self.start = 0.0
 
     def resume(self) -> None:
         self.start = time.time()
@@ -428,7 +524,12 @@ class TuneTimeoutChecker(object):
 
 
 class TuneTrial:
-    def __init__(self, dbgym_cfg: DBGymConfig, tuning_mode: TuningMode, ray_trial_id: Optional[str]=None) -> None:
+    def __init__(
+        self,
+        dbgym_cfg: DBGymConfig,
+        tuning_mode: TuningMode,
+        ray_trial_id: Optional[str] = None,
+    ) -> None:
         """
         We use this object for HPO, tune, and replay. It behaves *slightly* differently
         depending on what it's used for, which is why we have the tuning_mode param.
@@ -437,16 +538,20 @@ class TuneTrial:
         self.tuning_mode = tuning_mode
 
         if self.tuning_mode == TuningMode.HPO:
-            assert ray_trial_id != None, "If we're doing HPO, we will create multiple TuneTrial() objects. We thus need to differentiate them somehow."
+            assert (
+                ray_trial_id != None
+            ), "If we're doing HPO, we will create multiple TuneTrial() objects. We thus need to differentiate them somehow."
         else:
-            assert ray_trial_id == None, "If we're not doing HPO, we (currently) will create only one TuneTrial() object. For clarity, we set ray_trial_id to None since ray_trial_id should not be used in this case."
+            assert (
+                ray_trial_id == None
+            ), "If we're not doing HPO, we (currently) will create only one TuneTrial() object. For clarity, we set ray_trial_id to None since ray_trial_id should not be used in this case."
         self.ray_trial_id = ray_trial_id
 
     def setup(self, hpo_params: dict[str, Any]) -> None:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
-        torch.set_default_dtype(torch.float32) # type: ignore
+        torch.set_default_dtype(torch.float32)  # type: ignore
         seed = (
             hpo_params["seed"]
             if hpo_params["seed"] != -1
@@ -498,8 +603,14 @@ class TuneTrial:
             )
             self.env_init = True
 
-            assert self.ray_trial_id != None if self.tuning_mode == TuningMode.HPO else True, "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
-            self.logger.stash_results(infos, name_override="baseline", ray_trial_id=self.ray_trial_id)
+            assert (
+                self.ray_trial_id != None
+                if self.tuning_mode == TuningMode.HPO
+                else True
+            ), "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
+            self.logger.stash_results(
+                infos, name_override="baseline", ray_trial_id=self.ray_trial_id
+            )
         else:
             self.agent.learn(self.env, total_timesteps=1, tuning_mode=self.tuning_mode)
 
@@ -511,13 +622,13 @@ class TuneTrial:
             "AgentEpisode": episode,
             "AgentTimesteps": it,
             "TrialStep": self.step_count,
-            "Best Metric": self.target_reset.real_best_metric
-            if self.target_reset
-            else -1,
-            "Best Seen Metric": self.target_reset.best_metric
-            if self.target_reset
-            else -1,
-            "HoursElapsed": (time.time() - self.start_time) / 3600.,
+            "Best Metric": (
+                self.target_reset.real_best_metric if self.target_reset else -1
+            ),
+            "Best Seen Metric": (
+                self.target_reset.best_metric if self.target_reset else -1
+            ),
+            "HoursElapsed": (time.time() - self.start_time) / 3600.0,
         }
 
         # If we've timed out. Note that we've timed out.
@@ -529,9 +640,10 @@ class TuneTrial:
 
     def cleanup(self) -> None:
         self.logger.flush()
-        self.env.close() # type: ignore
+        self.env.close()  # type: ignore
         if Path(self.signal).exists():
             os.remove(self.signal)
+
 
 # I want to pass dbgym_cfg into TuneOpt without putting it inside `hpo_params`. This is because it's a pain to turn DBGymConfig
 #   into a nice dictionary of strings, and nothing in DBGymConfig would be relevant to someone checking the configs later
@@ -546,7 +658,9 @@ def create_tune_opt_class(dbgym_cfg_param):
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
-            self.trial = TuneTrial(TuneOpt.dbgym_cfg, TuningMode.HPO, ray_trial_id=self.trial_id)
+            self.trial = TuneTrial(
+                TuneOpt.dbgym_cfg, TuningMode.HPO, ray_trial_id=self.trial_id
+            )
             self.trial.setup(hpo_params)
 
         def step(self) -> dict[Any, Any]:
@@ -562,7 +676,7 @@ def create_tune_opt_class(dbgym_cfg_param):
         def load_checkpoint(self, checkpoint_dir: Union[dict[Any, Any], None]) -> None:
             # We can't actually do anything about this right now.
             pass
-    
+
     return TuneOpt
 
 
@@ -583,16 +697,20 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     workload_timeouts = [hpo_args.workload_timeout]
     query_timeouts = [hpo_args.query_timeout]
 
-    benchbase_config = {
-        "oltp_config": {
-            "oltp_num_terminals": hpo_args.oltp_num_terminals,
-            "oltp_duration": hpo_args.oltp_duration,
-            "oltp_sf": hpo_args.oltp_sf,
-            "oltp_warmup": hpo_args.oltp_warmup,
-        },
-        "benchbase_path": hpo_args.benchbase_path,
-        "benchbase_config_path": hpo_args.benchbase_config_path,
-    } if is_oltp else {}
+    benchbase_config = (
+        {
+            "oltp_config": {
+                "oltp_num_terminals": hpo_args.oltp_num_terminals,
+                "oltp_duration": hpo_args.oltp_duration,
+                "oltp_sf": hpo_args.oltp_sf,
+                "oltp_warmup": hpo_args.oltp_warmup,
+            },
+            "benchbase_path": hpo_args.benchbase_path,
+            "benchbase_config_path": hpo_args.benchbase_config_path,
+        }
+        if is_oltp
+        else {}
+    )
 
     space = build_space(
         sysknobs,
@@ -615,15 +733,15 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     )
 
     restart_ray(dbgym_cfg.root_yaml["ray_gcs_port"])
-    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False)
+    ray.init(
+        address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False
+    )
 
     # Scheduler.
-    scheduler = FIFOScheduler() # type: ignore
+    scheduler = FIFOScheduler()  # type: ignore
 
     # Search.
-    search = BasicVariantGenerator(
-        max_concurrent=hpo_args.max_concurrent
-    )
+    search = BasicVariantGenerator(max_concurrent=hpo_args.max_concurrent)
 
     mode = "max" if is_oltp else "min"
     tune_config = TuneConfig(
@@ -659,18 +777,29 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
             if results[i].error:
                 print(f"Trial {results[i]} FAILED")
         assert False, print("Encountered exceptions!")
-    
+
     # Save the best params.json.
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)
     best_params_generated_fpath = Path(best_result.path) / "params.json"
     # Before saving, copy it into run_*/[codebase]/data/. This way, save_file() called on
     #   params.json will link directly to run_*/[codebase]/data/params.json instead of to
     #   run_*/[codebase]/hpo_ray_results/TuneOpt*/.
-    best_params_copy_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json"
+    best_params_copy_fpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json"
+    )
     shutil.copy(best_params_generated_fpath, best_params_copy_fpath)
-    link_result(dbgym_cfg, best_params_copy_fpath, custom_result_name=default_hpoed_agent_params_fname(hpo_args.benchmark_name, hpo_args.workload_name) + ".link")
+    link_result(
+        dbgym_cfg,
+        best_params_copy_fpath,
+        custom_result_name=default_hpoed_agent_params_fname(
+            hpo_args.benchmark_name, hpo_args.workload_name
+        )
+        + ".link",
+    )
     # We also link from run_*/[codebase]/data/params.json to run_*/[codebase]/hpo_ray_results/TuneOpt*/**/params.json.
     #   This way, when _manually_ looking through run_*/, we can see which HPO trial was
     #   responsible for creating params.json.
-    best_params_link_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json.link"
+    best_params_link_fpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "params.json.link"
+    )
     os.symlink(best_params_generated_fpath, best_params_link_fpath)

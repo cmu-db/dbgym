@@ -1,12 +1,26 @@
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from pathlib import Path
+
 import click
 import pandas as pd
 
-from misc.utils import DEFAULT_BOOT_CONFIG_FPATH, WORKSPACE_PATH_PLACEHOLDER, DBGymConfig, TuningMode, conv_inputpath_to_realabspath, link_result, open_and_save, default_hpoed_agent_params_path, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER, workload_name_fn, default_tuning_steps_dname
+from misc.utils import (
+    BENCHMARK_NAME_PLACEHOLDER,
+    DEFAULT_BOOT_CONFIG_FPATH,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    TuningMode,
+    conv_inputpath_to_realabspath,
+    default_hpoed_agent_params_path,
+    default_tuning_steps_dname,
+    link_result,
+    open_and_save,
+    workload_name_fn,
+)
 from tune.protox.agent.coerce_config import coerce_config
 from tune.protox.agent.hpo import TuneTrial, build_space
 
@@ -15,8 +29,18 @@ from tune.protox.agent.hpo import TuneTrial, build_space
 @click.command()
 @click.pass_obj
 @click.argument("benchmark-name")
-@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
-@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-start",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
+)
+@click.option(
+    "--seed-end",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
+)
 @click.option(
     "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
@@ -48,31 +72,52 @@ from tune.protox.agent.hpo import TuneTrial, build_space
     "--tune-duration-during-tune",
     default=None,
     type=float,
-    help="The number of hours to run the tuning agent for. If you do not specify this argument, it will be the same as --tune-duration-during-hpo."
+    help="The number of hours to run the tuning agent for. If you do not specify this argument, it will be the same as --tune-duration-during-hpo.",
 )
-def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end: int, query_subset: str, scale_factor: float, hpoed_agent_params_path: Path, enable_boot_during_tune: bool, boot_config_fpath_during_tune: Path, tune_duration_during_tune: float) -> None:
-    """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters".""" 
+def tune(
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    seed_start: int,
+    seed_end: int,
+    query_subset: str,
+    scale_factor: float,
+    hpoed_agent_params_path: Path,
+    enable_boot_during_tune: bool,
+    boot_config_fpath_during_tune: Path,
+    tune_duration_during_tune: float,
+) -> None:
+    """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters"."""
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path == None:
-        hpoed_agent_params_path = default_hpoed_agent_params_path(dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name)
+        hpoed_agent_params_path = default_hpoed_agent_params_path(
+            dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
+        )
 
     # Convert all input paths to absolute paths
-    hpoed_agent_params_path = conv_inputpath_to_realabspath(dbgym_cfg, hpoed_agent_params_path)
-    boot_config_fpath_during_tune = conv_inputpath_to_realabspath(dbgym_cfg, boot_config_fpath_during_tune)
+    hpoed_agent_params_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, hpoed_agent_params_path
+    )
+    boot_config_fpath_during_tune = conv_inputpath_to_realabspath(
+        dbgym_cfg, boot_config_fpath_during_tune
+    )
 
     # Tune
     with open_and_save(dbgym_cfg, hpoed_agent_params_path, "r") as f:
         hpo_params = json.load(f)
 
     # Coerce using a dummy space.
-    hpo_params = coerce_config(dbgym_cfg, build_space(
-        sysknobs={},
-        benchmark_config={},
-        workload_path=Path(),
-        embedder_path=[],
-        pgconn_info={}
-    ), hpo_params)
+    hpo_params = coerce_config(
+        dbgym_cfg,
+        build_space(
+            sysknobs={},
+            benchmark_config={},
+            workload_path=Path(),
+            embedder_path=[],
+            pgconn_info={},
+        ),
+        hpo_params,
+    )
 
     # Set defaults that depend on hpo_params
     if tune_duration_during_tune == None:
@@ -86,9 +131,13 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     # Note that while we currently do not persist the hpo_params used during *tuning* back to
     #   a file, this is entirely possible to do in the future if needed.
     hpo_params["enable_boot"][str(TuningMode.TUNE)] = enable_boot_during_tune
-    hpo_params["boot_config_fpath"][str(TuningMode.TUNE)] = boot_config_fpath_during_tune
+    hpo_params["boot_config_fpath"][
+        str(TuningMode.TUNE)
+    ] = boot_config_fpath_during_tune
     hpo_params["tune_duration"][str(TuningMode.TUNE)] = tune_duration_during_tune
-    hpo_params["workload_timeout"][str(TuningMode.TUNE)] = hpo_params["workload_timeout"][str(TuningMode.HPO)]
+    hpo_params["workload_timeout"][str(TuningMode.TUNE)] = hpo_params[
+        "workload_timeout"
+    ][str(TuningMode.HPO)]
 
     # Piggyback off the HPO magic.
     tune_trial = TuneTrial(dbgym_cfg, TuningMode.TUNE)
@@ -115,8 +164,14 @@ def tune(dbgym_cfg: DBGymConfig, benchmark_name: str, seed_start: int, seed_end:
     # We copy instead of just symlinking so that tuning_steps/ is a fully self-contained directory.
     hpoed_agent_params_copy_fpath = tuning_steps_dpath / "params.json"
     shutil.copy(hpoed_agent_params_path, hpoed_agent_params_copy_fpath)
-    tuning_steps_link_dname = default_tuning_steps_dname(benchmark_name, workload_name, enable_boot_during_tune)
-    link_result(dbgym_cfg, tuning_steps_dpath, custom_result_name=tuning_steps_link_dname + ".link")
+    tuning_steps_link_dname = default_tuning_steps_dname(
+        benchmark_name, workload_name, enable_boot_during_tune
+    )
+    link_result(
+        dbgym_cfg,
+        tuning_steps_dpath,
+        custom_result_name=tuning_steps_link_dname + ".link",
+    )
     # We also create a link to hpoed_agent_params_path. This is useful when we are _manually_ looking through
     #   run_*/ and want to see which other run_*/ was responsible for creating params.json
     hpoed_agent_params_link_fpath = tuning_steps_dpath / "params.json.link"

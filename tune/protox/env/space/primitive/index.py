@@ -54,7 +54,9 @@ class IndexAction(object):
             raw_repr=None,
             bias=0.0,
         )
-        assert ia.get_index_name() == idx_name, f"ia.get_index_name()={ia.get_index_name()} but idx_name={idx_name}"
+        assert (
+            ia.get_index_name() == idx_name
+        ), f"ia.get_index_name()={ia.get_index_name()} but idx_name={idx_name}"
         return ia
 
     def sql(self, add: bool, allow_fail: bool = False) -> str:
@@ -83,7 +85,7 @@ class IndexAction(object):
         if self not in IndexAction.index_name_map:
             IndexAction.index_name_map[self] = f"index{IndexAction.index_name_counter}"
             IndexAction.index_name_counter += 1
-        
+
         return IndexAction.index_name_map[self]
 
     # This equality/hash mechanism is purely based off of index identity.

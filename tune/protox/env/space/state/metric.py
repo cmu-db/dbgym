@@ -129,7 +129,11 @@ class MetricStateSpace(StateSpace, spaces.Dict):
         return True
 
     def __init__(
-        self, dbgym_cfg: DBGymConfig, spaces: Mapping[str, spaces.Space[Any]], tables: list[str], seed: int
+        self,
+        dbgym_cfg: DBGymConfig,
+        spaces: Mapping[str, spaces.Space[Any]],
+        tables: list[str],
+        seed: int,
     ) -> None:
         self.dbgym_cfg = dbgym_cfg
         self.tables = tables
@@ -152,7 +156,9 @@ class MetricStateSpace(StateSpace, spaces.Dict):
                     self.internal_spaces[metric] = Box(low=-np.inf, high=np.inf)
         super().__init__(self.internal_spaces, seed)
 
-    def check_benchbase(self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]) -> bool:
+    def check_benchbase(
+        self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]
+    ) -> bool:
         assert results_dpath is not None
         assert Path(results_dpath).exists()
         metric_files = [f for f in Path(results_dpath).rglob("*metrics.json")]
@@ -182,8 +188,12 @@ class MetricStateSpace(StateSpace, spaces.Dict):
             initial_data = initial_metrics[key]
             final_data = final_metrics[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
-                final_data = [d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
+                initial_data = [
+                    d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME
+                ]
+                final_data = [
+                    d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME
+                ]
             elif spec["per_table"]:
                 initial_data = sorted(
                     [d for d in initial_data if d["relname"] in self.tables],
@@ -254,8 +264,12 @@ class MetricStateSpace(StateSpace, spaces.Dict):
             initial_data = initial[key]
             final_data = final[key]
             if spec["filter_db"]:
-                initial_data = [d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
-                final_data = [d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME]
+                initial_data = [
+                    d for d in initial_data if d["datname"] == DBGYM_POSTGRES_DBNAME
+                ]
+                final_data = [
+                    d for d in final_data if d["datname"] == DBGYM_POSTGRES_DBNAME
+                ]
             elif spec["per_table"]:
                 initial_data = sorted(
                     [d for d in initial_data if d["relname"] in self.tables],

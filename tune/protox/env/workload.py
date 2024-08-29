@@ -1,11 +1,12 @@
-import math
 import copy
 import json
+import math
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union, cast
-import tempfile
+
 import numpy as np
 import pglast  # type: ignore
 from plumbum import local
@@ -68,7 +69,10 @@ class Workload(object):
         pid: Optional[int],
         query_spec: QuerySpec,
     ) -> None:
-        assert all(sql[1].exists() and not sql[1].is_symlink() and sql[1].is_absolute() for sql in sqls), f"sqls ({sqls}) should only contain existent real absolute paths."
+        assert all(
+            sql[1].exists() and not sql[1].is_symlink() and sql[1].is_absolute()
+            for sql in sqls
+        ), f"sqls ({sqls}) should only contain existent real absolute paths."
         do_tbl_include_subsets_prune = query_spec["tbl_include_subsets_prune"]
         self.order = []
         self.queries = QueryMap({})
@@ -329,7 +333,9 @@ class Workload(object):
         return max([len(cols) for _, cols in self.query_usages.items()])
 
     @staticmethod
-    def compute_total_workload_runtime(qid_runtime_data: dict[str, BestQueryRun]) -> float:
+    def compute_total_workload_runtime(
+        qid_runtime_data: dict[str, BestQueryRun]
+    ) -> float:
         return sum(best_run.runtime for best_run in qid_runtime_data.values()) / 1.0e6
 
     @time_record("execute")
@@ -379,7 +385,7 @@ class Workload(object):
                     for action in actions
                 ],
             )
-        
+
         # Figure out workload to execute.
         if workload_qdir is not None and workload_qdir[0] is not None:
             # Load actual queries to execute.
@@ -418,7 +424,7 @@ class Workload(object):
             for qidx, (sql_type, query) in enumerate(queries):
                 assert sql_type != QueryType.UNKNOWN
                 if sql_type != QueryType.SELECT:
-                    # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. 
+                    # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries.
                     assert sql_type != QueryType.INS_UPD_DEL
                     pg_conn.conn().execute(query)
                     continue
@@ -443,7 +449,9 @@ class Workload(object):
                     if r[2] not in [rr[2] for rr in runs]:
                         runs.append(r)
 
-                target_pqt = query_timeout if query_timeout else this_execution_workload_timeout
+                target_pqt = (
+                    query_timeout if query_timeout else this_execution_workload_timeout
+                )
                 skip_execute = False
                 if (
                     reset_metrics is not None
@@ -468,7 +476,12 @@ class Workload(object):
                         connection=pg_conn.conn(),
                         runs=runs,
                         query=query,
-                        query_timeout=min(target_pqt, this_execution_workload_timeout - Workload.compute_total_workload_runtime(qid_runtime_data) + 1),
+                        query_timeout=min(
+                            target_pqt,
+                            this_execution_workload_timeout
+                            - Workload.compute_total_workload_runtime(qid_runtime_data)
+                            + 1,
+                        ),
                         logger=self.logger,
                         sysknobs=sysknobs,
                         observation_space=observation_space,
@@ -490,9 +503,12 @@ class Workload(object):
                 assert best_run.runtime
                 qid_runtime_data[qid] = best_run
 
-                if Workload.compute_total_workload_runtime(qid_runtime_data) > this_execution_workload_timeout:
+                if (
+                    Workload.compute_total_workload_runtime(qid_runtime_data)
+                    > this_execution_workload_timeout
+                ):
                     # We need to undo any potential statements after the timed out query.
-                    for st, rq in queries[qidx+1:]:
+                    for st, rq in queries[qidx + 1 :]:
                         if st != QueryType.SELECT:
                             # This is a sanity check because any OLTP workload should be run through benchbase, and any OLAP workload should not have INS_UPD_DEL queries. If we do have INS_UPD_DEL queries, our "undo" logic will likely have to change.
                             assert st != QueryType.INS_UPD_DEL
@@ -573,7 +589,9 @@ class Workload(object):
                         assert best_run and best_run.runtime and best_run.query_run
                         rtime = best_run.runtime
                         pfx = best_run.query_run.prefix
-                        f.write(f"{i+1},{qid},{start},{rtime},{best_run.timed_out},0,{pfx}\n")
+                        f.write(
+                            f"{i+1},{qid},{start},{rtime},{best_run.timed_out},0,{pfx}\n"
+                        )
                         start += rtime / 1e6
 
                 # Write a penalty term if needed.
@@ -581,7 +599,8 @@ class Workload(object):
                 if workload_timed_out and self.workload_timeout_penalty > 1:
                     # Get the penalty.
                     penalty = (
-                        this_execution_workload_timeout * self.workload_timeout_penalty - Workload.compute_total_workload_runtime(qid_runtime_data)
+                        this_execution_workload_timeout * self.workload_timeout_penalty
+                        - Workload.compute_total_workload_runtime(qid_runtime_data)
                     )
                     penalty = (penalty + 1.05) * 1e6 if not first else penalty * 1e6
                 elif workload_timed_out and not first:
@@ -592,7 +611,9 @@ class Workload(object):
                     f.write(f"{len(self.order)},P,{time.time()},{penalty},,0,PENALTY\n")
 
         # Get all the timeouts.
-        num_timed_out_queries = sum([1 if best_run.timed_out else 0 for _, best_run in qid_runtime_data.items()])
+        num_timed_out_queries = sum(
+            [1 if best_run.timed_out else 0 for _, best_run in qid_runtime_data.items()]
+        )
         return num_timed_out_queries, workload_timed_out, qid_runtime_data
 
     @time_record("execute")
@@ -637,8 +658,16 @@ class Workload(object):
 
         # Generate a unique temporary directory to store results in.
         results_dpath = Path(tempfile.mkdtemp())
-        print(results_dpath.is_dir(), results_dpath.exists(), not any(results_dpath.iterdir()))
-        assert results_dpath.is_dir() and results_dpath.exists() and not any(results_dpath.iterdir()), "results_dpath should be existent and empty since mkdtemp should guarantee a unique dir."
+        print(
+            results_dpath.is_dir(),
+            results_dpath.exists(),
+            not any(results_dpath.iterdir()),
+        )
+        assert (
+            results_dpath.is_dir()
+            and results_dpath.exists()
+            and not any(results_dpath.iterdir())
+        ), "results_dpath should be existent and empty since mkdtemp should guarantee a unique dir."
 
         if self.benchbase:
             # Execute benchbase if specified.
@@ -646,19 +675,21 @@ class Workload(object):
             # We can only create a state if we succeeded.
             success = observation_space.check_benchbase(self.dbgym_cfg, results_dpath)
         else:
-            num_timed_out_queries, did_workload_time_out, query_metric_data = self.execute_workload(
-                pg_conn,
-                actions=actions,
-                variation_names=variation_names,
-                results_dpath=results_dpath,
-                observation_space=observation_space,
-                action_space=action_space,
-                reset_metrics=reset_metrics,
-                override_workload_timeout=self.workload_timeout,
-                query_timeout=query_timeout,
-                workload_qdir=None,
-                blocklist=[],
-                first=first,
+            num_timed_out_queries, did_workload_time_out, query_metric_data = (
+                self.execute_workload(
+                    pg_conn,
+                    actions=actions,
+                    variation_names=variation_names,
+                    results_dpath=results_dpath,
+                    observation_space=observation_space,
+                    action_space=action_space,
+                    reset_metrics=reset_metrics,
+                    override_workload_timeout=self.workload_timeout,
+                    query_timeout=query_timeout,
+                    workload_qdir=None,
+                    blocklist=[],
+                    first=first,
+                )
             )
             did_anything_time_out = num_timed_out_queries > 0 or did_workload_time_out
             success = True
@@ -673,4 +704,11 @@ class Workload(object):
             self.logger.get_logger(__name__).info(
                 f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
             )
-        return success, metric, reward, results_dpath, did_anything_time_out, query_metric_data
+        return (
+            success,
+            metric,
+            reward,
+            results_dpath,
+            did_anything_time_out,
+            query_metric_data,
+        )

@@ -59,12 +59,13 @@ class LSC(object):
             )
             self.logger.get_logger(__name__).info("LSC Shift Max: %s", self.max)
 
-
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
         if not self.enabled:
             return action
 
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(action.shape, self.vae_configuration["latent_dim"])
+        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(
+            action.shape, self.vae_configuration["latent_dim"]
+        )
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
@@ -82,13 +83,12 @@ class LSC(object):
 
     def current_scale(self) -> np.typing.NDArray[np.float32]:
         if not self.enabled:
-            return np.array([-1.], dtype=np.float32)
+            return np.array([-1.0], dtype=np.float32)
 
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
         lsc_max = self.max[(self.num_steps % self.horizon)]
         rel = lsc_shift / lsc_max
         return np.array([(rel * 2.0) - 1], dtype=np.float32)
-
 
     def inverse_scale(self, value: torch.Tensor) -> torch.Tensor:
         if not self.enabled:
@@ -97,7 +97,6 @@ class LSC(object):
         lsc_max = self.max[0]
         lsc_shift = ((value + 1) / 2.0) * lsc_max
         return cast(torch.Tensor, lsc_shift * self.vae_configuration["output_scale"])
-
 
     def advance(self) -> None:
         if self.frozen or (not self.enabled):

@@ -3,41 +3,42 @@ import gc
 import math
 import os
 import random
+import shutil
 import time
 from itertools import chain, combinations
 from multiprocessing import Pool
 from pathlib import Path
+
 import click
 import numpy as np
 import pandas as pd
 import yaml
 from sklearn.preprocessing import quantile_transform
-import shutil
 
+from dbms.postgres.cli import create_conn, start_postgres, stop_postgres
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
+    SCALE_FACTOR_PLACEHOLDER,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
-    SCALE_FACTOR_PLACEHOLDER,
     DBGymConfig,
     conv_inputpath_to_realabspath,
     default_benchmark_config_path,
-    default_workload_path,
-    default_pristine_dbdata_snapshot_path,
+    default_dbdata_parent_dpath,
     default_pgbin_path,
-    traindata_fname,
+    default_pristine_dbdata_snapshot_path,
+    default_workload_path,
+    is_ssd,
     link_result,
     open_and_save,
     save_file,
+    traindata_fname,
     workload_name_fn,
-    default_dbdata_parent_dpath,
-    is_ssd,
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
-from dbms.postgres.cli import create_conn, start_postgres, stop_postgres
 from util.shell import subprocess_run
 
 # FUTURE(oltp)
@@ -54,8 +55,18 @@ from util.shell import subprocess_run
 
 # generic args
 @click.argument("benchmark-name")
-@click.option("--seed-start", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).")
-@click.option("--seed-end", type=int, default=15721, help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).")
+@click.option(
+    "--seed-start",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
+)
+@click.option(
+    "--seed-end",
+    type=int,
+    default=15721,
+    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
+)
 @click.option(
     "--query-subset",
     type=click.Choice(["all", "even", "odd"]),
@@ -66,7 +77,12 @@ from util.shell import subprocess_run
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
-@click.option("--pgbin-path", type=Path, default=None, help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.")
+@click.option(
+    "--pgbin-path",
+    type=Path,
+    default=None,
+    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+)
 # TODO(phw2): need to run pgtune before gathering data
 @click.option(
     "--pristine-dbdata-snapshot-path",
@@ -177,7 +193,9 @@ def datagen(
     Updates the symlink in the data/ dir to point to the new .parquet file.
     """
     # check args
-    assert seed_start <= seed_end, f'seed_start ({seed_start}) must be <= seed_end ({seed_end})'
+    assert (
+        seed_start <= seed_end
+    ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
 
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
@@ -196,7 +214,9 @@ def datagen(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
     if dbdata_parent_dpath == None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(dbgym_cfg.dbgym_workspace_path)
+        dbdata_parent_dpath = default_dbdata_parent_dpath(
+            dbgym_cfg.dbgym_workspace_path
+        )
     if max_concurrent == None:
         max_concurrent = os.cpu_count()
     if seed == None:
@@ -204,16 +224,24 @@ def datagen(
 
     # Convert all input paths to absolute paths
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    benchmark_config_path = conv_inputpath_to_realabspath(dbgym_cfg, benchmark_config_path)
+    benchmark_config_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, benchmark_config_path
+    )
     pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(dbgym_cfg, pristine_dbdata_snapshot_path)
+    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(
+        dbgym_cfg, pristine_dbdata_snapshot_path
+    )
     dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
-        assert not is_ssd(dbdata_parent_dpath), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
+        assert not is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
     elif intended_dbdata_hardware == "ssd":
-        assert is_ssd(dbdata_parent_dpath), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
+        assert is_ssd(
+            dbdata_parent_dpath
+        ), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
     else:
         assert False
 
@@ -238,7 +266,14 @@ def datagen(
     # Group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
     generic_args = EmbeddingDatagenGenericArgs(
-        benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath
+        benchmark_name,
+        workload_name,
+        scale_factor,
+        benchmark_config_path,
+        seed,
+        workload_path,
+        pristine_dbdata_snapshot_path,
+        dbdata_parent_dpath,
     )
     dir_gen_args = EmbeddingDirGenArgs(
         leading_col_tbls,
@@ -252,7 +287,11 @@ def datagen(
 
     # run all steps
     start_time = time.time()
-    dbdata_dpath = untar_snapshot(dbgym_cfg, generic_args.pristine_dbdata_snapshot_path, generic_args.dbdata_parent_dpath)
+    dbdata_dpath = untar_snapshot(
+        dbgym_cfg,
+        generic_args.pristine_dbdata_snapshot_path,
+        generic_args.dbdata_parent_dpath,
+    )
     pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
     _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
@@ -263,9 +302,13 @@ def datagen(
     stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
 
 
-def untar_snapshot(dbgym_cfg: DBGymConfig, dbdata_snapshot_fpath: Path, dbdata_parent_dpath: Path) -> Path:
+def untar_snapshot(
+    dbgym_cfg: DBGymConfig, dbdata_snapshot_fpath: Path, dbdata_parent_dpath: Path
+) -> Path:
     # It should be an absolute path and it should exist
-    assert dbdata_snapshot_fpath.is_absolute() and dbdata_snapshot_fpath.exists(), f"untar_snapshot(): dbdata_snapshot_fpath ({dbdata_snapshot_fpath}) either doesn't exist or is not absolute"
+    assert (
+        dbdata_snapshot_fpath.is_absolute() and dbdata_snapshot_fpath.exists()
+    ), f"untar_snapshot(): dbdata_snapshot_fpath ({dbdata_snapshot_fpath}) either doesn't exist or is not absolute"
     # It may be a symlink so we need to resolve them first
     dbdata_snapshot_real_fpath = dbdata_snapshot_fpath.resolve()
     save_file(dbgym_cfg, dbdata_snapshot_real_fpath)
@@ -286,7 +329,17 @@ class EmbeddingDatagenGenericArgs:
     I wanted to make multiple classes instead of just one to conceptually separate the different args
     """
 
-    def __init__(self, benchmark_name, workload_name, scale_factor, benchmark_config_path, seed, workload_path, pristine_dbdata_snapshot_path, dbdata_parent_dpath):
+    def __init__(
+        self,
+        benchmark_name,
+        workload_name,
+        scale_factor,
+        benchmark_config_path,
+        seed,
+        workload_path,
+        pristine_dbdata_snapshot_path,
+        dbdata_parent_dpath,
+    ):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
         self.scale_factor = scale_factor
@@ -399,7 +452,9 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
 
 
 def _combine_traindata_dir_into_parquet(
-    dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGenericArgs, file_gen_args: EmbeddingFileGenArgs
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingDatagenGenericArgs,
+    file_gen_args: EmbeddingFileGenArgs,
 ):
     tbl_dirs = {}
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
@@ -499,7 +554,9 @@ def _combine_traindata_dir_into_parquet(
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / traindata_fname(generic_args.benchmark_name, generic_args.workload_name)
+    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / traindata_fname(
+        generic_args.benchmark_name, generic_args.workload_name
+    )
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 

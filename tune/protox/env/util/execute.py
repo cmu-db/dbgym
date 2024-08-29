@@ -85,7 +85,9 @@ def _acquire_metrics_around_query(
     if query_timeout > 0:
         _force_statement_timeout(connection, query_timeout * 1000)
     else:
-        assert query_timeout == 0, f"Setting query_timeout to 0 indicates \"timeout\". However, setting query_timeout ({query_timeout}) < 0 is a bug."
+        assert (
+            query_timeout == 0
+        ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
     qid_runtime, did_time_out, explain_data = _time_query(
         logger, prefix, connection, query, query_timeout

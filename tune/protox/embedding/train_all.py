@@ -1,5 +1,5 @@
-import gc
 import copy
+import gc
 import json
 import logging
 import os
@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
 import ray
@@ -62,7 +63,9 @@ def fetch_index_parameters(
     tables = data["tables"]
     attributes = data["attributes"]
     query_spec = data["query_spec"]
-    workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None)
+    workload = Workload(
+        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=None
+    )
     modified_attrs = workload.column_usages()
 
     space = IndexSpace(
@@ -85,7 +88,12 @@ def fetch_index_parameters(
 
 
 def load_input_data(
-    dbgym_cfg: DBGymConfig, traindata_path: Path, train_size: int, max_attrs: int, require_cost: bool, seed: int
+    dbgym_cfg: DBGymConfig,
+    traindata_path: Path,
+    train_size: int,
+    max_attrs: int,
+    require_cost: bool,
+    seed: int,
 ) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
@@ -187,7 +195,9 @@ def train_all_embeddings(
 
     # Connect to cluster or die.
     restart_ray(dbgym_cfg.root_yaml["ray_gcs_port"])
-    ray.init(address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False)
+    ray.init(
+        address=f"localhost:{dbgym_cfg.root_yaml['ray_gcs_port']}", log_to_driver=False
+    )
 
     scheduler = FIFOScheduler()  # type: ignore
     # Search.
@@ -284,8 +294,13 @@ def _hpo_train(
         config["metric_loss_md"]["output_scale"] = config["output_scale"]
 
     dtime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    trial_dpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / f"embeddings_{dtime}_{os.getpid()}"
-    assert not trial_dpath.exists(), f"at this point, trial_dpath ({trial_dpath}) should not exist"
+    trial_dpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True)
+        / f"embeddings_{dtime}_{os.getpid()}"
+    )
+    assert (
+        not trial_dpath.exists()
+    ), f"at this point, trial_dpath ({trial_dpath}) should not exist"
 
     # Seed
     seed = np.random.randint(int(1), int(1e8))

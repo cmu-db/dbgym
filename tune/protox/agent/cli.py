@@ -2,8 +2,8 @@ import click
 
 from misc.utils import DBGymConfig
 from tune.protox.agent.hpo import hpo
-from tune.protox.agent.tune import tune
 from tune.protox.agent.replay import replay
+from tune.protox.agent.tune import tune
 
 
 @click.group("agent")

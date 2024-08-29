@@ -38,10 +38,12 @@ class StructureStateSpace(StateSpace, spaces.Dict):
             }
         else:
             self.internal_spaces = {
-                k: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
-                if s.uses_embed() else s
+                k: (
+                    gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
+                    if s.uses_embed()
+                    else s
+                )
                 for k, s in action_space.get_spaces()
-
             }
 
         self.internal_spaces.update(spaces)
@@ -50,7 +52,9 @@ class StructureStateSpace(StateSpace, spaces.Dict):
     def require_metrics(self) -> bool:
         return False
 
-    def check_benchbase(self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]) -> bool:
+    def check_benchbase(
+        self, dbgym_cfg: DBGymConfig, results_dpath: Union[str, Path]
+    ) -> bool:
         # We don't use benchbase metrics anyways.
         return True
 
