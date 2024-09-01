@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, TypeVar, Union
 
 import numpy as np
 from plumbum import local
-from torch.utils.tensorboard import SummaryWriter  # type: ignore
+from torch.utils.tensorboard import SummaryWriter
 from typing_extensions import ParamSpec
 
 from misc.utils import DBGymConfig
@@ -25,16 +25,17 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             ret = f(*args, **kwargs)
 
             # TODO(wz2): This is a hack to get a logger instance.
-            assert hasattr(args[0], "logger"), print(args[0], type(args[0]))
+            first_arg = args[0] # type: ignore[index]  # Ignore the indexing type error
+            assert hasattr(first_arg, "logger"), print(first_arg, type(first_arg))
 
-            if args[0].logger is None:
+            if first_arg.logger is None:
                 # If there is no logger, just return.
                 return ret
 
-            assert isinstance(args[0].logger, Logger)
-            if args[0].logger is not None:
-                cls_name = type(args[0]).__name__
-                args[0].logger.record(f"{cls_name}_{key}", time.time() - start)
+            assert isinstance(first_arg.logger, Logger)
+            if first_arg.logger is not None:
+                cls_name = type(first_arg).__name__
+                first_arg.logger.record(f"{cls_name}_{key}", time.time() - start)
             return ret
 
         return wrapped_f
@@ -81,7 +82,7 @@ class Logger(object):
         self.writer: Union[SummaryWriter, None] = None
         if self.trace:
             self.tensorboard_dpath.mkdir(parents=True, exist_ok=True)
-            self.writer = SummaryWriter(self.tensorboard_dpath)  # type: ignore
+            self.writer = SummaryWriter(self.tensorboard_dpath)
 
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}
@@ -144,14 +145,14 @@ class Logger(object):
         for key, value in self.iteration_data.items():
             if isinstance(value, str):
                 # str is considered a np.ScalarType
-                self.writer.add_text(key, value, self.iteration)  # type: ignore
+                self.writer.add_text(key, value, self.iteration)
             else:
-                self.writer.add_scalar(key, value, self.iteration)  # type: ignore
+                self.writer.add_scalar(key, value, self.iteration)
 
         del self.iteration_data
         self.iteration_data = {}
         self.iteration += 1
-        self.writer.flush()  # type: ignore
+        self.writer.flush()
 
     def record(self, key: str, value: Any) -> None:
         stack = inspect.stack(context=2)
@@ -168,4 +169,4 @@ class Logger(object):
         if self.trace:
             assert self.writer
             self.advance()
-            self.writer.flush()  # type: ignore
+            self.writer.flush()
