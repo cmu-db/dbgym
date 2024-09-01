@@ -1,13 +1,11 @@
 import os
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
-import click
 import redis
 import yaml
 
@@ -47,8 +45,7 @@ def get_runs_path_from_workspace_path(workspace_path):
 
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
-    assert type(scale_factor) is float or type(scale_factor) is str
-    if scale_factor == SCALE_FACTOR_PLACEHOLDER:
+    if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
     else:
         if float(int(scale_factor)) == scale_factor:
@@ -62,9 +59,9 @@ def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
 
 
 # Other parameters
-BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
-WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
-SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
+BENCHMARK_NAME_PLACEHOLDER: str = "[benchmark_name]"
+WORKLOAD_NAME_PLACEHOLDER: str = "[workload_name]"
+SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
@@ -481,7 +478,7 @@ def extract_from_task_run_fordpath(
 
 # TODO(phw2): really look at the clean PR to see what it changed
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
+def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -544,7 +541,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
 def link_result(
-    dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: str | None = None
+    dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: Optional[str] = None
 ) -> Path:
     """
     result_fordpath must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path.
@@ -564,7 +561,7 @@ def link_result(
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 
-    if custom_result_name != None:
+    if type(custom_result_name) is str:
         result_name = custom_result_name
     else:
         if os.path.isfile(result_fordpath):
