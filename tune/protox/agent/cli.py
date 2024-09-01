@@ -8,7 +8,7 @@ from tune.protox.agent.tune import tune
 
 @click.group("agent")
 @click.pass_obj
-def agent_group(dbgym_cfg: DBGymConfig):
+def agent_group(dbgym_cfg: DBGymConfig) -> None:
     dbgym_cfg.append_group("agent")
 
 
