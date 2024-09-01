@@ -7,7 +7,7 @@ from tune.protox.embedding.cli import embedding_group
 
 @click.group(name="protox")
 @click.pass_obj
-def protox_group(dbgym_cfg: DBGymConfig):
+def protox_group(dbgym_cfg: DBGymConfig) -> None:
     dbgym_cfg.append_group("protox")
 
 
