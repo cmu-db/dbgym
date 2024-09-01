@@ -54,7 +54,7 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
             return str(scale_factor).replace(".", "point")
 
 
-def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float | str) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
 
 
@@ -68,11 +68,11 @@ SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
 DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
-default_benchmark_config_path = (
+default_benchmark_config_path: Callable[[str], Path] = (
     lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchmark_config.yaml"
 )
-default_benchbase_config_path = (
+default_benchbase_config_path: Callable[[str], Path] = (
     lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
@@ -90,7 +90,7 @@ traindata_fname = (
 default_embedder_dname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
 )
-default_hpoed_agent_params_fname = (
+default_hpoed_agent_params_fname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
 )
 default_tuning_steps_dname: Callable[[str, str, bool], str] = (
@@ -118,7 +118,7 @@ default_traindata_path = (
     / "data"
     / (traindata_fname(benchmark_name, workload_name) + ".link")
 )
-default_embedder_path = (
+default_embedder_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -134,7 +134,7 @@ default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     / "data"
     / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
 )
-default_workload_path = (
+default_workload_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -142,7 +142,7 @@ default_workload_path = (
     / "data"
     / (workload_name + ".link")
 )
-default_pristine_dbdata_snapshot_path = (
+default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -150,10 +150,10 @@ default_pristine_dbdata_snapshot_path = (
     / "data"
     / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
 )
-default_dbdata_parent_dpath = lambda workspace_path: get_tmp_path_from_workspace_path(
-    workspace_path
+default_dbdata_parent_dpath: Callable[[Path], Path] = (
+    lambda workspace_path: get_tmp_path_from_workspace_path(workspace_path)
 )
-default_pgbin_path = (
+default_pgbin_path: Callable[[Path], Path] = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_dbms_postgres"
     / "build"

@@ -6,7 +6,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Type, Union
 
 import click
 import numpy as np
@@ -54,26 +54,26 @@ METRIC_NAME = "Best Metric"
 class AgentHPOArgs:
     def __init__(
         self,
-        benchmark_name,
-        workload_name,
-        embedder_path,
-        benchmark_config_path,
-        benchbase_config_path,
-        sysknobs_path,
-        pristine_dbdata_snapshot_path,
-        dbdata_parent_dpath,
-        pgbin_path,
-        workload_path,
-        seed,
-        agent,
-        max_concurrent,
-        num_samples,
-        tune_duration_during_hpo,
-        workload_timeout,
-        query_timeout,
-        enable_boot_during_hpo,
-        boot_config_fpath_during_hpo,
-        build_space_good_for_boot,
+        benchmark_name: str,
+        workload_name: str,
+        embedder_path: Path,
+        benchmark_config_path: Path,
+        benchbase_config_path: Path,
+        sysknobs_path: Path,
+        pristine_dbdata_snapshot_path: Path,
+        dbdata_parent_dpath: Path,
+        pgbin_path: Path,
+        workload_path: Path,
+        seed: int,
+        agent: str,
+        max_concurrent: int,
+        num_samples: int,
+        tune_duration_during_hpo: float,
+        workload_timeout: float,
+        query_timeout: float,
+        enable_boot_during_hpo: bool,
+        boot_config_fpath_during_hpo: Path,
+        build_space_good_for_boot: bool,
     ):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
@@ -119,35 +119,38 @@ class AgentHPOArgs:
 )
 @click.option(
     "--scale-factor",
+    type=float,
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
     "--embedder-path",
+    type=Path,
     default=None,
     help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchbase-config-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--sysknobs-path",
+    type=Path,
     default=DEFAULT_SYSKNOBS_PATH,
     help=f"The path to the file configuring the space of system knobs the tuner can tune.",
 )
 @click.option(
     "--pristine-dbdata-snapshot-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
@@ -158,57 +161,62 @@ class AgentHPOArgs:
 )
 @click.option(
     "--dbdata-parent-dpath",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
-    default=None,
     type=int,
+    default=None,
     help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
 )
 @click.option(
-    "--agent", default="wolp", help=f"The RL algorithm to use for the tuning agent."
+    "--agent",
+    type=str,
+    default="wolp",
+    help=f"The RL algorithm to use for the tuning agent."
 )
 @click.option(
     "--max-concurrent",
+    type=int,
     default=1,
     help=f"The max # of concurrent agent models to train. Note that unlike in HPO, all will use the same hyperparameters. This just helps control for other sources of randomness.",
 )
 @click.option(
     "--num-samples",
+    type=int,
     default=40,
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train agent models with.",
 )
 @click.option(
     "--tune-duration-during-hpo",
-    default=4,
     type=float,
+    default=4.0,
     help="The number of hours to run each hyperparamer config tuning trial for.",
 )
 @click.option(
     "--workload-timeout",
-    default=DEFAULT_WORKLOAD_TIMEOUT,
     type=int,
+    default=DEFAULT_WORKLOAD_TIMEOUT,
     help="The timeout (in seconds) of a workload. We run the workload once per DBMS configuration. For OLAP workloads, certain configurations may be extremely suboptimal, so we need to time out the workload.",
 )
 @click.option(
     "--query-timeout",
-    default=30,
     type=int,
+    default=30,
     help="The timeout (in seconds) of a query. See the help of --workload-timeout for the motivation of this.",
 )
 @click.option(
@@ -218,8 +226,8 @@ class AgentHPOArgs:
 )
 @click.option(
     "--boot-config-fpath-during-hpo",
-    default=DEFAULT_BOOT_CONFIG_FPATH,
     type=Path,
+    default=DEFAULT_BOOT_CONFIG_FPATH,
     help="The path to the file configuring Boot when running HPO. When tuning, you may use a different Boot config.",
 )
 # Building a space good for Boot is subtly different from whether we enable Boot during HPO.
@@ -240,58 +248,58 @@ class AgentHPOArgs:
     help="Whether to avoid certain options that are known to not perform well when Boot is enabled. See the codebase for why this is subtly different from --enable-boot-during-hpo.",
 )
 def hpo(
-    dbgym_cfg,
-    benchmark_name,
-    seed_start,
-    seed_end,
-    query_subset,
-    scale_factor,
-    embedder_path,
-    benchmark_config_path,
-    benchbase_config_path,
-    sysknobs_path,
-    pristine_dbdata_snapshot_path,
-    intended_dbdata_hardware,
-    dbdata_parent_dpath,
-    pgbin_path,
-    workload_path,
-    seed,
-    agent,
-    max_concurrent,
-    num_samples,
-    tune_duration_during_hpo,
-    workload_timeout,
-    query_timeout,
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    seed_start: int,
+    seed_end: int,
+    query_subset: str,
+    scale_factor: float,
+    embedder_path: Optional[Path],
+    benchmark_config_path: Optional[Path],
+    benchbase_config_path: Optional[Path],
+    sysknobs_path: Path,
+    pristine_dbdata_snapshot_path: Optional[Path],
+    intended_dbdata_hardware: str,
+    dbdata_parent_dpath: Optional[Path],
+    pgbin_path: Optional[Path],
+    workload_path: Optional[Path],
+    seed: Optional[int],
+    agent: str,
+    max_concurrent: int,
+    num_samples: int,
+    tune_duration_during_hpo: float,
+    workload_timeout: int,
+    query_timeout: int,
     enable_boot_during_hpo: bool,
     boot_config_fpath_during_hpo: Path,
     build_space_good_for_boot: bool,
-):
+) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
-    if embedder_path == None:
+    if embedder_path is None:
         embedder_path = default_embedder_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
-    if benchmark_config_path == None:
+    if benchmark_config_path is None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
-    if benchbase_config_path == None:
+    if benchbase_config_path is None:
         benchbase_config_path = default_benchbase_config_path(benchmark_name)
-    if pristine_dbdata_snapshot_path == None:
+    if pristine_dbdata_snapshot_path is None:
         pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
-    if dbdata_parent_dpath == None:
+    if dbdata_parent_dpath is None:
         dbdata_parent_dpath = default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
-    if pgbin_path == None:
+    if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
-    if workload_path == None:
+    if workload_path is None:
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
-    if seed == None:
-        seed = random.randint(0, 1e8)
+    if seed is None:
+        seed = random.randint(0, int(1e8))
 
     # Convert all input paths to absolute paths
     embedder_path = conv_inputpath_to_realabspath(dbgym_cfg, embedder_path)
@@ -358,15 +366,15 @@ def build_space(
     benchmark_config: dict[str, Any],
     workload_path: Path,
     embedder_path: list[Path],
-    pgconn_info: dict[str, str],
+    pgconn_info: dict[str, Path],
     benchbase_config: dict[str, Any] = {},
-    tune_duration_during_hpo: int = 30,
+    tune_duration_during_hpo: float = 30.0,
     seed: int = 0,
     enable_boot_during_hpo: bool = False,
-    boot_config_fpath_during_hpo: Path = None,
+    boot_config_fpath_during_hpo: Path = Path(),
     build_space_good_for_boot: bool = False,
-    workload_timeouts: list[int] = [600],
-    query_timeouts: list[int] = [30],
+    workload_timeouts: list[float] = [600.0],
+    query_timeouts: list[float] = [30.0],
 ) -> dict[str, Any]:
 
     return {
@@ -551,7 +559,7 @@ class TuneTrial:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
-        torch.set_default_dtype(torch.float32)  # type: ignore
+        torch.set_default_dtype(torch.float32)
         seed = (
             hpo_params["seed"]
             if hpo_params["seed"] != -1
@@ -640,7 +648,7 @@ class TuneTrial:
 
     def cleanup(self) -> None:
         self.logger.flush()
-        self.env.close()  # type: ignore
+        self.env.close()
         if Path(self.signal).exists():
             os.remove(self.signal)
 
@@ -650,11 +658,12 @@ class TuneTrial:
 # Using a function to create a class is Ray's recommended way of doing this (see
 #   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
 # If you don't create the class with a function, it doesn't work due to how Ray serializes classes
-def create_tune_opt_class(dbgym_cfg_param):
+global_dbgym_cfg: DBGymConfig
+def create_tune_opt_class(dbgym_cfg_param: DBGymConfig) -> Type[Trainable]:
     global global_dbgym_cfg
     global_dbgym_cfg = dbgym_cfg_param
 
-    class TuneOpt(Trainable):
+    class TuneOpt(Trainable):  # type: ignore
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
@@ -697,20 +706,23 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     workload_timeouts = [hpo_args.workload_timeout]
     query_timeouts = [hpo_args.query_timeout]
 
-    benchbase_config = (
-        {
-            "oltp_config": {
-                "oltp_num_terminals": hpo_args.oltp_num_terminals,
-                "oltp_duration": hpo_args.oltp_duration,
-                "oltp_sf": hpo_args.oltp_sf,
-                "oltp_warmup": hpo_args.oltp_warmup,
-            },
-            "benchbase_path": hpo_args.benchbase_path,
-            "benchbase_config_path": hpo_args.benchbase_config_path,
-        }
-        if is_oltp
-        else {}
-    )
+    assert not is_oltp
+    benchbase_config: dict[str, Any] = {}
+    # This is commented out because OLTP is currently not implemented.
+    # benchbase_config = (
+    #     {
+    #         "oltp_config": {
+    #             "oltp_num_terminals": hpo_args.oltp_num_terminals,
+    #             "oltp_duration": hpo_args.oltp_duration,
+    #             "oltp_sf": hpo_args.oltp_sf,
+    #             "oltp_warmup": hpo_args.oltp_warmup,
+    #         },
+    #         "benchbase_path": hpo_args.benchbase_path,
+    #         "benchbase_config_path": hpo_args.benchbase_config_path,
+    #     }
+    #     if is_oltp
+    #     else {}
+    # )
 
     space = build_space(
         sysknobs,
@@ -738,7 +750,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     )
 
     # Scheduler.
-    scheduler = FIFOScheduler()  # type: ignore
+    scheduler = FIFOScheduler()
 
     # Search.
     search = BasicVariantGenerator(max_concurrent=hpo_args.max_concurrent)

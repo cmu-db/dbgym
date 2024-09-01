@@ -56,12 +56,10 @@ DEFAULT_NEIGHBOR_PARAMETERS = NeighborParameters(
 ServerTableIndexMetadata = NewType(
     "ServerTableIndexMetadata", dict[str, dict[str, ServerIndexMetadata]]
 )
-class ProtoAction(torch.Tensor):
-    pass
+ProtoAction = NewType("ProtoAction", torch.Tensor)  # type: ignore
 
 KnobMap = NewType("KnobMap", dict[str, Union[Knob, CategoricalKnob]])
-class KnobSpaceRawAction(torch.Tensor):
-    pass
+KnobSpaceRawAction = NewType("KnobSpaceRawAction", torch.Tensor)  # type: ignore
 # {knob.name(): knob_value, ...}
 KnobSpaceAction = NewType("KnobSpaceAction", dict[str, Any])
 # {knob.name(): knob_value, ...}
