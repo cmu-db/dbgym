@@ -4,7 +4,7 @@ import subprocess
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Callable, Tuple, Optional
 
 import redis
 import yaml
@@ -78,7 +78,7 @@ default_benchbase_config_path = (
 )
 
 # Generally useful functions
-workload_name_fn = (
+workload_name_fn: Callable[[float | str, int, int, str], str] = (
     lambda scale_factor, seed_start, seed_end, query_subset: f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 )
 
@@ -87,13 +87,13 @@ workload_name_fn = (
 traindata_fname = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
-default_embedder_dname = (
+default_embedder_dname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
 )
 default_hpoed_agent_params_fname = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
 )
-default_tuning_steps_dname = (
+default_tuning_steps_dname: Callable[[str, str, bool], str] = (
     lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
 )
 
@@ -126,7 +126,7 @@ default_embedder_path = (
     / "data"
     / (default_embedder_dname(benchmark_name, workload_name) + ".link")
 )
-default_hpoed_agent_params_path = (
+default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
