@@ -308,7 +308,7 @@ def init_modules(
                 else:
                     init_fn(layer.weight)
 
-    modules = [encoder, decoder]
+    modules: list[nn.Module] = [encoder, decoder]
     for module in modules:
         if module is not None:
             module.apply(init)

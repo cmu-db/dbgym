@@ -8,7 +8,7 @@ class LoadInfoBaseClass:
     def get_schema_fpath(self) -> str:
         raise NotImplemented
 
-    def get_tables_and_fpaths(self) -> list[(str, str)]:
+    def get_tables_and_fpaths(self) -> list[tuple[str, str]]:
         raise NotImplemented
 
     # If the subclassing benchmark does not have constraints, you can return None here
