@@ -168,7 +168,7 @@ class QuerySpec(TypedDict, total=False):
 
 class ActionsInfo(TypedDict):
     all_holon_action_variations: list[Tuple[str, HolonAction]]
-    best_observed_holon_action: HolonAction
+    best_observed_holon_action: Optional[HolonAction]
 
 
 class EnvInfoDict(TypedDict, total=False):

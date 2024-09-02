@@ -14,6 +14,7 @@ from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import (
+    ActionsInfo,
     EnvInfoDict,
     HolonAction,
     HolonStateContainer,
@@ -255,6 +256,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
+            assert self.logger is not None
             self.logger.get_logger(__name__).info(
                 f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
             )
@@ -302,9 +304,10 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results_dpath": results_dpath,
-                    "actions_info": {
+                    "actions_info": ActionsInfo({
                         "all_holon_action_variations": all_holon_action_variations,
-                    },
+                        "best_observed_holon_action": None
+                    }),
                 }
             )
         )
@@ -328,6 +331,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             if not soft:
                 if not self.workload.oltp_workload:
                     # Update the workload metric timeout if we've succeeded.
+                    assert info["metric"] is not None
                     self.workload.set_workload_timeout(info["metric"])
 
             # Get the current view of the state container.
@@ -351,6 +355,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         if not soft:
             self.current_step = self.current_step + 1
         self.current_state = next_state
+        assert info["reward"] is not None
         return (
             self.current_state,
             info["reward"],

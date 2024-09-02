@@ -71,7 +71,7 @@ class PostgresConn:
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def get_connstr(self):
+    def get_connstr(self) -> str:
         return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
     def conn(self) -> psycopg.Connection[Any]:
@@ -358,11 +358,11 @@ class PostgresConn:
         self.disconnect()
         return 0, None
 
-    def restore_pristine_snapshot(self) -> None:
-        self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
+    def restore_pristine_snapshot(self) -> bool:
+        return self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
 
-    def restore_checkpointed_snapshot(self):
-        self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
+    def restore_checkpointed_snapshot(self) -> bool:
+        return self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
 
     @time_record("restore")
     def _restore_snapshot(
