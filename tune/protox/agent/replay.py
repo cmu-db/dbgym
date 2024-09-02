@@ -308,7 +308,7 @@ def replay_tuning_run(
         current_step = 0
         start_found = False
         start_time = None
-        existing_index_acts: Set[IndexAction] = set()
+        existing_index_acts: set[IndexAction] = set()
 
         for line in f:
             # Keep going until we've found the start.

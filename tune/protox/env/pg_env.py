@@ -79,7 +79,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("reset")
     def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
-    ) -> Tuple[Any, EnvInfoDict]:
+    ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
         if self.logger:
             self.logger.get_logger(__name__).info(
@@ -213,7 +213,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         return self.current_state, info
 
     @time_record("step_before_execution")
-    def step_before_execution(self, action: HolonAction) -> Tuple[bool, EnvInfoDict]:
+    def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
         if self.logger:
             self.logger.get_logger(__name__).debug(
@@ -249,9 +249,9 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step_execute(
         self,
         setup_success: bool,
-        all_holon_action_variations: list[Tuple[str, HolonAction]],
+        all_holon_action_variations: list[tuple[str, HolonAction]],
         info: EnvInfoDict,
-    ) -> Tuple[bool, EnvInfoDict]:
+    ) -> tuple[bool, EnvInfoDict]:
         if setup_success:
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
@@ -320,7 +320,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         action: HolonAction,
         info: EnvInfoDict,
         soft: bool = False,
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
         if self.workload.oltp_workload and self.horizon > 1:
             # If horizon = 1, then we're going to reset anyways. So easier to just untar the original archive.
             # Restore the crisp and clean snapshot.
@@ -366,7 +366,7 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def step(  # type: ignore
         self, action: HolonAction
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
         assert self.tuning_mode != TuningMode.REPLAY
         success, info = self.step_before_execution(action)
         success, info = self.step_execute(success, [("PerQuery", action)], info)

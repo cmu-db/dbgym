@@ -62,7 +62,7 @@ class Workload(object):
     def _crunch(
         self,
         all_attributes: AttrTableListMap,
-        sqls: list[Tuple[str, Path, float]],
+        sqls: list[tuple[str, Path, float]],
         pid: Optional[int],
         query_spec: QuerySpec,
     ) -> None:
@@ -356,7 +356,7 @@ class Workload(object):
         workload_qdir: Optional[tuple[Path, Path]] = None,
         blocklist: list[str] = [],
         first: bool = False,
-    ) -> Tuple[int, bool, dict[str, Any]]:
+    ) -> tuple[int, bool, dict[str, Any]]:
         this_execution_workload_timeout = (
             self.workload_timeout
             if not override_workload_timeout
@@ -378,7 +378,7 @@ class Workload(object):
                 ][0],
             )
             ql_knobs = cast(
-                list[Tuple[LatentQuerySpace, QuerySpaceAction]],
+                list[tuple[LatentQuerySpace, QuerySpaceAction]],
                 [
                     [
                         (t, v)
@@ -654,7 +654,7 @@ class Workload(object):
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         update: bool = True,
         first: bool = False,
-    ) -> Tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
+    ) -> tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
         if self.logger:
             self.logger.get_logger(__name__).info("Starting to run benchmark...")

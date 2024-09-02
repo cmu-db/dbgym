@@ -36,7 +36,7 @@ def _time_query(
     connection: psycopg.Connection[Any],
     query: str,
     timeout: float,
-) -> Tuple[float, bool, Any]:
+) -> tuple[float, bool, Any]:
     did_time_out = False
     has_explain = "EXPLAIN" in query
     explain_data = None
@@ -77,7 +77,7 @@ def _acquire_metrics_around_query(
     query: str,
     query_timeout: float = 0.0,
     observation_space: Optional[StateSpace] = None,
-) -> Tuple[float, bool, Any, Any]:
+) -> tuple[float, bool, Any, Any]:
     _force_statement_timeout(connection, 0)
     if observation_space and observation_space.require_metrics():
         initial_metrics = observation_space.construct_online(connection)

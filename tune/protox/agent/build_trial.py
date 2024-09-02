@@ -61,7 +61,7 @@ def _parse_activation_fn(act_type: str) -> type[nn.Module]:
         raise ValueError(f"Unsupported activation type {act_type}")
 
 
-def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
+def _get_signal(signal_folder: Union[str, Path]) -> tuple[int, str]:
     MIN_PORT = 5434
     MAX_PORT = 5500
 
@@ -142,7 +142,7 @@ def _build_utilities(
     tuning_mode: TuningMode,
     pgport: int,
     hpo_params: dict[str, Any],
-) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
+) -> tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
         hpo_params["trace"],
@@ -201,7 +201,7 @@ def _build_actions(
     hpo_params: dict[str, Any],
     workload: Workload,
     logger: Logger,
-) -> Tuple[HolonSpace, LSC]:
+) -> tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
         tables=hpo_params["benchmark_config"]["tables"],
@@ -334,7 +334,7 @@ def _build_env(
     workload: Workload,
     reward_utility: RewardUtility,
     logger: Logger,
-) -> Tuple[TargetResetWrapper, AgentEnv]:
+) -> tuple[TargetResetWrapper, AgentEnv]:
 
     env = gym.make(
         "Postgres-v0",
@@ -538,7 +538,7 @@ def build_trial(
     seed: int,
     hpo_params: dict[str, Any],
     ray_trial_id: Optional[str] = None,
-) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
+) -> tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])

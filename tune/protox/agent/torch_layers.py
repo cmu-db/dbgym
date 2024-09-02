@@ -33,14 +33,14 @@ def init_layer(
 def create_mlp(
     input_dim: int,
     output_dim: int,
-    net_arch: List[int],
+    net_arch: list[int],
     activation_fn: Type[nn.Module] = nn.ReLU,
     squash_output: bool = False,
     with_bias: bool = True,
     weight_init: Optional[str] = None,
     bias_zero: bool = False,
     final_layer_adjust: float = 1.0,
-) -> List[nn.Module]:
+) -> list[nn.Module]:
     """
     Create a multi layer perceptron (MLP), which is
     a collection of fully-connected layers each followed by an activation function.

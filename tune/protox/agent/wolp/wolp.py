@@ -47,12 +47,12 @@ class Wolp(OffPolicyAlgorithm):
         replay_buffer: ReplayBuffer,
         learning_starts: int = 100,
         batch_size: int = 100,
-        train_freq: Tuple[int, str] = (1, "episode"),
+        train_freq: tuple[int, str] = (1, "episode"),
         gradient_steps: int = -1,
         action_noise: Optional[ActionNoise] = None,
         target_action_noise: Optional[ActionNoise] = None,
         seed: Optional[int] = None,
-        neighbor_parameters: Dict[str, Any] = {},
+        neighbor_parameters: dict[str, Any] = {},
         ray_trial_id: Optional[str] = None,
     ):
         super().__init__(
@@ -77,7 +77,7 @@ class Wolp(OffPolicyAlgorithm):
         new_obs: NDArray[np.float32],
         reward: float,
         dones: bool,
-        infos: Dict[str, Any],
+        infos: dict[str, Any],
     ) -> None:
         """
         Store transition in the replay buffer.
@@ -124,7 +124,7 @@ class Wolp(OffPolicyAlgorithm):
         self,
         learning_starts: int,
         action_noise: Optional[ActionNoise] = None,
-    ) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
         """
         Sample an action according to the exploration policy.
         This is either done by sampling the probability distribution of the policy,

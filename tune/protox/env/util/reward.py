@@ -52,7 +52,7 @@ class RewardUtility(object):
 
     def parse_tps_avg_p99_for_metric(
         self, parent: Union[Path, str]
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         files = [f for f in Path(parent).rglob("*.summary.json")]
         assert len(files) == 1
 
@@ -99,7 +99,7 @@ class RewardUtility(object):
         metric: Optional[float] = None,
         update: bool = True,
         did_error: bool = False,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
 
         # TODO: we need to get the memory consumption of indexes. if the index usage
         # exceeds the limit, then kill the reward function. may also want to penalize

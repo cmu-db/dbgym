@@ -199,7 +199,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
     def step(  # type: ignore
         self,
         action: HolonAction,
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
         # Step based on the "global" action.
         assert isinstance(self.unwrapped, PostgresEnv)
         success, info = self.unwrapped.step_before_execution(action)
@@ -331,7 +331,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
         return self.unwrapped.step_post_execute(success, action, info)
 
-    def reset(self, *args: Any, **kwargs: Any) -> Tuple[Any, EnvInfoDict]:  # type: ignore
+    def reset(self, *args: Any, **kwargs: Any) -> tuple[Any, EnvInfoDict]:  # type: ignore
         assert isinstance(self.unwrapped, PostgresEnv)
         # First have to shift to the new state.
         state, info = self.unwrapped.reset(*args, **kwargs)

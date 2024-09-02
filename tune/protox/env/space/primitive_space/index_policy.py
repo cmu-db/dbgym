@@ -42,7 +42,7 @@ class IndexPolicy:
         self.index_space_aux_include = index_space_aux_include
 
     def spaces(self, seed: int) -> Sequence[spaces.Space[Any]]:
-        aux: List[spaces.Space[Any]] = [
+        aux: list[spaces.Space[Any]] = [
             # One-hot encoding for the tables.
             spaces.Discrete(self.num_tables, seed=seed),
             # Ordering. Note that we use the postgres style ordinal notation. 0 is illegal/end-of-index.
@@ -67,7 +67,7 @@ class IndexPolicy:
                 )
             ]
 
-        return cast(List[spaces.Space[Any]], aux_type + aux + aux_include)
+        return cast(list[spaces.Space[Any]], aux_type + aux + aux_include)
 
     def to_action(self, act: IndexSpaceRawSample) -> IndexAction:
         # First index is the index type.

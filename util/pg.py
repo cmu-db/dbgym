@@ -20,7 +20,7 @@ def conn_execute(conn: Connection, sql: str) -> CursorResult[Any]:
     return conn.execute(text(sql))
 
 
-def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> List[str]:
+def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> list[str]:
     with open_and_save(dbgym_cfg, filepath) as f:
         lines: list[str] = []
         for line in f:

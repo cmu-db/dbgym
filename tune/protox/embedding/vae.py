@@ -9,10 +9,10 @@ from pytorch_metric_learning.utils import common_functions as c_f
 
 def gen_vae_collate(
     max_categorical: int, infer: bool = False
-) -> Callable[[list[Any]], Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]]:
+) -> Callable[[list[Any]], Union[tuple[torch.Tensor, torch.Tensor], torch.Tensor]]:
     def vae_collate(
         batch: list[Any],
-    ) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    ) -> Union[tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
         if infer:
             x = torch.as_tensor(batch).type(torch.int64)
         else:
@@ -120,7 +120,7 @@ class VAELoss(losses.BaseMetricLossFunction):  # type: ignore
         embeddings: torch.Tensor,
         labels: Any = None,
         indices_tuple: Any = None,
-        ref_emb: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        ref_emb: Optional[tuple[torch.Tensor, torch.Tensor]] = None,
         ref_labels: Any = None,
         is_eval: bool = False,
     ) -> Any:
@@ -149,7 +149,7 @@ class VAELoss(losses.BaseMetricLossFunction):  # type: ignore
         preds: torch.Tensor,
         unused0: Any,
         unused1: Any,
-        tdata: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        tdata: Optional[tuple[torch.Tensor, torch.Tensor]],
         *args: Any,
         **kwargs: Any
     ) -> Any:
@@ -353,16 +353,16 @@ class VAE(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
-    ) -> Union[Tuple[torch.Tensor, torch.Tensor, bool], Tuple[torch.Tensor, bool]]:
+        bias: Optional[Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]] = None,
+    ) -> Union[tuple[torch.Tensor, torch.Tensor, bool], tuple[torch.Tensor, bool]]:
         return self._compute(x, bias=bias, require_full=True)
 
     def latents(
         self,
         x: torch.Tensor,
-        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
+        bias: Optional[Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]] = None,
         require_full: bool = False,
-    ) -> Tuple[torch.Tensor, bool]:
+    ) -> tuple[torch.Tensor, bool]:
         rets = self._compute(x, bias=bias, require_full=False)
         assert len(rets) == 2
         return rets[0], rets[1]
@@ -370,9 +370,9 @@ class VAE(nn.Module):
     def _compute(
         self,
         x: torch.Tensor,
-        bias: Optional[Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]] = None,
+        bias: Optional[Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]] = None,
         require_full: bool = False,
-    ) -> Union[Tuple[torch.Tensor, torch.Tensor, bool], Tuple[torch.Tensor, bool]]:
+    ) -> Union[tuple[torch.Tensor, torch.Tensor, bool], tuple[torch.Tensor, bool]]:
         latents: torch.Tensor = self.encoder(x)
         latents = latents * self.output_scale
 

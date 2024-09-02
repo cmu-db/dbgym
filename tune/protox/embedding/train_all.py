@@ -46,7 +46,7 @@ from tune.protox.env.types import (
 from tune.protox.env.workload import Workload
 
 
-def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> Tuple[int, int]:
+def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> tuple[int, int]:
     max_indexable = w.max_indexable()
     max_cat_features = max(
         ntables, max_indexable + 1
@@ -59,7 +59,7 @@ def fetch_index_parameters(
     dbgym_cfg: DBGymConfig,
     data: dict[str, Any],
     workload_path: Path,
-) -> Tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
+) -> tuple[int, int, TableAttrListMap, dict[TableColTuple, int]]:
     tables = data["tables"]
     attributes = data["attributes"]
     query_spec = data["query_spec"]
@@ -94,7 +94,7 @@ def load_input_data(
     max_attrs: int,
     require_cost: bool,
     seed: int,
-) -> Tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
+) -> tuple[TensorDataset, Any, Any, Optional[TensorDataset], int]:
     # Load the input data.
     columns = []
     columns += ["tbl_index", "idx_class"]

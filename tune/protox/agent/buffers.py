@@ -12,7 +12,7 @@ class ReplayBufferSamples(NamedTuple):
     next_observations: th.Tensor
     dones: th.Tensor
     rewards: th.Tensor
-    infos: List[dict[str, Any]]
+    infos: list[dict[str, Any]]
 
 
 class ReplayBuffer:
@@ -68,7 +68,7 @@ class ReplayBuffer:
         action: NDArray[np.float32],
         reward: float,
         done: bool,
-        infos: Dict[str, Any],
+        infos: dict[str, Any],
     ) -> None:
         # Reshape to handle multi-dim and discrete action spaces, see GH #970 #1392
         action = action.reshape((self.action_dim))

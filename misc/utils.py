@@ -445,7 +445,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str="r") -> IO
 
 def extract_from_task_run_fordpath(
     dbgym_cfg: DBGymConfig, task_run_fordpath: Path
-) -> Tuple[Path, str, Path, str]:
+) -> tuple[Path, str, Path, str]:
     """
     The task_runs/ folder is organized like task_runs/run_*/[codebase]/[org]/any/path/you/want.
     This function extracts the [codebase] and [org] components

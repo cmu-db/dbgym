@@ -98,7 +98,7 @@ class WolpPolicy(BaseModel):
         embed_actions: th.Tensor,
         actions_dim: th.Tensor,
         env_actions: list[HolonAction],
-    ) -> Tuple[list[HolonAction], th.Tensor]:
+    ) -> tuple[list[HolonAction], th.Tensor]:
         states_tile = states.repeat_interleave(actions_dim, dim=0)
         if use_target:
             next_q_values = th.cat(
@@ -140,7 +140,7 @@ class WolpPolicy(BaseModel):
         action_noise: Optional[Union[ActionNoise, th.Tensor]] = None,
         neighbor_parameters: NeighborParameters = DEFAULT_NEIGHBOR_PARAMETERS,
         random_act: bool = False,
-    ) -> Tuple[list[HolonAction], th.Tensor]:
+    ) -> tuple[list[HolonAction], th.Tensor]:
         # Get the tensor representation.
         start_time = time.time()
         if not isinstance(states, th.Tensor):

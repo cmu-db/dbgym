@@ -32,7 +32,7 @@ class StructureStateSpace(StateSpace, spaces.Dict):
         self.normalize = normalize
 
         if self.normalize:
-            self.internal_spaces: Dict[str, gym.spaces.Space[Any]] = {
+            self.internal_spaces: dict[str, gym.spaces.Space[Any]] = {
                 k: gym.spaces.Box(low=-np.inf, high=np.inf, shape=(s.critic_dim(),))
                 for k, s in action_space.get_spaces()
             }

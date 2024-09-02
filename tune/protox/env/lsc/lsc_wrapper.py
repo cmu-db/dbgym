@@ -14,7 +14,7 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.lsc = lsc
         self.logger = logger
 
-    def reset(self, *args: Any, **kwargs: Any) -> Tuple[Any, dict[str, Any]]:
+    def reset(self, *args: Any, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         state, info = self.env.reset(*args, **kwargs)
         self.lsc.reset()
 
@@ -27,7 +27,7 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
     def step(
         self, *args: Any, **kwargs: Any
-    ) -> Tuple[Any, float, bool, bool, dict[str, Any]]:
+    ) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         state, reward, term, trunc, info = self.env.step(*args, **kwargs)
 
         # Remember the LSC when we considered this action.

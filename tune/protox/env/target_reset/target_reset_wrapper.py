@@ -36,7 +36,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
 
     def step(  # type: ignore
         self, *args: Any, **kwargs: Any
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
         """Steps through the environment, normalizing the rewards returned."""
         obs, rews, terms, truncs, infos = self.env.step(*args, **kwargs)
         query_metric_data = infos.get("query_metric_data", None)
@@ -81,7 +81,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                     ]
         return obs, rews, terms, truncs, infos
 
-    def reset(self, **kwargs: Any) -> Tuple[Any, dict[str, Any]]:
+    def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         if len(self.tracked_states) == 0:
             # First time.
             state, info = self.env.reset(**kwargs)

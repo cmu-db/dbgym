@@ -302,7 +302,7 @@ class PostgresConn:
         self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
-    def psql(self, sql: str) -> Tuple[int, Optional[str]]:
+    def psql(self, sql: str) -> tuple[int, Optional[str]]:
         low_sql = sql.lower()
 
         def cancel_fn(conn_str: str) -> None:

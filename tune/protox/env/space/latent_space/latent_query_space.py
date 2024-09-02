@@ -41,12 +41,12 @@ class LatentQuerySpace(LatentKnobSpace, QuerySpace):
 
     def generate_action_plan(
         self, action: QuerySpaceAction, sc: QuerySpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         return [], []
 
     def generate_delta_action_plan(
         self, action: QuerySpaceAction, sc: QuerySpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         return [], []
 
     def extract_query(self, action: QuerySpaceAction) -> QuerySpaceKnobAction:
