@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 
 class LoadInfoBaseClass:
@@ -15,5 +16,5 @@ class LoadInfoBaseClass:
         raise NotImplemented
 
     # If the subclassing benchmark does not have constraints, you can return None here
-    def get_constraints_fpath(self) -> Path | None:
+    def get_constraints_fpath(self) -> Optional[Path]:
         raise NotImplemented

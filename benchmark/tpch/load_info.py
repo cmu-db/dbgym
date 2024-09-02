@@ -1,3 +1,5 @@
+from pathlib import Path
+from typing import Optional
 from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, get_scale_factor_string
 
@@ -55,11 +57,11 @@ class TpchLoadInfo(LoadInfoBaseClass):
             table_fpath = tables_dpath / f"{table}.tbl"
             self._tables_and_fpaths.append((table, table_fpath))
 
-    def get_schema_fpath(self):
+    def get_schema_fpath(self) -> Path:
         return self._schema_fpath
 
-    def get_tables_and_fpaths(self):
+    def get_tables_and_fpaths(self) -> list[tuple[str, Path]]:
         return self._tables_and_fpaths
 
-    def get_constraints_fpath(self):
+    def get_constraints_fpath(self) -> Optional[Path]:
         return self._constraints_fpath
