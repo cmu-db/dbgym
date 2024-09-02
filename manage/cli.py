@@ -8,10 +8,20 @@ from typing import List, Set
 import click
 import yaml
 
-from misc.utils import DBGymConfig, is_child_path, parent_dpath_of_path
+from misc.utils import DBGymConfig, get_runs_path_from_workspace_path, get_symlinks_path_from_workspace_path, is_child_path, parent_dpath_of_path
 
 task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
+
+
+# This is used in test_clean.py. It's defined here to avoid a circular import.
+class MockDBGymConfig:
+    def __init__(self, scratchspace_path: Path):
+        self.dbgym_workspace_path = scratchspace_path
+        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
+            scratchspace_path
+        )
+        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
 
 
 @click.group(name="manage")
@@ -136,7 +146,7 @@ def _count_files_in_workspace(dbgym_cfg: DBGymConfig) -> int:
     return total_count
 
 
-def clean_workspace(dbgym_cfg: DBGymConfig, mode: str = "safe", verbose=False) -> None:
+def clean_workspace(dbgym_cfg: DBGymConfig | MockDBGymConfig, mode: str = "safe", verbose=False) -> None:
     """
     Clean all [workspace]/task_runs/run_*/ directories that are not referenced by any "active symlinks".
     If mode is "aggressive", "active symlinks" means *only* the symlinks directly in [workspace]/symlinks/.
