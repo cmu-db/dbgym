@@ -9,7 +9,10 @@ import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium.wrappers import FlattenObservation  # type: ignore
-from gymnasium.wrappers import NormalizeObservation, NormalizeReward  # type: ignore[attr-defined]
+from gymnasium.wrappers import (  # type: ignore[attr-defined]
+    NormalizeObservation,
+    NormalizeReward,
+)
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
@@ -433,9 +436,7 @@ def _build_agent(
         policy_weight_adjustment=hpo_params["policy_weight_adjustment"],
     )
 
-    actor_optimizer = Adam(
-        actor.parameters(), lr=hpo_params["learning_rate"]
-    )
+    actor_optimizer = Adam(actor.parameters(), lr=hpo_params["learning_rate"])
 
     critic = ContinuousCritic(
         observation_space=observation_space,

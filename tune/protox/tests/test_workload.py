@@ -1,7 +1,7 @@
 import json
-from typing import Any, Tuple
 import unittest
 from pathlib import Path
+from typing import Any, Tuple
 
 import yaml
 
@@ -46,7 +46,9 @@ class WorkloadTests(unittest.TestCase):
         )
         return w, i
 
-    def diff_classmapping(self, ref: dict[TableColTuple, int], target: dict[TableColTuple, int]) -> None:
+    def diff_classmapping(
+        self, ref: dict[TableColTuple, int], target: dict[TableColTuple, int]
+    ) -> None:
         for k, v in ref.items():
             self.assertTrue(k in target, msg=f"{k} is missing.")
             self.assertTrue(v == target[k])

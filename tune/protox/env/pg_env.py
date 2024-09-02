@@ -304,10 +304,12 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results_dpath": results_dpath,
-                    "actions_info": ActionsInfo({
-                        "all_holon_action_variations": all_holon_action_variations,
-                        "best_observed_holon_action": None
-                    }),
+                    "actions_info": ActionsInfo(
+                        {
+                            "all_holon_action_variations": all_holon_action_variations,
+                            "best_observed_holon_action": None,
+                        }
+                    ),
                 }
             )
         )

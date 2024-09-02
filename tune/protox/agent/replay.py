@@ -6,10 +6,10 @@ Additionally, the original tuning run may have been accelerated by Boot, whereas
     replayed tuning run is not.
 """
 
-from datetime import datetime
 import json
 import logging
 import pickle
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional, Set, cast
 
@@ -249,7 +249,9 @@ def replay_tuning_run(
                 num_lines += 1
 
     # A convenience wrapper around execute_workload() which fills in the arguments properly and processes the return values.
-    def _execute_workload_wrapper(actions_info: ActionsInfo) -> tuple[int, int, bool, float]:
+    def _execute_workload_wrapper(
+        actions_info: ActionsInfo,
+    ) -> tuple[int, int, bool, float]:
         logging.info(
             f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n"
         )

@@ -25,7 +25,7 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             ret = f(*args, **kwargs)
 
             # TODO(wz2): This is a hack to get a logger instance.
-            first_arg = args[0] # Ignore the indexing type error
+            first_arg = args[0]  # Ignore the indexing type error
             assert hasattr(first_arg, "logger"), print(first_arg, type(first_arg))
 
             if first_arg.logger is None:

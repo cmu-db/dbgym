@@ -4,7 +4,7 @@ import subprocess
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import IO, Any, Callable, Tuple, Optional
+from typing import IO, Any, Callable, Optional, Tuple
 
 import redis
 import yaml
@@ -257,7 +257,7 @@ class DBGymConfig:
             cur_path = cur_path / dir
         return cur_path
 
-    def cur_symlinks_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_symlinks_path(self, *dirs: str, mkdir: bool = False) -> Path:
         flattened_structure = "_".join(self.cur_path_list)
         cur_path = self.dbgym_symlinks_path / flattened_structure
         for dir in dirs:
@@ -266,7 +266,7 @@ class DBGymConfig:
             cur_path.mkdir(parents=True, exist_ok=True)
         return cur_path
 
-    def cur_task_runs_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_task_runs_path(self, *dirs: str, mkdir: bool = False) -> Path:
         flattened_structure = "_".join(self.cur_path_list)
         cur_path = self.dbgym_this_run_path / flattened_structure
         for dir in dirs:
@@ -275,22 +275,22 @@ class DBGymConfig:
             cur_path.mkdir(parents=True, exist_ok=True)
         return cur_path
 
-    def cur_symlinks_bin_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_symlinks_bin_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("bin", *dirs, mkdir=mkdir)
 
-    def cur_symlinks_build_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_symlinks_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("build", *dirs, mkdir=mkdir)
 
-    def cur_symlinks_data_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_symlinks_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("data", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_build_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_task_runs_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("build", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_data_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_task_runs_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_artifacts_path(self, *dirs: str, mkdir: bool=False) -> Path:
+    def cur_task_runs_artifacts_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
@@ -405,7 +405,7 @@ def is_child_path(child_path: os.PathLike[str], parent_dpath: os.PathLike[str]) 
         )
 
 
-def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str="r") -> IO[Any]:
+def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> IO[Any]:
     """
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
@@ -541,7 +541,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
 def link_result(
-    dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: Optional[str] = None
+    dbgym_cfg: DBGymConfig,
+    result_fordpath: Path,
+    custom_result_name: Optional[str] = None,
 ) -> Path:
     """
     result_fordpath must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path.

@@ -163,7 +163,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.logger = logger
 
     def _update_best_observed(
-        self, query_metric_data: dict[str, BestQueryRun], force_overwrite: bool=False
+        self, query_metric_data: dict[str, BestQueryRun], force_overwrite: bool = False
     ) -> None:
         if query_metric_data is not None:
             for qid, best_run in query_metric_data.items():

@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Optional
+
 from dbms.load_info_base_class import LoadInfoBaseClass
 from misc.utils import DBGymConfig, get_scale_factor_string
 

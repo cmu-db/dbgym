@@ -72,7 +72,7 @@ class EmbeddingSelectArgs:
         idx_limit: int,
         num_curate: int,
         allow_all: bool,
-        flatten_idx: int
+        flatten_idx: int,
     ) -> None:
         self.recon = recon
         self.latent_dim = latent_dim

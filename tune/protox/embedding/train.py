@@ -41,10 +41,7 @@ from tune.protox.embedding.train_args import (
 @click.pass_obj
 
 # generic args
-@click.argument(
-    "benchmark-name",
-    type=str
-)
+@click.argument("benchmark-name", type=str)
 @click.option(
     "--seed-start",
     type=int,
@@ -107,19 +104,11 @@ from tune.protox.embedding.train_args import (
     default=40,
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train embedding models with.",
 )
-@click.option(
-    "--train-size",
-    type=float,
-    default=0.99,
-    help=f"TODO(wz2)"
-)
+@click.option("--train-size", type=float, default=0.99, help=f"TODO(wz2)")
 
 # analyze args
 @click.option(
-    "--start-epoch",
-    type=int,
-    default=0,
-    help="The epoch to start analyzing models at."
+    "--start-epoch", type=int, default=0, help="The epoch to start analyzing models at."
 )
 @click.option(
     "--batch-size",
@@ -178,21 +167,12 @@ from tune.protox.embedding.train_args import (
     help="The number of indexes whose errors to compute during _attach().",
 )
 @click.option(
-    "--num-curate",
-    type=int,
-    default=1,
-    help="The number of models to curate"
+    "--num-curate", type=int, default=1, help="The number of models to curate"
 )  # TODO(wz2): why would we want to curate more than one?
 @click.option(
-    "--allow-all",
-    is_flag=True,
-    help="Whether to curate within or across parts."
+    "--allow-all", is_flag=True, help="Whether to curate within or across parts."
 )
-@click.option("--flatten-idx",
-    type=int,
-    default=0,
-    help="TODO(wz2)"
-)
+@click.option("--flatten-idx", type=int, default=0, help="TODO(wz2)")
 def train(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,

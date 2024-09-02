@@ -187,7 +187,7 @@ class AgentHPOArgs:
     "--agent",
     type=str,
     default="wolp",
-    help=f"The RL algorithm to use for the tuning agent."
+    help=f"The RL algorithm to use for the tuning agent.",
 )
 @click.option(
     "--max-concurrent",
@@ -659,6 +659,8 @@ class TuneTrial:
 #   https://discuss.ray.io/t/using-static-variables-to-control-trainable-subclass-in-ray-tune/808/4)
 # If you don't create the class with a function, it doesn't work due to how Ray serializes classes
 global_dbgym_cfg: DBGymConfig
+
+
 def create_tune_opt_class(dbgym_cfg_param: DBGymConfig) -> Type[Trainable]:
     global global_dbgym_cfg
     global_dbgym_cfg = dbgym_cfg_param

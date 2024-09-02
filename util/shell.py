@@ -1,14 +1,19 @@
 import logging
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 shell_util_logger = logging.getLogger("shell_util")
 shell_util_logger.setLevel(logging.INFO)
 
 
-def subprocess_run(c: str, cwd: Optional[Path]=None, check_returncode: bool=True, verbose: bool=True) -> subprocess.Popen[str]:
+def subprocess_run(
+    c: str,
+    cwd: Optional[Path] = None,
+    check_returncode: bool = True,
+    verbose: bool = True,
+) -> subprocess.Popen[str]:
     cwd_msg = f"(cwd: {cwd if cwd is not None else os.getcwd()})"
 
     if verbose:

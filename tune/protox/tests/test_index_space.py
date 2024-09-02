@@ -13,11 +13,11 @@ from tune.protox.env.workload import Workload
 class IndexSpaceTests(unittest.TestCase):
     @staticmethod
     def load(
-        config_path: Path=Path(
+        config_path: Path = Path(
             "tune/protox/tests/unittest_benchmark_configs/unittest_tpch.yaml"
         ).resolve(),
-        aux_type: bool=True,
-        aux_include: bool=True,
+        aux_type: bool = True,
+        aux_include: bool = True,
     ) -> tuple[Workload, IndexSpace]:
         # don't call open_and_save() because this is a unittest
         with open(config_path, "r") as f:
@@ -86,7 +86,9 @@ class IndexSpaceTests(unittest.TestCase):
         _, isa = IndexSpaceTests.load(aux_type=False, aux_include=False)
 
         act = isa.sample(mask={"table_idx": 2, "col_idx": 1})
-        act = IndexSpaceRawSample(tuple([0, *act, np.zeros(i.max_inc_columns, dtype=np.float32)]))
+        act = IndexSpaceRawSample(
+            tuple([0, *act, np.zeros(i.max_inc_columns, dtype=np.float32)])
+        )
         self.assertTrue(check_subspace(i, act))
 
         neighbors = i.policy.structural_neighbors(act)

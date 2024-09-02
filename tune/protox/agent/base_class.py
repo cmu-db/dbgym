@@ -76,7 +76,9 @@ class BaseAlgorithm(ABC):
         return total_timesteps
 
     @abstractmethod
-    def learn(self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode) -> None:
+    def learn(
+        self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode
+    ) -> None:
         """
         Return a trained model.
 
