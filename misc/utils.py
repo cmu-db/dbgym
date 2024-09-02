@@ -163,7 +163,7 @@ default_pgbin_path: Callable[[Path], Path] = (
     / "postgres"
     / "bin"
 )
-default_tuning_steps_dpath = (
+default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
     lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
         workspace_path
     )

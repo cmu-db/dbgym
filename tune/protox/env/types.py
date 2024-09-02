@@ -166,6 +166,11 @@ class QuerySpec(TypedDict, total=False):
     tbl_fold_iterations: int
 
 
+class ActionsInfo(TypedDict):
+    all_holon_action_variations: list[Tuple[str, HolonAction]]
+    best_observed_holon_action: HolonAction
+
+
 class EnvInfoDict(TypedDict, total=False):
     # Original baseline metric.
     baseline_metric: float
@@ -193,8 +198,8 @@ class EnvInfoDict(TypedDict, total=False):
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
     # Information about the actions that were executed this step.
-    # The actions are in a format usable by replay. (TODO(phw2))
-    actions_info: Tuple["KnobSpaceAction", "IndexAction", "QuerySpaceAction"]
+    # The actions are in a format usable by replay.
+    actions_info: Optional[ActionsInfo]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction
 

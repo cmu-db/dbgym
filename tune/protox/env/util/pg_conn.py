@@ -358,7 +358,7 @@ class PostgresConn:
         self.disconnect()
         return 0, None
 
-    def restore_pristine_snapshot(self):
+    def restore_pristine_snapshot(self) -> None:
         self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
 
     def restore_checkpointed_snapshot(self):
