@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, TypeVar, Union
 
 import numpy as np
 from plumbum import local
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 from typing_extensions import ParamSpec
 
 from misc.utils import DBGymConfig
@@ -25,7 +25,7 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             ret = f(*args, **kwargs)
 
             # TODO(wz2): This is a hack to get a logger instance.
-            first_arg = args[0] # type: ignore[index]  # Ignore the indexing type error
+            first_arg = args[0] # Ignore the indexing type error
             assert hasattr(first_arg, "logger"), print(first_arg, type(first_arg))
 
             if first_arg.logger is None:
@@ -82,7 +82,7 @@ class Logger(object):
         self.writer: Union[SummaryWriter, None] = None
         if self.trace:
             self.tensorboard_dpath.mkdir(parents=True, exist_ok=True)
-            self.writer = SummaryWriter(self.tensorboard_dpath)
+            self.writer = SummaryWriter(self.tensorboard_dpath)  # type: ignore[no-untyped-call]
 
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}
@@ -145,14 +145,14 @@ class Logger(object):
         for key, value in self.iteration_data.items():
             if isinstance(value, str):
                 # str is considered a np.ScalarType
-                self.writer.add_text(key, value, self.iteration)
+                self.writer.add_text(key, value, self.iteration)  # type: ignore[no-untyped-call]
             else:
-                self.writer.add_scalar(key, value, self.iteration)
+                self.writer.add_scalar(key, value, self.iteration)  # type: ignore[no-untyped-call]
 
         del self.iteration_data
         self.iteration_data = {}
         self.iteration += 1
-        self.writer.flush()
+        self.writer.flush()  # type: ignore[no-untyped-call]
 
     def record(self, key: str, value: Any) -> None:
         stack = inspect.stack(context=2)
@@ -169,4 +169,4 @@ class Logger(object):
         if self.trace:
             assert self.writer
             self.advance()
-            self.writer.flush()
+            self.writer.flush()  # type: ignore[no-untyped-call]
