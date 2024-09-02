@@ -1,9 +1,8 @@
-from enum import Enum, unique
 from typing import Iterator, Optional, Tuple
 
-import pglast  # type: ignore
+import pglast
 from pglast import stream
-from pglast.visitors import Continue, Visitor  # type: ignore
+from pglast.visitors import Continue, Visitor
 
 from tune.protox.env.types import (
     AttrTableListMap,
