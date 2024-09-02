@@ -6,6 +6,7 @@ from typing import Any, Optional
 import numpy as np
 from numpy.typing import NDArray
 
+from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.env.logger import Logger
@@ -75,7 +76,7 @@ class BaseAlgorithm(ABC):
         return total_timesteps
 
     @abstractmethod
-    def learn(self, env: AgentEnv, total_timesteps: int) -> None:
+    def learn(self, env: AgentEnv, total_timesteps: int, tuning_mode: TuningMode) -> None:
         """
         Return a trained model.
 
