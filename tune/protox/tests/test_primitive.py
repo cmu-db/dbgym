@@ -7,7 +7,7 @@ from tune.protox.env.space.primitive.latent_knob import LatentKnob
 
 class PrimitivesTests(unittest.TestCase):
 
-    def test_linear_knob(self):
+    def test_linear_knob(self) -> None:
         k = Knob(
             table_name=None,
             query_name="q",
@@ -30,7 +30,7 @@ class PrimitivesTests(unittest.TestCase):
         self.assertEqual(k.project_scraped_setting(0.58), 0.5)
         self.assertEqual(round(k.project_scraped_setting(0.62), 2), 0.6)
 
-    def test_log_knob(self):
+    def test_log_knob(self) -> None:
         k = Knob(
             table_name=None,
             query_name="q",
@@ -53,7 +53,7 @@ class PrimitivesTests(unittest.TestCase):
         self.assertEqual(k.project_scraped_setting(24), 32.0)
         self.assertEqual(k.project_scraped_setting(1024), 1024.0)
 
-    def test_latent_knob(self):
+    def test_latent_knob(self) -> None:
         k = LatentKnob(
             table_name=None,
             query_name="q",
@@ -85,7 +85,7 @@ class PrimitivesTests(unittest.TestCase):
         self.assertEqual(k.shift_offset(0.5, 1), 0.6)
         self.assertEqual(k.shift_offset(0.5, -2), 0.3)
 
-    def test_ia(self):
+    def test_ia(self) -> None:
         ia1 = IndexAction(
             idx_type="btree",
             tbl="tbl",
@@ -95,7 +95,7 @@ class PrimitivesTests(unittest.TestCase):
             raw_repr=None,
             bias=0.0,
         )
-        IndexAction.index_counter = 0
+        IndexAction.index_name_counter = 0
         self.assertEqual(
             ia1.sql(add=True),
             "CREATE INDEX  index0 ON tbl USING btree (a,b,c) INCLUDE (d,e)",

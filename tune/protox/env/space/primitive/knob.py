@@ -44,7 +44,7 @@ class KnobMetadata(TypedDict, total=False):
     type: str
     min: float
     max: float
-    quantize: bool
+    quantize: int
     log_scale: int
     unit: int
     values: list[str]
