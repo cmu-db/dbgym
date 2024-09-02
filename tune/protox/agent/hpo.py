@@ -559,7 +559,7 @@ class TuneTrial:
         # Attach mythril directory to the search path.
         sys.path.append(os.path.expanduser(self.dbgym_cfg.dbgym_repo_path))
 
-        torch.set_default_dtype(torch.float32)
+        torch.set_default_dtype(torch.float32)  # type: ignore[no-untyped-call]
         seed = (
             hpo_params["seed"]
             if hpo_params["seed"] != -1
@@ -648,7 +648,7 @@ class TuneTrial:
 
     def cleanup(self) -> None:
         self.logger.flush()
-        self.env.close()
+        self.env.close()  # type: ignore[no-untyped-call]
         if Path(self.signal).exists():
             os.remove(self.signal)
 
@@ -663,7 +663,7 @@ def create_tune_opt_class(dbgym_cfg_param: DBGymConfig) -> Type[Trainable]:
     global global_dbgym_cfg
     global_dbgym_cfg = dbgym_cfg_param
 
-    class TuneOpt(Trainable):  # type: ignore
+    class TuneOpt(Trainable):
         dbgym_cfg = global_dbgym_cfg
 
         def setup(self, hpo_params: dict[str, Any]) -> None:
@@ -750,7 +750,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     )
 
     # Scheduler.
-    scheduler = FIFOScheduler()
+    scheduler = FIFOScheduler()  # type: ignore[no-untyped-call]
 
     # Search.
     search = BasicVariantGenerator(max_concurrent=hpo_args.max_concurrent)
@@ -773,7 +773,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
-        storage_path=dbgym_cfg.cur_task_runs_path("hpo_ray_results", mkdir=True),
+        storage_path=str(dbgym_cfg.cur_task_runs_path("hpo_ray_results", mkdir=True)),
     )
 
     tuner = ray.tune.Tuner(
