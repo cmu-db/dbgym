@@ -6,8 +6,10 @@ import gymnasium as gym
 import numpy as np
 from numpy.typing import NDArray
 
+from tune.protox.env.pg_env import PostgresEnv
 
-class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
+
+class AgentEnv(gym.Wrapper[PostgresEnv, Any, Any, Any]):
     def __init__(self, env: gym.Env[Any, Any]):
         super().__init__(env)
         self.class_attributes = dict(inspect.getmembers(self.__class__))

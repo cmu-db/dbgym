@@ -26,7 +26,7 @@ google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
 greenlet==3.0.3
 grpcio==1.60.0
-gymnasium==0.28.1
+gymnasium==0.29.1
 h5py==3.10.0
 hyperopt==0.2.7
 idna==3.6
@@ -119,6 +119,7 @@ tomli==2.0.1
 torch==2.4.0
 tqdm==4.66.1
 triton==3.0.0
+types-python-dateutil==2.9.0.20240821
 types-pytz==2024.1.0.20240417
 types-PyYAML==6.0.12.20240808
 typing_extensions==4.9.0

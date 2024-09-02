@@ -11,7 +11,7 @@ import json
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Optional, Set
+from typing import Any, Optional, Set, cast
 
 import click
 import pandas as pd
@@ -233,8 +233,8 @@ def replay_tuning_run(
     _, _, agent_env, _, _ = build_trial(
         dbgym_cfg, TuningMode.REPLAY, hpo_params["seed"], hpo_params
     )
-    pg_env: PostgresEnv = agent_env.unwrapped
-    action_space: HolonSpace = pg_env.action_space
+    pg_env: PostgresEnv = cast(PostgresEnv, agent_env.unwrapped)
+    action_space: HolonSpace = cast(HolonSpace, pg_env.action_space)
 
     # Reset things.
     if not replay_args.simulated:
