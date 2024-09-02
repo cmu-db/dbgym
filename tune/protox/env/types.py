@@ -190,9 +190,9 @@ class EnvInfoDict(TypedDict, total=False):
     attempted_changes: Tuple[list[str], list[str]]
 
     # Metric of this step.
-    metric: float
+    metric: Optional[float]
     # Reward of this step.
-    reward: float
+    reward: Optional[float]
     # Whether any queries timed out or the workload as a whole timed out.
     did_anything_time_out: bool
     # Query metric data.

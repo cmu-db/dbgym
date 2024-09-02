@@ -163,7 +163,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.logger = logger
 
     def _update_best_observed(
-        self, query_metric_data: dict[str, BestQueryRun], force_overwrite=False
+        self, query_metric_data: dict[str, BestQueryRun], force_overwrite: bool=False
     ) -> None:
         if query_metric_data is not None:
             for qid, best_run in query_metric_data.items():
@@ -176,6 +176,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                         None,
                     )
                     if self.logger:
+                        assert best_run.runtime is not None
                         self.logger.get_logger(__name__).debug(
                             f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})"
                         )
@@ -307,6 +308,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
         # Execute.
+        assert self.logger is not None
         self.logger.get_logger(__name__).info("MQOWrapper called step_execute()")
         success, info = self.unwrapped.step_execute(success, runs, info)
         if info["query_metric_data"]:
@@ -319,6 +321,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         with torch.no_grad():
             # Pass the mutilated action back through.
             assert isinstance(self.action_space, HolonSpace)
+            assert info["actions_info"] is not None
             info["actions_info"][
                 "best_observed_holon_action"
             ] = best_observed_holon_action
@@ -412,6 +415,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
             # Update the reward baseline.
             if self.unwrapped.reward_utility:
+                assert self.unwrapped.baseline_metric
                 self.unwrapped.reward_utility.set_relative_baseline(
                     self.unwrapped.baseline_metric,
                     prev_result=metric,
