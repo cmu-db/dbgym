@@ -551,7 +551,7 @@ class TuneTrial:
             ), "If we're doing HPO, we will create multiple TuneTrial() objects. We thus need to differentiate them somehow."
         else:
             assert (
-                ray_trial_id == None
+                ray_trial_id is None
             ), "If we're not doing HPO, we (currently) will create only one TuneTrial() object. For clarity, we set ray_trial_id to None since ray_trial_id should not be used in this case."
         self.ray_trial_id = ray_trial_id
 

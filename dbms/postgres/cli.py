@@ -99,9 +99,9 @@ def postgres_dbdata(
     dbdata_parent_dpath: Path,
 ):
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    if pgbin_path == None:
+    if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
-    if dbdata_parent_dpath == None:
+    if dbdata_parent_dpath is None:
         dbdata_parent_dpath = default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )

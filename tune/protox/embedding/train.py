@@ -12,6 +12,7 @@ from misc.utils import (
     DEFAULT_HPO_SPACE_PATH,
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
     conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_traindata_path,
@@ -40,7 +41,10 @@ from tune.protox.embedding.train_args import (
 @click.pass_obj
 
 # generic args
-@click.argument("benchmark-name", type=str)
+@click.argument(
+    "benchmark-name",
+    type=str
+)
 @click.option(
     "--seed-start",
     type=int,
@@ -190,34 +194,34 @@ from tune.protox.embedding.train_args import (
     help="TODO(wz2)"
 )
 def train(
-    dbgym_cfg,
-    benchmark_name,
-    seed_start,
-    seed_end,
-    query_subset,
-    scale_factor,
-    benchmark_config_path,
-    traindata_path,
-    seed,
-    hpo_space_path,
-    train_max_concurrent,
-    iterations_per_epoch,
-    num_samples,
-    train_size,
-    start_epoch,
-    batch_size,
-    num_batches,
-    max_segments,
-    num_points_to_sample,
-    num_classes_to_keep,
-    recon,
-    latent_dim,
-    bias_sep,
-    idx_limit,
-    num_curate,
-    allow_all,
-    flatten_idx,
-):
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    seed_start: int,
+    seed_end: int,
+    query_subset: str,
+    scale_factor: float,
+    benchmark_config_path: Optional[Path],
+    traindata_path: Optional[Path],
+    seed: Optional[int],
+    hpo_space_path: Path,
+    train_max_concurrent: int,
+    iterations_per_epoch: int,
+    num_samples: int,
+    train_size: int,
+    start_epoch: int,
+    batch_size: int,
+    num_batches: int,
+    max_segments: int,
+    num_points_to_sample: int,
+    num_classes_to_keep: int,
+    recon: float,
+    latent_dim: int,
+    bias_sep: float,
+    idx_limit: int,
+    num_curate: int,
+    allow_all: bool,
+    flatten_idx: int,
+) -> None:
     """
     Trains embeddings with num_samples samples of the hyperparameter space.
     Analyzes the accuracy of all epochs of all hyperparameter space samples.
@@ -225,16 +229,16 @@ def train(
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
-    if traindata_path == None:
+    if traindata_path is None:
         traindata_path = default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
-    if benchmark_config_path == None:
+    if benchmark_config_path is None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
-    if seed == None:
-        seed = random.randint(0, 1e8)
+    if seed is None:
+        seed = random.randint(0, int(1e8))
 
     # Convert all input paths to absolute paths
     benchmark_config_path = conv_inputpath_to_realabspath(

@@ -201,25 +201,25 @@ def datagen(
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
-    if benchmark_config_path == None:
+    if benchmark_config_path is None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
-    if workload_path == None:
+    if workload_path is None:
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
-    if pgbin_path == None:
+    if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
-    if pristine_dbdata_snapshot_path == None:
+    if pristine_dbdata_snapshot_path is None:
         pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
-    if dbdata_parent_dpath == None:
+    if dbdata_parent_dpath is None:
         dbdata_parent_dpath = default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
-    if max_concurrent == None:
+    if max_concurrent is None:
         max_concurrent = os.cpu_count()
-    if seed == None:
+    if seed is None:
         seed = random.randint(0, 1e8)
 
     # Convert all input paths to absolute paths
@@ -246,10 +246,10 @@ def datagen(
         assert False
 
     # Process the "data structure" args
-    leading_col_tbls = [] if leading_col_tbls == None else leading_col_tbls.split(",")
+    leading_col_tbls = [] if leading_col_tbls is None else leading_col_tbls.split(",")
     # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
     # I felt this was better than introducing a new delimiter which might conflict with the name of a table
-    if override_sample_limits == None:
+    if override_sample_limits is None:
         override_sample_limits = dict()
     else:
         override_sample_limits_str = override_sample_limits
