@@ -153,12 +153,12 @@ class TargetResetConfig(TypedDict, total=False):
 class QuerySpec(TypedDict, total=False):
     benchbase: bool
     oltp_workload: bool
-    query_transactional: Union[str, Path]
-    query_directory: Union[str, Path]
-    query_order: Union[str, Path]
+    query_transactional: Path
+    query_directory: Path
+    query_order: Path
 
-    execute_query_directory: Union[str, Path]
-    execute_query_order: Union[str, Path]
+    execute_query_directory: Path
+    execute_query_order: Path
 
     tbl_include_subsets_prune: bool
     tbl_fold_subsets: bool
