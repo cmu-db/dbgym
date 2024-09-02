@@ -272,7 +272,7 @@ class PostgresConn:
         mu_hyp_opt: float,
         mu_hyp_time: int,
         mu_hyp_stdev: float,
-    ):
+    ) -> None:
         """
         Sets up Boot on the currently running Postgres instances.
         Uses instance vars of PostgresConn for configuration.
