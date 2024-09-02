@@ -1,7 +1,5 @@
 import glob
 import json
-import os
-import shutil
 import socket
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -11,8 +9,9 @@ import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium.wrappers import FlattenObservation  # type: ignore
-from gymnasium.wrappers import NormalizeObservation, NormalizeReward
+from gymnasium.wrappers import NormalizeObservation, NormalizeReward  # type: ignore[attr-defined]
 from torch import nn
+from torch.optim import Adam  # type: ignore[attr-defined]
 
 from misc.utils import (
     DBGymConfig,
@@ -85,7 +84,7 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 continue
 
-            with open(f"{signal_folder}/{port}.signal", "w") as f:  # type: IO[Any]
+            with open(f"{signal_folder}/{port}.signal", "w") as f:
                 f.write(str(port))
                 f.close()
 
@@ -434,7 +433,7 @@ def _build_agent(
         policy_weight_adjustment=hpo_params["policy_weight_adjustment"],
     )
 
-    actor_optimizer = torch.optim.Adam(
+    actor_optimizer = Adam(
         actor.parameters(), lr=hpo_params["learning_rate"]
     )
 
@@ -462,7 +461,7 @@ def _build_agent(
         action_dim=critic_action_dim,
     )
 
-    critic_optimizer = torch.optim.Adam(
+    critic_optimizer = Adam(
         critic.parameters(),
         lr=hpo_params["learning_rate"] * hpo_params["critic_lr_scale"],
     )
