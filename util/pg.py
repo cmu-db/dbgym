@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 import pglast
 import psycopg
@@ -16,7 +16,7 @@ DEFAULT_POSTGRES_PORT = 5432
 SHARED_PRELOAD_LIBRARIES = "boot,pg_hint_plan,pg_prewarm"
 
 
-def conn_execute(conn: Connection, sql: str) -> CursorResult:
+def conn_execute(conn: Connection, sql: str) -> CursorResult[Any]:
     return conn.execute(text(sql))
 
 
@@ -29,8 +29,9 @@ def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> List[str]:
             if len(line.strip()) == 0:
                 continue
             lines.append(line)
-        queries = "".join(lines)
-        return pglast.split(queries)
+        queries_str = "".join(lines)
+        queries: list[str] = pglast.split(queries_str)
+        return queries
 
 
 def sql_file_execute(dbgym_cfg: DBGymConfig, conn: Connection, filepath: Path) -> None:
@@ -40,7 +41,7 @@ def sql_file_execute(dbgym_cfg: DBGymConfig, conn: Connection, filepath: Path) -
 
 # The reason pgport is an argument is because when doing agnet HPO, we want to run multiple instances of Postgres
 #   at the same time. In this situation, they need to have different ports
-def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
+def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg: bool=True) -> str:
     connstr_suffix = f"{DBGYM_POSTGRES_USER}:{DBGYM_POSTGRES_PASS}@localhost:{pgport}/{DBGYM_POSTGRES_DBNAME}"
     # use_psycopg means whether or not we use the psycopg.connect() function
     # counterintuively, you *don't* need psycopg in the connection string if you *are*
@@ -49,12 +50,14 @@ def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg=True) -> str:
     return connstr_prefix + "://" + connstr_suffix
 
 
-def create_conn(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg=True) -> Connection:
+def create_conn(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg: bool=True) -> Connection:
     connstr = get_connstr(use_psycopg=use_psycopg, pgport=pgport)
     if use_psycopg:
-        return psycopg.connect(connstr, autocommit=True, prepare_threshold=None)
+        psycopg_conn = psycopg.connect(connstr, autocommit=True, prepare_threshold=None)
+        engine = create_engine(connstr, creator=lambda : psycopg_conn)
+        return engine.connect()
     else:
-        engine: Engine = create_engine(
+        engine = create_engine(
             connstr,
             execution_options={"isolation_level": "AUTOCOMMIT"},
         )
