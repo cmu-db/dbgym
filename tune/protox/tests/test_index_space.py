@@ -6,18 +6,19 @@ import yaml
 
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace
+from tune.protox.env.types import IndexSpaceRawSample
 from tune.protox.env.workload import Workload
 
 
 class IndexSpaceTests(unittest.TestCase):
     @staticmethod
     def load(
-        config_path=Path(
+        config_path: Path=Path(
             "tune/protox/tests/unittest_benchmark_configs/unittest_tpch.yaml"
         ).resolve(),
-        aux_type=True,
-        aux_include=True,
-    ):
+        aux_type: bool=True,
+        aux_include: bool=True,
+    ) -> tuple[Workload, IndexSpace]:
         # don't call open_and_save() because this is a unittest
         with open(config_path, "r") as f:
             benchmark_config = yaml.safe_load(f)
@@ -51,7 +52,7 @@ class IndexSpaceTests(unittest.TestCase):
         )
         return w, i
 
-    def test_null_action(self):
+    def test_null_action(self) -> None:
         w, i = IndexSpaceTests.load()
         null_action = i.null_action()
         self.assertTrue(check_subspace(i, null_action))
@@ -60,19 +61,19 @@ class IndexSpaceTests(unittest.TestCase):
         null_action = i.null_action()
         self.assertTrue(check_subspace(i, null_action))
 
-    def test_sample(self):
+    def test_sample(self) -> None:
         w, i = IndexSpaceTests.load(aux_type=False, aux_include=False)
         for _ in range(100):
             self.assertTrue(check_subspace(i, i.sample()))
 
-    def test_sample_table(self):
+    def test_sample_table(self) -> None:
         w, i = IndexSpaceTests.load(aux_type=False, aux_include=False)
         for _ in range(100):
             mask = {"table_idx": 2}
             ia = i.to_action(i.sample(mask))
             self.assertEqual(ia.tbl_name, "lineitem")
 
-    def test_sample_table_col(self):
+    def test_sample_table_col(self) -> None:
         w, i = IndexSpaceTests.load(aux_type=False, aux_include=False)
         for _ in range(100):
             mask = {"table_idx": 2, "col_idx": 1}
@@ -80,12 +81,12 @@ class IndexSpaceTests(unittest.TestCase):
             self.assertEqual(ia.tbl_name, "lineitem")
             self.assertEqual(ia.columns[0], "l_partkey")
 
-    def test_neighborhood(self):
+    def test_neighborhood(self) -> None:
         w, i = IndexSpaceTests.load(aux_type=True, aux_include=True)
         _, isa = IndexSpaceTests.load(aux_type=False, aux_include=False)
 
         act = isa.sample(mask={"table_idx": 2, "col_idx": 1})
-        act = (0, *act, np.zeros(i.max_inc_columns, dtype=np.float32))
+        act = IndexSpaceRawSample(tuple([0, *act, np.zeros(i.max_inc_columns, dtype=np.float32)]))
         self.assertTrue(check_subspace(i, act))
 
         neighbors = i.policy.structural_neighbors(act)

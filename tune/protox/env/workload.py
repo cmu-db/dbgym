@@ -57,7 +57,7 @@ class Workload(object):
         # why we assert here
         # I still chose to make mode an argument just to make the interface identical to open()/open_and_save()
         assert mode == "r"
-        if self.dbgym_cfg != None:
+        if self.dbgym_cfg is not None:
             return open_and_save(self.dbgym_cfg, path)
         else:
             return open(path)
@@ -162,7 +162,7 @@ class Workload(object):
         )
 
         if do_tbl_include_subsets_prune:
-            self.tbl_include_subsets = {}
+            self.tbl_include_subsets = TableAttrAccessSetsMap({})
             # First prune any "fully enclosed".
             for tbl, attrsets in tbl_include_subsets.items():
                 self.tbl_include_subsets[tbl] = set(
@@ -217,7 +217,8 @@ class Workload(object):
 
     def __init__(
         self,
-        dbgym_cfg: DBGymConfig,
+        # dbgym_cfg is only optional so we can set it to None for unittests. Don't set it to None during normal operation.
+        dbgym_cfg: Optional[DBGymConfig],
         tables: list[str],
         attributes: TableAttrListMap,
         query_spec: QuerySpec,
