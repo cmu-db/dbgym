@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
-from sqlalchemy import Connection
+import sqlalchemy
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
@@ -36,9 +36,9 @@ from util.pg import (
     DEFAULT_POSTGRES_DBNAME,
     DEFAULT_POSTGRES_PORT,
     SHARED_PRELOAD_LIBRARIES,
-    conn_execute,
-    create_conn,
+    create_sqlalchemy_conn,
     sql_file_execute,
+    sqlalchemy_conn_execute,
 )
 from util.shell import subprocess_run
 
@@ -249,7 +249,7 @@ def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:
 def _load_benchmark_into_dbdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ) -> None:
-    with create_conn(use_psycopg=False) as conn:
+    with create_sqlalchemy_conn() as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
         else:
@@ -261,13 +261,13 @@ def _load_benchmark_into_dbdata(
 
 
 def _load_into_dbdata(
-    dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass
+    dbgym_cfg: DBGymConfig, conn: sqlalchemy.Connection, load_info: LoadInfoBaseClass
 ) -> None:
     sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
 
     # truncate all tables first before even loading a single one
     for table, _ in load_info.get_tables_and_fpaths():
-        conn_execute(conn, f"TRUNCATE {table} CASCADE")
+        sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # then, load the tables
     for table, table_fpath in load_info.get_tables_and_fpaths():
         with open_and_save(dbgym_cfg, table_fpath, "r") as table_csv:
