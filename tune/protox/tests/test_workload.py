@@ -1,16 +1,18 @@
 import json
+from typing import Any, Tuple
 import unittest
 from pathlib import Path
 
 import yaml
 
 from tune.protox.env.space.primitive_space import IndexSpace
+from tune.protox.env.types import TableAttrAccessSetsMap, TableColTuple
 from tune.protox.env.workload import Workload
 
 
 class WorkloadTests(unittest.TestCase):
     @staticmethod
-    def load(config_file: str, workload_path: Path):
+    def load(config_file: str, workload_path: Path) -> tuple[Workload, IndexSpace]:
         # don't call open_and_save() because this is a unittest
         with open(config_file, "r") as f:
             benchmark_config = yaml.safe_load(f)
@@ -37,19 +39,19 @@ class WorkloadTests(unittest.TestCase):
             seed=0,
             rel_metadata=w.column_usages(),
             attributes_overwrite=w.column_usages(),
-            tbl_include_subsets={},
+            tbl_include_subsets=TableAttrAccessSetsMap({}),
             index_space_aux_type=True,
             index_space_aux_include=True,
             deterministic_policy=True,
         )
         return w, i
 
-    def diff_classmapping(self, ref, target):
+    def diff_classmapping(self, ref: dict[TableColTuple, int], target: dict[TableColTuple, int]) -> None:
         for k, v in ref.items():
             self.assertTrue(k in target, msg=f"{k} is missing.")
             self.assertTrue(v == target[k])
 
-    def test_tpch(self):
+    def test_tpch(self) -> None:
         with open("tune/protox/tests/unittest_ref_models/ref_tpch_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
             ref = {(v["relname"], v["ord_column"]): int(k) for k, v in ref.items()}
@@ -60,7 +62,7 @@ class WorkloadTests(unittest.TestCase):
         )
         self.assertEqual(i.class_mapping, ref)
 
-    def test_job(self):
+    def test_job(self) -> None:
         # don't call open_and_save() because this is a unittest
         with open(
             "tune/protox/tests/unittest_ref_models/ref_job_full_model.txt", "r"
@@ -74,7 +76,7 @@ class WorkloadTests(unittest.TestCase):
         )
         self.assertEqual(i.class_mapping, ref)
 
-    def test_dsb(self):
+    def test_dsb(self) -> None:
         # don't call open_and_save() because this is a unittest
         with open("tune/protox/tests/unittest_ref_models/ref_dsb_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
@@ -86,7 +88,7 @@ class WorkloadTests(unittest.TestCase):
         )
         self.diff_classmapping(ref, i.class_mapping)
 
-    def test_tpcc(self):
+    def test_tpcc(self) -> None:
         # don't call open_and_save() because this is a unittest
         with open("tune/protox/tests/unittest_ref_models/ref_tpcc_model.txt", "r") as f:
             ref = json.load(f)["class_mapping"]
