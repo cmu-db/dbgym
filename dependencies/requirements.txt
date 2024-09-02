@@ -120,6 +120,7 @@ torch==2.4.0
 tqdm==4.66.1
 triton==3.0.0
 types-pytz==2024.1.0.20240417
+types-PyYAML==6.0.12.20240808
 typing_extensions==4.9.0
 tzdata==2023.4
 urllib3==2.2.0
