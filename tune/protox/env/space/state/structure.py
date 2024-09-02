@@ -116,7 +116,7 @@ class StructureStateSpace(StateSpace, spaces.Dict):
             else:
                 index_state = np.zeros(index_space.critic_dim(), dtype=np.float32)
 
-        state = {}
+        state: dict[str, Any] = {}
         if knob_state is not None:
             state["knobs"] = knob_state
         if query_state is not None:
