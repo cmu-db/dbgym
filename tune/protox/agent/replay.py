@@ -275,6 +275,7 @@ def replay_tuning_run(
             #   will not have had a chance to run at all. Based on the behavior of `_mutilate_action_with_metrics()`, we select
             #   an arbitrary variation fo the queries that have not executed at all.
             best_observed_holon_action = actions_info["best_observed_holon_action"]
+            assert best_observed_holon_action is not None
             actions = [best_observed_holon_action]
             variation_names = ["BestObserved"]
 
