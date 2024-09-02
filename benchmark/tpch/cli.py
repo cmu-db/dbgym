@@ -1,6 +1,5 @@
 import logging
-import os
-import shutil
+from pathlib import Path
 
 import click
 
@@ -10,7 +9,6 @@ from misc.utils import (
     link_result,
     workload_name_fn,
 )
-from util.pg import *
 from util.shell import subprocess_run
 
 benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
@@ -19,7 +17,7 @@ benchmark_tpch_logger.setLevel(logging.INFO)
 
 @click.group(name="tpch")
 @click.pass_obj
-def tpch_group(dbgym_cfg: DBGymConfig):
+def tpch_group(dbgym_cfg: DBGymConfig) -> None:
     dbgym_cfg.append_group("tpch")
 
 
@@ -28,7 +26,7 @@ def tpch_group(dbgym_cfg: DBGymConfig):
 @click.pass_obj
 # The reason generate data is separate from create dbdata is because generate-data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
-def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float):
+def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     _clone(dbgym_cfg)
     _generate_data(dbgym_cfg, scale_factor)
 
@@ -59,7 +57,7 @@ def tpch_workload(
     seed_end: int,
     query_subset: str,
     scale_factor: float,
-):
+) -> None:
     assert (
         seed_start <= seed_end
     ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
@@ -72,7 +70,7 @@ def _get_queries_dname(seed: int, scale_factor: float) -> str:
     return f"queries_{seed}_sf{get_scale_factor_string(scale_factor)}"
 
 
-def _clone(dbgym_cfg: DBGymConfig):
+def _clone(dbgym_cfg: DBGymConfig) -> None:
     expected_symlink_dpath = (
         dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "tpch-kit.link"
     )
@@ -102,7 +100,7 @@ def _get_tpch_kit_dpath(dbgym_cfg: DBGymConfig) -> Path:
 
 def _generate_queries(
     dbgym_cfg: DBGymConfig, seed_start: int, seed_end: int, scale_factor: float
-):
+) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
     benchmark_tpch_logger.info(
@@ -132,7 +130,7 @@ def _generate_queries(
     )
 
 
-def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float):
+def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
     expected_tables_symlink_dpath = (
@@ -162,7 +160,7 @@ def _generate_workload(
     seed_end: int,
     query_subset: str,
     scale_factor: float,
-):
+) -> None:
     symlink_data_dpath = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     expected_workload_symlink_dpath = symlink_data_dpath / (workload_name + ".link")
@@ -177,6 +175,8 @@ def _generate_workload(
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 0]
     elif query_subset == "odd":
         queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 1]
+    else:
+        assert False
 
     with open(real_dpath / "order.txt", "w") as f:
         for seed in range(seed_start, seed_end + 1):
