@@ -1,6 +1,7 @@
 import logging
 import random
 from pathlib import Path
+from typing import Optional
 
 import click
 import numpy as np
@@ -59,75 +60,90 @@ from tune.protox.embedding.train_args import (
 )
 @click.option(
     "--scale-factor",
+    type=float,
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
     "--benchmark-config-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--traindata-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
-    default=None,
     type=int,
+    default=None,
     help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
 )
 
 # train args
 @click.option(
     "--hpo-space-path",
+    type=Path,
     default=DEFAULT_HPO_SPACE_PATH,
-    type=str,
     help="The path to the .json file defining the search space for hyperparameter optimization (HPO).",
 )
 @click.option(
     "--train-max-concurrent",
-    default=1,
     type=int,
+    default=1,
     help="The max # of concurrent embedding models to train during hyperparameter optimization. This is usually set lower than `nproc` to reduce memory pressure.",
 )
 @click.option("--iterations-per-epoch", default=1000, help=f"TODO(wz2)")
 @click.option(
     "--num-samples",
+    type=int,
     default=40,
     help=f"The # of times to specific hyperparameter configs to sample from the hyperparameter search space and train embedding models with.",
 )
-@click.option("--train-size", default=0.99, help=f"TODO(wz2)")
+@click.option(
+    "--train-size",
+    type=float,
+    default=0.99,
+    help=f"TODO(wz2)"
+)
 
 # analyze args
 @click.option(
-    "--start-epoch", default=0, help="The epoch to start analyzing models at."
+    "--start-epoch",
+    type=int,
+    default=0,
+    help="The epoch to start analyzing models at."
 )
 @click.option(
     "--batch-size",
+    type=int,
     default=8192,
     help=f"The size of batches to use to build {STATS_FNAME}.",
 )
 @click.option(
     "--num-batches",
+    type=int,
     default=100,
     help=f'The number of batches to use to build {STATS_FNAME}. Setting it to -1 indicates "use all batches".',
 )
 @click.option(
     "--max-segments",
+    type=int,
     default=15,
     help=f"The maximum # of segments in the latent space when creating {RANGES_FNAME}.",
 )
 @click.option(
     "--num-points-to-sample",
+    type=int,
     default=8192,
     help=f"The number of points to sample when creating {RANGES_FNAME}.",
 )
 @click.option(
     "--num-classes-to-keep",
+    type=int,
     default=5,
     help=f"The number of classes to keep for each segment when creating {RANGES_FNAME}.",
 )
@@ -158,12 +174,21 @@ from tune.protox.embedding.train_args import (
     help="The number of indexes whose errors to compute during _attach().",
 )
 @click.option(
-    "--num-curate", default=1, help="The number of models to curate"
+    "--num-curate",
+    type=int,
+    default=1,
+    help="The number of models to curate"
 )  # TODO(wz2): why would we want to curate more than one?
 @click.option(
-    "--allow-all", is_flag=True, help="Whether to curate within or across parts."
+    "--allow-all",
+    is_flag=True,
+    help="Whether to curate within or across parts."
 )
-@click.option("--flatten-idx", default=0, help="TODO(wz2)")
+@click.option("--flatten-idx",
+    type=int,
+    default=0,
+    help="TODO(wz2)"
+)
 def train(
     dbgym_cfg,
     benchmark_name,
