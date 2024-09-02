@@ -39,7 +39,7 @@ class HolonSpace(spaces.Tuple):
         carprod_neighbors: list[HolonAction],
         carprod_embeds: torch.Tensor,
         first_drift: int,
-    ):
+    ) -> None:
         zero = self.to_latent([carprod_neighbors[0]])[0]
         last = self.to_latent([carprod_neighbors[-1]])[0]
         first_d = self.to_latent([carprod_neighbors[first_drift]])[0]
@@ -232,19 +232,19 @@ class HolonSpace(spaces.Tuple):
         neighbor_parameters: NeighborParameters = DEFAULT_NEIGHBOR_PARAMETERS,
     ) -> Tuple[list[HolonAction], ProtoAction, torch.Tensor]:
         env_acts = []
-        emb_acts: List[torch.Tensor] = []
+        emb_acts: list[torch.Tensor] = []
         ndims = []
 
         env_action = self.from_latent(raw_action)
         for proto in env_action:
             # Figure out the neighbors for each subspace.
-            envs_neighbors = []
-            embed_neighbors = []
+            envs_neighbors: list[Any] = []
+            embed_neighbors: list[Any] = []
 
             # TODO(wz2,PROTOX_DELTA): For pseudo-backwards compatibility, we meld the knob + query space together.
             # In this way, we don't actually generate knob x query cartesian product.
             # Rather, we directly fuse min(knob_neighbors, query_neighbors) together and then cross with indexes.
-            meld_groups = [
+            meld_groups: list[list[Any]] = [
                 [self.get_knob_space(), self.get_query_space()],
                 [self.get_index_space()],
             ]
