@@ -15,7 +15,7 @@ import pandas as pd
 import yaml
 from sklearn.preprocessing import quantile_transform
 
-from dbms.postgres.cli import create_conn, start_postgres, stop_postgres
+from dbms.postgres.cli import start_postgres, stop_postgres
 from misc.utils import (
     BENCHMARK_NAME_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
@@ -39,6 +39,7 @@ from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import QueryType
 from tune.protox.env.workload import Workload
+from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
 
 # FUTURE(oltp)
@@ -780,7 +781,7 @@ def _produce_index_data(
             # there are no indexes to generate.
             return
 
-    with create_conn() as connection:
+    with create_psycopg_conn() as connection:
         _fetch_server_indexes(connection)
         if generate_costs:
             try:
