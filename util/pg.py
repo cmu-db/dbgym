@@ -63,8 +63,8 @@ def create_psycopg_conn(pgport: int = DEFAULT_POSTGRES_PORT) -> psycopg.Connecti
 def create_sqlalchemy_conn(
     pgport: int = DEFAULT_POSTGRES_PORT,
 ) -> sqlalchemy.Connection:
-    connstr = get_connstr(use_psycopg=True, pgport=pgport)
-    engine = create_engine(
+    connstr = get_connstr(use_psycopg=False, pgport=pgport)
+    engine: sqlalchemy.Engine = create_engine(
         connstr,
         execution_options={"isolation_level": "AUTOCOMMIT"},
     )
