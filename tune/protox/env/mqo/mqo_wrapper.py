@@ -329,7 +329,10 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                 [best_observed_holon_action]
             )
 
-        return self.unwrapped.step_post_execute(success, action, info)
+        obs, reward, term, trunc, info = self.step_post_execute(success, action, info)
+        # Since we called step_post_execute() with soft=False, we expect infos[1] (reward) to not be None.
+        assert reward is not None
+        return (obs, reward, term, trunc, info)
 
     def reset(self, *args: Any, **kwargs: Any) -> tuple[Any, EnvInfoDict]:  # type: ignore
         assert isinstance(self.unwrapped, PostgresEnv)

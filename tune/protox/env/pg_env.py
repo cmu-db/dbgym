@@ -321,8 +321,17 @@ class PostgresEnv(gym.Env[Any, Any]):
         success: bool,
         action: HolonAction,
         info: EnvInfoDict,
+        # If "soft" is true, it means we're calling step_post_execute() from reset(). If it's false, it means we're calling step_post_execute() from step().
         soft: bool = False,
-    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, Optional[float], bool, bool, EnvInfoDict]:
+        # If we're calling step_post_execute() from reset(), we expect info["metric"] and info["reward"] to be None.
+        if not soft:
+            assert info["reward"] is not None
+            assert info["metric"] is not None
+        else:
+            assert info["reward"] is None
+            assert info["metric"] is None
+
         if self.workload.oltp_workload and self.horizon > 1:
             # If horizon = 1, then we're going to reset anyways. So easier to just untar the original archive.
             # Restore the crisp and clean snapshot.
@@ -357,7 +366,6 @@ class PostgresEnv(gym.Env[Any, Any]):
         if not soft:
             self.current_step = self.current_step + 1
         self.current_state = next_state
-        assert info["reward"] is not None
         return (
             self.current_state,
             info["reward"],
@@ -372,7 +380,10 @@ class PostgresEnv(gym.Env[Any, Any]):
         assert self.tuning_mode != TuningMode.REPLAY
         success, info = self.step_before_execution(action)
         success, info = self.step_execute(success, [("PerQuery", action)], info)
-        return self.step_post_execute(success, action, info)
+        obs, reward, term, trunc, info = self.step_post_execute(success, action, info)
+        # Since we called step_post_execute() with soft=False, we expect infos[1] (reward) to not be None.
+        assert reward is not None
+        return (obs, reward, term, trunc, info)
 
     @time_record("shift_state")
     def shift_state(
