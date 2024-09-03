@@ -126,8 +126,9 @@ def _modify_benchbase_config(
 
 def _gen_noise_scale(
     vae_config: dict[str, Any], hpo_params: dict[str, Any]
-) -> Callable[[ProtoAction, torch.Tensor], ProtoAction]:
-    def f(p: ProtoAction, n: torch.Tensor) -> ProtoAction:
+) -> Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]:
+    def f(p: ProtoAction, n: Optional[torch.Tensor]) -> ProtoAction:
+        assert n is not None
         if hpo_params["scale_noise_perturb"]:
             return ProtoAction(
                 torch.clamp(
