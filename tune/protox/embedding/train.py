@@ -187,7 +187,7 @@ def train(
     train_max_concurrent: int,
     iterations_per_epoch: int,
     num_samples: int,
-    train_size: int,
+    train_size: float,
     start_epoch: int,
     batch_size: int,
     num_batches: int,

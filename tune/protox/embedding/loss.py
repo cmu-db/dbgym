@@ -3,8 +3,8 @@ from typing import Any, Callable, Optional, Tuple, Union, cast
 
 import torch
 import torch.nn as nn
-from pytorch_metric_learning import losses  # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
+from pytorch_metric_learning import losses
+from pytorch_metric_learning.utils import common_functions as c_f
 
 COST_COLUMNS = [
     "quant_mult_cost_improvement",

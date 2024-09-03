@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import tqdm
 from numpy.typing import NDArray
-from pytorch_metric_learning import trainers  # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
+from pytorch_metric_learning import trainers
+from pytorch_metric_learning.utils import common_functions as c_f
 from torch.utils.data import Sampler
 
 
@@ -170,7 +170,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
             if not self.disable_tqdm:
                 pbar = tqdm.tqdm(range(self.iterations_per_epoch))
             else:
-                pbar = range(self.iterations_per_epoch)  # type: ignore
+                pbar = range(self.iterations_per_epoch)
 
             for self.iteration in pbar:
                 self.forward_and_backward()

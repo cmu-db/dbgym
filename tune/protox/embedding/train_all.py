@@ -15,6 +15,7 @@ import pandas as pd
 import ray
 import torch
 import torch.nn as nn
+from torch.optim import Adam  # type: ignore[attr-defined]
 import tqdm
 import yaml
 from pytorch_metric_learning.utils import logging_presets
@@ -24,7 +25,7 @@ from ray.tune import TuneConfig, with_parameters, with_resources
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search import ConcurrencyLimiter
 from ray.tune.search.hyperopt import HyperOptSearch
-from sklearn.model_selection import train_test_split  # type: ignore
+from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset
 from typing_extensions import ParamSpec
 
@@ -90,7 +91,7 @@ def fetch_index_parameters(
 def load_input_data(
     dbgym_cfg: DBGymConfig,
     traindata_path: Path,
-    train_size: int,
+    train_size: float,
     max_attrs: int,
     require_cost: bool,
     seed: int,
@@ -115,7 +116,7 @@ def load_input_data(
     gc.collect()
     gc.collect()
 
-    if train_size == 1:
+    if train_size == 1.0:
         train_dataset = TensorDataset(torch.Tensor(x), torch.Tensor(y))
         del x
         gc.collect()
@@ -126,7 +127,7 @@ def load_input_data(
     train_x, val_x, train_y, val_y = train_test_split(
         x,
         y,
-        test_size=1 - train_size,
+        test_size=1.0 - train_size,
         train_size=train_size,
         random_state=seed,
         shuffle=True,
@@ -161,7 +162,7 @@ def create_vae_model(
         "sigmoid": nn.Sigmoid,
     }[config["mean_output_act"]]
 
-    torch.set_float32_matmul_precision("high")  # type: ignore
+    torch.set_float32_matmul_precision("high")
     model = VAE(
         max_categorical=max_cat_features,
         input_dim=cat_input,
@@ -182,7 +183,7 @@ def train_all_embeddings(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingTrainGenericArgs,
     train_all_args: EmbeddingTrainAllArgs,
-):
+) -> None:
     """
     Trains all num_samples models using different samples of the hyperparameter space, writing their
     results to different embedding_*/ folders in the run_*/ folder
@@ -226,7 +227,7 @@ def train_all_embeddings(
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
-        storage_path=dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True),
+        storage_path=str(dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True)),
     )
 
     resources = {"cpu": 1}
@@ -270,7 +271,7 @@ def _hpo_train(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingTrainGenericArgs,
     train_all_args: EmbeddingTrainAllArgs,
-):
+) -> None:
     sys.path.append(os.fspath(dbgym_cfg.dbgym_repo_path))
 
     # Explicitly set the number of torch threads.
@@ -352,11 +353,11 @@ def _build_trainer(
     traindata_path: Path,
     trial_dpath: Path,
     benchmark_config_path: Path,
-    train_size: int,
+    train_size: float,
     workload_path: Path,
-    dataloader_num_workers=0,
-    disable_tqdm=False,
-):
+    dataloader_num_workers: int=0,
+    disable_tqdm: bool=False,
+) -> tuple[VAETrainer, Callable[..., Optional[dict[str, Any]]]]:
     max_cat_features = 0
     max_attrs = 0
 
@@ -401,7 +402,7 @@ def _build_trainer(
 
     models = {"trunk": trunk, "embedder": model}
     optimizers = {
-        "embedder_optimizer": torch.optim.Adam(
+        "embedder_optimizer": Adam(
             model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]
         ),
     }
@@ -442,7 +443,7 @@ def _build_trainer(
 
     def clip_grad() -> None:
         if config["grad_clip_amount"] is not None:
-            torch.nn.utils.clip_grad_norm_(  # type: ignore
+            torch.nn.utils.clip_grad_norm_(
                 model.parameters(), config["grad_clip_amount"]
             )
 
@@ -513,9 +514,9 @@ def _construct_epoch_end(
                 trainer.switch_eval()
 
                 pbar = None if suppress else tqdm.tqdm(total=len(val_dl))
-                for i, curr_batch in enumerate(val_dl):  # type: ignore
+                for i, curr_batch in enumerate(val_dl):
                     # Get the losses.
-                    trainer.calculate_loss(curr_batch)  # type: ignore
+                    trainer.calculate_loss(curr_batch)
                     if isinstance(trainer.losses["metric_loss"], torch.Tensor):
                         total_metric_loss.append(trainer.losses["metric_loss"].item())
                     else:
