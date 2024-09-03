@@ -15,7 +15,6 @@ import pandas as pd
 import ray
 import torch
 import torch.nn as nn
-from torch.optim import Adam  # type: ignore[attr-defined]
 import tqdm
 import yaml
 from pytorch_metric_learning.utils import logging_presets
@@ -26,6 +25,7 @@ from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search import ConcurrencyLimiter
 from ray.tune.search.hyperopt import HyperOptSearch
 from sklearn.model_selection import train_test_split
+from torch.optim import Adam  # type: ignore[attr-defined]
 from torch.utils.data import TensorDataset
 from typing_extensions import ParamSpec
 
@@ -227,7 +227,9 @@ def train_all_embeddings(
         sync_config=SyncConfig(),
         verbose=2,
         log_to_file=True,
-        storage_path=str(dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True)),
+        storage_path=str(
+            dbgym_cfg.cur_task_runs_path("embedding_ray_results", mkdir=True)
+        ),
     )
 
     resources = {"cpu": 1}
@@ -355,8 +357,8 @@ def _build_trainer(
     benchmark_config_path: Path,
     train_size: float,
     workload_path: Path,
-    dataloader_num_workers: int=0,
-    disable_tqdm: bool=False,
+    dataloader_num_workers: int = 0,
+    disable_tqdm: bool = False,
 ) -> tuple[VAETrainer, Callable[..., Optional[dict[str, Any]]]]:
     max_cat_features = 0
     max_attrs = 0

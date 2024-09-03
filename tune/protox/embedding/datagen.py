@@ -39,7 +39,12 @@ from misc.utils import (
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
-from tune.protox.env.types import QuerySpec, QueryType, TableAttrAccessSetsMap, TableAttrListMap
+from tune.protox.env.types import (
+    QuerySpec,
+    QueryType,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+)
 from tune.protox.env.workload import Workload
 from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
@@ -52,7 +57,9 @@ from util.shell import subprocess_run
 #     pass
 
 
-QueryBatches = NewType("QueryBatches", list[tuple[str, list[tuple[QueryType, str]], Any]])
+QueryBatches = NewType(
+    "QueryBatches", list[tuple[str, list[tuple[QueryType, str]], Any]]
+)
 
 
 # click steup
@@ -254,7 +261,9 @@ def datagen(
         assert False
 
     # Process the "data structure" args
-    leading_col_tbls_parsed: list[str] = [] if leading_col_tbls is None else leading_col_tbls.split(",")
+    leading_col_tbls_parsed: list[str] = (
+        [] if leading_col_tbls is None else leading_col_tbls.split(",")
+    )
     # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
     # I felt this was better than introducing a new delimiter which might conflict with the name of a table
     override_sample_limits_parsed: dict[str, int] = dict()
@@ -378,7 +387,9 @@ class EmbeddingDirGenArgs:
 class EmbeddingFileGenArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
-    def __init__(self, table_shape: bool, dual_class: bool, pad_min: int, rebias: float):
+    def __init__(
+        self, table_shape: bool, dual_class: bool, pad_min: int, rebias: float
+    ):
         self.table_shape = table_shape
         self.dual_class = dual_class
         self.pad_min = pad_min
@@ -389,7 +400,11 @@ def get_traindata_dir(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
 
 
-def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGenericArgs, dir_gen_args: EmbeddingDirGenArgs) -> None:
+def _gen_traindata_dir(
+    dbgym_cfg: DBGymConfig,
+    generic_args: EmbeddingDatagenGenericArgs,
+    dir_gen_args: EmbeddingDirGenArgs,
+) -> None:
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
@@ -408,7 +423,11 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGen
         results = []
         job_id = 0
         for tbl in tables:
-            cols: list[Optional[str]] = [None] if tbl not in dir_gen_args.leading_col_tbls else cast(list[Optional[str]], modified_attrs[tbl])
+            cols: list[Optional[str]] = (
+                [None]
+                if tbl not in dir_gen_args.leading_col_tbls
+                else cast(list[Optional[str]], modified_attrs[tbl])
+            )
             for colidx, col in enumerate(cols):
                 if col is None:
                     output = traindata_dir / tbl
@@ -607,7 +626,9 @@ def _augment_query_data(workload: Workload, data: dict[str, float]) -> dict[str,
     return data
 
 
-def _execute_explains(cursor: psycopg.Cursor[Any], batches: QueryBatches, models: Optional[dict[Any, Any]]) -> dict[str, float]:
+def _execute_explains(
+    cursor: psycopg.Cursor[Any], batches: QueryBatches, models: Optional[dict[Any, Any]]
+) -> dict[str, float]:
     data: dict[str, float] = {}
     ou_model_data: dict[str, list[Any]] = {}
 
@@ -697,15 +718,23 @@ def _execute_explains(cursor: psycopg.Cursor[Any], batches: QueryBatches, models
     return data
 
 
-def _extract_refs(generate_costs: bool, target: Optional[str], cursor: psycopg.Cursor[Any], workload: Workload, models: Optional[dict[Any, Any]]) -> tuple[dict[str, float], dict[str, float]]:
+def _extract_refs(
+    generate_costs: bool,
+    target: Optional[str],
+    cursor: psycopg.Cursor[Any],
+    workload: Workload,
+    models: Optional[dict[Any, Any]],
+) -> tuple[dict[str, float], dict[str, float]]:
     ref_qs = {}
     table_ref_qs = {}
     if generate_costs:
         # Get reference costs.
-        batches = QueryBatches([
-            (q, workload.queries[q], workload.query_aliases[q])
-            for q in workload.queries.keys()
-        ])
+        batches = QueryBatches(
+            [
+                (q, workload.queries[q], workload.query_aliases[q])
+                for q in workload.queries.keys()
+            ]
+        )
         ref_qs = _execute_explains(cursor, batches, models)
         ref_qs = _augment_query_data(workload, ref_qs)
 
@@ -714,7 +743,9 @@ def _extract_refs(generate_costs: bool, target: Optional[str], cursor: psycopg.C
             table_ref_qs = ref_qs
         else:
             qs = workload.queries_for_table(target)
-            batches = QueryBatches([(q, workload.queries[q], workload.query_aliases[q]) for q in qs])
+            batches = QueryBatches(
+                [(q, workload.queries[q], workload.query_aliases[q]) for q in qs]
+            )
             table_ref_qs = _execute_explains(cursor, batches, models)
             table_ref_qs = _augment_query_data(workload, table_ref_qs)
     return ref_qs, table_ref_qs
@@ -743,9 +774,7 @@ def _produce_index_data(
     #     models = load_ou_models(model_dir)
 
     # Construct workload.
-    workload = Workload(
-        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=p
-    )
+    workload = Workload(dbgym_cfg, tables, attributes, query_spec, workload_path, pid=p)
     modified_attrs = workload.column_usages()
 
     np.random.seed(seed)
@@ -843,10 +872,12 @@ def _produce_index_data(
                         else:
                             qs_for_tbl = workload.queries_for_table(ia.tbl_name)
 
-                        batches = QueryBatches([
-                            (q, workload.queries[q], workload.query_aliases[q])
-                            for q in qs_for_tbl
-                        ])
+                        batches = QueryBatches(
+                            [
+                                (q, workload.queries[q], workload.query_aliases[q])
+                                for q in qs_for_tbl
+                            ]
+                        )
                         data = _execute_explains(cursor, batches, models)
                         data = _augment_query_data(workload, data)
                         if models is None:

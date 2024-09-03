@@ -6,8 +6,8 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
 import tqdm
+from pandas import DataFrame
 
 from misc.utils import DBGymConfig, default_embedder_dname, link_result
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
@@ -159,7 +159,7 @@ def _load_data(dbgym_cfg: DBGymConfig, select_args: EmbeddingSelectArgs) -> Data
     return data
 
 
-def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int=0) -> DataFrame:
+def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int = 0) -> DataFrame:
     # As the group index goes up, the perf should go up (i.e., bounds should tighten)
     filtered_data: dict[tuple[float, float], DataFrame] = {}
     new_data = []
@@ -167,7 +167,9 @@ def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int=0) -> DataFrame
         tup_dict = {k: getattr(tup, k) for k in data.columns}
         if raw_data is not None and Path(tup_dict["ranges_file"]).exists():
 
-            def compute_dist_score(current_dists: dict[str, float], base: float, upper: float) -> float:
+            def compute_dist_score(
+                current_dists: dict[str, float], base: float, upper: float
+            ) -> float:
                 nonlocal filtered_data
                 key = (base, upper)
                 if key not in filtered_data:
@@ -219,7 +221,10 @@ def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int=0) -> DataFrame
                         if drange[0] is None:
                             drange = (1.0 - tup_dict["bias_separation"], 1.01)
                         else:
-                            drange = (drange[0] - tup_dict["bias_separation"], drange[0])
+                            drange = (
+                                drange[0] - tup_dict["bias_separation"],
+                                drange[0],
+                            )
                         current_dists = {}
 
                     else:
@@ -230,7 +235,9 @@ def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int=0) -> DataFrame
                 if len(current_dists) > 0:
                     # Put the error in.
                     errors.append(
-                        compute_dist_score(current_dists, 0.0, tup_dict["bias_separation"])
+                        compute_dist_score(
+                            current_dists, 0.0, tup_dict["bias_separation"]
+                        )
                     )
 
                 tup_dict["idx_class_errors"] = ",".join(
