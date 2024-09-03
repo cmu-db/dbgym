@@ -8,10 +8,12 @@ import time
 from itertools import chain, combinations
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Any, NewType, Optional, cast
 
 import click
 import numpy as np
 import pandas as pd
+import psycopg
 import yaml
 from sklearn.preprocessing import quantile_transform
 
@@ -37,7 +39,7 @@ from misc.utils import (
 )
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
-from tune.protox.env.types import QueryType
+from tune.protox.env.types import QuerySpec, QueryType, TableAttrAccessSetsMap, TableAttrListMap
 from tune.protox.env.workload import Workload
 from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
@@ -48,6 +50,9 @@ from util.shell import subprocess_run
 #     from behavior.utils.prepare_ou_data import clean_input_data
 # except:
 #     pass
+
+
+QueryBatches = NewType("QueryBatches", list[tuple[str, list[tuple[QueryType, str]], Any]])
 
 
 # click steup
@@ -75,6 +80,7 @@ from util.shell import subprocess_run
 )
 @click.option(
     "--scale-factor",
+    type=float,
     default=1.0,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
@@ -87,8 +93,8 @@ from util.shell import subprocess_run
 # TODO(phw2): need to run pgtune before gathering data
 @click.option(
     "--pristine-dbdata-snapshot-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .tgz snapshot of the dbdata directory to build an embedding space over. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
@@ -99,60 +105,60 @@ from util.shell import subprocess_run
 )
 @click.option(
     "--dbdata-parent-dpath",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchmark-config-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
-    default=None,
     type=Path,
+    default=None,
     help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
-    default=None,
     type=int,
+    default=None,
     help="The seed used for all sources of randomness (random, np, torch, etc.). The default is a random value.",
 )
 
 # dir gen args
 @click.option(
     "--leading-col-tbls",
-    default=None,
     type=str,
+    default=None,
     help='All tables included here will have indexes created s.t. each column is represented equally often as the "leading column" of the index.',
 )
 # TODO(wz2): what if we sample tbl_sample_limit / len(cols) for tables in leading_col_tbls? this way, tbl_sample_limit will always represent the total # of indexes created on that table. currently the description of the param is a bit weird as you can see
 @click.option(
     "--default-sample-limit",
-    default=2048,
     type=int,
+    default=2048,
     help="The default sample limit of all tables, used unless override sample limit is specified. If the table is in --leading-col-tbls, sample limit is # of indexes to sample per column for that table table. If the table is in --leading-col-tbls, sample limit is the # of indexes to sample total for that table.",
 )
 @click.option(
     "--override-sample-limits",
-    default=None,
     type=str,
+    default=None,
     help='Override the sample limit for specific tables. An example input would be "lineitem,32768,orders,4096".',
 )
 # TODO(wz2): if I'm just outputting out.parquet instead of the full directory, do we even need file limit at all?
 @click.option(
     "--file-limit",
-    default=1024,
     type=int,
+    default=1024,
     help="The max # of data points (one data point = one hypothetical index) per file",
 )
 @click.option(
     "--max-concurrent",
-    default=None,
     type=int,
+    default=None,
     help="The max # of concurrent threads that will be creating hypothetical indexes. The default is `nproc`.",
 )
 # TODO(wz2): when would we not want to generate costs?
@@ -161,33 +167,33 @@ from util.shell import subprocess_run
 # file gen args
 @click.option("--table-shape", is_flag=True, help="TODO(wz2)")
 @click.option("--dual-class", is_flag=True, help="TODO(wz2)")
-@click.option("--pad-min", default=None, type=int, help="TODO(wz2)")
-@click.option("--rebias", default=0, type=float, help="TODO(wz2)")
+@click.option("--pad-min", type=int, default=None, help="TODO(wz2)")
+@click.option("--rebias", type=float, default=0, help="TODO(wz2)")
 def datagen(
-    dbgym_cfg,
-    benchmark_name,
-    seed_start,
-    seed_end,
-    query_subset,
-    scale_factor,
-    pgbin_path,
-    pristine_dbdata_snapshot_path,
-    intended_dbdata_hardware,
-    dbdata_parent_dpath,
-    benchmark_config_path,
-    workload_path,
-    seed,
-    leading_col_tbls,
-    default_sample_limit,
-    override_sample_limits,
-    file_limit,
-    max_concurrent,
-    no_generate_costs,
-    table_shape,
-    dual_class,
-    pad_min,
-    rebias,
-):
+    dbgym_cfg: DBGymConfig,
+    benchmark_name: str,
+    seed_start: int,
+    seed_end: int,
+    query_subset: str,
+    scale_factor: float,
+    pgbin_path: Optional[Path],
+    pristine_dbdata_snapshot_path: Optional[Path],
+    intended_dbdata_hardware: str,
+    dbdata_parent_dpath: Optional[Path],
+    benchmark_config_path: Optional[Path],
+    workload_path: Optional[Path],
+    seed: Optional[int],
+    leading_col_tbls: str,
+    default_sample_limit: int,
+    override_sample_limits: Optional[str],
+    file_limit: int,
+    max_concurrent: Optional[int],
+    no_generate_costs: bool,
+    table_shape: bool,
+    dual_class: bool,
+    pad_min: int,
+    rebias: float,
+) -> None:
     """
     Samples the effects of indexes on the workload as estimated by HypoPG.
     Outputs all this data as a .parquet file in the run_*/ dir.
@@ -220,8 +226,9 @@ def datagen(
         )
     if max_concurrent is None:
         max_concurrent = os.cpu_count()
+        assert max_concurrent is not None
     if seed is None:
-        seed = random.randint(0, 1e8)
+        seed = random.randint(0, int(1e8))
 
     # Convert all input paths to absolute paths
     workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
@@ -247,22 +254,19 @@ def datagen(
         assert False
 
     # Process the "data structure" args
-    leading_col_tbls = [] if leading_col_tbls is None else leading_col_tbls.split(",")
+    leading_col_tbls_parsed: list[str] = [] if leading_col_tbls is None else leading_col_tbls.split(",")
     # I chose to only use the "," delimiter in override_sample_limits_str, so the dictionary is encoded as [key],[value],[key],[value]
     # I felt this was better than introducing a new delimiter which might conflict with the name of a table
-    if override_sample_limits is None:
-        override_sample_limits = dict()
-    else:
-        override_sample_limits_str = override_sample_limits
-        override_sample_limits = dict()
-        override_sample_limits_str_split = override_sample_limits_str.split(",")
+    override_sample_limits_parsed: dict[str, int] = dict()
+    if override_sample_limits is not None:
+        override_sample_limits_str_split = override_sample_limits.split(",")
         assert (
             len(override_sample_limits_str_split) % 2 == 0
-        ), f'override_sample_limits ("{override_sample_limits_str}") does not have an even number of values'
+        ), f'override_sample_limits ("{override_sample_limits}") does not have an even number of values'
         for i in range(0, len(override_sample_limits_str_split), 2):
             tbl = override_sample_limits_str_split[i]
             limit = int(override_sample_limits_str_split[i + 1])
-            override_sample_limits[tbl] = limit
+            override_sample_limits_parsed[tbl] = limit
 
     # Group args together to reduce the # of parameters we pass into functions
     # I chose to group them into separate objects instead because it felt hacky to pass a giant args object into every function
@@ -277,9 +281,9 @@ def datagen(
         dbdata_parent_dpath,
     )
     dir_gen_args = EmbeddingDirGenArgs(
-        leading_col_tbls,
+        leading_col_tbls_parsed,
         default_sample_limit,
-        override_sample_limits,
+        override_sample_limits_parsed,
         file_limit,
         max_concurrent,
         no_generate_costs,
@@ -332,14 +336,14 @@ class EmbeddingDatagenGenericArgs:
 
     def __init__(
         self,
-        benchmark_name,
-        workload_name,
-        scale_factor,
-        benchmark_config_path,
-        seed,
-        workload_path,
-        pristine_dbdata_snapshot_path,
-        dbdata_parent_dpath,
+        benchmark_name: str,
+        workload_name: str,
+        scale_factor: float,
+        benchmark_config_path: Path,
+        seed: int,
+        workload_path: Path,
+        pristine_dbdata_snapshot_path: Path,
+        dbdata_parent_dpath: Path,
     ):
         self.benchmark_name = benchmark_name
         self.workload_name = workload_name
@@ -356,12 +360,12 @@ class EmbeddingDirGenArgs:
 
     def __init__(
         self,
-        leading_col_tbls,
-        default_sample_limit,
-        override_sample_limits,
-        file_limit,
-        max_concurrent,
-        no_generate_costs,
+        leading_col_tbls: list[str],
+        default_sample_limit: int,
+        override_sample_limits: dict[str, int],
+        file_limit: int,
+        max_concurrent: int,
+        no_generate_costs: bool,
     ):
         self.leading_col_tbls = leading_col_tbls
         self.default_sample_limit = default_sample_limit
@@ -374,25 +378,25 @@ class EmbeddingDirGenArgs:
 class EmbeddingFileGenArgs:
     """Same comment as EmbeddingDatagenGenericArgs"""
 
-    def __init__(self, table_shape, dual_class, pad_min, rebias):
+    def __init__(self, table_shape: bool, dual_class: bool, pad_min: int, rebias: float):
         self.table_shape = table_shape
         self.dual_class = dual_class
         self.pad_min = pad_min
         self.rebias = rebias
 
 
-def get_traindata_dir(dbgym_cfg):
+def get_traindata_dir(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
 
 
-def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
+def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args: EmbeddingDatagenGenericArgs, dir_gen_args: EmbeddingDirGenArgs) -> None:
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
 
-    max_num_columns = benchmark_config["protox"]["max_num_columns"]
-    tables = benchmark_config["protox"]["tables"]
-    attributes = benchmark_config["protox"]["attributes"]
-    query_spec = benchmark_config["protox"]["query_spec"]
+    max_num_columns: int = benchmark_config["protox"]["max_num_columns"]
+    tables: list[str] = benchmark_config["protox"]["tables"]
+    attributes: TableAttrListMap = benchmark_config["protox"]["attributes"]
+    query_spec: QuerySpec = benchmark_config["protox"]["query_spec"]
 
     workload = Workload(
         dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
@@ -404,11 +408,7 @@ def _gen_traindata_dir(dbgym_cfg: DBGymConfig, generic_args, dir_gen_args):
         results = []
         job_id = 0
         for tbl in tables:
-            cols = (
-                [None]
-                if tbl not in dir_gen_args.leading_col_tbls
-                else modified_attrs[tbl]
-            )
+            cols: list[Optional[str]] = [None] if tbl not in dir_gen_args.leading_col_tbls else cast(list[Optional[str]], modified_attrs[tbl])
             for colidx, col in enumerate(cols):
                 if col is None:
                     output = traindata_dir / tbl
@@ -456,7 +456,7 @@ def _combine_traindata_dir_into_parquet(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingDatagenGenericArgs,
     file_gen_args: EmbeddingFileGenArgs,
-):
+) -> None:
     tbl_dirs = {}
     with open_and_save(dbgym_cfg, generic_args.benchmark_config_path, "r") as f:
         benchmark_config = yaml.safe_load(f)
@@ -562,14 +562,10 @@ def _combine_traindata_dir_into_parquet(
     link_result(dbgym_cfg, traindata_path)
 
 
-def _all_subsets(ss):
-    return chain(*map(lambda x: combinations(ss, x), range(0, len(ss) + 1)))
+_INDEX_SERVER_COUNTS: dict[str, int] = {}
 
 
-_INDEX_SERVER_COUNTS = {}
-
-
-def _fetch_server_indexes(connection):
+def _fetch_server_indexes(connection: psycopg.Connection[Any]) -> None:
     global _INDEX_SERVER_COUNTS
     query = """
         SELECT t.relname as table_name, i.relname as index_name
@@ -596,26 +592,26 @@ def _fetch_server_indexes(connection):
 #     return models
 
 
-def _write(data, output_dir, batch_num):
+def _write(data: list[dict[str, Any]], output_dir: Path, batch_num: int) -> None:
     df = pd.DataFrame(data)
-    cols = [c for c in df if "col" in c and "str" not in c]
+    cols = [c for c in df.columns if "col" in c and "str" not in c]
     df[cols] = df[cols].astype(int)
-    df.to_parquet(f"{output_dir}/{batch_num}.parquet")
+    df.to_parquet(output_dir / f"{batch_num}.parquet")
     del df
 
 
-def _augment_query_data(workload, data):
+def _augment_query_data(workload: Workload, data: dict[str, float]) -> dict[str, float]:
     for qstem, value in workload.queries_mix.items():
         if qstem in data:
             data[qstem] *= value
     return data
 
 
-def _execute_explains(cursor, batches, models):
-    data = {}
-    ou_model_data = {}
+def _execute_explains(cursor: psycopg.Cursor[Any], batches: QueryBatches, models: Optional[dict[Any, Any]]) -> dict[str, float]:
+    data: dict[str, float] = {}
+    ou_model_data: dict[str, list[Any]] = {}
 
-    def acquire_model_data(q, plan):
+    def acquire_model_data(q: str, plan: dict[str, Any]) -> None:
         nonlocal ou_model_data
         node_tag = plan["Node Type"]
         node_tag = node_tag.replace(" ", "")
@@ -701,15 +697,15 @@ def _execute_explains(cursor, batches, models):
     return data
 
 
-def _extract_refs(generate_costs, target, cursor, workload, models):
+def _extract_refs(generate_costs: bool, target: Optional[str], cursor: psycopg.Cursor[Any], workload: Workload, models: Optional[dict[Any, Any]]) -> tuple[dict[str, float], dict[str, float]]:
     ref_qs = {}
     table_ref_qs = {}
     if generate_costs:
         # Get reference costs.
-        batches = [
+        batches = QueryBatches([
             (q, workload.queries[q], workload.query_aliases[q])
             for q in workload.queries.keys()
-        ]
+        ])
         ref_qs = _execute_explains(cursor, batches, models)
         ref_qs = _augment_query_data(workload, ref_qs)
 
@@ -718,28 +714,28 @@ def _extract_refs(generate_costs, target, cursor, workload, models):
             table_ref_qs = ref_qs
         else:
             qs = workload.queries_for_table(target)
-            batches = [(q, workload.queries[q], workload.query_aliases[q]) for q in qs]
+            batches = QueryBatches([(q, workload.queries[q], workload.query_aliases[q]) for q in qs])
             table_ref_qs = _execute_explains(cursor, batches, models)
             table_ref_qs = _augment_query_data(workload, table_ref_qs)
     return ref_qs, table_ref_qs
 
 
 def _produce_index_data(
-    dbgym_cfg,
-    tables,
-    attributes,
-    query_spec,
-    workload_path,
-    max_num_columns,
-    seed,
-    generate_costs,
-    sample_limit,
-    target,
-    leading_col,
-    leading_col_name,
-    p,
-    output,
-):
+    dbgym_cfg: DBGymConfig,
+    tables: list[str],
+    attributes: TableAttrListMap,
+    query_spec: QuerySpec,
+    workload_path: Path,
+    max_num_columns: int,
+    seed: int,
+    generate_costs: bool,
+    sample_limit: int,
+    target: Optional[str],
+    leading_col: Optional[int],
+    leading_col_name: Optional[str],
+    p: int,
+    output: Path,
+) -> None:
 
     models = None
     # FUTURE(oltp)
@@ -748,7 +744,7 @@ def _produce_index_data(
 
     # Construct workload.
     workload = Workload(
-        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=str(p)
+        dbgym_cfg, tables, attributes, query_spec, workload_path, pid=p
     )
     modified_attrs = workload.column_usages()
 
@@ -764,7 +760,7 @@ def _produce_index_data(
         seed=seed,
         rel_metadata=copy.deepcopy(modified_attrs),
         attributes_overwrite=copy.deepcopy(modified_attrs),
-        tbl_include_subsets={},
+        tbl_include_subsets=TableAttrAccessSetsMap({}),
         index_space_aux_type=False,
         index_space_aux_include=False,
         deterministic_policy=False,
@@ -793,8 +789,7 @@ def _produce_index_data(
             reference_qs, table_reference_qs = _extract_refs(
                 generate_costs, target, cursor, workload, models
             )
-            cached_refs = {}
-            accum_data = []
+            accum_data: list[dict[str, Any]] = []
 
             # Repeatedly...
             for i in range(sample_limit):
@@ -811,7 +806,7 @@ def _produce_index_data(
                 )
                 ia = idxs.to_action(act)
 
-                accum = {
+                accum: dict[str, Any] = {
                     "table": ia.tbl_name,
                 }
                 if generate_costs:
@@ -848,10 +843,10 @@ def _produce_index_data(
                         else:
                             qs_for_tbl = workload.queries_for_table(ia.tbl_name)
 
-                        batches = [
+                        batches = QueryBatches([
                             (q, workload.queries[q], workload.query_aliases[q])
                             for q in qs_for_tbl
-                        ]
+                        ])
                         data = _execute_explains(cursor, batches, models)
                         data = _augment_query_data(workload, data)
                         if models is None:
@@ -890,6 +885,7 @@ def _produce_index_data(
                 for i in range(max_num_columns):
                     accum[f"col{i}"] = 0
 
+                assert ia.col_idxs is not None
                 for i, col_idx in enumerate(ia.col_idxs):
                     accum[f"col{i}"] = col_idx + 1
 

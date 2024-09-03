@@ -79,7 +79,7 @@ class Workload(object):
         self.tbl_filter_queries_usage: dict[TableColTuple, set[str]] = {}
 
         # Build the SQL and table usage information.
-        self.queries_mix = {}
+        self.queries_mix: dict[str, float] = {}
         self.query_aliases = {}
         self.query_usages = TableAttrListMap({t: [] for t in self.tables})
         tbl_include_subsets = TableAttrAccessSetsMap(
