@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -48,6 +49,8 @@ def select_best_embeddings(
 
     if select_args.flatten_idx == -1:
         for tup in df.itertuples():
+            assert type(tup.path) is str
+            assert type(tup.root) is str
             shutil.copytree(
                 tup.path,
                 curated_dpath / tup.path,
@@ -62,6 +65,8 @@ def select_best_embeddings(
         info_txt = open(curated_dpath / "info.txt", "w")
 
         for loop_i, tup in enumerate(df.itertuples()):
+            assert type(tup.path) is str
+            assert type(tup.root) is str
             epoch = int(str(tup.path).split("epoch")[-1])
             model_dpath = curated_dpath / f"model{idx}"
             shutil.copytree(tup.path, model_dpath)
@@ -119,7 +124,7 @@ def _load_data(dbgym_cfg: DBGymConfig, select_args: EmbeddingSelectArgs) -> Data
         with open(stat.parent.parent.parent / "config", "r") as f:
             config = json.load(f)
 
-            def recurse_set(source, target):
+            def recurse_set(source: dict[Any, Any], target: dict[Any, Any]) -> None:
                 for k, v in source.items():
                     if isinstance(v, dict):
                         recurse_set(v, target)
@@ -154,15 +159,15 @@ def _load_data(dbgym_cfg: DBGymConfig, select_args: EmbeddingSelectArgs) -> Data
     return data
 
 
-def _attach(data, raw_data, num_limit: int=0) -> DataFrame:
+def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int=0) -> DataFrame:
     # As the group index goes up, the perf should go up (i.e., bounds should tighten)
-    filtered_data = {}
+    filtered_data: dict[tuple[float, float], DataFrame] = {}
     new_data = []
     for tup in tqdm.tqdm(data.itertuples(), total=data.shape[0]):
         tup_dict = {k: getattr(tup, k) for k in data.columns}
         if raw_data is not None and Path(tup_dict["ranges_file"]).exists():
 
-            def compute_dist_score(current_dists, base, upper):
+            def compute_dist_score(current_dists: dict[str, float], base: float, upper: float) -> float:
                 nonlocal filtered_data
                 key = (base, upper)
                 if key not in filtered_data:
@@ -195,14 +200,15 @@ def _attach(data, raw_data, num_limit: int=0) -> DataFrame:
 
             # don't use open_and_save() because we generated ranges in this run
             with open(tup_dict["ranges_file"], "r") as f:
-                errors = []
-                drange = (None, None)
-                current_dists = {}
+                errors: list[float] = []
+                drange: tuple[Optional[float], Optional[float]] = (None, None)
+                current_dists: dict[str, float] = {}
 
                 for line in f:
                     if "Generating range" in line:
                         if len(current_dists) > 0:
                             assert drange[0] is not None
+                            assert drange[1] is not None
                             errors.append(
                                 compute_dist_score(current_dists, drange[0], drange[1])
                             )
