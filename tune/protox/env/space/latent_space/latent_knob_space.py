@@ -181,7 +181,7 @@ class LatentKnobSpace(KnobSpace):
 
     def generate_action_plan(
         self, action: KnobSpaceAction, sc: KnobSpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         config_changes = []
         sql_commands = []
         require_cleanup = False
@@ -235,5 +235,5 @@ class LatentKnobSpace(KnobSpace):
 
     def generate_delta_action_plan(
         self, action: KnobSpaceAction, sc: KnobSpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         return self.generate_action_plan(action, sc, **kwargs)

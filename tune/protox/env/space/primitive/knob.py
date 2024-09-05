@@ -27,7 +27,7 @@ def full_knob_name(
         return knob_name
 
 
-def _parse_setting_dtype(type_str: str) -> Tuple[SettingType, Any]:
+def _parse_setting_dtype(type_str: str) -> tuple[SettingType, Any]:
     return {
         "boolean": (SettingType.BOOLEAN, np.int32),
         "integer": (SettingType.INTEGER, np.int32),
@@ -44,7 +44,7 @@ class KnobMetadata(TypedDict, total=False):
     type: str
     min: float
     max: float
-    quantize: bool
+    quantize: int
     log_scale: int
     unit: int
     values: list[str]
@@ -229,7 +229,7 @@ def _flatdim_knob(space: Knob) -> int:
     return 1
 
 
-def _categorical_elems(type_str: str) -> Tuple[SettingType, int]:
+def _categorical_elems(type_str: str) -> tuple[SettingType, int]:
     return {
         "scanmethod_enum_categorical": (SettingType.SCANMETHOD_ENUM_CATEGORICAL, 2),
     }[type_str]

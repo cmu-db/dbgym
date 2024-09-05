@@ -1,13 +1,11 @@
 import os
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
+from typing import IO, Any, Callable, Optional, Tuple
 
-import click
 import redis
 import yaml
 
@@ -34,21 +32,20 @@ WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 
 
 # Helper functions that both this file and other files use
-def get_symlinks_path_from_workspace_path(workspace_path):
+def get_symlinks_path_from_workspace_path(workspace_path: Path) -> Path:
     return workspace_path / "symlinks"
 
 
-def get_tmp_path_from_workspace_path(workspace_path):
+def get_tmp_path_from_workspace_path(workspace_path: Path) -> Path:
     return workspace_path / "tmp"
 
 
-def get_runs_path_from_workspace_path(workspace_path):
+def get_runs_path_from_workspace_path(workspace_path: Path) -> Path:
     return workspace_path / "task_runs"
 
 
 def get_scale_factor_string(scale_factor: float | str) -> str:
-    assert type(scale_factor) is float or type(scale_factor) is str
-    if scale_factor == SCALE_FACTOR_PLACEHOLDER:
+    if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
     else:
         if float(int(scale_factor)) == scale_factor:
@@ -57,46 +54,46 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
             return str(scale_factor).replace(".", "point")
 
 
-def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float) -> str:
+def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float | str) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
 
 
 # Other parameters
-BENCHMARK_NAME_PLACEHOLDER = "[benchmark_name]"
-WORKLOAD_NAME_PLACEHOLDER = "[workload_name]"
-SCALE_FACTOR_PLACEHOLDER = "[scale_factor]"
+BENCHMARK_NAME_PLACEHOLDER: str = "[benchmark_name]"
+WORKLOAD_NAME_PLACEHOLDER: str = "[workload_name]"
+SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
 DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
-default_benchmark_config_path = (
+default_benchmark_config_path: Callable[[str], Path] = (
     lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchmark_config.yaml"
 )
-default_benchbase_config_path = (
+default_benchbase_config_path: Callable[[str], Path] = (
     lambda benchmark_name: PROTOX_PATH
     / f"default_{benchmark_name}_benchbase_config.xml"
 )
 
 # Generally useful functions
-workload_name_fn = (
+workload_name_fn: Callable[[float | str, int, int, str], str] = (
     lambda scale_factor, seed_start, seed_end, query_subset: f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 )
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.
-traindata_fname = (
+traindata_fname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
-default_embedder_dname = (
+default_embedder_dname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
 )
-default_hpoed_agent_params_fname = (
+default_hpoed_agent_params_fname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
 )
-default_tuning_steps_dname = (
+default_tuning_steps_dname: Callable[[str, str, bool], str] = (
     lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
 )
 
@@ -113,7 +110,7 @@ default_tuning_steps_dname = (
 #    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an output.log file, which goes in
 #    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the output.log file of the
 #    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
-default_traindata_path = (
+default_traindata_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -121,7 +118,7 @@ default_traindata_path = (
     / "data"
     / (traindata_fname(benchmark_name, workload_name) + ".link")
 )
-default_embedder_path = (
+default_embedder_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -129,7 +126,7 @@ default_embedder_path = (
     / "data"
     / (default_embedder_dname(benchmark_name, workload_name) + ".link")
 )
-default_hpoed_agent_params_path = (
+default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -137,7 +134,7 @@ default_hpoed_agent_params_path = (
     / "data"
     / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
 )
-default_workload_path = (
+default_workload_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -145,7 +142,7 @@ default_workload_path = (
     / "data"
     / (workload_name + ".link")
 )
-default_pristine_dbdata_snapshot_path = (
+default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -153,10 +150,10 @@ default_pristine_dbdata_snapshot_path = (
     / "data"
     / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
 )
-default_dbdata_parent_dpath = lambda workspace_path: get_tmp_path_from_workspace_path(
-    workspace_path
+default_dbdata_parent_dpath: Callable[[Path], Path] = (
+    lambda workspace_path: get_tmp_path_from_workspace_path(workspace_path)
 )
-default_pgbin_path = (
+default_pgbin_path: Callable[[Path], Path] = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_dbms_postgres"
     / "build"
@@ -166,7 +163,7 @@ default_pgbin_path = (
     / "postgres"
     / "bin"
 )
-default_tuning_steps_dpath = (
+default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
     lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
         workspace_path
     )
@@ -201,7 +198,7 @@ class DBGymConfig:
 
         # Parse the YAML file.
         contents: str = dbgym_config_path.read_text()
-        yaml_config: dict = yaml.safe_load(contents)
+        yaml_config: dict[str, Any] = yaml.safe_load(contents)
 
         # Require dbgym_workspace_path to be absolute.
         # All future paths should be constructed from dbgym_workspace_path.
@@ -211,8 +208,8 @@ class DBGymConfig:
 
         self.path: Path = dbgym_config_path
         self.cur_path_list: list[str] = ["dbgym"]
-        self.root_yaml: dict = yaml_config
-        self.cur_yaml: dict = self.root_yaml
+        self.root_yaml: dict[str, Any] = yaml_config
+        self.cur_yaml: dict[str, Any] = self.root_yaml
 
         # Set and create paths.
         self.dbgym_repo_path = Path(os.getcwd())
@@ -247,11 +244,11 @@ class DBGymConfig:
 
     # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
-    def append_group(self, name) -> None:
+    def append_group(self, name: str) -> None:
         self.cur_path_list.append(name)
         self.cur_yaml = self.cur_yaml.get(name, {})
 
-    def cur_source_path(self, *dirs) -> Path:
+    def cur_source_path(self, *dirs: str) -> Path:
         cur_path = self.dbgym_repo_path
         assert self.cur_path_list[0] == "dbgym"
         for folder in self.cur_path_list[1:]:
@@ -260,7 +257,7 @@ class DBGymConfig:
             cur_path = cur_path / dir
         return cur_path
 
-    def cur_symlinks_path(self, *dirs, mkdir=False) -> Path:
+    def cur_symlinks_path(self, *dirs: str, mkdir: bool = False) -> Path:
         flattened_structure = "_".join(self.cur_path_list)
         cur_path = self.dbgym_symlinks_path / flattened_structure
         for dir in dirs:
@@ -269,7 +266,7 @@ class DBGymConfig:
             cur_path.mkdir(parents=True, exist_ok=True)
         return cur_path
 
-    def cur_task_runs_path(self, *dirs, mkdir=False) -> Path:
+    def cur_task_runs_path(self, *dirs: str, mkdir: bool = False) -> Path:
         flattened_structure = "_".join(self.cur_path_list)
         cur_path = self.dbgym_this_run_path / flattened_structure
         for dir in dirs:
@@ -278,27 +275,27 @@ class DBGymConfig:
             cur_path.mkdir(parents=True, exist_ok=True)
         return cur_path
 
-    def cur_symlinks_bin_path(self, *dirs, mkdir=False) -> Path:
+    def cur_symlinks_bin_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("bin", *dirs, mkdir=mkdir)
 
-    def cur_symlinks_build_path(self, *dirs, mkdir=False) -> Path:
+    def cur_symlinks_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("build", *dirs, mkdir=mkdir)
 
-    def cur_symlinks_data_path(self, *dirs, mkdir=False) -> Path:
+    def cur_symlinks_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_symlinks_path("data", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_build_path(self, *dirs, mkdir=False) -> Path:
+    def cur_task_runs_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("build", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_data_path(self, *dirs, mkdir=False) -> Path:
+    def cur_task_runs_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
 
-    def cur_task_runs_artifacts_path(self, *dirs, mkdir=False) -> Path:
+    def cur_task_runs_artifacts_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
 def conv_inputpath_to_realabspath(
-    dbgym_cfg: DBGymConfig, inputpath: os.PathLike
+    dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]
 ) -> Path:
     """
     Convert any user inputted path to a real, absolute path
@@ -329,7 +326,7 @@ def conv_inputpath_to_realabspath(
     return realabspath
 
 
-def is_base_git_dir(cwd) -> bool:
+def is_base_git_dir(cwd: str) -> bool:
     """
     Returns whether we are in the base directory of some git repository
     """
@@ -394,7 +391,7 @@ def basename_of_path(dpath: Path) -> str:
 
 
 # TODO(phw2): refactor to use Path
-def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
+def is_child_path(child_path: os.PathLike[str], parent_dpath: os.PathLike[str]) -> bool:
     """
     Checks whether child_path refers to a file/dir/link that is a child of the dir referred to by parent_dpath
     If the two paths are equal, this function returns FALSE
@@ -408,7 +405,7 @@ def is_child_path(child_path: os.PathLike, parent_dpath: os.PathLike) -> bool:
         )
 
 
-def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
+def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> IO[Any]:
     """
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
@@ -448,7 +445,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode="r"):
 
 def extract_from_task_run_fordpath(
     dbgym_cfg: DBGymConfig, task_run_fordpath: Path
-) -> Tuple[Path, str, Path, str]:
+) -> tuple[Path, str, Path, str]:
     """
     The task_runs/ folder is organized like task_runs/run_*/[codebase]/[org]/any/path/you/want.
     This function extracts the [codebase] and [org] components
@@ -481,7 +478,7 @@ def extract_from_task_run_fordpath(
 
 # TODO(phw2): really look at the clean PR to see what it changed
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
+def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -544,7 +541,9 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> Path:
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
 def link_result(
-    dbgym_cfg: DBGymConfig, result_fordpath: Path, custom_result_name: str | None = None
+    dbgym_cfg: DBGymConfig,
+    result_fordpath: Path,
+    custom_result_name: Optional[str] = None,
 ) -> Path:
     """
     result_fordpath must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path.
@@ -564,7 +563,7 @@ def link_result(
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 
-    if custom_result_name != None:
+    if type(custom_result_name) is str:
         result_name = custom_result_name
     else:
         if os.path.isfile(result_fordpath):

@@ -35,7 +35,7 @@ class LSCIndexSpace(LatentIndexSpace):
         latent_dim: int = 0,
         index_output_transform: Optional[Callable[[ProtoAction], ProtoAction]] = None,
         index_noise_scale: Optional[
-            Callable[[ProtoAction, torch.Tensor], ProtoAction]
+            Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
         logger: Optional[Logger] = None,
         lsc: Optional[LSC] = None,

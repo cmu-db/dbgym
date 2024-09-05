@@ -2,7 +2,12 @@ import unittest
 
 import pglast
 
-from tune.protox.env.util.workload_analysis import *
+from tune.protox.env.types import AttrTableListMap, QueryType
+from tune.protox.env.util.workload_analysis import (
+    extract_aliases,
+    extract_columns,
+    extract_sqltypes,
+)
 
 
 class WorkloadUtilsTests(unittest.TestCase):
@@ -16,69 +21,71 @@ class WorkloadUtilsTests(unittest.TestCase):
         "nation",
         "region",
     ]
-    TPCH_ALL_ATTRIBUTES = {
-        "r_regionkey": ["region"],
-        "r_name": ["region"],
-        "r_comment": ["region"],
-        "n_nationkey": ["nation"],
-        "n_name": ["nation"],
-        "n_regionkey": ["nation"],
-        "n_comment": ["nation"],
-        "p_partkey": ["part"],
-        "p_name": ["part"],
-        "p_mfgr": ["part"],
-        "p_brand": ["part"],
-        "p_type": ["part"],
-        "p_size": ["part"],
-        "p_container": ["part"],
-        "p_retailprice": ["part"],
-        "p_comment": ["part"],
-        "s_suppkey": ["supplier"],
-        "s_name": ["supplier"],
-        "s_address": ["supplier"],
-        "s_nationkey": ["supplier"],
-        "s_phone": ["supplier"],
-        "s_acctbal": ["supplier"],
-        "s_comment": ["supplier"],
-        "ps_partkey": ["partsupp"],
-        "ps_suppkey": ["partsupp"],
-        "ps_availqty": ["partsupp"],
-        "ps_supplycost": ["partsupp"],
-        "ps_comment": ["partsupp"],
-        "c_custkey": ["customer"],
-        "c_name": ["customer"],
-        "c_address": ["customer"],
-        "c_nationkey": ["customer"],
-        "c_phone": ["customer"],
-        "c_acctbal": ["customer"],
-        "c_mktsegment": ["customer"],
-        "c_comment": ["customer"],
-        "o_orderkey": ["orders"],
-        "o_custkey": ["orders"],
-        "o_orderstatus": ["orders"],
-        "o_totalprice": ["orders"],
-        "o_orderdate": ["orders"],
-        "o_orderpriority": ["orders"],
-        "o_clerk": ["orders"],
-        "o_shippriority": ["orders"],
-        "o_comment": ["orders"],
-        "l_orderkey": ["lineitem"],
-        "l_partkey": ["lineitem"],
-        "l_suppkey": ["lineitem"],
-        "l_linenumber": ["lineitem"],
-        "l_quantity": ["lineitem"],
-        "l_extendedprice": ["lineitem"],
-        "l_discount": ["lineitem"],
-        "l_tax": ["lineitem"],
-        "l_returnflag": ["lineitem"],
-        "l_linestatus": ["lineitem"],
-        "l_shipdate": ["lineitem"],
-        "l_commitdate": ["lineitem"],
-        "l_receiptdate": ["lineitem"],
-        "l_shipinstruct": ["lineitem"],
-        "l_shipmode": ["lineitem"],
-        "l_comment": ["lineitem"],
-    }
+    TPCH_ALL_ATTRIBUTES = AttrTableListMap(
+        {
+            "r_regionkey": ["region"],
+            "r_name": ["region"],
+            "r_comment": ["region"],
+            "n_nationkey": ["nation"],
+            "n_name": ["nation"],
+            "n_regionkey": ["nation"],
+            "n_comment": ["nation"],
+            "p_partkey": ["part"],
+            "p_name": ["part"],
+            "p_mfgr": ["part"],
+            "p_brand": ["part"],
+            "p_type": ["part"],
+            "p_size": ["part"],
+            "p_container": ["part"],
+            "p_retailprice": ["part"],
+            "p_comment": ["part"],
+            "s_suppkey": ["supplier"],
+            "s_name": ["supplier"],
+            "s_address": ["supplier"],
+            "s_nationkey": ["supplier"],
+            "s_phone": ["supplier"],
+            "s_acctbal": ["supplier"],
+            "s_comment": ["supplier"],
+            "ps_partkey": ["partsupp"],
+            "ps_suppkey": ["partsupp"],
+            "ps_availqty": ["partsupp"],
+            "ps_supplycost": ["partsupp"],
+            "ps_comment": ["partsupp"],
+            "c_custkey": ["customer"],
+            "c_name": ["customer"],
+            "c_address": ["customer"],
+            "c_nationkey": ["customer"],
+            "c_phone": ["customer"],
+            "c_acctbal": ["customer"],
+            "c_mktsegment": ["customer"],
+            "c_comment": ["customer"],
+            "o_orderkey": ["orders"],
+            "o_custkey": ["orders"],
+            "o_orderstatus": ["orders"],
+            "o_totalprice": ["orders"],
+            "o_orderdate": ["orders"],
+            "o_orderpriority": ["orders"],
+            "o_clerk": ["orders"],
+            "o_shippriority": ["orders"],
+            "o_comment": ["orders"],
+            "l_orderkey": ["lineitem"],
+            "l_partkey": ["lineitem"],
+            "l_suppkey": ["lineitem"],
+            "l_linenumber": ["lineitem"],
+            "l_quantity": ["lineitem"],
+            "l_extendedprice": ["lineitem"],
+            "l_discount": ["lineitem"],
+            "l_tax": ["lineitem"],
+            "l_returnflag": ["lineitem"],
+            "l_linestatus": ["lineitem"],
+            "l_shipdate": ["lineitem"],
+            "l_commitdate": ["lineitem"],
+            "l_receiptdate": ["lineitem"],
+            "l_shipinstruct": ["lineitem"],
+            "l_shipmode": ["lineitem"],
+            "l_comment": ["lineitem"],
+        }
+    )
     TPCH_Q1 = """
 select
 	l_returnflag,
@@ -104,10 +111,10 @@ order by
 """
 
     @staticmethod
-    def pglast_parse(sql):
+    def pglast_parse(sql: str) -> pglast.ast.Node:
         return pglast.parse_sql(sql)
 
-    def test_extract_aliases(self):
+    def test_extract_aliases(self) -> None:
         sql = "select * from t1 as t1_alias; select * from t1;"
         stmts = WorkloadUtilsTests.pglast_parse(sql)
         aliases = extract_aliases(stmts)
@@ -116,21 +123,21 @@ order by
         self.assertTrue("t1" in aliases and len(aliases) == 1)
         self.assertEqual(set(aliases["t1"]), set(["t1", "t1_alias"]))
 
-    def test_extract_aliases_ignores_views_in_create_view(self):
+    def test_extract_aliases_ignores_views_in_create_view(self) -> None:
         sql = "create view view1 (view1_c1) as select c1 from t1;"
         stmts = WorkloadUtilsTests.pglast_parse(sql)
         aliases = extract_aliases(stmts)
         # all tables have only one alias so we can do this simpler assertion code
         self.assertEqual(aliases, {"t1": ["t1"]})
 
-    def test_extract_aliases_doesnt_ignore_views_that_are_used(self):
+    def test_extract_aliases_doesnt_ignore_views_that_are_used(self) -> None:
         sql = "create view view1 (view1_c1) as select c1 from t1; select * from view1;"
         stmts = WorkloadUtilsTests.pglast_parse(sql)
         aliases = extract_aliases(stmts)
         # all tables have only one alias so we can do this simpler assertion code
         self.assertEqual(aliases, {"t1": ["t1"], "view1": ["view1"]})
 
-    def test_extract_sqltypes(self):
+    def test_extract_sqltypes(self) -> None:
         sql = """
 select * from t1;
 update t1 set t1.c1 = 0 where t1.c1 = 1;
@@ -150,7 +157,7 @@ create or replace view view1 (view1_c1) as
         self.assertEqual(sqltypes[1][0], QueryType.INS_UPD_DEL)
         self.assertEqual(sqltypes[2][0], QueryType.CREATE_VIEW)
 
-    def test_extract_columns(self):
+    def test_extract_columns(self) -> None:
         sql = WorkloadUtilsTests.TPCH_Q1
         tables = WorkloadUtilsTests.TPCH_TABLES
         all_attributes = WorkloadUtilsTests.TPCH_ALL_ATTRIBUTES
@@ -194,7 +201,7 @@ create or replace view view1 (view1_c1) as
             ),
         )
 
-    def test_extract_columns_with_cte(self):
+    def test_extract_columns_with_cte(self) -> None:
         sql = """
 with cte1 as (
     select t1.c1
@@ -205,7 +212,7 @@ select *
 from cte1;
 """
         tables = ["t1"]
-        all_attributes = {"c1": "t1", "c2": "t1"}
+        all_attributes = AttrTableListMap({"c1": ["t1"], "c2": ["t1"]})
         stmts = WorkloadUtilsTests.pglast_parse(sql)
         aliases = extract_aliases(stmts)
         self.assertEqual(len(stmts), 1)

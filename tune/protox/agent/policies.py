@@ -83,7 +83,7 @@ class Actor(BaseModel):
         self,
         observation_space: spaces.Space[Any],
         action_space: spaces.Space[Any],
-        net_arch: List[int],
+        net_arch: list[int],
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
         weight_init: Optional[str] = None,
@@ -150,7 +150,7 @@ class ContinuousCritic(BaseModel):
         self,
         observation_space: spaces.Space[Any],
         action_space: spaces.Space[Any],
-        net_arch: List[int],
+        net_arch: list[int],
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
         weight_init: Optional[str] = None,
@@ -178,7 +178,7 @@ class ContinuousCritic(BaseModel):
             self.add_module(f"qf{idx}", q_net)
             self.q_networks.append(q_net)
 
-    def forward(self, obs: th.Tensor, actions: th.Tensor) -> Tuple[th.Tensor, ...]:
+    def forward(self, obs: th.Tensor, actions: th.Tensor) -> tuple[th.Tensor, ...]:
         with th.set_grad_enabled(True):
             features = self.extract_features(obs)
         qvalue_input = th.cat([features, actions], dim=1)

@@ -3,81 +3,34 @@ import os
 import shutil
 from itertools import chain
 from pathlib import Path
-from typing import List, Set
 
 import click
-import yaml
 
-from misc.utils import DBGymConfig, is_child_path, parent_dpath_of_path
+from misc.utils import (
+    DBGymConfig,
+    get_runs_path_from_workspace_path,
+    get_symlinks_path_from_workspace_path,
+    is_child_path,
+    parent_dpath_of_path,
+)
 
 task_logger = logging.getLogger("task")
 task_logger.setLevel(logging.INFO)
 
 
+# This is used in test_clean.py. It's defined here to avoid a circular import.
+class MockDBGymConfig:
+    def __init__(self, scratchspace_path: Path):
+        self.dbgym_workspace_path = scratchspace_path
+        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
+            scratchspace_path
+        )
+        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
+
+
 @click.group(name="manage")
-def manage_group():
+def manage_group() -> None:
     pass
-
-
-@click.command(name="show")
-@click.argument("keys", nargs=-1)
-@click.pass_obj
-def manage_show(dbgym_cfg, keys):
-    config_path = dbgym_cfg.path
-    config_yaml = dbgym_cfg.yaml
-
-    # Traverse the YAML.
-    for key in keys:
-        config_yaml = config_yaml[key]
-
-    # Pretty-print the requested YAML value.
-    output_str = None
-    if type(config_yaml) != dict:
-        output_str = config_yaml
-    else:
-        output_str = yaml.dump(config_yaml, default_flow_style=False)
-        if len(keys) > 0:
-            output_str = "  " + output_str.replace("\n", "\n  ")
-        output_str = output_str.rstrip()
-    print(output_str)
-
-    task_logger.info(f"Read: {Path(config_path)}")
-
-
-@click.command(name="write")
-@click.argument("keys", nargs=-1)
-@click.argument("value_type")
-@click.argument("value")
-@click.pass_obj
-def manage_write(dbgym_cfg, keys, value_type, value):
-    config_path = dbgym_cfg.path
-    config_yaml = dbgym_cfg.yaml
-
-    # Traverse the YAML.
-    root_yaml = config_yaml
-    for key in keys[:-1]:
-        config_yaml = config_yaml[key]
-
-    # Modify the requested YAML value and write the YAML file.
-    assert type(config_yaml[keys[-1]]) != dict
-    config_yaml[keys[-1]] = getattr(__builtins__, value_type)(value)
-    new_yaml = yaml.dump(root_yaml, default_flow_style=False).rstrip()
-    Path(config_path).write_text(new_yaml)
-
-    task_logger.info(f"Updated: {Path(config_path)}")
-
-
-@click.command(name="standardize")
-@click.pass_obj
-def manage_standardize(dbgym_cfg):
-    config_path = dbgym_cfg.path
-    config_yaml = dbgym_cfg.yaml
-
-    # Write the YAML file.
-    new_yaml = yaml.dump(config_yaml, default_flow_style=False).rstrip()
-    Path(config_path).write_text(new_yaml)
-
-    task_logger.info(f"Updated: {Path(config_path)}")
 
 
 @click.command("clean")
@@ -88,13 +41,13 @@ def manage_standardize(dbgym_cfg):
     default="safe",
     help='The mode to clean the workspace (default="safe"). "aggressive" means "only keep run_*/ folders referenced by a file in symlinks/". "safe" means "in addition to that, recursively keep any run_*/ folders referenced by any symlinks in run_*/ folders we are keeping."',
 )
-def manage_clean(dbgym_cfg: DBGymConfig, mode: str):
+def manage_clean(dbgym_cfg: DBGymConfig, mode: str) -> None:
     clean_workspace(dbgym_cfg, mode=mode, verbose=True)
 
 
 @click.command("count")
 @click.pass_obj
-def manage_count(dbgym_cfg: DBGymConfig):
+def manage_count(dbgym_cfg: DBGymConfig) -> None:
     num_files = _count_files_in_workspace(dbgym_cfg)
     print(
         f"The workspace ({dbgym_cfg.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
@@ -102,7 +55,7 @@ def manage_count(dbgym_cfg: DBGymConfig):
 
 
 def add_symlinks_in_dpath(
-    symlinks_stack: List[Path], root_dpath: Path, processed_symlinks: Set[Path]
+    symlinks_stack: list[Path], root_dpath: Path, processed_symlinks: set[Path]
 ) -> None:
     """
     Will modify symlinks_stack and processed_symlinks.
@@ -117,7 +70,7 @@ def add_symlinks_in_dpath(
                 processed_symlinks.add(file_path)
 
 
-def _count_files_in_workspace(dbgym_cfg: DBGymConfig) -> int:
+def _count_files_in_workspace(dbgym_cfg: DBGymConfig | MockDBGymConfig) -> int:
     """
     Counts the number of files (regular file or dir or symlink) in the workspace.
     """
@@ -136,7 +89,9 @@ def _count_files_in_workspace(dbgym_cfg: DBGymConfig) -> int:
     return total_count
 
 
-def clean_workspace(dbgym_cfg: DBGymConfig, mode: str = "safe", verbose=False) -> None:
+def clean_workspace(
+    dbgym_cfg: DBGymConfig | MockDBGymConfig, mode: str = "safe", verbose: bool = False
+) -> None:
     """
     Clean all [workspace]/task_runs/run_*/ directories that are not referenced by any "active symlinks".
     If mode is "aggressive", "active symlinks" means *only* the symlinks directly in [workspace]/symlinks/.
@@ -144,9 +99,9 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str = "safe", verbose=False) -
       any symlinks referenced in task_runs/run_*/ directories we have already decided to keep.
     """
     # This stack holds the symlinks that are left to be processed
-    symlink_fpaths_to_process = []
+    symlink_fpaths_to_process: list[Path] = []
     # This set holds the symlinks that have already been processed to avoid infinite loops
-    processed_symlinks = set()
+    processed_symlinks: set[Path] = set()
 
     # 1. Initialize paths to process
     if dbgym_cfg.dbgym_symlinks_path.exists():
@@ -237,8 +192,5 @@ def clean_workspace(dbgym_cfg: DBGymConfig, mode: str = "safe", verbose=False) -
         )
 
 
-manage_group.add_command(manage_show)
-manage_group.add_command(manage_write)
-manage_group.add_command(manage_standardize)
 manage_group.add_command(manage_clean)
 manage_group.add_command(manage_count)

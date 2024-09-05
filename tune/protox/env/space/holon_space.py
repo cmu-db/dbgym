@@ -39,7 +39,7 @@ class HolonSpace(spaces.Tuple):
         carprod_neighbors: list[HolonAction],
         carprod_embeds: torch.Tensor,
         first_drift: int,
-    ):
+    ) -> None:
         zero = self.to_latent([carprod_neighbors[0]])[0]
         last = self.to_latent([carprod_neighbors[-1]])[0]
         first_d = self.to_latent([carprod_neighbors[first_drift]])[0]
@@ -81,9 +81,9 @@ class HolonSpace(spaces.Tuple):
         self.space_dims: Optional[list[int]] = None
         self.logger = logger
 
-    def get_spaces(self) -> list[Tuple[str, HolonSubSpace]]:
+    def get_spaces(self) -> list[tuple[str, HolonSubSpace]]:
         r = cast(
-            list[Tuple[str, HolonSubSpace]],
+            list[tuple[str, HolonSubSpace]],
             [(s.name, s) for s in self.spaces if hasattr(s, "name")],
         )
         assert len(r) == 3
@@ -98,7 +98,7 @@ class HolonSpace(spaces.Tuple):
 
     def split_action(
         self, action: HolonAction
-    ) -> list[Tuple[HolonSubSpace, HolonSubAction]]:
+    ) -> list[tuple[HolonSubSpace, HolonSubAction]]:
         return [
             (cast(LatentKnobSpace, self.spaces[0]), action[0]),
             (cast(LatentIndexSpace, self.spaces[1]), action[1]),
@@ -230,21 +230,21 @@ class HolonSpace(spaces.Tuple):
         self,
         raw_action: ProtoAction,
         neighbor_parameters: NeighborParameters = DEFAULT_NEIGHBOR_PARAMETERS,
-    ) -> Tuple[list[HolonAction], ProtoAction, torch.Tensor]:
+    ) -> tuple[list[HolonAction], ProtoAction, torch.Tensor]:
         env_acts = []
-        emb_acts: List[torch.Tensor] = []
+        emb_acts: list[torch.Tensor] = []
         ndims = []
 
         env_action = self.from_latent(raw_action)
         for proto in env_action:
             # Figure out the neighbors for each subspace.
-            envs_neighbors = []
-            embed_neighbors = []
+            envs_neighbors: list[Any] = []
+            embed_neighbors: list[Any] = []
 
             # TODO(wz2,PROTOX_DELTA): For pseudo-backwards compatibility, we meld the knob + query space together.
             # In this way, we don't actually generate knob x query cartesian product.
             # Rather, we directly fuse min(knob_neighbors, query_neighbors) together and then cross with indexes.
-            meld_groups = [
+            meld_groups: list[list[Any]] = [
                 [self.get_knob_space(), self.get_query_space()],
                 [self.get_index_space()],
             ]
@@ -329,7 +329,7 @@ class HolonSpace(spaces.Tuple):
         prev_state_container: Optional[HolonStateContainer],
         action: Optional[HolonAction],
         connection: Connection[Any],
-        queries: dict[str, list[Tuple[QueryType, str]]],
+        queries: dict[str, list[tuple[QueryType, str]]],
     ) -> HolonStateContainer:
         t = tuple(
             s.generate_state_container(
@@ -346,7 +346,7 @@ class HolonSpace(spaces.Tuple):
 
     def generate_action_plan(
         self, action: HolonAction, state_container: HolonStateContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         outputs = [
             space.generate_action_plan(action[i], state_container[i], **kwargs)
             for i, space in enumerate(self.spaces)
@@ -359,7 +359,7 @@ class HolonSpace(spaces.Tuple):
 
     def generate_plan_from_config(
         self, config: HolonStateContainer, sc: HolonStateContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         outputs = [
             space.generate_delta_action_plan(config[i], sc[i], **kwargs)
             for i, space in enumerate(self.spaces)

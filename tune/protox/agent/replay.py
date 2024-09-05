@@ -9,7 +9,9 @@ Additionally, the original tuning run may have been accelerated by Boot, whereas
 import json
 import logging
 import pickle
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Optional, Set, cast
 
 import click
 import pandas as pd
@@ -28,8 +30,9 @@ from misc.utils import (
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import HolonAction
+from tune.protox.env.types import ActionsInfo, HolonAction
 from tune.protox.env.workload import Workload
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -38,11 +41,13 @@ REPLAY_DATA_FNAME = "replay_data.csv"
 class ReplayArgs:
     def __init__(
         self,
-        workload_timeout_during_replay: bool,
+        # If it's None, it'll get set later on inside replay_tuning_run().
+        workload_timeout_during_replay: Optional[float],
         replay_all_variations: bool,
         simulated: bool,
-        cutoff: float,
-        blocklist: list,
+        # If it's None, it'll get set later on inside replay_tuning_run().
+        cutoff: Optional[float],
+        blocklist: list[str],
     ):
         self.workload_timeout_during_replay = workload_timeout_during_replay
         self.replay_all_variations = replay_all_variations
@@ -73,6 +78,7 @@ class ReplayArgs:
 )
 @click.option(
     "--scale-factor",
+    type=float,
     default=1.0,
     help="The scale factor used when generating the data of the benchmark.",
 )
@@ -83,14 +89,14 @@ class ReplayArgs:
 )
 @click.option(
     "--tuning-steps-dpath",
-    default=None,
     type=Path,
+    default=None,
     help="The path to the `tuning_steps` directory to be replayed.",
 )
 @click.option(
     "--workload-timeout-during-replay",
+    type=float,
     default=None,
-    type=int,
     # You can make it use the workload timeout used during tuning if you want.
     # I just made it use the workload timeout from HPO because I don't currently persist the tuning HPO params.
     help="The timeout (in seconds) of a workload when replaying. By default, it will be equal to the workload timeout used during HPO.",
@@ -107,14 +113,14 @@ class ReplayArgs:
 )
 @click.option(
     "--cutoff",
-    default=None,
     type=float,
+    default=None,
     help='Only evaluate configs up to cutoff hours. None means "evaluate all configs".',
 )
 @click.option(
     "--blocklist",
+    type=list[str],
     default=[],
-    type=list,
     help="Ignore running queries in the blocklist.",
 )
 def replay(
@@ -125,17 +131,17 @@ def replay(
     query_subset: str,
     scale_factor: float,
     boot_enabled_during_tune: bool,
-    tuning_steps_dpath: Path,
-    workload_timeout_during_replay: bool,
+    tuning_steps_dpath: Optional[Path],
+    workload_timeout_during_replay: Optional[float],
     replay_all_variations: bool,
     simulated: bool,
-    cutoff: float,
-    blocklist: list,
+    cutoff: Optional[float],
+    blocklist: list[str],
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
 
-    if tuning_steps_dpath == None:
+    if tuning_steps_dpath is None:
         tuning_steps_dpath = default_tuning_steps_dpath(
             dbgym_cfg.dbgym_workspace_path,
             benchmark_name,
@@ -161,7 +167,7 @@ def replay(
 
 def replay_tuning_run(
     dbgym_cfg: DBGymConfig, tuning_steps_dpath: Path, replay_args: ReplayArgs
-):
+) -> None:
     """
     Replay a single tuning run (as in one tuning_steps/ folder).
     """
@@ -174,7 +180,7 @@ def replay_tuning_run(
         hpo_params = json.load(f)
 
     # Set defaults that depend on hpo_params
-    if replay_args.workload_timeout_during_replay == None:
+    if replay_args.workload_timeout_during_replay is None:
         replay_args.workload_timeout_during_replay = hpo_params["workload_timeout"][
             str(TuningMode.HPO)
         ]
@@ -190,6 +196,7 @@ def replay_tuning_run(
     # This finds all the [time] folders in tuning_steps/ (except "baseline" since we ignore that in `_is_tuning_step_line()`),
     #   so you could just do `ls tuning_steps/` if you wanted to.
     folders = []
+    start_time: Optional[datetime] = None
     start_found = False
     output_log_fpath = tuning_steps_dpath / "output.log"
     with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
@@ -209,8 +216,9 @@ def replay_tuning_run(
                     time_since_start = parse(
                         line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
                     )
+                    assert type(start_time) is datetime
                     if (
-                        replay_args.cutoff == None
+                        replay_args.cutoff is None
                         or (time_since_start - start_time).total_seconds()
                         < replay_args.cutoff * 3600
                     ):
@@ -225,8 +233,8 @@ def replay_tuning_run(
     _, _, agent_env, _, _ = build_trial(
         dbgym_cfg, TuningMode.REPLAY, hpo_params["seed"], hpo_params
     )
-    pg_env: PostgresEnv = agent_env.unwrapped
-    action_space: HolonSpace = pg_env.action_space
+    pg_env: PostgresEnv = cast(PostgresEnv, agent_env.unwrapped)
+    action_space: HolonSpace = cast(HolonSpace, pg_env.action_space)
 
     # Reset things.
     if not replay_args.simulated:
@@ -241,7 +249,9 @@ def replay_tuning_run(
                 num_lines += 1
 
     # A convenience wrapper around execute_workload() which fills in the arguments properly and processes the return values.
-    def _execute_workload_wrapper(actions_info: list["HolonAction"]) -> list[float]:
+    def _execute_workload_wrapper(
+        actions_info: ActionsInfo,
+    ) -> tuple[int, int, bool, float]:
         logging.info(
             f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n"
         )
@@ -267,6 +277,7 @@ def replay_tuning_run(
             #   will not have had a chance to run at all. Based on the behavior of `_mutilate_action_with_metrics()`, we select
             #   an arbitrary variation fo the queries that have not executed at all.
             best_observed_holon_action = actions_info["best_observed_holon_action"]
+            assert best_observed_holon_action is not None
             actions = [best_observed_holon_action]
             variation_names = ["BestObserved"]
 
@@ -299,8 +310,7 @@ def replay_tuning_run(
         current_step = 0
         start_found = False
         start_time = None
-        maximal_repo = None
-        existing_index_acts = []
+        existing_index_acts: set[IndexAction] = set()
 
         for line in f:
             # Keep going until we've found the start.
@@ -316,19 +326,10 @@ def replay_tuning_run(
                 continue
 
             elif _is_tuning_step_line(line):
-                if _is_tuning_step_line(line):
-                    repo = eval(line.split("Running ")[-1])[-1]
-                    time_since_start = parse(
-                        line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
-                    )
-                elif "Found new maximal state with" in line:
-                    repo = eval(maximal_repo.split("Running ")[-1])[-1]
-                    time_since_start = parse(
-                        maximal_repo.split("DEBUG:")[-1]
-                        .split(" Running")[0]
-                        .split("[")[0]
-                    )
-                    maximal_repo = None
+                repo = eval(line.split("Running ")[-1])[-1]
+                time_since_start = parse(
+                    line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
+                )
 
                 # Get the original runtime as well as whether any individual queries and/or the full workload timed out.
                 run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
@@ -367,7 +368,7 @@ def replay_tuning_run(
                 with open_and_save(
                     dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb"
                 ) as f:
-                    actions_info = pickle.load(f)
+                    actions_info: ActionsInfo = pickle.load(f)
                     all_holon_action_variations = actions_info[
                         "all_holon_action_variations"
                     ]
@@ -451,6 +452,7 @@ def replay_tuning_run(
                     )
 
                 # Perform some validity checks and then add this tuning step's data to `run_data``.
+                assert isinstance(start_time, datetime)
                 this_step_run_data = {
                     "step": current_step,
                     "time_since_start": (time_since_start - start_time).total_seconds(),

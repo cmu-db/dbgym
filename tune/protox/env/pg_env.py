@@ -14,6 +14,7 @@ from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import (
+    ActionsInfo,
     EnvInfoDict,
     HolonAction,
     HolonStateContainer,
@@ -78,7 +79,7 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("reset")
     def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
-    ) -> Tuple[Any, EnvInfoDict]:
+    ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
         if self.logger:
             self.logger.get_logger(__name__).info(
@@ -212,7 +213,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         return self.current_state, info
 
     @time_record("step_before_execution")
-    def step_before_execution(self, action: HolonAction) -> Tuple[bool, EnvInfoDict]:
+    def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
         if self.logger:
             self.logger.get_logger(__name__).debug(
@@ -248,13 +249,14 @@ class PostgresEnv(gym.Env[Any, Any]):
     def step_execute(
         self,
         setup_success: bool,
-        all_holon_action_variations: list[Tuple[str, HolonAction]],
+        all_holon_action_variations: list[tuple[str, HolonAction]],
         info: EnvInfoDict,
-    ) -> Tuple[bool, EnvInfoDict]:
+    ) -> tuple[bool, EnvInfoDict]:
         if setup_success:
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
+            assert self.logger is not None
             self.logger.get_logger(__name__).info(
                 f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
             )
@@ -302,9 +304,12 @@ class PostgresEnv(gym.Env[Any, Any]):
                     "query_metric_data": query_metric_data,
                     "reward": reward,
                     "results_dpath": results_dpath,
-                    "actions_info": {
-                        "all_holon_action_variations": all_holon_action_variations,
-                    },
+                    "actions_info": ActionsInfo(
+                        {
+                            "all_holon_action_variations": all_holon_action_variations,
+                            "best_observed_holon_action": None,
+                        }
+                    ),
                 }
             )
         )
@@ -316,8 +321,17 @@ class PostgresEnv(gym.Env[Any, Any]):
         success: bool,
         action: HolonAction,
         info: EnvInfoDict,
+        # If "soft" is true, it means we're calling step_post_execute() from reset(). If it's false, it means we're calling step_post_execute() from step().
         soft: bool = False,
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, Optional[float], bool, bool, EnvInfoDict]:
+        # If we're calling step_post_execute() from reset(), we expect info["metric"] and info["reward"] to be None.
+        if not soft:
+            assert info["reward"] is not None
+            assert info["metric"] is not None
+        else:
+            assert info["reward"] is None
+            assert info["metric"] is None
+
         if self.workload.oltp_workload and self.horizon > 1:
             # If horizon = 1, then we're going to reset anyways. So easier to just untar the original archive.
             # Restore the crisp and clean snapshot.
@@ -328,6 +342,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             if not soft:
                 if not self.workload.oltp_workload:
                     # Update the workload metric timeout if we've succeeded.
+                    assert info["metric"] is not None
                     self.workload.set_workload_timeout(info["metric"])
 
             # Get the current view of the state container.
@@ -361,11 +376,14 @@ class PostgresEnv(gym.Env[Any, Any]):
 
     def step(  # type: ignore
         self, action: HolonAction
-    ) -> Tuple[Any, float, bool, bool, EnvInfoDict]:
+    ) -> tuple[Any, float, bool, bool, EnvInfoDict]:
         assert self.tuning_mode != TuningMode.REPLAY
         success, info = self.step_before_execution(action)
         success, info = self.step_execute(success, [("PerQuery", action)], info)
-        return self.step_post_execute(success, action, info)
+        obs, reward, term, trunc, info = self.step_post_execute(success, action, info)
+        # Since we called step_post_execute() with soft=False, we expect infos[1] (reward) to not be None.
+        assert reward is not None
+        return (obs, reward, term, trunc, info)
 
     @time_record("shift_state")
     def shift_state(

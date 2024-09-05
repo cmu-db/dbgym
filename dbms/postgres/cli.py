@@ -10,9 +10,10 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 import click
-from sqlalchemy import Connection
+import sqlalchemy
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
@@ -35,9 +36,9 @@ from util.pg import (
     DEFAULT_POSTGRES_DBNAME,
     DEFAULT_POSTGRES_PORT,
     SHARED_PRELOAD_LIBRARIES,
-    conn_execute,
-    create_conn,
+    create_sqlalchemy_conn,
     sql_file_execute,
+    sqlalchemy_conn_execute,
 )
 from util.shell import subprocess_run
 
@@ -47,7 +48,7 @@ dbms_postgres_logger.setLevel(logging.INFO)
 
 @click.group(name="postgres")
 @click.pass_obj
-def postgres_group(dbgym_cfg: DBGymConfig):
+def postgres_group(dbgym_cfg: DBGymConfig) -> None:
     dbgym_cfg.append_group("postgres")
 
 
@@ -61,7 +62,7 @@ def postgres_group(dbgym_cfg: DBGymConfig):
     is_flag=True,
     help="Include this flag to rebuild Postgres even if it already exists.",
 )
-def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool):
+def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     _build_repo(dbgym_cfg, rebuild)
 
 
@@ -94,14 +95,14 @@ def postgres_dbdata(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
     scale_factor: float,
-    pgbin_path: Path,
+    pgbin_path: Optional[Path],
     intended_dbdata_hardware: str,
-    dbdata_parent_dpath: Path,
-):
+    dbdata_parent_dpath: Optional[Path],
+) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    if pgbin_path == None:
+    if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
-    if dbdata_parent_dpath == None:
+    if dbdata_parent_dpath is None:
         dbdata_parent_dpath = default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
@@ -138,7 +139,7 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
     return dbgym_cfg.cur_symlinks_build_path("repo.link")
 
 
-def _build_repo(dbgym_cfg: DBGymConfig, rebuild):
+def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
     if not rebuild and expected_repo_symlink_dpath.exists():
         dbms_postgres_logger.info(
@@ -209,7 +210,7 @@ def _create_dbdata(
     dbms_postgres_logger.info(f"Created dbdata in {dbdata_tgz_symlink_path}")
 
 
-def _generic_dbdata_setup(dbgym_cfg: DBGymConfig):
+def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:
     # get necessary vars
     pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_cfg).resolve()
     assert pgbin_real_dpath.exists()
@@ -247,8 +248,8 @@ def _generic_dbdata_setup(dbgym_cfg: DBGymConfig):
 
 def _load_benchmark_into_dbdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
-):
-    with create_conn(use_psycopg=False) as conn:
+) -> None:
+    with create_sqlalchemy_conn() as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
         else:
@@ -260,23 +261,27 @@ def _load_benchmark_into_dbdata(
 
 
 def _load_into_dbdata(
-    dbgym_cfg: DBGymConfig, conn: Connection, load_info: LoadInfoBaseClass
-):
+    dbgym_cfg: DBGymConfig, conn: sqlalchemy.Connection, load_info: LoadInfoBaseClass
+) -> None:
     sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
 
     # truncate all tables first before even loading a single one
     for table, _ in load_info.get_tables_and_fpaths():
-        conn_execute(conn, f"TRUNCATE {table} CASCADE")
+        sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # then, load the tables
     for table, table_fpath in load_info.get_tables_and_fpaths():
         with open_and_save(dbgym_cfg, table_fpath, "r") as table_csv:
-            with conn.connection.dbapi_connection.cursor() as cur:
+            assert conn.connection.dbapi_connection is not None
+            cur = conn.connection.dbapi_connection.cursor()
+            try:
                 with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
                     while data := table_csv.read(8192):
                         copy.write(data)
+            finally:
+                cur.close()
 
     constraints_fpath = load_info.get_constraints_fpath()
-    if constraints_fpath != None:
+    if constraints_fpath is not None:
         sql_file_execute(dbgym_cfg, conn, constraints_fpath)
 
 

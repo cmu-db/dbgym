@@ -224,7 +224,7 @@ def fetch_server_knobs(
 
 def fetch_server_indexes(
     connection: Connection[Any], tables: list[str]
-) -> typing.Tuple[TableAttrListMap, ServerTableIndexMetadata]:
+) -> tuple[TableAttrListMap, ServerTableIndexMetadata]:
     rel_metadata = TableAttrListMap({t: [] for t in tables})
     existing_indexes = ServerTableIndexMetadata({})
     with connection.cursor(row_factory=dict_row) as cursor:

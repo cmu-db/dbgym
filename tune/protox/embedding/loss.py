@@ -3,8 +3,8 @@ from typing import Any, Callable, Optional, Tuple, Union, cast
 
 import torch
 import torch.nn as nn
-from pytorch_metric_learning import losses  # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
+from pytorch_metric_learning import losses
+from pytorch_metric_learning.utils import common_functions as c_f
 
 COST_COLUMNS = [
     "quant_mult_cost_improvement",
@@ -24,11 +24,11 @@ def get_loss(distance_fn: str) -> nn.Module:
 def get_bias_fn(
     config: dict[str, Any]
 ) -> Callable[
-    [torch.Tensor, torch.Tensor], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+    [torch.Tensor, torch.Tensor], Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]
 ]:
     def bias_fn(
         data: torch.Tensor, labels: torch.Tensor
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         red_index = COST_COLUMNS.index(config["cost_reduction_type"])
         distance_scale = config["distance_scale"]
         if distance_scale == "auto":
@@ -74,7 +74,7 @@ def _distance_cost(
     targets: torch.Tensor,
     bias: Callable[
         [torch.Tensor, torch.Tensor],
-        Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor],
+        Union[tuple[torch.Tensor, torch.Tensor], torch.Tensor],
     ],
     output_scale: float,
 ) -> Any:

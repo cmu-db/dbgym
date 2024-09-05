@@ -7,6 +7,7 @@ import os
 import shutil
 import time
 from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -28,20 +29,21 @@ from tune.protox.embedding.train_args import (
 from tune.protox.embedding.trainer import StratifiedRandomSampler
 from tune.protox.embedding.vae import VAELoss, gen_vae_collate
 from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
+from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.workload import Workload
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"
 
 
-def compute_num_parts(num_samples: int):
+def compute_num_parts(num_samples: int) -> int:
     # TODO(phw2): in the future, implement running different parts in parallel, set OMP_NUM_THREADS accordingly, and investigate the effect of having more parts
     # TODO(phw2): if having more parts is effective, figure out a good way to specify num_parts (can it be determined automatically or should it be a CLI arg?)
     # TODO(phw2): does anything bad happen if num_parts doesn't evenly divide num_samples?
     return 1
 
 
-def redist_trained_models(dbgym_cfg: DBGymConfig, num_parts: int):
+def redist_trained_models(dbgym_cfg: DBGymConfig, num_parts: int) -> None:
     """
     Redistribute all embeddings_*/ folders inside the run_*/ folder into num_parts subfolders
     """
@@ -64,7 +66,7 @@ def analyze_all_embeddings_parts(
     num_parts: int,
     generic_args: EmbeddingTrainGenericArgs,
     analyze_args: EmbeddingAnalyzeArgs,
-):
+) -> None:
     """
     Analyze all part*/ dirs _in parallel_
     """
@@ -83,7 +85,7 @@ def _analyze_embeddings_part(
     part_i: int,
     generic_args: EmbeddingTrainGenericArgs,
     analyze_args: EmbeddingAnalyzeArgs,
-):
+) -> None:
     """
     Analyze (meaning create both stats.txt and ranges.txt) all the embedding models in the part[part_i]/ dir
     """
@@ -107,7 +109,7 @@ def _create_stats_for_part(
     part_dpath: Path,
     generic_args: EmbeddingTrainGenericArgs,
     analyze_args: EmbeddingAnalyzeArgs,
-):
+) -> None:
     """
     Creates a stats.txt file inside each embeddings_*/models/epoch*/ dir inside this part*/ dir
     TODO(wz2): what does stats.txt contain?
@@ -124,9 +126,7 @@ def _create_stats_for_part(
         )
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    models = itertools.chain(*[part_dpath.rglob("config")])
-    models = [m for m in models]
-    print(f"models={models}")
+    models = [m for m in itertools.chain(*[part_dpath.rglob("config")])]
     for model_config in tqdm.tqdm(models):
         if ((Path(model_config).parent) / "FAILED").exists():
             print("Detected failure in: ", model_config)
@@ -192,7 +192,7 @@ def _create_stats_for_part(
                 vae_loss = VAELoss(config["loss_fn"], max_attrs, max_cat_features)
 
             # Construct the accumulator.
-            accumulated_stats = {}
+            accumulated_stats: dict[str, list[Any]] = {}
             for class_idx in class_mapping:
                 accumulated_stats[f"recon_{class_idx}"] = []
 
@@ -320,7 +320,7 @@ def _create_ranges_for_part(
     part_dpath: Path,
     generic_args: EmbeddingTrainGenericArgs,
     analyze_args: EmbeddingAnalyzeArgs,
-):
+) -> None:
     """
     Create the ranges.txt for all models in part_dpath
     TODO(wz2): what does ranges.txt contain?
@@ -341,7 +341,7 @@ def _create_ranges_for_embedder(
     embedder_fpath: Path,
     generic_args: EmbeddingTrainGenericArgs,
     analyze_args: EmbeddingAnalyzeArgs,
-):
+) -> None:
     """
     Create the ranges.txt file corresponding to a specific part*/embeddings_*/models/epoch*/embedder_*.pth file
     """
@@ -376,9 +376,9 @@ def _create_ranges_for_embedder(
             lambda x: torch.nn.Sigmoid()(x) * config["output_scale"]
         )
 
-        def index_noise_scale(x, n):
+        def index_noise_scale(x: ProtoAction, n: Optional[torch.Tensor]) -> ProtoAction:
             assert n is None
-            return torch.clamp(x, 0.0, config["output_scale"])
+            return ProtoAction(torch.clamp(x, 0.0, config["output_scale"]))
 
         max_attrs, max_cat_features = fetch_vae_parameters_from_workload(
             workload, len(tables)
@@ -392,10 +392,10 @@ def _create_ranges_for_embedder(
         tables=tables,
         max_num_columns=max_num_columns,
         max_indexable_attributes=workload.max_indexable(),
-        seed=np.random.randint(1, 1e10),
+        seed=np.random.randint(1, int(1e10)),
         rel_metadata=copy.deepcopy(modified_attrs),
         attributes_overwrite=copy.deepcopy(modified_attrs),
-        tbl_include_subsets={},
+        tbl_include_subsets=TableAttrAccessSetsMap({}),
         vae=vae,
         index_space_aux_type=False,
         index_space_aux_include=False,
@@ -418,7 +418,7 @@ def _create_ranges_for_embedder(
     ranges_fpath = epoch_dpath / RANGES_FNAME
     with open(ranges_fpath, "w") as f:
         for _ in tqdm.tqdm(range(num_segments), total=num_segments, leave=False):
-            classes = {}
+            classes: dict[str, int] = {}
             with torch.no_grad():
                 points = (
                     torch.rand(analyze_args.num_points_to_sample, config["latent_dim"])
@@ -444,18 +444,18 @@ def _create_ranges_for_embedder(
                     if idx_class not in classes:
                         classes[idx_class] = 0
                     classes[idx_class] += 1
-            classes = sorted(
+            sorted_classes = sorted(
                 [(k, v) for k, v in classes.items()], key=lambda x: x[1], reverse=True
             )
             if analyze_args.num_classes_to_keep != 0:
-                classes = classes[: analyze_args.num_classes_to_keep]
+                sorted_classes = sorted_classes[: analyze_args.num_classes_to_keep]
 
             f.write(f"Generating range {base} - {base + output_scale}\n")
             f.write(
                 "\n".join(
                     [
                         f"{k}: {v / analyze_args.num_points_to_sample}"
-                        for (k, v) in classes
+                        for (k, v) in sorted_classes
                     ]
                 )
             )

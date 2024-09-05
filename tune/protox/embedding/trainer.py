@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import tqdm
 from numpy.typing import NDArray
-from pytorch_metric_learning import trainers  # type: ignore
-from pytorch_metric_learning.utils import common_functions as c_f  # type: ignore
+from pytorch_metric_learning import trainers
+from pytorch_metric_learning.utils import common_functions as c_f
 from torch.utils.data import Sampler
 
 
@@ -26,7 +26,7 @@ class StratifiedRandomSampler(Sampler[int]):
         self.elem_per_class = 0
         assert self.batch_size > 0
 
-    def compute(self) -> Tuple[dict[int, Tuple[int, NDArray[Any]]], int, int]:
+    def compute(self) -> tuple[dict[int, tuple[int, NDArray[Any]]], int, int]:
         r = {}
         for c in range(self.max_class):
             lc = np.argwhere(self.labels == c)
@@ -80,7 +80,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
         bias_fn: Optional[
             Callable[
                 [torch.Tensor, torch.Tensor],
-                Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
+                Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]],
             ]
         ],
         *args: Any,
@@ -90,7 +90,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
         self.failed = False
         self.fail_msg: Optional[str] = None
         self.fail_data: Optional[
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
         ] = None
         self.disable_tqdm = disable_tqdm
         self.bias_fn = bias_fn
@@ -117,7 +117,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
             )
         return 0
 
-    def calculate_loss(self, curr_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
+    def calculate_loss(self, curr_batch: tuple[torch.Tensor, torch.Tensor]) -> None:
         data, labels = curr_batch
         if labels.shape[1] == 1:
             # Flatten labels if it's a class.
@@ -170,7 +170,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
             if not self.disable_tqdm:
                 pbar = tqdm.tqdm(range(self.iterations_per_epoch))
             else:
-                pbar = range(self.iterations_per_epoch)  # type: ignore
+                pbar = range(self.iterations_per_epoch)
 
             for self.iteration in pbar:
                 self.forward_and_backward()
@@ -232,7 +232,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
     def compute_embeddings(self, base_output: Any) -> None:
         assert False
 
-    def get_batch(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_batch(self) -> tuple[torch.Tensor, torch.Tensor]:
         self.dataloader_iter, curr_batch = c_f.try_next_on_generator(self.dataloader_iter, self.dataloader)  # type: ignore
         data, labels = self.data_and_label_getter(curr_batch)
         return data, labels

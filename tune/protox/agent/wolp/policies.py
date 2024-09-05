@@ -6,7 +6,7 @@ import torch as th
 import torch.nn.functional as F
 from gymnasium import spaces
 from numpy.typing import NDArray
-from torch.optim import Optimizer
+from torch.optim import Optimizer  # type: ignore[attr-defined]
 
 from tune.protox.agent.buffers import ReplayBufferSamples
 from tune.protox.agent.noise import ActionNoise
@@ -98,7 +98,7 @@ class WolpPolicy(BaseModel):
         embed_actions: th.Tensor,
         actions_dim: th.Tensor,
         env_actions: list[HolonAction],
-    ) -> Tuple[list[HolonAction], th.Tensor]:
+    ) -> tuple[list[HolonAction], th.Tensor]:
         states_tile = states.repeat_interleave(actions_dim, dim=0)
         if use_target:
             next_q_values = th.cat(
@@ -140,7 +140,7 @@ class WolpPolicy(BaseModel):
         action_noise: Optional[Union[ActionNoise, th.Tensor]] = None,
         neighbor_parameters: NeighborParameters = DEFAULT_NEIGHBOR_PARAMETERS,
         random_act: bool = False,
-    ) -> Tuple[list[HolonAction], th.Tensor]:
+    ) -> tuple[list[HolonAction], th.Tensor]:
         # Get the tensor representation.
         start_time = time.time()
         if not isinstance(states, th.Tensor):
@@ -244,7 +244,9 @@ class WolpPolicy(BaseModel):
         self.critic_optimizer.zero_grad()
         assert not th.isnan(critic_loss).any()
         critic_loss.backward()  # type: ignore
-        th.nn.utils.clip_grad_norm_(list(self.critic.parameters()), self.grad_clip, error_if_nonfinite=True)  # type: ignore
+        th.nn.utils.clip_grad_norm_(
+            list(self.critic.parameters()), self.grad_clip, error_if_nonfinite=True
+        )
         self.critic.check_grad()
         self.critic_optimizer.step()
         return critic_loss
@@ -282,7 +284,9 @@ class WolpPolicy(BaseModel):
         self.actor_optimizer.zero_grad()
         assert not th.isnan(actor_loss).any()
         actor_loss.backward()  # type: ignore
-        th.nn.utils.clip_grad_norm_(list(self.actor.parameters()), self.grad_clip, error_if_nonfinite=True)  # type: ignore
+        th.nn.utils.clip_grad_norm_(
+            list(self.actor.parameters()), self.grad_clip, error_if_nonfinite=True
+        )
         self.actor.check_grad()
         self.actor_optimizer.step()
         return actor_loss

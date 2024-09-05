@@ -39,7 +39,7 @@ class LatentIndexSpace(IndexSpace):
         latent_dim: int = 0,
         index_output_transform: Optional[Callable[[ProtoAction], ProtoAction]] = None,
         index_noise_scale: Optional[
-            Callable[[ProtoAction, torch.Tensor], ProtoAction]
+            Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
         logger: Optional[Logger] = None,
     ) -> None:
@@ -250,7 +250,7 @@ class LatentIndexSpace(IndexSpace):
 
     def generate_action_plan(
         self, action: IndexSpaceRawSample, sc: IndexSpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         assert check_subspace(self, action)
 
         sql_commands = []
@@ -277,7 +277,7 @@ class LatentIndexSpace(IndexSpace):
 
     def generate_delta_action_plan(
         self, action: IndexSpaceContainer, sc: IndexSpaceContainer, **kwargs: Any
-    ) -> Tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str]]:
         assert isinstance(action, list)
         acts = []
         sql_commands = []

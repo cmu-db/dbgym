@@ -43,7 +43,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         replay_buffer: ReplayBuffer,
         learning_starts: int = 100,
         batch_size: int = 256,
-        train_freq: Tuple[int, str] = (1, "step"),
+        train_freq: tuple[int, str] = (1, "step"),
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
         seed: Optional[int] = None,
@@ -62,7 +62,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         # Save train freq parameter, will be converted later to TrainFreq object
         self.train_freq = self._convert_train_freq(train_freq)
 
-    def _convert_train_freq(self, train_freq: Tuple[int, str]) -> TrainFreq:
+    def _convert_train_freq(self, train_freq: tuple[int, str]) -> TrainFreq:
         """
         Convert `train_freq` parameter (int or tuple)
         to a TrainFreq object.
@@ -91,7 +91,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         new_obs: NDArray[np.float32],
         reward: float,
         dones: bool,
-        infos: Dict[str, Any],
+        infos: dict[str, Any],
     ) -> None:
         """
         Store transition in the replay buffer.
@@ -135,7 +135,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         self,
         learning_starts: int,
         action_noise: Optional[ActionNoise] = None,
-    ) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
         raise NotImplementedError()
 
     def collect_rollouts(

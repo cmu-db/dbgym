@@ -2,10 +2,12 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 import tqdm
+from pandas import DataFrame
 
 from misc.utils import DBGymConfig, default_embedder_dname, link_result
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
@@ -15,12 +17,6 @@ from tune.protox.embedding.train_args import (
 )
 
 
-class DotDict(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
 def select_best_embeddings(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingTrainGenericArgs,
@@ -28,9 +24,7 @@ def select_best_embeddings(
 ) -> None:
     data = _load_data(dbgym_cfg, select_args)
 
-    if generic_args.traindata_path is not None and os.path.exists(
-        generic_args.traindata_path
-    ):
+    if generic_args.traindata_path is not None and generic_args.traindata_path.exists():
         raw_data = pd.read_parquet(generic_args.traindata_path)
         data = _attach(data, raw_data, select_args.idx_limit)
 
@@ -55,6 +49,8 @@ def select_best_embeddings(
 
     if select_args.flatten_idx == -1:
         for tup in df.itertuples():
+            assert type(tup.path) is str
+            assert type(tup.root) is str
             shutil.copytree(
                 tup.path,
                 curated_dpath / tup.path,
@@ -69,6 +65,8 @@ def select_best_embeddings(
         info_txt = open(curated_dpath / "info.txt", "w")
 
         for loop_i, tup in enumerate(df.itertuples()):
+            assert type(tup.path) is str
+            assert type(tup.root) is str
             epoch = int(str(tup.path).split("epoch")[-1])
             model_dpath = curated_dpath / f"model{idx}"
             shutil.copytree(tup.path, model_dpath)
@@ -97,8 +95,8 @@ def select_best_embeddings(
         info_txt.close()
 
 
-def _load_data(dbgym_cfg, select_args):
-    data = []
+def _load_data(dbgym_cfg: DBGymConfig, select_args: EmbeddingSelectArgs) -> DataFrame:
+    stat_infos = []
     stats = [s for s in dbgym_cfg.dbgym_this_run_path.rglob(STATS_FNAME)]
     print(f"stats={stats}")
     for stat in stats:
@@ -126,7 +124,7 @@ def _load_data(dbgym_cfg, select_args):
         with open(stat.parent.parent.parent / "config", "r") as f:
             config = json.load(f)
 
-            def recurse_set(source, target):
+            def recurse_set(source: dict[Any, Any], target: dict[Any, Any]) -> None:
                 for k, v in source.items():
                     if isinstance(v, dict):
                         recurse_set(v, target)
@@ -147,10 +145,9 @@ def _load_data(dbgym_cfg, select_args):
 
             info["ranges_file"] = str(Path(stat).parent / RANGES_FNAME)
 
-        data.append(info)
+        stat_infos.append(info)
 
-    print(f"data={data}")
-    data = pd.DataFrame(data)
+    data = DataFrame(stat_infos)
     data = data.loc[:, ~(data == data.iloc[0]).all()]
 
     if "output_scale" not in data:
@@ -162,15 +159,17 @@ def _load_data(dbgym_cfg, select_args):
     return data
 
 
-def _attach(data, raw_data, num_limit=0):
+def _attach(data: DataFrame, raw_data: DataFrame, num_limit: int = 0) -> DataFrame:
     # As the group index goes up, the perf should go up (i.e., bounds should tighten)
-    filtered_data = {}
+    filtered_data: dict[tuple[float, float], DataFrame] = {}
     new_data = []
     for tup in tqdm.tqdm(data.itertuples(), total=data.shape[0]):
-        tup = DotDict({k: getattr(tup, k) for k in data.columns})
-        if raw_data is not None and Path(tup.ranges_file).exists():
+        tup_dict = {k: getattr(tup, k) for k in data.columns}
+        if raw_data is not None and Path(tup_dict["ranges_file"]).exists():
 
-            def compute_dist_score(current_dists, base, upper):
+            def compute_dist_score(
+                current_dists: dict[str, float], base: float, upper: float
+            ) -> float:
                 nonlocal filtered_data
                 key = (base, upper)
                 if key not in filtered_data:
@@ -202,15 +201,16 @@ def _attach(data, raw_data, num_limit=0):
                 return error
 
             # don't use open_and_save() because we generated ranges in this run
-            with open(tup.ranges_file, "r") as f:
-                errors = []
-                drange = (None, None)
-                current_dists = {}
+            with open(tup_dict["ranges_file"], "r") as f:
+                errors: list[float] = []
+                drange: tuple[Optional[float], Optional[float]] = (None, None)
+                current_dists: dict[str, float] = {}
 
                 for line in f:
                     if "Generating range" in line:
                         if len(current_dists) > 0:
                             assert drange[0] is not None
+                            assert drange[1] is not None
                             errors.append(
                                 compute_dist_score(current_dists, drange[0], drange[1])
                             )
@@ -219,9 +219,12 @@ def _attach(data, raw_data, num_limit=0):
                                 break
 
                         if drange[0] is None:
-                            drange = (1.0 - tup.bias_separation, 1.01)
+                            drange = (1.0 - tup_dict["bias_separation"], 1.01)
                         else:
-                            drange = (drange[0] - tup.bias_separation, drange[0])
+                            drange = (
+                                drange[0] - tup_dict["bias_separation"],
+                                drange[0],
+                            )
                         current_dists = {}
 
                     else:
@@ -232,19 +235,21 @@ def _attach(data, raw_data, num_limit=0):
                 if len(current_dists) > 0:
                     # Put the error in.
                     errors.append(
-                        compute_dist_score(current_dists, 0.0, tup.bias_separation)
+                        compute_dist_score(
+                            current_dists, 0.0, tup_dict["bias_separation"]
+                        )
                     )
 
-                tup["idx_class_errors"] = ",".join(
+                tup_dict["idx_class_errors"] = ",".join(
                     [str(np.round(e, 2)) for e in errors]
                 )
                 for i, e in enumerate(errors):
-                    tup[f"idx_class_error{i}"] = np.round(e, 2)
+                    tup_dict[f"idx_class_error{i}"] = np.round(e, 2)
 
                 if len(errors) > 0:
-                    tup["idx_class_mean_error"] = np.mean(errors)
-                    tup["idx_class_total_error"] = np.sum(errors)
-                    tup["idx_class_min_error"] = np.min(errors)
-                    tup["idx_class_max_error"] = np.max(errors)
-        new_data.append(dict(tup))
-    return pd.DataFrame(new_data)
+                    tup_dict["idx_class_mean_error"] = np.mean(errors)
+                    tup_dict["idx_class_total_error"] = np.sum(errors)
+                    tup_dict["idx_class_min_error"] = np.min(errors)
+                    tup_dict["idx_class_max_error"] = np.max(errors)
+        new_data.append(tup_dict)
+    return DataFrame(new_data)

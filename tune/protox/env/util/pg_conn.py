@@ -71,7 +71,7 @@ class PostgresConn:
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def get_connstr(self):
+    def get_connstr(self) -> str:
         return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
     def conn(self) -> psycopg.Connection[Any]:
@@ -272,7 +272,7 @@ class PostgresConn:
         mu_hyp_opt: float,
         mu_hyp_time: int,
         mu_hyp_stdev: float,
-    ):
+    ) -> None:
         """
         Sets up Boot on the currently running Postgres instances.
         Uses instance vars of PostgresConn for configuration.
@@ -302,7 +302,7 @@ class PostgresConn:
         self.logger.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
-    def psql(self, sql: str) -> Tuple[int, Optional[str]]:
+    def psql(self, sql: str) -> tuple[int, Optional[str]]:
         low_sql = sql.lower()
 
         def cancel_fn(conn_str: str) -> None:
@@ -358,11 +358,11 @@ class PostgresConn:
         self.disconnect()
         return 0, None
 
-    def restore_pristine_snapshot(self):
-        self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
+    def restore_pristine_snapshot(self) -> bool:
+        return self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
 
-    def restore_checkpointed_snapshot(self):
-        self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
+    def restore_checkpointed_snapshot(self) -> bool:
+        return self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
 
     @time_record("restore")
     def _restore_snapshot(

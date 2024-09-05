@@ -16,7 +16,7 @@ from tune.cli import tune_group
 
 @click.group()
 @click.pass_context
-def task(ctx):
+def task(ctx: click.Context) -> None:
     """💩💩💩 CMU-DB Database Gym: github.com/cmu-db/dbgym 💩💩💩"""
     dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
     ctx.obj = DBGymConfig(dbgym_config_path)

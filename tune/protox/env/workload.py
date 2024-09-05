@@ -5,10 +5,10 @@ import shutil
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union, cast
+from typing import IO, Any, Optional, Tuple, Union, cast
 
 import numpy as np
-import pglast  # type: ignore
+import pglast
 from plumbum import local
 
 from misc.utils import DBGymConfig, open_and_save
@@ -50,14 +50,11 @@ class Workload(object):
     # However, when creating a Workload object for unittesting, we just want to call open()
     def _open_for_reading(
         self,
-        path,
-        mode="r",
-    ):
-        # when opening for writing we always use open() so we don't need this function, which is
-        # why we assert here
-        # I still chose to make mode an argument just to make the interface identical to open()/open_and_save()
-        assert mode == "r"
-        if self.dbgym_cfg != None:
+        path: Path,
+    ) -> IO[Any]:
+        # When opening for writing we always use open() so we don't need this function, which is
+        # why hardcode the mode as "r".
+        if self.dbgym_cfg is not None:
             return open_and_save(self.dbgym_cfg, path)
         else:
             return open(path)
@@ -65,7 +62,7 @@ class Workload(object):
     def _crunch(
         self,
         all_attributes: AttrTableListMap,
-        sqls: list[Tuple[str, Path, float]],
+        sqls: list[tuple[str, Path, float]],
         pid: Optional[int],
         query_spec: QuerySpec,
     ) -> None:
@@ -82,7 +79,7 @@ class Workload(object):
         self.tbl_filter_queries_usage: dict[TableColTuple, set[str]] = {}
 
         # Build the SQL and table usage information.
-        self.queries_mix = {}
+        self.queries_mix: dict[str, float] = {}
         self.query_aliases = {}
         self.query_usages = TableAttrListMap({t: [] for t in self.tables})
         tbl_include_subsets = TableAttrAccessSetsMap(
@@ -93,7 +90,7 @@ class Workload(object):
             self.order.append(stem)
             self.queries_mix[stem] = ratio
 
-            with self._open_for_reading(sql_file, "r") as q:
+            with self._open_for_reading(sql_file) as q:
                 sql = q.read()
                 assert not sql.startswith("/*")
 
@@ -162,7 +159,7 @@ class Workload(object):
         )
 
         if do_tbl_include_subsets_prune:
-            self.tbl_include_subsets = {}
+            self.tbl_include_subsets = TableAttrAccessSetsMap({})
             # First prune any "fully enclosed".
             for tbl, attrsets in tbl_include_subsets.items():
                 self.tbl_include_subsets[tbl] = set(
@@ -217,7 +214,8 @@ class Workload(object):
 
     def __init__(
         self,
-        dbgym_cfg: DBGymConfig,
+        # dbgym_cfg is only optional so we can set it to None for unittests. Don't set it to None during normal operation.
+        dbgym_cfg: Optional[DBGymConfig],
         tables: list[str],
         attributes: TableAttrListMap,
         query_spec: QuerySpec,
@@ -255,7 +253,7 @@ class Workload(object):
         sqls = []
         order_or_txn_fname = "txn.txt" if self.oltp_workload else "order.txt"
         workload_order_or_txn_fpath = self.workload_path / order_or_txn_fname
-        with self._open_for_reading(workload_order_or_txn_fpath, "r") as f:
+        with self._open_for_reading(workload_order_or_txn_fpath) as f:
             lines = f.read().splitlines()
             sqls = [
                 (
@@ -268,7 +266,7 @@ class Workload(object):
 
         # TODO(phw2): pass "query_transactional" somewhere other than query_spec, just like "query_order" is
         if "query_transactional" in query_spec:
-            with self._open_for_reading(query_spec["query_transactional"], "r") as f:
+            with self._open_for_reading(query_spec["query_transactional"]) as f:
                 lines = f.read().splitlines()
                 splits = [line.split(",") for line in lines]
                 sqls = [
@@ -286,7 +284,7 @@ class Workload(object):
 
         # TODO(phw2): pass "execute_query_order" somewhere other than query_spec, just like "query_order" is
         if "execute_query_order" in query_spec:
-            with open_and_save(dbgym_cfg, query_spec["execute_query_order"], "r") as f:
+            with self._open_for_reading(query_spec["execute_query_order"]) as f:
                 lines = f.read().splitlines()
                 sqls = [
                     (
@@ -336,7 +334,12 @@ class Workload(object):
     def compute_total_workload_runtime(
         qid_runtime_data: dict[str, BestQueryRun]
     ) -> float:
-        return sum(best_run.runtime for best_run in qid_runtime_data.values()) / 1.0e6
+        total_runtime: float = 0.0
+        for best_run in qid_runtime_data.values():
+            assert best_run.runtime is not None
+            total_runtime += best_run.runtime
+        total_runtime /= 1.0e6
+        return total_runtime
 
     @time_record("execute")
     def execute_workload(
@@ -344,16 +347,16 @@ class Workload(object):
         pg_conn: PostgresConn,
         actions: list[HolonAction] = [],
         variation_names: list[str] = [],
-        results_dpath: Optional[Union[str, Path]] = None,
+        results_dpath: Optional[Path] = None,
         observation_space: Optional[StateSpace] = None,
         action_space: Optional[HolonSpace] = None,
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         override_workload_timeout: Optional[float] = None,
         query_timeout: Optional[int] = None,
-        workload_qdir: Optional[Tuple[Union[str, Path], Union[str, Path]]] = None,
+        workload_qdir: Optional[tuple[Path, Path]] = None,
         blocklist: list[str] = [],
         first: bool = False,
-    ) -> Tuple[int, bool, dict[str, Any]]:
+    ) -> tuple[int, bool, dict[str, Any]]:
         this_execution_workload_timeout = (
             self.workload_timeout
             if not override_workload_timeout
@@ -375,7 +378,7 @@ class Workload(object):
                 ][0],
             )
             ql_knobs = cast(
-                list[Tuple[LatentQuerySpace, QuerySpaceAction]],
+                list[tuple[LatentQuerySpace, QuerySpaceAction]],
                 [
                     [
                         (t, v)
@@ -390,7 +393,7 @@ class Workload(object):
         if workload_qdir is not None and workload_qdir[0] is not None:
             # Load actual queries to execute.
             workload_dir, workload_qlist = workload_qdir
-            with self._open_for_reading(workload_qlist, "r") as f:
+            with self._open_for_reading(workload_qlist) as f:
                 psql_order = [
                     (f"Q{i+1}", Path(workload_dir) / l.strip())
                     for i, l in enumerate(f.readlines())
@@ -400,7 +403,7 @@ class Workload(object):
             actual_sql_files = {k: str(v) for (k, v) in psql_order}
             actual_queries = {}
             for qid, qpat in psql_order:
-                with self._open_for_reading(qpat, "r") as f:
+                with self._open_for_reading(qpat) as f:
                     query = f.read()
                 actual_queries[qid] = [(QueryType.SELECT, query)]
         else:
@@ -651,7 +654,7 @@ class Workload(object):
         reset_metrics: Optional[dict[str, BestQueryRun]] = None,
         update: bool = True,
         first: bool = False,
-    ) -> Tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
+    ) -> tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
         if self.logger:
             self.logger.get_logger(__name__).info("Starting to run benchmark...")
@@ -673,6 +676,7 @@ class Workload(object):
             # Execute benchbase if specified.
             success = self._execute_benchbase(benchbase_config, results_dpath)
             # We can only create a state if we succeeded.
+            assert self.dbgym_cfg is not None
             success = observation_space.check_benchbase(self.dbgym_cfg, results_dpath)
         else:
             num_timed_out_queries, did_workload_time_out, query_metric_data = (

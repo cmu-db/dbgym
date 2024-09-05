@@ -7,7 +7,7 @@ from tune.protox.embedding.train import train
 
 @click.group("embedding")
 @click.pass_obj
-def embedding_group(dbgym_cfg: DBGymConfig):
+def embedding_group(dbgym_cfg: DBGymConfig) -> None:
     dbgym_cfg.append_group("embedding")
 
 

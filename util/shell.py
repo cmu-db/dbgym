@@ -1,17 +1,20 @@
 import logging
 import os
 import subprocess
+from pathlib import Path
+from typing import Optional
 
 shell_util_logger = logging.getLogger("shell_util")
 shell_util_logger.setLevel(logging.INFO)
 
 
-def subprocess_run(c, cwd=None, check_returncode=True, dry_run=False, verbose=True):
+def subprocess_run(
+    c: str,
+    cwd: Optional[Path] = None,
+    check_returncode: bool = True,
+    verbose: bool = True,
+) -> subprocess.Popen[str]:
     cwd_msg = f"(cwd: {cwd if cwd is not None else os.getcwd()})"
-
-    if dry_run:
-        shell_util_logger.info(f"Dry run {cwd_msg}: {c}")
-        return
 
     if verbose:
         shell_util_logger.info(f"Running {cwd_msg}: {c}")
@@ -27,6 +30,7 @@ def subprocess_run(c, cwd=None, check_returncode=True, dry_run=False, verbose=Tr
     ) as proc:
         while True:
             loop = proc.poll() is None
+            assert proc.stdout is not None
             for line in proc.stdout:
                 if verbose:
                     print(line, end="", flush=True)

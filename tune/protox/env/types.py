@@ -75,12 +75,12 @@ QuerySpaceAction: TypeAlias = KnobSpaceAction
 QuerySpaceContainer: TypeAlias = KnobSpaceContainer
 
 # ([idx_type], [table_encoding], [key1_encoding], ... [key#_encoding], [include_mask])
-IndexSpaceRawSample = NewType("IndexSpaceRawSample", Tuple[Any, ...])
+IndexSpaceRawSample = NewType("IndexSpaceRawSample", tuple[Any, ...])
 # [IndexAction(index1), ...]
 IndexSpaceContainer = NewType("IndexSpaceContainer", list["IndexAction"])
 
 # (table_name, column_name)
-TableColTuple = NewType("TableColTuple", Tuple[str, str])
+TableColTuple = NewType("TableColTuple", tuple[str, str])
 
 # {table: [att1, att2, ...], ...}
 TableAttrListMap = NewType("TableAttrListMap", dict[str, list[str]])
@@ -91,7 +91,7 @@ AttrTableListMap = NewType("AttrTableListMap", dict[str, list[str]])
 # {table: set[ (att1, att3), (att3, att4), ... ], ...}
 # This maps a table to a set of attributes accessed together.
 TableAttrAccessSetsMap = NewType(
-    "TableAttrAccessSetsMap", dict[str, set[Tuple[str, ...]]]
+    "TableAttrAccessSetsMap", dict[str, set[tuple[str, ...]]]
 )
 
 # {qid: {table: scan_method, ...}, ...}
@@ -101,11 +101,11 @@ TableAliasMap = NewType("TableAliasMap", dict[str, list[str]])
 # {qid: {table: [alias1, alias2, ...], ...}, ...}
 QueryTableAliasMap = NewType("QueryTableAliasMap", dict[str, TableAliasMap])
 # {qid: [(query_type1, query_str1), (query_type2, query_str2), ...], ...}
-QueryMap = NewType("QueryMap", dict[str, list[Tuple[QueryType, str]]])
+QueryMap = NewType("QueryMap", dict[str, list[tuple[QueryType, str]]])
 
 HolonAction = NewType(
     "HolonAction",
-    Tuple[
+    tuple[
         KnobSpaceAction,
         IndexSpaceRawSample,
         QuerySpaceAction,
@@ -114,7 +114,7 @@ HolonAction = NewType(
 
 HolonStateContainer = NewType(
     "HolonStateContainer",
-    Tuple[
+    tuple[
         KnobSpaceContainer,
         IndexSpaceContainer,
         QuerySpaceContainer,
@@ -153,17 +153,22 @@ class TargetResetConfig(TypedDict, total=False):
 class QuerySpec(TypedDict, total=False):
     benchbase: bool
     oltp_workload: bool
-    query_transactional: Union[str, Path]
-    query_directory: Union[str, Path]
-    query_order: Union[str, Path]
+    query_transactional: Path
+    query_directory: Path
+    query_order: Path
 
-    execute_query_directory: Union[str, Path]
-    execute_query_order: Union[str, Path]
+    execute_query_directory: Path
+    execute_query_order: Path
 
     tbl_include_subsets_prune: bool
     tbl_fold_subsets: bool
     tbl_fold_delta: int
     tbl_fold_iterations: int
+
+
+class ActionsInfo(TypedDict):
+    all_holon_action_variations: list[tuple[str, HolonAction]]
+    best_observed_holon_action: Optional[HolonAction]
 
 
 class EnvInfoDict(TypedDict, total=False):
@@ -182,19 +187,19 @@ class EnvInfoDict(TypedDict, total=False):
     prior_pgconf: Optional[Union[str, Path]]
 
     # Changes made to the DBMS during this step.
-    attempted_changes: Tuple[list[str], list[str]]
+    attempted_changes: tuple[list[str], list[str]]
 
     # Metric of this step.
-    metric: float
+    metric: Optional[float]
     # Reward of this step.
-    reward: float
+    reward: Optional[float]
     # Whether any queries timed out or the workload as a whole timed out.
     did_anything_time_out: bool
     # Query metric data.
     query_metric_data: Optional[dict[str, BestQueryRun]]
     # Information about the actions that were executed this step.
-    # The actions are in a format usable by replay. (TODO(phw2))
-    actions_info: Tuple["KnobSpaceAction", "IndexAction", "QuerySpaceAction"]
+    # The actions are in a format usable by replay.
+    actions_info: Optional[ActionsInfo]
     # ProtoAction of the altered step action.
     maximal_embed: ProtoAction
 

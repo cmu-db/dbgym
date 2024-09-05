@@ -4,13 +4,10 @@ import os
 import shutil
 import unittest
 from pathlib import Path
+from typing import Any, NewType, cast
 
-from manage.cli import clean_workspace
-from misc.utils import (
-    get_runs_path_from_workspace_path,
-    get_symlinks_path_from_workspace_path,
-    path_exists_dont_follow_symlinks,
-)
+from manage.cli import MockDBGymConfig, clean_workspace
+from misc.utils import path_exists_dont_follow_symlinks
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
@@ -18,13 +15,7 @@ from misc.utils import (
 logging.basicConfig(level=logging.INFO)
 
 
-class MockDBGymConfig:
-    def __init__(self, scratchspace_path: Path):
-        self.dbgym_workspace_path = scratchspace_path
-        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
-            scratchspace_path
-        )
-        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
+FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
 
 
 class CleanTests(unittest.TestCase):
@@ -33,17 +24,23 @@ class CleanTests(unittest.TestCase):
     losing important files.
     """
 
+    scratchspace_path: Path = Path()
+
     @staticmethod
-    def create_structure(root_path: Path, structure: dict) -> None:
+    def create_structure(root_path: Path, structure: FilesystemStructure) -> None:
         def create_structure_internal(
-            root_path: Path, cur_path: Path, structure: dict
+            root_path: Path, cur_path: Path, structure: FilesystemStructure
         ) -> None:
             for path, content in structure.items():
                 full_path: Path = cur_path / path
 
                 if isinstance(content, dict):  # Directory
                     full_path.mkdir(parents=True, exist_ok=True)
-                    create_structure_internal(root_path, full_path, content)
+                    create_structure_internal(
+                        root_path,
+                        full_path,
+                        FilesystemStructure(cast(dict[str, Any], content)),
+                    )
                 elif isinstance(content, tuple) and content[0] == "file":
                     assert len(content) == 1
                     full_path.touch()
@@ -58,9 +55,9 @@ class CleanTests(unittest.TestCase):
         create_structure_internal(root_path, root_path, structure)
 
     @staticmethod
-    def verify_structure(root_path: Path, structure: dict) -> bool:
+    def verify_structure(root_path: Path, structure: FilesystemStructure) -> bool:
         def verify_structure_internal(
-            root_path: Path, cur_path: Path, structure: dict
+            root_path: Path, cur_path: Path, structure: FilesystemStructure
         ) -> bool:
             # Check for the presence of each item specified in the structure
             for name, item in structure.items():
@@ -72,7 +69,11 @@ class CleanTests(unittest.TestCase):
                     if not new_cur_path.is_dir():
                         logging.debug(f"expected {new_cur_path} to be a directory")
                         return False
-                    if not verify_structure_internal(root_path, new_cur_path, item):
+                    if not verify_structure_internal(
+                        root_path,
+                        new_cur_path,
+                        FilesystemStructure(cast(dict[str, Any], item)),
+                    ):
                         return False
                 elif isinstance(item, tuple) and item[0] == "file":
                     if not new_cur_path.is_file():
@@ -111,36 +112,41 @@ class CleanTests(unittest.TestCase):
 
     @staticmethod
     def make_workspace_structure(
-        symlinks_structure: dict, task_runs_structure: dict
-    ) -> dict:
+        symlinks_structure: FilesystemStructure,
+        task_runs_structure: FilesystemStructure,
+    ) -> FilesystemStructure:
         """
         This function exists so that it's easier to refactor the tests in case we ever change
           how the workspace is organized.
         """
-        return {
-            "symlinks": symlinks_structure,
-            "task_runs": task_runs_structure,
-        }
+        return FilesystemStructure(
+            {
+                "symlinks": symlinks_structure,
+                "task_runs": task_runs_structure,
+            }
+        )
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.scratchspace_path = Path.cwd() / "manage/tests/test_clean_scratchspace/"
 
-    def setUp(self):
+    def setUp(self) -> None:
         if self.scratchspace_path.exists():
             shutil.rmtree(self.scratchspace_path)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         if self.scratchspace_path.exists():
             shutil.rmtree(self.scratchspace_path)
 
-    def test_structure_helpers(self):
-        structure = {
-            "dir1": {"file1.txt": ("file",), "dir2": {"file2.txt": ("file",)}},
-            "dir3": {"nested_link_to_dir1": ("symlink", "dir1")},
-            "link_to_dir1": ("symlink", "dir1"),
-            "link_to_file2": ("symlink", "dir1/dir2/file2.txt"),
-        }
+    def test_structure_helpers(self) -> None:
+        structure = FilesystemStructure(
+            {
+                "dir1": {"file1.txt": ("file",), "dir2": {"file2.txt": ("file",)}},
+                "dir3": {"nested_link_to_dir1": ("symlink", "dir1")},
+                "link_to_dir1": ("symlink", "dir1"),
+                "link_to_file2": ("symlink", "dir1/dir2/file2.txt"),
+            }
+        )
         CleanTests.create_structure(self.scratchspace_path, structure)
         self.assertTrue(CleanTests.verify_structure(self.scratchspace_path, structure))
 
@@ -214,44 +220,46 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, wrong_link_structure)
         )
 
-    def test_nonexistent_workspace(self):
+    def test_nonexistent_workspace(self) -> None:
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
 
-    def test_no_symlinks_dir_and_no_task_runs_dir(self):
-        starting_structure = {}
-        ending_structure = {}
+    def test_no_symlinks_dir_and_no_task_runs_dir(self) -> None:
+        starting_structure = FilesystemStructure({})
+        ending_structure = FilesystemStructure({})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_no_symlinks_dir_and_yes_task_runs_dir(self):
-        starting_structure = {"task_runs": {"file1.txt": ("file",)}}
-        ending_structure = {"task_runs": {}}
+    def test_no_symlinks_dir_and_yes_task_runs_dir(self) -> None:
+        starting_structure = FilesystemStructure(
+            {"task_runs": {"file1.txt": ("file",)}}
+        )
+        ending_structure = FilesystemStructure({"task_runs": {}})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_yes_symlinks_dir_and_no_task_runs_dir(self):
-        starting_structure = {"symlinks": {}}
-        ending_structure = {"symlinks": {}}
+    def test_yes_symlinks_dir_and_no_task_runs_dir(self) -> None:
+        starting_structure = FilesystemStructure({"symlinks": {}})
+        ending_structure = FilesystemStructure({"symlinks": {}})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_no_symlinks_in_dir_and_no_task_runs_in_dir(self):
-        starting_symlinks_structure = {}
-        starting_task_runs_structure = {}
+    def test_no_symlinks_in_dir_and_no_task_runs_in_dir(self) -> None:
+        starting_symlinks_structure = FilesystemStructure({})
+        starting_task_runs_structure = FilesystemStructure({})
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {}
-        ending_task_runs_structure = {}
+        ending_symlinks_structure = FilesystemStructure({})
+        ending_task_runs_structure = FilesystemStructure({})
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -262,14 +270,14 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_no_links_in_symlinks(self):
-        starting_symlinks_structure = {}
-        starting_task_runs_structure = {"run_0": {}}
+    def test_no_links_in_symlinks(self) -> None:
+        starting_symlinks_structure = FilesystemStructure({})
+        starting_task_runs_structure = FilesystemStructure({"run_0": {}})
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {}
-        ending_task_runs_structure = {}
+        ending_symlinks_structure = FilesystemStructure({})
+        ending_task_runs_structure = FilesystemStructure({})
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -280,14 +288,20 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_file_directly_in_task_runs(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/file1.txt")}
-        starting_task_runs_structure = {"file1.txt": ("file",), "file2.txt": ("file",)}
+    def test_link_to_file_directly_in_task_runs(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/file1.txt")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {"file1.txt": ("file",), "file2.txt": ("file",)}
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/file1.txt")}
-        ending_task_runs_structure = {"file1.txt": ("file",)}
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/file1.txt")}
+        )
+        ending_task_runs_structure = FilesystemStructure({"file1.txt": ("file",)})
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -298,17 +312,25 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_dir_directly_in_task_runs(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {"file1.txt": ("file",)},
-            "dir2": {"file2.txt": ("file",)},
-        }
+    def test_link_to_dir_directly_in_task_runs(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"file1.txt": ("file",)},
+                "dir2": {"file2.txt": ("file",)},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {"dir1": {"file1.txt": ("file",)}}
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {"dir1": {"file1.txt": ("file",)}}
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -319,21 +341,25 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_file_in_dir_in_task_runs(self):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        starting_task_runs_structure = {
-            "dir1": {"file1.txt": ("file",)},
-            "dir2": {"file2.txt": ("file",)},
-        }
+    def test_link_to_file_in_dir_in_task_runs(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"file1.txt": ("file",)},
+                "dir2": {"file2.txt": ("file",)},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        ending_task_runs_structure = {"dir1": {"file1.txt": ("file",)}}
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {"dir1": {"file1.txt": ("file",)}}
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -344,19 +370,27 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_dir_in_dir_in_task_runs(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1/dir2")}
-        starting_task_runs_structure = {
-            "dir1": {"dir2": {"file1.txt": ("file",)}, "file2.txt": ("file",)},
-            "dir3": {"file3.txt": ("file",)},
-        }
+    def test_link_to_dir_in_dir_in_task_runs(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/dir2")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"dir2": {"file1.txt": ("file",)}, "file2.txt": ("file",)},
+                "dir3": {"file3.txt": ("file",)},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1/dir2")}
-        ending_task_runs_structure = {
-            "dir1": {"dir2": {"file1.txt": ("file",)}, "file2.txt": ("file",)},
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/dir2")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"dir2": {"file1.txt": ("file",)}, "file2.txt": ("file",)},
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -367,12 +401,16 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_link_crashes(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/symlink2")}
-        starting_task_runs_structure = {
-            "symlink2": ("symlink", "task_runs/file1.txt"),
-            "file1.txt": ("file",),
-        }
+    def test_link_to_link_crashes(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/symlink2")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "symlink2": ("symlink", "task_runs/file1.txt"),
+                "file1.txt": ("file",),
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
@@ -381,56 +419,29 @@ class CleanTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             clean_workspace(MockDBGymConfig(self.scratchspace_path))
 
-    def test_safe_mode_link_to_dir_with_link(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
-            "file1.txt": ("file",),
-            "file2.txt": ("file",),
-        }
-        starting_structure = CleanTests.make_workspace_structure(
-            starting_symlinks_structure, starting_task_runs_structure
+    def test_safe_mode_link_to_dir_with_link(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
-            "file1.txt": ("file",),
-        }
-        ending_structure = CleanTests.make_workspace_structure(
-            ending_symlinks_structure, ending_task_runs_structure
-        )
-
-        CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
-        self.assertTrue(
-            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
-        )
-
-    def test_safe_mode_link_to_file_in_dir_with_link(self):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        starting_task_runs_structure = {
-            "dir1": {
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
                 "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/file2.txt"),
-            },
-            "file2.txt": ("file",),
-            "file3.txt": ("file",),
-        }
+                "file2.txt": ("file",),
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        ending_task_runs_structure = {
-            "dir1": {
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
                 "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/file2.txt"),
-            },
-            "file2.txt": ("file",),
-        }
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -441,25 +452,35 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_safe_mode_link_to_dir_with_link_to_file_in_dir_in_task_runs(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/dir2/file2.txt")},
-            "dir2": {
+    def test_safe_mode_link_to_file_in_dir_with_link(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/file2.txt"),
+                },
                 "file2.txt": ("file",),
-            },
-            "file3.txt": ("file",),
-        }
+                "file3.txt": ("file",),
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/dir2/file2.txt")},
-            "dir2": {
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/file2.txt"),
+                },
                 "file2.txt": ("file",),
-            },
-        }
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -470,20 +491,65 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_aggressive_mode_link_to_dir_with_link(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
-            "file1.txt": ("file",),
-            "file2.txt": ("file",),
-        }
+    def test_safe_mode_link_to_dir_with_link_to_file_in_dir_in_task_runs(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/dir2/file2.txt")},
+                "dir2": {
+                    "file2.txt": ("file",),
+                },
+                "file3.txt": ("file",),
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", None)},
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/dir2/file2.txt")},
+                "dir2": {
+                    "file2.txt": ("file",),
+                },
+            }
+        )
+        ending_structure = CleanTests.make_workspace_structure(
+            ending_symlinks_structure, ending_task_runs_structure
+        )
+
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        self.assertTrue(
+            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
+        )
+
+    def test_aggressive_mode_link_to_dir_with_link(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/file1.txt")},
+                "file1.txt": ("file",),
+                "file2.txt": ("file",),
+            }
+        )
+        starting_structure = CleanTests.make_workspace_structure(
+            starting_symlinks_structure, starting_task_runs_structure
+        )
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", None)},
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -494,14 +560,16 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_link_to_link_to_file_gives_error(self):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/symlink2")
-        }
-        starting_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "task_runs/file2.txt")},
-            "file2.txt": ("file",),
-        }
+    def test_link_to_link_to_file_gives_error(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/symlink2")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "task_runs/file2.txt")},
+                "file2.txt": ("file",),
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
@@ -512,13 +580,15 @@ class CleanTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
 
-    def test_multi_link_loop_gives_error(self):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/symlink2")
-        }
-        starting_task_runs_structure = {
-            "dir1": {"symlink2": ("symlink", "symlinks/symlink1")},
-        }
+    def test_multi_link_loop_gives_error(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/symlink2")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {"symlink2": ("symlink", "symlinks/symlink1")},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
@@ -529,9 +599,11 @@ class CleanTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
 
-    def test_link_self_loop_gives_error(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "symlinks/symlink1")}
-        starting_task_runs_structure = dict()
+    def test_link_self_loop_gives_error(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "symlinks/symlink1")}
+        )
+        starting_task_runs_structure = FilesystemStructure({})
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
@@ -544,32 +616,40 @@ class CleanTests(unittest.TestCase):
 
     def test_dont_loop_infinitely_if_there_are_cycles_between_different_dirs_in_runs(
         self,
-    ):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir2/file2.txt"),
-            },
-            "dir2": {
-                "file2.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+    ) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir2/file2.txt"),
+                },
+                "dir2": {
+                    "file2.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir2/file2.txt"),
-            },
-            "dir2": {
-                "file2.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir2/file2.txt"),
+                },
+                "dir2": {
+                    "file2.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -582,24 +662,32 @@ class CleanTests(unittest.TestCase):
 
     def test_dont_loop_infinitely_if_there_is_a_dir_in_runs_that_links_to_a_file_in_itself(
         self,
-    ):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+    ) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -610,24 +698,32 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_dont_loop_infinitely_if_there_is_loop_amongst_symlinks(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+    def test_dont_loop_infinitely_if_there_is_loop_amongst_symlinks(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
-            },
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/file1.txt"),
+                },
+            }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -638,22 +734,28 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_broken_symlink_has_no_effect(self):
-        starting_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "task_runs/dir1/non_existent_file.txt"),
-            },
-            "dir2": {"file2.txt": ("file",)},
-        }
+    def test_broken_symlink_has_no_effect(self) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "task_runs/dir1/non_existent_file.txt"),
+                },
+                "dir2": {"file2.txt": ("file",)},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        ending_symlinks_structure = {"symlink1": ("symlink", "task_runs/dir1")}
-        ending_task_runs_structure = {
-            "dir1": {"file1.txt": ("file",), "symlink2": ("symlink", None)}
-        }
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {"dir1": {"file1.txt": ("file",), "symlink2": ("symlink", None)}}
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -667,35 +769,41 @@ class CleanTests(unittest.TestCase):
     # The idea behind this test is that we shouldn't be following links outside of task_runs, even on safe mode
     def test_link_to_folder_outside_runs_that_contains_link_to_other_run_doesnt_save_other_run(
         self,
-    ):
-        starting_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        starting_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "external/dir3/file3.txt"),
-            },
-            "dir2": {"file2.txt": ("file",)},
-        }
+    ) -> None:
+        starting_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        starting_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "external/dir3/file3.txt"),
+                },
+                "dir2": {"file2.txt": ("file",)},
+            }
+        )
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        starting_structure["external"] = {
-            "dir3": {
-                "file3.txt": ("file",),
-                "symlink3": ("symlink", "task_runs/dir2/file2.txt"),
+        starting_structure["external"] = FilesystemStructure(
+            {
+                "dir3": {
+                    "file3.txt": ("file",),
+                    "symlink3": ("symlink", "task_runs/dir2/file2.txt"),
+                }
             }
-        }
-        ending_symlinks_structure = {
-            "symlink1": ("symlink", "task_runs/dir1/file1.txt")
-        }
-        ending_task_runs_structure = {
-            "dir1": {
-                "file1.txt": ("file",),
-                "symlink2": ("symlink", "external/dir3/file3.txt"),
+        )
+        ending_symlinks_structure = FilesystemStructure(
+            {"symlink1": ("symlink", "task_runs/dir1/file1.txt")}
+        )
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "dir1": {
+                    "file1.txt": ("file",),
+                    "symlink2": ("symlink", "external/dir3/file3.txt"),
+                }
             }
-        }
+        )
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
@@ -709,19 +817,19 @@ class CleanTests(unittest.TestCase):
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
 
-    def test_outside_task_runs_doesnt_get_deleted(self):
-        starting_symlinks_structure = {}
-        starting_task_runs_structure = {"dir1": {}}
+    def test_outside_task_runs_doesnt_get_deleted(self) -> None:
+        starting_symlinks_structure = FilesystemStructure({})
+        starting_task_runs_structure = FilesystemStructure({"dir1": {}})
         starting_structure = CleanTests.make_workspace_structure(
             starting_symlinks_structure, starting_task_runs_structure
         )
-        starting_structure["external"] = {"file1.txt": ("file",)}
-        ending_symlinks_structure = {}
-        ending_task_runs_structure = {}
+        starting_structure["external"] = FilesystemStructure({"file1.txt": ("file",)})
+        ending_symlinks_structure = FilesystemStructure({})
+        ending_task_runs_structure = FilesystemStructure({})
         ending_structure = CleanTests.make_workspace_structure(
             ending_symlinks_structure, ending_task_runs_structure
         )
-        ending_structure["external"] = {"file1.txt": ("file",)}
+        ending_structure["external"] = FilesystemStructure({"file1.txt": ("file",)})
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")

@@ -7,7 +7,7 @@ class IndexAction(object):
     IA = TypeVar("IA", bound="IndexAction")
 
     index_name_counter = 0
-    index_name_map: dict["IndexAction", int] = dict()
+    index_name_map: dict["IndexAction", str] = dict()
 
     def __init__(
         self,
@@ -81,7 +81,7 @@ class IndexAction(object):
 
     # A given index name (like "index5") maps one-to-one to the function of an
     # index (i.e. its table, columns, etc.).
-    def get_index_name(self):
+    def get_index_name(self) -> str:
         if self not in IndexAction.index_name_map:
             IndexAction.index_name_map[self] = f"index{IndexAction.index_name_counter}"
             IndexAction.index_name_counter += 1

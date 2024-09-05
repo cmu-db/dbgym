@@ -107,7 +107,7 @@ class IndexSpace(spaces.Tuple):
         action[0] = 1.0
         return self.policy.sample_dist(action, self.np_random, sample_num_columns=False)
 
-    def to_jsonable(self, sample_n) -> List[str]:  # type: ignore
+    def to_jsonable(self, sample_n) -> list[str]:  # type: ignore
         # Emit the representation of an index.
         ias = [self.to_action(sample) for sample in sample_n]
         return [ia.__repr__() for ia in ias]

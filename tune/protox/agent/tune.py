@@ -89,7 +89,7 @@ def tune(
     """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters"."""
     # Set args to defaults programmatically (do this before doing anything else in the function)
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
-    if hpoed_agent_params_path == None:
+    if hpoed_agent_params_path is None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
@@ -120,7 +120,7 @@ def tune(
     )
 
     # Set defaults that depend on hpo_params
-    if tune_duration_during_tune == None:
+    if tune_duration_during_tune is None:
         tune_duration_during_tune = hpo_params["tune_duration"][str(TuningMode.HPO)]
 
     # Set the hpo_params that are allowed to differ between HPO, tuning, and replay.

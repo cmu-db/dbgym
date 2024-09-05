@@ -1,6 +1,6 @@
 import copy
 import inspect
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -12,7 +12,7 @@ class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
         super().__init__(env)
         self.class_attributes = dict(inspect.getmembers(self.__class__))
 
-    def reset(self, **kwargs: Any) -> Tuple[Any, dict[str, Any]]:
+    def reset(self, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         observations, info = self.env.reset(**kwargs)
         self._check_val(event="reset", observations=observations)
         self._observations = observations
@@ -20,7 +20,7 @@ class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
 
     def step(
         self, actions: NDArray[np.float32]
-    ) -> Tuple[Any, float, bool, bool, dict[str, Any]]:
+    ) -> tuple[Any, float, bool, bool, dict[str, Any]]:
         self._actions = actions
 
         observations, rewards, term, trunc, infos = self.env.step(actions)
@@ -50,7 +50,7 @@ class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
 
         return self.getattr_recursive(name)
 
-    def _get_all_attributes(self) -> Dict[str, Any]:
+    def _get_all_attributes(self) -> dict[str, Any]:
         """Get all (inherited) instance and class attributes
 
         :return: all_attributes
@@ -97,7 +97,7 @@ class AgentEnv(gym.Wrapper[Any, Any, Any, Any]):
 
     def check_array_value(
         self, name: str, value: NDArray[np.float32]
-    ) -> List[Tuple[str, str]]:
+    ) -> list[tuple[str, str]]:
         """
         Check for inf and NaN for a single numpy array.
 

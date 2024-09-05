@@ -1,6 +1,6 @@
 from typing import Any
 
-from hyperopt import hp  # type: ignore
+from hyperopt import hp
 
 
 def f_unpack_dict(dct: dict[str, Any]) -> dict[str, Any]:

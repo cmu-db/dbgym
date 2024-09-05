@@ -1,9 +1,8 @@
-from enum import Enum, unique
 from typing import Iterator, Optional, Tuple
 
-import pglast  # type: ignore
+import pglast
 from pglast import stream
-from pglast.visitors import Continue, Visitor  # type: ignore
+from pglast.visitors import Continue, Visitor
 
 from tune.protox.env.types import (
     AttrTableListMap,
@@ -73,7 +72,7 @@ def extract_aliases(stmts: pglast.ast.Node) -> TableAliasMap:
 
 def extract_sqltypes(
     stmts: pglast.ast.Node, pid: Optional[int]
-) -> list[Tuple[QueryType, str]]:
+) -> list[tuple[QueryType, str]]:
     sqls = []
     for stmt in stmts:
         sql_type = QueryType.UNKNOWN
@@ -115,7 +114,7 @@ def extract_columns(
     tables: list[str],
     all_attributes: AttrTableListMap,
     query_aliases: TableAliasMap,
-) -> Tuple[TableAttrSetMap, list[TableColTuple]]:
+) -> tuple[TableAttrSetMap, list[TableColTuple]]:
     tbl_col_usages: TableAttrSetMap = TableAttrSetMap({t: set() for t in tables})
 
     def traverse_extract_columns(

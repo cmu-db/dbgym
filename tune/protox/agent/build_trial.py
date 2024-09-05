@@ -1,7 +1,5 @@
 import glob
 import json
-import os
-import shutil
 import socket
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -11,8 +9,12 @@ import gymnasium as gym
 import numpy as np
 import torch
 from gymnasium.wrappers import FlattenObservation  # type: ignore
-from gymnasium.wrappers import NormalizeObservation, NormalizeReward
+from gymnasium.wrappers import (  # type: ignore[attr-defined]
+    NormalizeObservation,
+    NormalizeReward,
+)
 from torch import nn
+from torch.optim import Adam  # type: ignore[attr-defined]
 
 from misc.utils import (
     DBGymConfig,
@@ -62,7 +64,7 @@ def _parse_activation_fn(act_type: str) -> type[nn.Module]:
         raise ValueError(f"Unsupported activation type {act_type}")
 
 
-def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
+def _get_signal(signal_folder: Union[str, Path]) -> tuple[int, str]:
     MIN_PORT = 5434
     MAX_PORT = 5500
 
@@ -85,7 +87,7 @@ def _get_signal(signal_folder: Union[str, Path]) -> Tuple[int, str]:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 continue
 
-            with open(f"{signal_folder}/{port}.signal", "w") as f:  # type: IO[Any]
+            with open(f"{signal_folder}/{port}.signal", "w") as f:
                 f.write(str(port))
                 f.close()
 
@@ -124,8 +126,9 @@ def _modify_benchbase_config(
 
 def _gen_noise_scale(
     vae_config: dict[str, Any], hpo_params: dict[str, Any]
-) -> Callable[[ProtoAction, torch.Tensor], ProtoAction]:
-    def f(p: ProtoAction, n: torch.Tensor) -> ProtoAction:
+) -> Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]:
+    def f(p: ProtoAction, n: Optional[torch.Tensor]) -> ProtoAction:
+        assert n is not None
         if hpo_params["scale_noise_perturb"]:
             return ProtoAction(
                 torch.clamp(
@@ -143,7 +146,7 @@ def _build_utilities(
     tuning_mode: TuningMode,
     pgport: int,
     hpo_params: dict[str, Any],
-) -> Tuple[Logger, RewardUtility, PostgresConn, Workload]:
+) -> tuple[Logger, RewardUtility, PostgresConn, Workload]:
     logger = Logger(
         dbgym_cfg,
         hpo_params["trace"],
@@ -202,7 +205,7 @@ def _build_actions(
     hpo_params: dict[str, Any],
     workload: Workload,
     logger: Logger,
-) -> Tuple[HolonSpace, LSC]:
+) -> tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
         tables=hpo_params["benchmark_config"]["tables"],
@@ -335,7 +338,7 @@ def _build_env(
     workload: Workload,
     reward_utility: RewardUtility,
     logger: Logger,
-) -> Tuple[TargetResetWrapper, AgentEnv]:
+) -> tuple[TargetResetWrapper, AgentEnv]:
 
     env = gym.make(
         "Postgres-v0",
@@ -434,9 +437,7 @@ def _build_agent(
         policy_weight_adjustment=hpo_params["policy_weight_adjustment"],
     )
 
-    actor_optimizer = torch.optim.Adam(
-        actor.parameters(), lr=hpo_params["learning_rate"]
-    )
+    actor_optimizer = Adam(actor.parameters(), lr=hpo_params["learning_rate"])
 
     critic = ContinuousCritic(
         observation_space=observation_space,
@@ -462,7 +463,7 @@ def _build_agent(
         action_dim=critic_action_dim,
     )
 
-    critic_optimizer = torch.optim.Adam(
+    critic_optimizer = Adam(
         critic.parameters(),
         lr=hpo_params["learning_rate"] * hpo_params["critic_lr_scale"],
     )
@@ -539,7 +540,7 @@ def build_trial(
     seed: int,
     hpo_params: dict[str, Any],
     ray_trial_id: Optional[str] = None,
-) -> Tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
+) -> tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
