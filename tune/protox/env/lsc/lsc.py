@@ -3,7 +3,7 @@ from typing import Any, Optional, TypeVar, cast
 import numpy as np
 import torch
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.types import ProtoAction
 
 T = TypeVar("T", torch.Tensor, np.typing.NDArray[np.float32])

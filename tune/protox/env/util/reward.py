@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 import pandas as pd
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 
 # Initial penalty to apply to create the "worst" perf from the baseline.
 INITIAL_PENALTY_MULTIPLIER = 4.0

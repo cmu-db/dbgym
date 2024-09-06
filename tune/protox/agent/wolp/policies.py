@@ -12,7 +12,7 @@ from tune.protox.agent.buffers import ReplayBufferSamples
 from tune.protox.agent.noise import ActionNoise
 from tune.protox.agent.policies import Actor, BaseModel, ContinuousCritic
 from tune.protox.agent.utils import polyak_update
-from tune.protox.env.logger import ArtifactManager, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.types import (
     DEFAULT_NEIGHBOR_PARAMETERS,

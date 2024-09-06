@@ -8,7 +8,7 @@ import torch
 from gymnasium import spaces
 from psycopg import Connection
 
-from tune.protox.env.logger import ArtifactManager, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.latent_space import (
     LatentIndexSpace,
     LatentKnobSpace,

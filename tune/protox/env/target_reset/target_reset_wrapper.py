@@ -3,7 +3,7 @@ from typing import Any, Optional, Tuple, cast
 
 import gymnasium as gym
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.types import EnvInfoDict, HolonStateContainer, TargetResetConfig
 from tune.protox.env.util.reward import RewardUtility

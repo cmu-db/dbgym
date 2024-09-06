@@ -9,7 +9,7 @@ import psycopg
 from plumbum import local
 
 from misc.utils import DBGymConfig, TuningMode
-from tune.protox.env.logger import ArtifactManager, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs

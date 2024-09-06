@@ -6,7 +6,7 @@ import torch
 from numpy.typing import NDArray
 
 from tune.protox.embedding.vae import VAE
-from tune.protox.env.logger import ArtifactManager, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace, fetch_server_indexes

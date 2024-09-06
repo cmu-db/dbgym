@@ -2,7 +2,7 @@ from typing import Any, Optional, Tuple
 
 import gymnasium as gym
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 

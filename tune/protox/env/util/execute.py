@@ -6,7 +6,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.errors import QueryCanceled
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.types import (

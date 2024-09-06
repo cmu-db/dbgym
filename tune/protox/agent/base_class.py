@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.noise import ActionNoise
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 
 
 class BaseAlgorithm(ABC):

@@ -20,7 +20,7 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
-from tune.protox.env.logger import ArtifactManager, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
     DBGYM_POSTGRES_PASS,

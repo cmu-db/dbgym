@@ -34,7 +34,7 @@ from tune.protox.embedding.train_all import (
     create_vae_model,
     fetch_vae_parameters_from_workload,
 )
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper

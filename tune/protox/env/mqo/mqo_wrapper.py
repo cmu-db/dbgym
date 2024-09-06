@@ -6,7 +6,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from tune.protox.env.logger import ArtifactManager
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive import SettingType, is_binary_enum, is_knob_enum
