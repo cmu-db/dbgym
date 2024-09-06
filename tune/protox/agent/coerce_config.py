@@ -24,7 +24,6 @@ def coerce_config(
         benchmark_config["query_spec"].update(mqs)
 
         defaults = {
-            "verbose": True,
             "trace": True,
             "seed": hpo_params["mythril_args"]["seed"],
             "tune_duration": {

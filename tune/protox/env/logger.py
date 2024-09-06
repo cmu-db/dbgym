@@ -59,24 +59,22 @@ class Logger(object):
         self,
         dbgym_cfg: DBGymConfig,
         trace: bool,
-        verbose: bool,
     ) -> None:
         self.log_dpath = dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
         self.trace = trace
-        self.verbose = verbose
         self.tensorboard_dpath = self.log_dpath / "tboard"
         self.tuning_steps_dpath = self.log_dpath / "tuning_steps"
         self.tuning_steps_dpath.mkdir(parents=True, exist_ok=True)
 
-        level = logging.INFO if not self.verbose else logging.DEBUG
+        level = logging.DEBUG
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
         logging.basicConfig(format=formatter, level=level, force=True)
 
         # Setup the file logger.
-        file_logger = logging.FileHandler(self.tuning_steps_dpath / "output.log")
-        file_logger.setFormatter(logging.Formatter(formatter))
-        file_logger.setLevel(level)
-        logging.getLogger().addHandler(file_logger)
+        file_handler = logging.FileHandler(self.tuning_steps_dpath / "output.log")
+        file_handler.setFormatter(logging.Formatter(formatter))
+        file_handler.setLevel(level)
+        logging.getLogger().addHandler(file_handler)
 
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None
@@ -87,9 +85,7 @@ class Logger(object):
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}
 
-    def get_logger(self, name: Optional[str]) -> logging.Logger:
-        if name is None:
-            return logging.getLogger()
+    def get_logger(self, name: Optional[str]=None) -> logging.Logger:
         return logging.getLogger(name)
 
     def stash_results(

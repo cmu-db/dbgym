@@ -150,7 +150,6 @@ def _build_utilities(
     logger = Logger(
         dbgym_cfg,
         hpo_params["trace"],
-        hpo_params["verbose"],
     )
 
     reward_utility = RewardUtility(

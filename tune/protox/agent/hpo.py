@@ -245,7 +245,7 @@ class AgentHPOArgs:
 @click.option(
     "--build-space-good-for-boot",
     is_flag=True,
-    help="Whether to avoid certain options that are known to not perform well when Boot is enabled. See the codebase for why this is subtly different from --enable-boot-during-hpo.",
+    help="Whether to avoid certain options that are known to not perform well when Boot is enabled. See the codebase for why this is different from --enable-boot-during-hpo.",
 )
 def hpo(
     dbgym_cfg: DBGymConfig,
@@ -380,7 +380,6 @@ def build_space(
     return {
         # Internal space versioning.
         "space_version": "2.0",
-        "verbose": True,
         "trace": True,
         "seed": seed,
         # For params that may differ between HPO, tune, and replay, I chose to represent them
@@ -578,8 +577,8 @@ class TuneTrial:
             hpo_params=hpo_params,
             ray_trial_id=self.ray_trial_id,
         )
-        self.logger.get_logger(None).info("%s", hpo_params)
-        self.logger.get_logger(None).info(f"Seed: {seed}")
+        self.logger.get_logger().info("%s", hpo_params)
+        self.logger.get_logger().info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
         self.agent.set_timeout_checker(self.timeout_checker)
@@ -596,7 +595,7 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        self.logger.get_logger(None).info(
+        self.logger.get_logger().info(
             f"Starting episode: {episode+1}, iteration: {it+1}"
         )
 
@@ -606,7 +605,7 @@ class TuneTrial:
                 infos["baseline_reward"],
                 infos["baseline_metric"],
             )
-            self.logger.get_logger(None).info(
+            self.logger.get_logger().info(
                 f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
             )
             self.env_init = True
