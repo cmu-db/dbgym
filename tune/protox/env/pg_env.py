@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union
@@ -71,20 +72,18 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.workload.queries,
         )
 
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).debug(
-                f"[Restored snapshot] {self.state_container}"
-            )
+        logging.debug(
+            f"[Restored snapshot] {self.state_container}"
+        )
 
     @time_record("reset")
     def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
     ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info(
-                "Resetting database system state to snapshot."
-            )
+        logging.info(
+            "Resetting database system state to snapshot."
+        )
         super().reset(seed=seed)
 
         target_config: Optional[TargetResetConfig] = None
@@ -139,10 +138,9 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             self.state_container = copy.deepcopy(config)
             self.current_state = env_state.copy()
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).debug(
-                    "[Finished] Reset to state (config): %s", config
-                )
+            logging.debug(
+                "[Finished] Reset to state (config): %s", config
+            )
 
         else:
             # Restore a pristine snapshot of the world.
@@ -215,10 +213,9 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("step_before_execution")
     def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).debug(
-                "Selected action: %s", self.action_space.to_jsonable([action])
-            )
+        logging.debug(
+            "Selected action: %s", self.action_space.to_jsonable([action])
+        )
 
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
@@ -256,14 +253,13 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            assert self.artifact_manager is not None
-            self.artifact_manager.get_logger(__name__).info(
+            logging.info(
                 f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
             )
-            self.artifact_manager.get_logger(__name__).info(
+            logging.info(
                 f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n"
             )
-            self.artifact_manager.get_logger(__name__).info(
+            logging.info(
                 f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n"
             )
             (
@@ -286,10 +282,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
         else:
             # Illegal configuration.
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).info(
-                    "Found illegal configuration: %s", info["attempted_changes"]
-                )
+            logging.info(
+                "Found illegal configuration: %s", info["attempted_changes"]
+            )
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
@@ -412,19 +407,17 @@ class PostgresEnv(gym.Env[Any, Any]):
                             False
                         ), f"attempt_checkpoint() failed after 5 attempts with {e}"
 
-                    if self.artifact_manager:
-                        self.artifact_manager.get_logger(__name__).debug(
-                            f"[attempt_checkpoint]: {e}"
-                        )
+                    logging.debug(
+                        f"[attempt_checkpoint]: {e}"
+                    )
                     time.sleep(5)
 
         shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).info(
-                    f"Executing {sql} [{i+1}/{len(sql_commands)}]"
-                )
+            logging.info(
+                f"Executing {sql} [{i+1}/{len(sql_commands)}]"
+            )
 
             ret, stderr = self.pg_conn.psql(sql)
             if ret == -1:

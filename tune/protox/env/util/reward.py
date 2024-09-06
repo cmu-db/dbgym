@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
@@ -33,7 +34,7 @@ class RewardUtility(object):
     def set_relative_baseline(
         self, relative_baseline: float, prev_result: Optional[float] = None
     ) -> None:
-        self.artifact_manager.get_logger(__name__).debug(
+        logging.debug(
             f"[set_relative_baseline]: {relative_baseline}"
         )
         self.relative_baseline = relative_baseline
@@ -57,7 +58,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        self.artifact_manager.get_logger(__name__).debug(
+        logging.debug(
             f"Reading TPS metric from file: {summary}"
         )
         # don't call open_and_save() because summary is generated from this run
@@ -74,7 +75,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        self.artifact_manager.get_logger(__name__).debug(
+        logging.debug(
             f"Reading TPS metric from file: {summary}"
         )
         # don't call open_and_save() because summary is generated from this run
@@ -109,7 +110,7 @@ class RewardUtility(object):
         #
         # minimum memory before start trading...)
         assert did_error or results_dpath is not None or metric is not None
-        self.artifact_manager.get_logger(__name__).debug(
+        logging.debug(
             f"[reward_calc]: {results_dpath} {metric} {update} {did_error}"
         )
 

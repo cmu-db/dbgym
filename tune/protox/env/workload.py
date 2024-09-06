@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import math
 import shutil
 import tempfile
@@ -233,10 +234,9 @@ class Workload(object):
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
         self.artifact_manager = artifact_manager
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info(
-                f"Initialized with workload timeout {workload_timeout}"
-            )
+        logging.info(
+            f"Initialized with workload timeout {workload_timeout}"
+        )
 
         self.tables: list[str] = tables
         self.attributes: TableAttrListMap = attributes
@@ -307,10 +307,9 @@ class Workload(object):
         else:
             self.workload_timeout = min(self.workload_timeout, metric)
 
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info(
-                f"Workload timeout set to: {self.workload_timeout}"
-            )
+        logging.info(
+            f"Workload timeout set to: {self.workload_timeout}"
+        )
 
     def queries_for_table(self, table: str) -> list[str]:
         return [q for q in self.order if q in self.tbl_queries_usage[table]]
@@ -656,8 +655,7 @@ class Workload(object):
         first: bool = False,
     ) -> tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info("Starting to run benchmark...")
+        logging.info("Starting to run benchmark...")
 
         # Generate a unique temporary directory to store results in.
         results_dpath = Path(tempfile.mkdtemp())
@@ -704,10 +702,9 @@ class Workload(object):
                 results_dpath=results_dpath, update=update, did_error=not success
             )
 
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info(
-                f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
-            )
+        logging.info(
+            f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
+        )
         return (
             success,
             metric,

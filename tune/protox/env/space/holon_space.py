@@ -1,5 +1,6 @@
 import copy
 import itertools
+import logging
 from typing import Any, Iterable, List, Optional, Tuple, Union, cast
 
 import gymnasium as gym
@@ -53,8 +54,7 @@ class HolonSpace(spaces.Tuple):
             first_d, carprod_embeds[first_drift]
         )
 
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).debug("Neighborhood Check passed.")
+        logging.debug("Neighborhood Check passed.")
 
     def __init__(
         self,

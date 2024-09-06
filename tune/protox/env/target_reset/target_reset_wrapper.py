@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Any, Optional, Tuple, cast
 
@@ -50,10 +51,9 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                 self.real_best_metric = self.best_metric
 
             if self.maximize_state:
-                if self.artifact_manager:
-                    self.artifact_manager.get_logger(__name__).info(
-                        f"Found new maximal state with {metric}."
-                    )
+                logging.info(
+                    f"Found new maximal state with {metric}."
+                )
                 assert len(self.tracked_states) > 0
                 state = self._get_state()
                 if self.start_reset:

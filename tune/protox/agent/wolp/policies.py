@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
@@ -71,9 +72,8 @@ class WolpPolicy(BaseModel):
         self.gamma = gamma
 
         # Log all the networks.
-        if self.artifact_manager:
-            self.artifact_manager.get_logger(__name__).info("Actor: %s", self.actor)
-            self.artifact_manager.get_logger(__name__).info("Critic: %s", self.critic)
+        logging.info("Actor: %s", self.actor)
+        logging.info("Critic: %s", self.critic)
 
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         raise NotImplementedError()
@@ -171,8 +171,8 @@ class WolpPolicy(BaseModel):
             # Insert a dimension.
             noise = noise.view(-1, *noise.shape)
 
-        if noise is not None and self.artifact_manager is not None:
-            self.artifact_manager.get_logger(__name__).debug(
+        if noise is not None:
+            logging.debug(
                 f"Perturbing with noise class {action_noise}"
             )
 
@@ -186,9 +186,8 @@ class WolpPolicy(BaseModel):
             raw_action, neighbor_parameters
         )
 
-        if self.artifact_manager is not None:
-            # Log the neighborhood we are observing.
-            self.artifact_manager.get_logger(__name__).debug(f"Neighborhood Sizes {actions_dim}")
+        # Log the neighborhood we are observing.
+        logging.debug(f"Neighborhood Sizes {actions_dim}")
 
         if random_act:
             # If we want a random action, don't use Q-value estimate.

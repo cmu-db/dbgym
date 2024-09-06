@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 from typing import Any, Optional, Tuple, Union
 
 import gymnasium as gym
@@ -109,10 +110,9 @@ def _regress_query_knobs(
                 value = 1.0 if "Index" in ams[qid_prefix][alias] else 0.0
             else:
                 # Log out the missing alias for debugging reference.
-                if artifact_manager:
-                    artifact_manager.get_logger(__name__).debug(
-                        f"Found missing {alias} in the parsed {ams}."
-                    )
+                logging.debug(
+                    f"Found missing {alias} in the parsed {ams}."
+                )
                 value = 0.0
             global_qknobs[knob] = value
         elif knob.knob_type == SettingType.BOOLEAN:
@@ -175,11 +175,10 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                         None,
                         None,
                     )
-                    if self.artifact_manager:
-                        assert best_run.runtime is not None
-                        self.artifact_manager.get_logger(__name__).debug(
-                            f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})"
-                        )
+                    assert best_run.runtime is not None
+                    logging.debug(
+                        f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})"
+                    )
                 elif not best_run.timed_out:
                     qobs = self.best_observed[qid]
                     assert qobs.runtime and best_run.runtime
@@ -191,10 +190,9 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                             None,
                             None,
                         )
-                        if self.artifact_manager:
-                            self.artifact_manager.get_logger(__name__).debug(
-                                f"[best_observe] {qid}: {best_run.runtime/1e6}"
-                            )
+                        logging.debug(
+                            f"[best_observe] {qid}: {best_run.runtime/1e6}"
+                        )
 
     def step(  # type: ignore
         self,
@@ -308,8 +306,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
         # Execute.
-        assert self.artifact_manager is not None
-        self.artifact_manager.get_logger(__name__).info("MQOWrapper called step_execute()")
+        logging.info("MQOWrapper called step_execute()")
         success, info = self.unwrapped.step_execute(success, runs, info)
         if info["query_metric_data"]:
             self._update_best_observed(info["query_metric_data"])
@@ -424,7 +421,6 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                     prev_result=metric,
                 )
 
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).debug("Maximized on reset.")
+            logging.debug("Maximized on reset.")
 
         return state, info

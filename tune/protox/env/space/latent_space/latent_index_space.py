@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
@@ -207,10 +208,9 @@ class LatentIndexSpace(IndexSpace):
             num_attempts += 1
             if num_attempts >= 100:
                 # Log but don't crash.
-                if self.artifact_manager:
-                    self.artifact_manager.get_logger(__name__).error(
-                        "Spent 100 iterations and could not find any valid index action. This should not happen."
-                    )
+                logging.error(
+                    "Spent 100 iterations and could not find any valid index action. This should not happen."
+                )
                 allow_random_samples = True
         return actions
 
@@ -261,15 +261,13 @@ class LatentIndexSpace(IndexSpace):
 
         exist_ia = ia in sc
         if exist_ia:
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).debug(
-                    "Contemplating %s (exist: True)", sc[sc.index(ia)]
-                )
+            logging.debug(
+                "Contemplating %s (exist: True)", sc[sc.index(ia)]
+            )
         else:
-            if self.artifact_manager:
-                self.artifact_manager.get_logger(__name__).debug(
-                    "Contemplating %s (exist: False)", ia
-                )
+            logging.debug(
+                "Contemplating %s (exist: False)", ia
+            )
             # Add the new index with the current index counter.
             sql_commands.append(ia.sql(add=True))
 

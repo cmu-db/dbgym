@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Optional, Tuple
 
 import gymnasium as gym
@@ -19,9 +20,8 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         self.lsc.reset()
 
         state["lsc"] = self.lsc.current_scale()
-        if self.artifact_manager:
-            lsc = state["lsc"]
-            self.artifact_manager.get_logger(__name__).debug(f"Attaching LSC: {lsc}")
+        lsc = state["lsc"]
+        logging.debug(f"Attaching LSC: {lsc}")
 
         return state, info
 
@@ -40,10 +40,9 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         state["lsc"] = self.lsc.current_scale()
         new_bias = self.lsc.current_bias()
 
-        if self.artifact_manager:
-            lsc = state["lsc"]
-            self.artifact_manager.get_logger(__name__).debug(
-                f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
-            )
+        lsc = state["lsc"]
+        logging.debug(
+            f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
+        )
 
         return state, float(reward), term, trunc, info

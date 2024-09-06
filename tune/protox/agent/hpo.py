@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import random
 import shutil
@@ -577,8 +578,8 @@ class TuneTrial:
             hpo_params=hpo_params,
             ray_trial_id=self.ray_trial_id,
         )
-        self.artifact_manager.get_logger().info("%s", hpo_params)
-        self.artifact_manager.get_logger().info(f"Seed: {seed}")
+        logging.info("%s", hpo_params)
+        logging.info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
         self.agent.set_timeout_checker(self.timeout_checker)
@@ -595,7 +596,7 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        self.artifact_manager.get_logger().info(
+        logging.info(
             f"Starting episode: {episode+1}, iteration: {it+1}"
         )
 
@@ -605,9 +606,9 @@ class TuneTrial:
                 infos["baseline_reward"],
                 infos["baseline_metric"],
             )
-            self.artifact_manager.get_logger().info(
-                f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
-            )
+            metric_reward_message = f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
+            logging.info(metric_reward_message)
+            self.artifact_manager.log_to_replay_info(metric_reward_message)
             self.env_init = True
 
             assert (

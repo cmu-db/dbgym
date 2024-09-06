@@ -61,6 +61,11 @@ class ArtifactManager(object):
     Importantly, this class should *not* be used for general-purpose logging. You should directly
     use the logging library to do that.
     """
+    # The output log is the file that the root logger writes to
+    OUTPUT_LOG_FNAME = "output.log"
+    REPLAY_INFO_LOG_FNAME = "replay_info.log"
+    REPLAY_LOGGER_NAME = "replay_logger"
+
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
@@ -72,15 +77,18 @@ class ArtifactManager(object):
         self.tuning_steps_dpath = self.log_dpath / "tuning_steps"
         self.tuning_steps_dpath.mkdir(parents=True, exist_ok=True)
 
-        level = logging.DEBUG
+        # Setup the root and replay loggers
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
-        logging.basicConfig(format=formatter, level=level, force=True)
+        logging.basicConfig(format=formatter, level=logging.DEBUG, force=True)
+        output_log_handler = logging.FileHandler(self.log_dpath / ArtifactManager.OUTPUT_LOG_FNAME)
+        output_log_handler.setFormatter(logging.Formatter(formatter))
+        output_log_handler.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(output_log_handler)
 
-        # Setup the file artifact_manager.
-        file_handler = logging.FileHandler(self.tuning_steps_dpath / "output.log")
-        file_handler.setFormatter(logging.Formatter(formatter))
-        file_handler.setLevel(level)
-        logging.getLogger().addHandler(file_handler)
+        replay_info_log_handler = logging.FileHandler(self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME)
+        replay_info_log_handler.setFormatter(logging.Formatter(formatter))
+        replay_info_log_handler.setLevel(logging.INFO)
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME)
 
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None
@@ -93,6 +101,9 @@ class ArtifactManager(object):
 
     def get_logger(self, name: Optional[str]=None) -> logging.Logger:
         return logging.getLogger(name)
+    
+    def log_to_replay_info(self, message: str) -> None:
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).info(message)
 
     def stash_results(
         self,
