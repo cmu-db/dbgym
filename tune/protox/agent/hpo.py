@@ -570,19 +570,19 @@ class TuneTrial:
         tune_duration = hpo_params["tune_duration"][str(self.tuning_mode)]
 
         self.timeout_checker = TuneTimeoutChecker(tune_duration)
-        self.logger, self.target_reset, self.env, self.agent, self.signal = build_trial(
+        self.artifact_manager, self.target_reset, self.env, self.agent, self.signal = build_trial(
             self.dbgym_cfg,
             self.tuning_mode,
             seed=seed,
             hpo_params=hpo_params,
             ray_trial_id=self.ray_trial_id,
         )
-        self.logger.get_logger().info("%s", hpo_params)
-        self.logger.get_logger().info(f"Seed: {seed}")
+        self.artifact_manager.get_logger().info("%s", hpo_params)
+        self.artifact_manager.get_logger().info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
         self.agent.set_timeout_checker(self.timeout_checker)
-        self.agent.set_logger(self.logger)
+        self.agent.set_artifact_manager(self.artifact_manager)
 
         self.env_init = False
         self.start_time = time.time()
@@ -595,7 +595,7 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        self.logger.get_logger().info(
+        self.artifact_manager.get_logger().info(
             f"Starting episode: {episode+1}, iteration: {it+1}"
         )
 
@@ -605,7 +605,7 @@ class TuneTrial:
                 infos["baseline_reward"],
                 infos["baseline_metric"],
             )
-            self.logger.get_logger().info(
+            self.artifact_manager.get_logger().info(
                 f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
             )
             self.env_init = True
@@ -615,14 +615,14 @@ class TuneTrial:
                 if self.tuning_mode == TuningMode.HPO
                 else True
             ), "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
-            self.logger.stash_results(
+            self.artifact_manager.stash_results(
                 infos, name_override="baseline", ray_trial_id=self.ray_trial_id
             )
         else:
             self.agent.learn(self.env, total_timesteps=1, tuning_mode=self.tuning_mode)
 
         self.timeout_checker.pause()
-        self.logger.advance()
+        self.artifact_manager.advance()
 
         # Step telemetry that we care about.
         data = {
@@ -646,7 +646,7 @@ class TuneTrial:
         return data
 
     def cleanup(self) -> None:
-        self.logger.flush()
+        self.artifact_manager.flush()
         self.env.close()  # type: ignore[no-untyped-call]
         if Path(self.signal).exists():
             os.remove(self.signal)

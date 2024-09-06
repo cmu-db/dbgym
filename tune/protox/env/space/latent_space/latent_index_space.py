@@ -41,7 +41,7 @@ class LatentIndexSpace(IndexSpace):
         index_noise_scale: Optional[
             Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
-        logger: Optional[ArtifactManager] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
     ) -> None:
 
         super().__init__(
@@ -61,7 +61,7 @@ class LatentIndexSpace(IndexSpace):
         self._latent_dim = latent_dim
         self.index_output_transform = index_output_transform
         self.index_noise_scale = index_noise_scale
-        self.logger = logger
+        self.artifact_manager = artifact_manager
         self.name = "index"
 
     def latent_dim(self) -> int:
@@ -207,8 +207,8 @@ class LatentIndexSpace(IndexSpace):
             num_attempts += 1
             if num_attempts >= 100:
                 # Log but don't crash.
-                if self.logger:
-                    self.logger.get_logger(__name__).error(
+                if self.artifact_manager:
+                    self.artifact_manager.get_logger(__name__).error(
                         "Spent 100 iterations and could not find any valid index action. This should not happen."
                     )
                 allow_random_samples = True
@@ -261,13 +261,13 @@ class LatentIndexSpace(IndexSpace):
 
         exist_ia = ia in sc
         if exist_ia:
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).debug(
                     "Contemplating %s (exist: True)", sc[sc.index(ia)]
                 )
         else:
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).debug(
                     "Contemplating %s (exist: False)", ia
                 )
             # Add the new index with the current index counter.

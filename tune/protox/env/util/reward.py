@@ -12,7 +12,7 @@ INITIAL_PENALTY_MULTIPLIER = 4.0
 
 class RewardUtility(object):
     def __init__(
-        self, target: str, metric: str, reward_scaler: float, logger: ArtifactManager
+        self, target: str, metric: str, reward_scaler: float, artifact_manager: ArtifactManager
     ) -> None:
         self.reward_scaler = reward_scaler
         self.target = target
@@ -21,7 +21,7 @@ class RewardUtility(object):
         self.worst_perf: Optional[float] = None
         self.relative_baseline: Optional[float] = None
         self.previous_result: Optional[float] = None
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
     def is_perf_better(self, new_perf: float, old_perf: float) -> bool:
         if self.maximize and new_perf > old_perf:
@@ -33,7 +33,7 @@ class RewardUtility(object):
     def set_relative_baseline(
         self, relative_baseline: float, prev_result: Optional[float] = None
     ) -> None:
-        self.logger.get_logger(__name__).debug(
+        self.artifact_manager.get_logger(__name__).debug(
             f"[set_relative_baseline]: {relative_baseline}"
         )
         self.relative_baseline = relative_baseline
@@ -57,7 +57,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        self.logger.get_logger(__name__).debug(
+        self.artifact_manager.get_logger(__name__).debug(
             f"Reading TPS metric from file: {summary}"
         )
         # don't call open_and_save() because summary is generated from this run
@@ -74,7 +74,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        self.logger.get_logger(__name__).debug(
+        self.artifact_manager.get_logger(__name__).debug(
             f"Reading TPS metric from file: {summary}"
         )
         # don't call open_and_save() because summary is generated from this run
@@ -109,7 +109,7 @@ class RewardUtility(object):
         #
         # minimum memory before start trading...)
         assert did_error or results_dpath is not None or metric is not None
-        self.logger.get_logger(__name__).debug(
+        self.artifact_manager.get_logger(__name__).debug(
             f"[reward_calc]: {results_dpath} {metric} {update} {did_error}"
         )
 

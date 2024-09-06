@@ -38,13 +38,13 @@ class PostgresEnv(gym.Env[Any, Any]):
         pg_conn: PostgresConn,
         query_timeout: int,
         benchbase_config: dict[str, Any],
-        logger: Optional[ArtifactManager] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
     ):
         super().__init__()
 
         self.dbgym_cfg = dbgym_cfg
         self.tuning_mode = tuning_mode
-        self.logger = logger
+        self.artifact_manager = artifact_manager
         self.action_space = action_space
         self.observation_space = observation_space
         self.workload = workload
@@ -71,8 +71,8 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.workload.queries,
         )
 
-        if self.logger:
-            self.logger.get_logger(__name__).debug(
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).debug(
                 f"[Restored snapshot] {self.state_container}"
             )
 
@@ -81,8 +81,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
     ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
-        if self.logger:
-            self.logger.get_logger(__name__).info(
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).info(
                 "Resetting database system state to snapshot."
             )
         super().reset(seed=seed)
@@ -139,8 +139,8 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             self.state_container = copy.deepcopy(config)
             self.current_state = env_state.copy()
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).debug(
                     "[Finished] Reset to state (config): %s", config
                 )
 
@@ -215,8 +215,8 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("step_before_execution")
     def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
-        if self.logger:
-            self.logger.get_logger(__name__).debug(
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).debug(
                 "Selected action: %s", self.action_space.to_jsonable([action])
             )
 
@@ -256,14 +256,14 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            assert self.logger is not None
-            self.logger.get_logger(__name__).info(
+            assert self.artifact_manager is not None
+            self.artifact_manager.get_logger(__name__).info(
                 f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
             )
-            self.logger.get_logger(__name__).info(
+            self.artifact_manager.get_logger(__name__).info(
                 f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n"
             )
-            self.logger.get_logger(__name__).info(
+            self.artifact_manager.get_logger(__name__).info(
                 f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n"
             )
             (
@@ -286,8 +286,8 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
         else:
             # Illegal configuration.
-            if self.logger:
-                self.logger.get_logger(__name__).info(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).info(
                     "Found illegal configuration: %s", info["attempted_changes"]
                 )
             success = False
@@ -412,8 +412,8 @@ class PostgresEnv(gym.Env[Any, Any]):
                             False
                         ), f"attempt_checkpoint() failed after 5 attempts with {e}"
 
-                    if self.logger:
-                        self.logger.get_logger(__name__).debug(
+                    if self.artifact_manager:
+                        self.artifact_manager.get_logger(__name__).debug(
                             f"[attempt_checkpoint]: {e}"
                         )
                     time.sleep(5)
@@ -421,8 +421,8 @@ class PostgresEnv(gym.Env[Any, Any]):
         shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
-            if self.logger:
-                self.logger.get_logger(__name__).info(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).info(
                     f"Executing {sql} [{i+1}/{len(sql_commands)}]"
                 )
 

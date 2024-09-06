@@ -24,18 +24,18 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             start = time.time()
             ret = f(*args, **kwargs)
 
-            # TODO(wz2): This is a hack to get a logger instance.
+            # TODO(wz2): This is a hack to get a artifact_manager instance.
             first_arg = args[0]  # Ignore the indexing type error
-            assert hasattr(first_arg, "logger"), print(first_arg, type(first_arg))
+            assert hasattr(first_arg, "artifact_manager"), print(first_arg, type(first_arg))
 
-            if first_arg.logger is None:
-                # If there is no logger, just return.
+            if first_arg.artifact_manager is None:
+                # If there is no artifact_manager, just return.
                 return ret
 
-            assert isinstance(first_arg.logger, ArtifactManager)
-            if first_arg.logger is not None:
+            assert isinstance(first_arg.artifact_manager, ArtifactManager)
+            if first_arg.artifact_manager is not None:
                 cls_name = type(first_arg).__name__
-                first_arg.logger.record(f"{cls_name}_{key}", time.time() - start)
+                first_arg.artifact_manager.record(f"{cls_name}_{key}", time.time() - start)
             return ret
 
         return wrapped_f
@@ -76,7 +76,7 @@ class ArtifactManager(object):
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
         logging.basicConfig(format=formatter, level=level, force=True)
 
-        # Setup the file logger.
+        # Setup the file artifact_manager.
         file_handler = logging.FileHandler(self.tuning_steps_dpath / "output.log")
         file_handler.setFormatter(logging.Formatter(formatter))
         file_handler.setLevel(level)

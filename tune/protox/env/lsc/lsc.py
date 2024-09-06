@@ -15,7 +15,7 @@ class LSC(object):
         horizon: int,
         lsc_parameters: dict[str, Any],
         vae_config: dict[str, Any],
-        logger: Optional[ArtifactManager],
+        artifact_manager: Optional[ArtifactManager],
     ):
         self.frozen = False
         self.horizon = horizon
@@ -50,14 +50,14 @@ class LSC(object):
         self.increment = np.array(lsc_increments)
         self.max = np.array(lsc_max)
         self.shift_after = lsc_parameters["shift_after"]
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
-        if self.logger:
-            self.logger.get_logger(__name__).info("LSC Shift: %s", self.lsc_shift)
-            self.logger.get_logger(__name__).info(
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).info("LSC Shift: %s", self.lsc_shift)
+            self.artifact_manager.get_logger(__name__).info(
                 "LSC Shift Increment: %s", self.increment
             )
-            self.logger.get_logger(__name__).info("LSC Shift Max: %s", self.max)
+            self.artifact_manager.get_logger(__name__).info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
         if not self.enabled:
@@ -130,7 +130,7 @@ class LSC(object):
             # Increment the current bias with the increment.
             self.lsc_shift[:bound] += self.increment[:bound]
             self.lsc_shift = self.lsc_shift % self.max
-            if self.logger:
-                self.logger.get_logger(__name__).info(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).info(
                     "LSC Bias Update: %s", self.lsc_shift
                 )

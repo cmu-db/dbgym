@@ -147,7 +147,7 @@ def _build_utilities(
     pgport: int,
     hpo_params: dict[str, Any],
 ) -> tuple[ArtifactManager, RewardUtility, PostgresConn, Workload]:
-    logger = ArtifactManager(
+    artifact_manager = ArtifactManager(
         dbgym_cfg,
         hpo_params["trace"],
     )
@@ -160,7 +160,7 @@ def _build_utilities(
         ),
         metric=hpo_params["reward"],
         reward_scaler=hpo_params["reward_scaler"],
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
@@ -180,7 +180,7 @@ def _build_utilities(
         enable_boot=enable_boot,
         boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
         connect_timeout=300,
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     workload = Workload(
@@ -192,10 +192,10 @@ def _build_utilities(
         pid=None,
         workload_timeout=hpo_params["workload_timeout"][str(tuning_mode)],
         workload_timeout_penalty=hpo_params["workload_timeout_penalty"],
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
-    return logger, reward_utility, pg_conn, workload
+    return artifact_manager, reward_utility, pg_conn, workload
 
 
 def _build_actions(
@@ -203,10 +203,10 @@ def _build_actions(
     seed: int,
     hpo_params: dict[str, Any],
     workload: Workload,
-    logger: ArtifactManager,
+    artifact_manager: ArtifactManager,
 ) -> tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
-        logger=logger,
+        artifact_manager=artifact_manager,
         tables=hpo_params["benchmark_config"]["tables"],
         knobs=hpo_params["system_knobs"],
         quantize=True,
@@ -237,7 +237,7 @@ def _build_actions(
         horizon=hpo_params["horizon"],
         lsc_parameters=hpo_params["lsc"],
         vae_config=vae_config,
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     idxspace = LSCIndexSpace(
@@ -258,7 +258,7 @@ def _build_actions(
         latent_dim=vae_config["latent_dim"],
         index_output_transform=index_output_transform,
         index_noise_scale=index_noise_scale,
-        logger=logger,
+        artifact_manager=artifact_manager,
         lsc=lsc,
     )
 
@@ -279,7 +279,7 @@ def _build_actions(
             else workload.query_aliases
         ),
         query_names=workload.order,
-        logger=logger,
+        artifact_manager=artifact_manager,
         latent=True,
     )
 
@@ -288,7 +288,7 @@ def _build_actions(
         index_space=idxspace,
         query_space=qspace,
         seed=seed,
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
     return hspace, lsc
 
@@ -336,7 +336,7 @@ def _build_env(
     lsc: LSC,
     workload: Workload,
     reward_utility: RewardUtility,
-    logger: ArtifactManager,
+    artifact_manager: ArtifactManager,
 ) -> tuple[TargetResetWrapper, AgentEnv]:
 
     env = gym.make(
@@ -351,7 +351,7 @@ def _build_env(
         pg_conn=pg_conn,
         query_timeout=hpo_params["query_timeout"],
         benchbase_config=hpo_params["benchbase_config"],
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     # Check whether to create the MQO wrapper.
@@ -368,14 +368,14 @@ def _build_env(
                 benchbase_config=hpo_params["benchbase_config"],
                 query_timeout=hpo_params["query_timeout"],
                 env=env,
-                logger=logger,
+                artifact_manager=artifact_manager,
             )
 
     # Attach LSC.
     env = LSCWrapper(
         lsc=lsc,
         env=env,
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     # Attach TargetResetWrapper.
@@ -384,7 +384,7 @@ def _build_env(
         maximize_state=hpo_params["maximize_state"],
         reward_utility=reward_utility,
         start_reset=False,
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     env = FlattenObservation(env)
@@ -404,7 +404,7 @@ def _build_agent(
     hpo_params: dict[str, Any],
     observation_space: StateSpace,
     action_space: HolonSpace,
-    logger: ArtifactManager,
+    artifact_manager: ArtifactManager,
     ray_trial_id: Optional[str],
 ) -> Wolp:
     action_dim = noise_action_dim = action_space.latent_dim()
@@ -480,7 +480,7 @@ def _build_agent(
         policy_l2_reg=hpo_params["policy_l2_reg"],
         tau=hpo_params["tau"],
         gamma=hpo_params["gamma"],
-        logger=logger,
+        artifact_manager=artifact_manager,
     )
 
     # Setup the noise policy.
@@ -545,10 +545,10 @@ def build_trial(
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
     _modify_benchbase_config(dbgym_cfg, port, hpo_params)
 
-    logger, reward_utility, pg_conn, workload = _build_utilities(
+    artifact_manager, reward_utility, pg_conn, workload = _build_utilities(
         dbgym_cfg, tuning_mode, port, hpo_params
     )
-    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, logger)
+    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, artifact_manager)
     observation_space = _build_observation_space(
         dbgym_cfg, holon_space, lsc, hpo_params, seed
     )
@@ -562,10 +562,10 @@ def build_trial(
         lsc,
         workload,
         reward_utility,
-        logger,
+        artifact_manager,
     )
 
     agent = _build_agent(
-        seed, hpo_params, observation_space, holon_space, logger, ray_trial_id
+        seed, hpo_params, observation_space, holon_space, artifact_manager, ray_trial_id
     )
-    return logger, target_reset, env, agent, signal
+    return artifact_manager, target_reset, env, agent, signal

@@ -40,7 +40,7 @@ class PostgresConn:
         connect_timeout: int,
         enable_boot: bool,
         boot_config_fpath: Path,
-        logger: ArtifactManager,
+        artifact_manager: ArtifactManager,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
@@ -50,7 +50,7 @@ class PostgresConn:
         self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
         # All the paths related to dbdata
         # pristine_dbdata_snapshot_fpath is the .tgz snapshot that represents the starting state
@@ -107,12 +107,12 @@ class PostgresConn:
             return
 
         while True:
-            self.logger.get_logger(__name__).debug("Shutting down postgres...")
+            self.artifact_manager.get_logger(__name__).debug("Shutting down postgres...")
             _, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "stop", "--wait", "-t", "180", "-D", self.dbdata_dpath
             ].run(retcode=None)
             time.sleep(1)
-            self.logger.get_logger(__name__).debug(
+            self.artifact_manager.get_logger(__name__).debug(
                 "Stop message: (%s, %s)", stdout, stderr
             )
 
@@ -201,12 +201,12 @@ class PostgresConn:
             if retcode == 0 or pid_lock.exists():
                 break
 
-            self.logger.get_logger(__name__).warn(
+            self.artifact_manager.get_logger(__name__).warn(
                 "startup encountered: (%s, %s)", stdout, stderr
             )
             attempts += 1
             if attempts >= 5:
-                self.logger.get_logger(__name__).error(
+                self.artifact_manager.get_logger(__name__).error(
                     "Number of attempts to start postgres has exceeded limit."
                 )
                 assert False, "Could not start postgres."
@@ -216,7 +216,7 @@ class PostgresConn:
         while True:
             if self.connect_timeout is not None and num_cycles >= self.connect_timeout:
                 # In this case, we've failed to start postgres.
-                self.logger.get_logger(__name__).error(
+                self.artifact_manager.get_logger(__name__).error(
                     "Failed to start postgres before timeout..."
                 )
                 return False
@@ -234,7 +234,7 @@ class PostgresConn:
 
             time.sleep(1)
             num_cycles += 1
-            self.logger.get_logger(__name__).debug(
+            self.artifact_manager.get_logger(__name__).debug(
                 "Waiting for postgres to bootup but it is not..."
             )
 
@@ -284,7 +284,7 @@ class PostgresConn:
         """
         # If any of these commands fail, they'll throw a Python exception
         # Thus, if none of them throw an exception, we know they passed
-        self.logger.get_logger(__name__).debug("Setting up boot")
+        self.artifact_manager.get_logger(__name__).debug("Setting up boot")
         self.conn().execute("DROP EXTENSION IF EXISTS boot")
         self.conn().execute("CREATE EXTENSION IF NOT EXISTS boot")
         self.conn().execute("SELECT boot_connect()")
@@ -299,7 +299,7 @@ class PostgresConn:
         self.conn().execute(f"SET boot.mu_hyp_opt={mu_hyp_opt}")
         self.conn().execute(f"SET boot.mu_hyp_time={mu_hyp_time}")
         self.conn().execute(f"SET boot.mu_hyp_stdev={mu_hyp_stdev}")
-        self.logger.get_logger(__name__).debug("Set up boot")
+        self.artifact_manager.get_logger(__name__).debug("Set up boot")
 
     @time_record("psql")
     def psql(self, sql: str) -> tuple[int, Optional[str]]:
@@ -317,7 +317,7 @@ class PostgresConn:
                 ]
 
             for row in r:
-                self.logger.get_logger(__name__).info(f"Killing process {row[0]}")
+                self.artifact_manager.get_logger(__name__).info(f"Killing process {row[0]}")
                 try:
                     psutil.Process(row[0]).kill()
                 except:
@@ -339,17 +339,17 @@ class PostgresConn:
         except ProgramLimitExceeded as e:
             timer.cancel()
             self.disconnect()
-            self.logger.get_logger(__name__).debug(f"Action error: {e}")
+            self.artifact_manager.get_logger(__name__).debug(f"Action error: {e}")
             return -1, str(e)
         except QueryCanceled as e:
             timer.cancel()
             self.disconnect()
-            self.logger.get_logger(__name__).debug(f"Action error: {e}")
+            self.artifact_manager.get_logger(__name__).debug(f"Action error: {e}")
             return -1, f"canceling statement: {sql}."
         except psycopg.OperationalError as e:
             timer.cancel()
             self.disconnect()
-            self.logger.get_logger(__name__).debug(f"Action error: {e}")
+            self.artifact_manager.get_logger(__name__).debug(f"Action error: {e}")
             return -1, f"operational error: {sql}."
         except psycopg.errors.UndefinedTable:
             timer.cancel()

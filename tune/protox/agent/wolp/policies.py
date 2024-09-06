@@ -54,7 +54,7 @@ class WolpPolicy(BaseModel):
         policy_l2_reg: float = 0.0,
         tau: float = 0.005,
         gamma: float = 0.99,
-        logger: Optional[ArtifactManager] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
     ):
         super().__init__(observation_space, action_space)
         self.actor = actor
@@ -63,7 +63,7 @@ class WolpPolicy(BaseModel):
         self.critic = critic
         self.critic_target = critic_target
         self.critic_optimizer = critic_optimizer
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
         self.grad_clip = grad_clip
         self.policy_l2_reg = policy_l2_reg
@@ -71,9 +71,9 @@ class WolpPolicy(BaseModel):
         self.gamma = gamma
 
         # Log all the networks.
-        if self.logger:
-            self.logger.get_logger(__name__).info("Actor: %s", self.actor)
-            self.logger.get_logger(__name__).info("Critic: %s", self.critic)
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).info("Actor: %s", self.actor)
+            self.artifact_manager.get_logger(__name__).info("Critic: %s", self.critic)
 
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         raise NotImplementedError()
@@ -171,8 +171,8 @@ class WolpPolicy(BaseModel):
             # Insert a dimension.
             noise = noise.view(-1, *noise.shape)
 
-        if noise is not None and self.logger is not None:
-            self.logger.get_logger(__name__).debug(
+        if noise is not None and self.artifact_manager is not None:
+            self.artifact_manager.get_logger(__name__).debug(
                 f"Perturbing with noise class {action_noise}"
             )
 
@@ -186,9 +186,9 @@ class WolpPolicy(BaseModel):
             raw_action, neighbor_parameters
         )
 
-        if self.logger is not None:
+        if self.artifact_manager is not None:
             # Log the neighborhood we are observing.
-            self.logger.get_logger(__name__).debug(f"Neighborhood Sizes {actions_dim}")
+            self.artifact_manager.get_logger(__name__).debug(f"Neighborhood Sizes {actions_dim}")
 
         if random_act:
             # If we want a random action, don't use Q-value estimate.

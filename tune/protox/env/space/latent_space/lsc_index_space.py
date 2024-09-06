@@ -37,7 +37,7 @@ class LSCIndexSpace(LatentIndexSpace):
         index_noise_scale: Optional[
             Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
-        logger: Optional[ArtifactManager] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
         lsc: Optional[LSC] = None,
     ) -> None:
 
@@ -56,7 +56,7 @@ class LSCIndexSpace(LatentIndexSpace):
             latent_dim,
             index_output_transform,
             index_noise_scale,
-            logger,
+            artifact_manager,
         )
 
         assert lsc is not None

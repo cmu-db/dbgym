@@ -173,8 +173,8 @@ class Wolp(OffPolicyAlgorithm):
 
         actor_losses, critic_losses = [], []
         for gs in range(gradient_steps):
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
+            if self.artifact_manager:
+                self.artifact_manager.get_logger(__name__).debug(
                     f"Training agent gradient step {gs}"
                 )
             self._n_updates += 1

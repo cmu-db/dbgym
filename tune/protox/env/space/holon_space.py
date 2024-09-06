@@ -53,8 +53,8 @@ class HolonSpace(spaces.Tuple):
             first_d, carprod_embeds[first_drift]
         )
 
-        if self.logger:
-            self.logger.get_logger(__name__).debug("Neighborhood Check passed.")
+        if self.artifact_manager:
+            self.artifact_manager.get_logger(__name__).debug("Neighborhood Check passed.")
 
     def __init__(
         self,
@@ -62,7 +62,7 @@ class HolonSpace(spaces.Tuple):
         index_space: LatentIndexSpace,
         query_space: LatentQuerySpace,
         seed: int,
-        logger: Optional[ArtifactManager],
+        artifact_manager: Optional[ArtifactManager],
     ):
         spaces: Iterable[gym.spaces.Space[Any]] = [knob_space, index_space, query_space]
         super().__init__(spaces, seed=seed)
@@ -79,7 +79,7 @@ class HolonSpace(spaces.Tuple):
         assert len(raw_dims) == 3
         self.raw_dims: list[int] = np.cumsum(raw_dims)
         self.space_dims: Optional[list[int]] = None
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
     def get_spaces(self) -> list[tuple[str, HolonSubSpace]]:
         r = cast(

@@ -28,12 +28,12 @@ from tune.protox.env.types import (
 
 class LatentKnobSpace(KnobSpace):
     def __init__(
-        self, logger: Optional[ArtifactManager] = None, *args: Any, **kwargs: Any
+        self, artifact_manager: Optional[ArtifactManager] = None, *args: Any, **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self.final_dim = gym.spaces.utils.flatdim(self)
         self.categorical_start = self.final_dim
-        self.logger = logger
+        self.artifact_manager = artifact_manager
         self.cat_dims: list[int] = []
         self.name = "knobs"
 

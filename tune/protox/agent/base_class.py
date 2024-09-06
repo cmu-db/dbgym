@@ -27,23 +27,23 @@ class BaseAlgorithm(ABC):
         self._episode_num = 0
         # For logging (and TD3 delayed updates)
         self._n_updates = 0  # type: int
-        # The logger object
-        self._logger: Optional[ArtifactManager] = None
+        # The artifact_manager object
+        self._artifact_manager: Optional[ArtifactManager] = None
         self.timeout_checker = None
 
-    def set_logger(self, logger: Optional[ArtifactManager]) -> None:
+    def set_artifact_manager(self, artifact_manager: Optional[ArtifactManager]) -> None:
         """
-        Setter for for logger object.
+        Setter for for artifact_manager object.
 
         .. warning::
         """
-        self._logger = logger
+        self._artifact_manager = artifact_manager
 
     @property
-    def logger(self) -> ArtifactManager:
-        """Getter for the logger object."""
-        assert self._logger is not None
-        return self._logger
+    def artifact_manager(self) -> ArtifactManager:
+        """Getter for the artifact_manager object."""
+        assert self._artifact_manager is not None
+        return self._artifact_manager
 
     def set_timeout_checker(self, timeout_checker: Any) -> None:
         self.timeout_checker = timeout_checker

@@ -188,11 +188,11 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             dones = terms or truncs
             # We only stash the results if we're not doing HPO, or else the results from concurrent HPO would get
             #   stashed in the same directory and potentially cause a race condition.
-            if self.logger:
+            if self.artifact_manager:
                 assert (
                     self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True
                 ), "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
-                self.logger.stash_results(infos, ray_trial_id=self.ray_trial_id)
+                self.artifact_manager.stash_results(infos, ray_trial_id=self.ray_trial_id)
 
             self.num_timesteps += 1
             num_collected_steps += 1
