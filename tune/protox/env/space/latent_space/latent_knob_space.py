@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from psycopg import Connection
 
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.logger import ArtifactManager, time_record
 from tune.protox.env.space.primitive import KnobClass, SettingType, is_knob_enum
 from tune.protox.env.space.primitive.knob import resolve_enum_value
 from tune.protox.env.space.primitive.latent_knob import (
@@ -28,7 +28,7 @@ from tune.protox.env.types import (
 
 class LatentKnobSpace(KnobSpace):
     def __init__(
-        self, logger: Optional[Logger] = None, *args: Any, **kwargs: Any
+        self, logger: Optional[ArtifactManager] = None, *args: Any, **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self.final_dim = gym.spaces.utils.flatdim(self)

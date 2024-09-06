@@ -3,7 +3,7 @@ from typing import Any, Optional, TypeVar, cast
 import numpy as np
 import torch
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.types import ProtoAction
 
 T = TypeVar("T", torch.Tensor, np.typing.NDArray[np.float32])
@@ -15,7 +15,7 @@ class LSC(object):
         horizon: int,
         lsc_parameters: dict[str, Any],
         vae_config: dict[str, Any],
-        logger: Optional[Logger],
+        logger: Optional[ArtifactManager],
     ):
         self.frozen = False
         self.horizon = horizon

@@ -9,7 +9,7 @@ import psycopg
 from plumbum import local
 
 from misc.utils import DBGymConfig, TuningMode
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.logger import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
@@ -38,7 +38,7 @@ class PostgresEnv(gym.Env[Any, Any]):
         pg_conn: PostgresConn,
         query_timeout: int,
         benchbase_config: dict[str, Any],
-        logger: Optional[Logger] = None,
+        logger: Optional[ArtifactManager] = None,
     ):
         super().__init__()
 

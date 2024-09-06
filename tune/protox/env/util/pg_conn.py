@@ -20,7 +20,7 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.logger import ArtifactManager, time_record
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
     DBGYM_POSTGRES_PASS,
@@ -40,7 +40,7 @@ class PostgresConn:
         connect_timeout: int,
         enable_boot: bool,
         boot_config_fpath: Path,
-        logger: Logger,
+        logger: ArtifactManager,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg

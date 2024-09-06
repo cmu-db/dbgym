@@ -4,7 +4,7 @@ import psycopg
 import torch
 
 from tune.protox.embedding.vae import VAE
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
 from tune.protox.env.space.primitive.index import IndexAction
@@ -37,7 +37,7 @@ class LSCIndexSpace(LatentIndexSpace):
         index_noise_scale: Optional[
             Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
-        logger: Optional[Logger] = None,
+        logger: Optional[ArtifactManager] = None,
         lsc: Optional[LSC] = None,
     ) -> None:
 

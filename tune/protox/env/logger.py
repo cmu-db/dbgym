@@ -32,7 +32,7 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
                 # If there is no logger, just return.
                 return ret
 
-            assert isinstance(first_arg.logger, Logger)
+            assert isinstance(first_arg.logger, ArtifactManager)
             if first_arg.logger is not None:
                 cls_name = type(first_arg).__name__
                 first_arg.logger.record(f"{cls_name}_{key}", time.time() - start)
@@ -54,7 +54,13 @@ class Encoder(json.JSONEncoder):
         return super(Encoder, self).default(obj)
 
 
-class Logger(object):
+class ArtifactManager(object):
+    """
+    This class manages the following artifacts of Proto-X: info for replaying and TensorBoard output.
+
+    Importantly, this class should *not* be used for general-purpose logging. You should directly
+    use the logging library to do that.
+    """
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,

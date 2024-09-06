@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.noise import ActionNoise
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 
 
 class BaseAlgorithm(ABC):
@@ -28,10 +28,10 @@ class BaseAlgorithm(ABC):
         # For logging (and TD3 delayed updates)
         self._n_updates = 0  # type: int
         # The logger object
-        self._logger: Optional[Logger] = None
+        self._logger: Optional[ArtifactManager] = None
         self.timeout_checker = None
 
-    def set_logger(self, logger: Optional[Logger]) -> None:
+    def set_logger(self, logger: Optional[ArtifactManager]) -> None:
         """
         Setter for for logger object.
 
@@ -40,7 +40,7 @@ class BaseAlgorithm(ABC):
         self._logger = logger
 
     @property
-    def logger(self) -> Logger:
+    def logger(self) -> ArtifactManager:
         """Getter for the logger object."""
         assert self._logger is not None
         return self._logger

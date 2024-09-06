@@ -6,7 +6,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive import SettingType, is_binary_enum, is_knob_enum
@@ -89,7 +89,7 @@ def _regress_query_knobs(
     qknobs: QuerySpaceKnobAction,
     sysknobs: Union[KnobSpaceAction, KnobSpaceContainer],
     ams: QueryTableAccessMap,
-    logger: Optional[Logger] = None,
+    logger: Optional[ArtifactManager] = None,
 ) -> QuerySpaceKnobAction:
     global_qknobs = {}
     for knob, _ in qknobs.items():
@@ -138,7 +138,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
         query_timeout: int,
         benchbase_config: dict[str, Any],
         env: gym.Env[Any, Any],
-        logger: Optional[Logger],
+        logger: Optional[ArtifactManager],
     ):
         assert isinstance(env, PostgresEnv) or isinstance(
             env.unwrapped, PostgresEnv

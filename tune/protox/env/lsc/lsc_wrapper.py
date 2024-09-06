@@ -2,13 +2,13 @@ from typing import Any, Optional, Tuple
 
 import gymnasium as gym
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 
 
 class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
-    def __init__(self, lsc: LSC, env: gym.Env[Any, Any], logger: Optional[Logger]):
+    def __init__(self, lsc: LSC, env: gym.Env[Any, Any], logger: Optional[ArtifactManager]):
         assert not isinstance(env, TargetResetWrapper)
         super().__init__(env)
         self.lsc = lsc

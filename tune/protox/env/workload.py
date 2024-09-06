@@ -12,7 +12,7 @@ import pglast
 from plumbum import local
 
 from misc.utils import DBGymConfig, open_and_save
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.logger import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
 from tune.protox.env.space.state.space import StateSpace
@@ -223,7 +223,7 @@ class Workload(object):
         pid: Optional[int] = None,
         workload_timeout: float = 0,
         workload_timeout_penalty: float = 1.0,
-        logger: Optional[Logger] = None,
+        logger: Optional[ArtifactManager] = None,
     ) -> None:
         self.dbgym_cfg = dbgym_cfg
         self.workload_path = workload_path

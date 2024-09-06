@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 import pandas as pd
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 
 # Initial penalty to apply to create the "worst" perf from the baseline.
 INITIAL_PENALTY_MULTIPLIER = 4.0
@@ -12,7 +12,7 @@ INITIAL_PENALTY_MULTIPLIER = 4.0
 
 class RewardUtility(object):
     def __init__(
-        self, target: str, metric: str, reward_scaler: float, logger: Logger
+        self, target: str, metric: str, reward_scaler: float, logger: ArtifactManager
     ) -> None:
         self.reward_scaler = reward_scaler
         self.target = target

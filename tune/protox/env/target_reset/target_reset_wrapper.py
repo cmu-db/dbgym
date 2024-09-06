@@ -3,7 +3,7 @@ from typing import Any, Optional, Tuple, cast
 
 import gymnasium as gym
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.types import EnvInfoDict, HolonStateContainer, TargetResetConfig
 from tune.protox.env.util.reward import RewardUtility
@@ -16,7 +16,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
         maximize_state: bool,
         reward_utility: RewardUtility,
         start_reset: bool,
-        logger: Optional[Logger],
+        logger: Optional[ArtifactManager],
     ):
         super().__init__(env)
         self.maximize_state = maximize_state

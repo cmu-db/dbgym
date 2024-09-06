@@ -6,7 +6,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.errors import QueryCanceled
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.types import (
@@ -31,7 +31,7 @@ def _force_statement_timeout(
 
 
 def _time_query(
-    logger: Optional[Logger],
+    logger: Optional[ArtifactManager],
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
@@ -71,7 +71,7 @@ def _time_query(
 
 
 def _acquire_metrics_around_query(
-    logger: Optional[Logger],
+    logger: Optional[ArtifactManager],
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
@@ -110,7 +110,7 @@ def execute_variations(
     runs: list[QueryRun],
     query: str,
     query_timeout: float = 0,
-    logger: Optional[Logger] = None,
+    logger: Optional[ArtifactManager] = None,
     sysknobs: Optional[KnobSpaceAction] = None,
     observation_space: Optional[StateSpace] = None,
 ) -> BestQueryRun:

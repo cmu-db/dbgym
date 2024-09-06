@@ -6,7 +6,7 @@ import torch
 from numpy.typing import NDArray
 
 from tune.protox.embedding.vae import VAE
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.logger import ArtifactManager, time_record
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.primitive_space import IndexSpace
 from tune.protox.env.space.utils import check_subspace, fetch_server_indexes
@@ -41,7 +41,7 @@ class LatentIndexSpace(IndexSpace):
         index_noise_scale: Optional[
             Callable[[ProtoAction, Optional[torch.Tensor]], ProtoAction]
         ] = None,
-        logger: Optional[Logger] = None,
+        logger: Optional[ArtifactManager] = None,
     ) -> None:
 
         super().__init__(

@@ -34,7 +34,7 @@ from tune.protox.embedding.train_all import (
     create_vae_model,
     fetch_vae_parameters_from_workload,
 )
-from tune.protox.env.logger import Logger
+from tune.protox.env.logger import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.lsc.lsc_wrapper import LSCWrapper
 from tune.protox.env.mqo.mqo_wrapper import MQOWrapper
@@ -146,8 +146,8 @@ def _build_utilities(
     tuning_mode: TuningMode,
     pgport: int,
     hpo_params: dict[str, Any],
-) -> tuple[Logger, RewardUtility, PostgresConn, Workload]:
-    logger = Logger(
+) -> tuple[ArtifactManager, RewardUtility, PostgresConn, Workload]:
+    logger = ArtifactManager(
         dbgym_cfg,
         hpo_params["trace"],
     )
@@ -203,7 +203,7 @@ def _build_actions(
     seed: int,
     hpo_params: dict[str, Any],
     workload: Workload,
-    logger: Logger,
+    logger: ArtifactManager,
 ) -> tuple[HolonSpace, LSC]:
     sysknobs = LatentKnobSpace(
         logger=logger,
@@ -336,7 +336,7 @@ def _build_env(
     lsc: LSC,
     workload: Workload,
     reward_utility: RewardUtility,
-    logger: Logger,
+    logger: ArtifactManager,
 ) -> tuple[TargetResetWrapper, AgentEnv]:
 
     env = gym.make(
@@ -404,7 +404,7 @@ def _build_agent(
     hpo_params: dict[str, Any],
     observation_space: StateSpace,
     action_space: HolonSpace,
-    logger: Logger,
+    logger: ArtifactManager,
     ray_trial_id: Optional[str],
 ) -> Wolp:
     action_dim = noise_action_dim = action_space.latent_dim()
@@ -539,7 +539,7 @@ def build_trial(
     seed: int,
     hpo_params: dict[str, Any],
     ray_trial_id: Optional[str] = None,
-) -> tuple[Logger, TargetResetWrapper, AgentEnv, Wolp, str]:
+) -> tuple[ArtifactManager, TargetResetWrapper, AgentEnv, Wolp, str]:
     # The massive trial builder.
 
     port, signal = _get_signal(hpo_params["pgconn_info"]["pgbin_path"])
