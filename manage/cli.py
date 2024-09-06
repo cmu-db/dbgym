@@ -14,9 +14,6 @@ from misc.utils import (
     parent_dpath_of_path,
 )
 
-task_logger = logging.getLogger("task")
-task_logger.setLevel(logging.INFO)
-
 
 # This is used in test_clean.py. It's defined here to avoid a circular import.
 class MockDBGymConfig:
@@ -184,10 +181,10 @@ def clean_workspace(
     ending_num_files = _count_files_in_workspace(dbgym_cfg)
 
     if verbose:
-        task_logger.info(
+        logging.info(
             f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files"
         )
-        task_logger.info(
+        logging.info(
             f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}"
         )
 

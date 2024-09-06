@@ -1,4 +1,5 @@
 import itertools
+import logging
 import random
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
@@ -165,7 +166,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
         self.initialize_dataloader()
         for self.epoch in range(start_epoch, num_epochs + 1):
             self.set_to_train()
-            c_f.LOGGER.info("TRAINING EPOCH %d" % self.epoch)
+            logging.info("TRAINING EPOCH %d" % self.epoch)
 
             if not self.disable_tqdm:
                 pbar = tqdm.tqdm(range(self.iterations_per_epoch))

@@ -11,9 +11,6 @@ from misc.utils import (
 )
 from util.shell import subprocess_run
 
-benchmark_tpch_logger = logging.getLogger("benchmark/tpch")
-benchmark_tpch_logger.setLevel(logging.INFO)
-
 
 @click.group(name="tpch")
 @click.pass_obj
@@ -75,17 +72,17 @@ def _clone(dbgym_cfg: DBGymConfig) -> None:
         dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "tpch-kit.link"
     )
     if expected_symlink_dpath.exists():
-        benchmark_tpch_logger.info(f"Skipping clone: {expected_symlink_dpath}")
+        logging.info(f"Skipping clone: {expected_symlink_dpath}")
         return
 
-    benchmark_tpch_logger.info(f"Cloning: {expected_symlink_dpath}")
+    logging.info(f"Cloning: {expected_symlink_dpath}")
     real_build_path = dbgym_cfg.cur_task_runs_build_path()
     subprocess_run(
         f"./tpch_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
     )
     symlink_dpath = link_result(dbgym_cfg, real_build_path / "tpch-kit")
     assert expected_symlink_dpath.samefile(symlink_dpath)
-    benchmark_tpch_logger.info(f"Cloned: {expected_symlink_dpath}")
+    logging.info(f"Cloned: {expected_symlink_dpath}")
 
 
 def _get_tpch_kit_dpath(dbgym_cfg: DBGymConfig) -> Path:
@@ -103,7 +100,7 @@ def _generate_queries(
 ) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    benchmark_tpch_logger.info(
+    logging.info(
         f"Generating queries: {data_path} [{seed_start}, {seed_end}]"
     )
     for seed in range(seed_start, seed_end + 1):
@@ -125,7 +122,7 @@ def _generate_queries(
             )
         queries_symlink_dpath = link_result(dbgym_cfg, real_dir)
         assert queries_symlink_dpath.samefile(expected_queries_symlink_dpath)
-    benchmark_tpch_logger.info(
+    logging.info(
         f"Generated queries: {data_path} [{seed_start}, {seed_end}]"
     )
 
@@ -137,12 +134,12 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
         data_path / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
     )
     if expected_tables_symlink_dpath.exists():
-        benchmark_tpch_logger.info(
+        logging.info(
             f"Skipping generation: {expected_tables_symlink_dpath}"
         )
         return
 
-    benchmark_tpch_logger.info(f"Generating: {expected_tables_symlink_dpath}")
+    logging.info(f"Generating: {expected_tables_symlink_dpath}")
     subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=tpch_kit_dpath / "dbgen")
     real_dir = dbgym_cfg.cur_task_runs_data_path(
         f"tables_sf{get_scale_factor_string(scale_factor)}", mkdir=True
@@ -151,7 +148,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
 
     tables_symlink_dpath = link_result(dbgym_cfg, real_dir)
     assert tables_symlink_dpath.samefile(expected_tables_symlink_dpath)
-    benchmark_tpch_logger.info(f"Generated: {expected_tables_symlink_dpath}")
+    logging.info(f"Generated: {expected_tables_symlink_dpath}")
 
 
 def _generate_workload(
@@ -165,7 +162,7 @@ def _generate_workload(
     workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
     expected_workload_symlink_dpath = symlink_data_dpath / (workload_name + ".link")
 
-    benchmark_tpch_logger.info(f"Generating: {expected_workload_symlink_dpath}")
+    logging.info(f"Generating: {expected_workload_symlink_dpath}")
     real_dpath = dbgym_cfg.cur_task_runs_data_path(workload_name, mkdir=True)
 
     queries = None
@@ -196,4 +193,4 @@ def _generate_workload(
 
     workload_symlink_dpath = link_result(dbgym_cfg, real_dpath)
     assert workload_symlink_dpath == expected_workload_symlink_dpath
-    benchmark_tpch_logger.info(f"Generated: {expected_workload_symlink_dpath}")
+    logging.info(f"Generated: {expected_workload_symlink_dpath}")

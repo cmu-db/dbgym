@@ -4,9 +4,6 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-shell_util_logger = logging.getLogger("shell_util")
-shell_util_logger.setLevel(logging.INFO)
-
 
 def subprocess_run(
     c: str,
@@ -17,7 +14,7 @@ def subprocess_run(
     cwd_msg = f"(cwd: {cwd if cwd is not None else os.getcwd()})"
 
     if verbose:
-        shell_util_logger.info(f"Running {cwd_msg}: {c}")
+        logging.info(f"Running {cwd_msg}: {c}")
 
     with subprocess.Popen(
         c,
