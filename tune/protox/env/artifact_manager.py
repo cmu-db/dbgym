@@ -99,9 +99,6 @@ class ArtifactManager(object):
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}
 
-    def get_logger(self, name: Optional[str]=None) -> logging.Logger:
-        return logging.getLogger(name)
-    
     def log_to_replay_info(self, message: str) -> None:
         logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).info(message)
 
@@ -123,32 +120,35 @@ class ArtifactManager(object):
             # Orthogonal to whether name_override is used, ray_trial_id disambiguates between folders created
             # by different HPO trials so that the folders don't overwrite each other.
             dname += f"_{ray_trial_id}"
+        
+        target_stash_dpath = self.tuning_steps_dpath / dname
 
         if (
             info_dict["results_dpath"] is not None
             and Path(info_dict["results_dpath"]).exists()
         ):
             local["mv"][
-                info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{dname}"
+                info_dict["results_dpath"], str(target_stash_dpath)
             ].run()
+            self.log_to_replay_info(f"mv src={info_dict['results_dpath']} dst={str(target_stash_dpath)}")
         else:
-            Path(f"{self.tuning_steps_dpath}/{dname}").mkdir(
+            target_stash_dpath.mkdir(
                 parents=True, exist_ok=True
             )
 
         if info_dict["prior_pgconf"]:
             local["cp"][
                 info_dict["prior_pgconf"],
-                f"{self.tuning_steps_dpath}/{dname}/old_pg.conf",
+                str(target_stash_dpath / "old_pg.conf")
             ].run()
 
         if info_dict["prior_state_container"]:
-            with open(self.tuning_steps_dpath / dname / "prior_state.pkl", "wb") as f:
+            with open(target_stash_dpath / "prior_state.pkl", "wb") as f:
                 # info_dict["prior_state_container"] is a somewhat complex object so we use pickle over json
                 pickle.dump(info_dict["prior_state_container"], f)
 
         if info_dict["actions_info"]:
-            with open(self.tuning_steps_dpath / dname / "action.pkl", "wb") as f:
+            with open(target_stash_dpath / "action.pkl", "wb") as f:
                 pickle.dump(info_dict["actions_info"], f)
 
     def advance(self) -> None:

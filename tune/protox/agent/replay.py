@@ -211,10 +211,10 @@ def replay_tuning_run(
                     start_found = True
             else:
                 if _is_tuning_step_line(line):
-                    repo = eval(line.split("Running ")[-1])[-1]
+                    repo = line.split("dst=")[-1]
                     last_folder = repo.split("/")[-1]
                     time_since_start = parse(
-                        line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
+                        line.split("DEBUG:")[-1].split(" mv")[0].split(" [")[0]
                     )
                     assert type(start_time) is datetime
                     if (
@@ -326,9 +326,9 @@ def replay_tuning_run(
                 continue
 
             elif _is_tuning_step_line(line):
-                repo = eval(line.split("Running ")[-1])[-1]
+                repo = line.split("dst=")[-1]
                 time_since_start = parse(
-                    line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
+                    line.split("DEBUG:")[-1].split(" mv")[0].split(" [")[0]
                 )
 
                 # Get the original runtime as well as whether any individual queries and/or the full workload timed out.
