@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import math
 import shutil
 import tempfile
@@ -12,7 +13,7 @@ import pglast
 from plumbum import local
 
 from misc.utils import DBGymConfig, open_and_save
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
 from tune.protox.env.space.state.space import StateSpace
@@ -223,7 +224,7 @@ class Workload(object):
         pid: Optional[int] = None,
         workload_timeout: float = 0,
         workload_timeout_penalty: float = 1.0,
-        logger: Optional[Logger] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
     ) -> None:
         self.dbgym_cfg = dbgym_cfg
         self.workload_path = workload_path
@@ -232,11 +233,10 @@ class Workload(object):
         self.oltp_workload = query_spec["oltp_workload"]
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
-        self.logger = logger
-        if self.logger:
-            self.logger.get_logger(__name__).info(
-                f"Initialized with workload timeout {workload_timeout}"
-            )
+        self.artifact_manager = artifact_manager
+        logging.info(
+            f"Initialized with workload timeout {workload_timeout}"
+        )
 
         self.tables: list[str] = tables
         self.attributes: TableAttrListMap = attributes
@@ -307,10 +307,9 @@ class Workload(object):
         else:
             self.workload_timeout = min(self.workload_timeout, metric)
 
-        if self.logger:
-            self.logger.get_logger(__name__).info(
-                f"Workload timeout set to: {self.workload_timeout}"
-            )
+        logging.info(
+            f"Workload timeout set to: {self.workload_timeout}"
+        )
 
     def queries_for_table(self, table: str) -> list[str]:
         return [q for q in self.order if q in self.tbl_queries_usage[table]]
@@ -485,7 +484,7 @@ class Workload(object):
                             - Workload.compute_total_workload_runtime(qid_runtime_data)
                             + 1,
                         ),
-                        logger=self.logger,
+                        artifact_manager=self.artifact_manager,
                         sysknobs=sysknobs,
                         observation_space=observation_space,
                     )
@@ -656,8 +655,7 @@ class Workload(object):
         first: bool = False,
     ) -> tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
-        if self.logger:
-            self.logger.get_logger(__name__).info("Starting to run benchmark...")
+        logging.info("Starting to run benchmark...")
 
         # Generate a unique temporary directory to store results in.
         results_dpath = Path(tempfile.mkdtemp())
@@ -704,10 +702,9 @@ class Workload(object):
                 results_dpath=results_dpath, update=update, did_error=not success
             )
 
-        if self.logger:
-            self.logger.get_logger(__name__).info(
-                f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
-            )
+        logging.info(
+            f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
+        )
         return (
             success,
             metric,

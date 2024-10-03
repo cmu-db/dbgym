@@ -404,7 +404,7 @@ def _create_ranges_for_embedder(
         index_output_transform=index_output_transform,
         # No-op noise.
         index_noise_scale=index_noise_scale,
-        logger=None,
+        artifact_manager=None,
     )
 
     output_scale = config["metric_loss_md"]["output_scale"]

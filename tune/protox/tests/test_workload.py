@@ -29,7 +29,7 @@ class WorkloadTests(unittest.TestCase):
             pid=None,
             workload_timeout=0,
             workload_timeout_penalty=1.0,
-            logger=None,
+            artifact_manager=None,
         )
 
         i = IndexSpace(

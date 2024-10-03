@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 from typing import Any, Optional, Tuple, Union
@@ -6,7 +7,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.errors import QueryCanceled
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.space.primitive.knob import CategoricalKnob, Knob
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.types import (
@@ -31,7 +32,7 @@ def _force_statement_timeout(
 
 
 def _time_query(
-    logger: Optional[Logger],
+    artifact_manager: Optional[ArtifactManager],
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
@@ -52,16 +53,14 @@ def _time_query(
             qid_runtime = float(c["Execution Time"]) * 1e3
             explain_data = c
 
-        if logger:
-            logger.get_logger(__name__).debug(
-                f"{prefix} evaluated in {qid_runtime/1e6}"
-            )
+        logging.debug(
+            f"{prefix} evaluated in {qid_runtime/1e6}"
+        )
 
     except QueryCanceled:
-        if logger:
-            logger.get_logger(__name__).debug(
-                f"{prefix} exceeded evaluation timeout {timeout}"
-            )
+        logging.debug(
+            f"{prefix} exceeded evaluation timeout {timeout}"
+        )
         qid_runtime = timeout * 1e6
         did_time_out = True
     except Exception as e:
@@ -71,7 +70,7 @@ def _time_query(
 
 
 def _acquire_metrics_around_query(
-    logger: Optional[Logger],
+    artifact_manager: Optional[ArtifactManager],
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
@@ -90,7 +89,7 @@ def _acquire_metrics_around_query(
         ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
     qid_runtime, did_time_out, explain_data = _time_query(
-        logger, prefix, connection, query, query_timeout
+        artifact_manager, prefix, connection, query, query_timeout
     )
 
     # Wipe the statement timeout.
@@ -110,7 +109,7 @@ def execute_variations(
     runs: list[QueryRun],
     query: str,
     query_timeout: float = 0,
-    logger: Optional[Logger] = None,
+    artifact_manager: Optional[ArtifactManager] = None,
     sysknobs: Optional[KnobSpaceAction] = None,
     observation_space: Optional[StateSpace] = None,
 ) -> BestQueryRun:
@@ -141,11 +140,10 @@ def execute_variations(
 
         # Log out the knobs that we are using.
         pqkk = [(knob.name(), val) for knob, val in qr.qknobs.items()]
-        if logger:
-            logger.get_logger(__name__).debug(f"{qr.prefix_qid} executing with {pqkk}")
+        logging.debug(f"{qr.prefix_qid} executing with {pqkk}")
 
         runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
-            logger=logger,
+            artifact_manager=artifact_manager,
             prefix=qr.prefix_qid,
             connection=connection,
             query=pqk_query,
@@ -168,8 +166,8 @@ def execute_variations(
                 metric,
             )
 
-        if logger:
+        if artifact_manager:
             # Log how long we are executing each query + mode.
-            logger.record(qr.prefix_qid, runtime / 1e6)
+            artifact_manager.record(qr.prefix_qid, runtime / 1e6)
 
     return best_qr
