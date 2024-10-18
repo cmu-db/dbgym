@@ -205,7 +205,7 @@ def fetch_server_knobs(
 
                 if not installed:
                     knob_targets[knobname] = 0.0
-                    logging.getLogger(__name__).warn(
+                    logging.warning(
                         f"Found missing alias for {knobname}"
                     )
             elif knob.knob_type == SettingType.BOOLEAN:

@@ -58,8 +58,8 @@ class ArtifactManager(object):
     """
     This class manages the following artifacts of Proto-X: info for replaying and TensorBoard output.
 
-    Importantly, this class should *not* be used for general-purpose logging. You should directly
-    use the logging library to do that.
+    Initializing this class sets up the root logger. However, to use the root logger, you should
+    directly use the logging library.
     """
     # The output log is the file that the root logger writes to
     OUTPUT_LOG_FNAME = "output.log"
