@@ -63,9 +63,7 @@ class LSC(object):
         if not self.enabled:
             return action
 
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(
-            action.shape, self.vae_configuration["latent_dim"]
-        )
+        assert action.shape[-1] == self.vae_configuration["latent_dim"], f"{action.shape} {self.vae_configuration['latent_dim']}"
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]

@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import subprocess
@@ -674,5 +675,5 @@ def is_ssd(path: Path) -> bool:
                 return is_ssd
         return False
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return False

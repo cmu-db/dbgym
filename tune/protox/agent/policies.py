@@ -1,5 +1,6 @@
 """Policies: abstract base class and concrete implementations."""
 
+import logging
 from typing import Any, List, Optional, Tuple, Type, cast
 
 import numpy as np
@@ -119,7 +120,7 @@ class Actor(BaseModel):
 
     def check_grad(self) -> None:
         layers = [l for l in self.mu.children()]
-        assert isinstance(layers[0], nn.Linear), print(layers[0], type(layers[0]))
+        assert isinstance(layers[0], nn.Linear), f"{layers[0]} {type(layers[0])}"
         assert layers[0].weight.grad is not None
         assert not layers[0].weight.grad.isnan().any()  # Check no NaN.
         assert layers[0].weight.grad.any()  # Check grad at least flows.
@@ -196,7 +197,7 @@ class ContinuousCritic(BaseModel):
 
     def check_grad(self) -> None:
         layers = [l for l in self.q_networks[0].children()]
-        assert isinstance(layers[0], nn.Linear), print(layers[0], type(layers[0]))
+        assert isinstance(layers[0], nn.Linear), f"{layers[0]} {type(layers[0])}"
         assert layers[0].weight.grad is not None
         assert not layers[0].weight.grad.isnan().any()  # Check no NaN.
         assert layers[0].weight.grad.any()  # Check grad at least flows.

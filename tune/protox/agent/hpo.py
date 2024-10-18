@@ -789,8 +789,8 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     if results.num_errors > 0:
         for i in range(len(results)):
             if results[i].error:
-                print(f"Trial {results[i]} FAILED")
-        assert False, print("Encountered exceptions!")
+                logging.error(f"Trial {results[i]} FAILED")
+        assert False, "Encountered exceptions!"
 
     # Save the best params.json.
     best_result = results.get_best_result(metric=METRIC_NAME, mode=mode)

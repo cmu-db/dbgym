@@ -142,7 +142,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
     ):
         assert isinstance(env, PostgresEnv) or isinstance(
             env.unwrapped, PostgresEnv
-        ), print("MQOPostgresEnv must be directly above PostgresEnv")
+        ), "MQOPostgresEnv must be directly above PostgresEnv"
         super().__init__(env)
 
         self.workload_eval_mode = workload_eval_mode

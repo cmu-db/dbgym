@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Callable, Optional, Tuple, Type, Union, cast
 
 import torch
@@ -69,7 +70,7 @@ def acquire_loss_function(
         )
         if torch.isnan(recon_loss).any():
             # Dump any found nan in the loss.
-            print(preds[torch.isnan(recon_loss)])
+            logging.error(preds[torch.isnan(recon_loss)])
             assert False
 
         recon_loss = recon_loss.sum(dim=(1,))

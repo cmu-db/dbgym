@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import yaml
@@ -88,7 +89,7 @@ def coerce_config(
             elif s == "space_version":
                 continue
             else:
-                assert False, print(f"{s} unable to coerce.")
+                assert False, f"{s} unable to coerce."
 
         return new_config
 

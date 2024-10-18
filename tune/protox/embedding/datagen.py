@@ -1,5 +1,6 @@
 import copy
 import gc
+import logging
 import math
 import os
 import random
@@ -823,7 +824,7 @@ def _produce_index_data(
             # Repeatedly...
             for i in range(sample_limit):
                 if (i % 1024) == 0:
-                    print(
+                    logging.info(
                         f"{target} {leading_col_name} {p} progress update: {i} / {sample_limit}."
                     )
 
@@ -856,7 +857,6 @@ def _produce_index_data(
                             )
                         ]
                         if len(r) == 0:
-                            print(cmds)
                             assert False
 
                         global _INDEX_SERVER_COUNTS
@@ -931,4 +931,4 @@ def _produce_index_data(
                 gc.collect()
                 gc.collect()
     # Log that we finished.
-    print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
+    logging.info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")

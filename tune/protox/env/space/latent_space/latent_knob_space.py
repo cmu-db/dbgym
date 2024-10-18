@@ -1,4 +1,5 @@
 import copy
+import logging
 from pprint import pformat
 from typing import Any, Optional, Tuple
 
@@ -78,7 +79,7 @@ class LatentKnobSpace(KnobSpace):
                 knob, LatentCategoricalKnob
             )
             env_act[key] = knob.from_latent(cont_env_act[key])
-            assert knob.contains(env_act[key]), print(key, env_act[key], knob)
+            assert knob.contains(env_act[key]), f"{key} {env_act[key]} {knob}"
 
         assert self.contains(env_act)
         return env_act
@@ -187,7 +188,7 @@ class LatentKnobSpace(KnobSpace):
         require_cleanup = False
 
         for act, val in action.items():
-            assert act in self.knobs, print(self.knobs, act)
+            assert act in self.knobs, f"{self.knobs} {act}"
             assert self.knobs[act].knob_class != KnobClass.QUERY
             if self.knobs[act].knob_class == KnobClass.TABLE:
                 if act not in sc or sc[act] != val:

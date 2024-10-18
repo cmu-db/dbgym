@@ -212,7 +212,6 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
                             "Recon Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
                         )
 
-                    print(self.fail_msg)
                     return
 
                 if not self.disable_tqdm:

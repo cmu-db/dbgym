@@ -64,7 +64,7 @@ def _time_query(
         qid_runtime = timeout * 1e6
         did_time_out = True
     except Exception as e:
-        assert False, print(e)
+        assert False, e
     # qid_runtime is in microseconds.
     return qid_runtime, did_time_out, explain_data
 

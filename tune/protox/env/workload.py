@@ -659,11 +659,6 @@ class Workload(object):
 
         # Generate a unique temporary directory to store results in.
         results_dpath = Path(tempfile.mkdtemp())
-        print(
-            results_dpath.is_dir(),
-            results_dpath.exists(),
-            not any(results_dpath.iterdir()),
-        )
         assert (
             results_dpath.is_dir()
             and results_dpath.exists()

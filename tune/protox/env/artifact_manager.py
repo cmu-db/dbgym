@@ -26,7 +26,7 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
             # TODO(wz2): This is a hack to get a artifact_manager instance.
             first_arg = args[0]  # Ignore the indexing type error
-            assert hasattr(first_arg, "artifact_manager"), print(first_arg, type(first_arg))
+            assert hasattr(first_arg, "artifact_manager"), f"{first_arg} {type(first_arg)}"
 
             if first_arg.artifact_manager is None:
                 # If there is no artifact_manager, just return.

@@ -482,7 +482,7 @@ def replay_tuning_run(
     # Output.
     run_data_df = pd.DataFrame(run_data)
     pd.set_option("display.max_columns", 10)
-    print(
+    logging.info(
         f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
     )
     run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)

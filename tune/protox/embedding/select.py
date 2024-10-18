@@ -98,7 +98,6 @@ def select_best_embeddings(
 def _load_data(dbgym_cfg: DBGymConfig, select_args: EmbeddingSelectArgs) -> DataFrame:
     stat_infos = []
     stats = [s for s in dbgym_cfg.dbgym_this_run_path.rglob(STATS_FNAME)]
-    print(f"stats={stats}")
     for stat in stats:
         if "curated" in str(stat):
             continue

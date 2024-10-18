@@ -252,15 +252,15 @@ def train_all_embeddings(
     )
 
     results = tuner.fit()
-    print(
+    logging.info(
         "Best hyperparameters found were: ",
         results.get_best_result(metric="loss", mode="min").config,
     )
     if results.num_errors > 0:
-        print("Encountered exceptions!")
+        logging.error("Encountered exceptions!")
         for i in range(len(results)):
             if results[i].error:
-                print(f"Trial {results[i]} FAILED")
+                logging.error(f"Trial {results[i]} FAILED")
         assert False
 
     train_all_embeddings_duration = time.time() - start_time

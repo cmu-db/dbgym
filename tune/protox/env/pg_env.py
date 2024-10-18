@@ -422,7 +422,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             ret, stderr = self.pg_conn.psql(sql)
             if ret == -1:
                 if stderr:
-                    print(stderr, flush=True)
+                    logging.warning(stderr)
                     assert (
                         "index row requires" in stderr
                         or "canceling statement" in stderr
@@ -432,7 +432,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     attempt_checkpoint(self.pg_conn.get_connstr())
                 return False
 
-            assert ret == 0, print(stderr)
+            assert ret == 0, stderr
 
         # Now try and perform the configuration changes.
         return self.pg_conn.start_with_changes(

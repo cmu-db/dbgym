@@ -30,7 +30,7 @@ def subprocess_run(
             assert proc.stdout is not None
             for line in proc.stdout:
                 if verbose:
-                    print(line, end="", flush=True)
+                    logging.info(line)
             if not loop:
                 break
         if check_returncode and proc.returncode != 0:
