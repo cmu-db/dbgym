@@ -62,12 +62,10 @@ class ArtifactManager(object):
     """
     This class manages the following artifacts of Proto-X: info for replaying and TensorBoard output.
 
-    Initializing this class sets up the root logger. However, to use the root logger, you should
-    directly use the logging library.
+    Note that the root logger is set up globally inside the upper-most task.py file. Do not reconfigure it here.
     """
 
     # The output log is the file that the root logger writes to
-    OUTPUT_LOG_FNAME = "output.log"
     REPLAY_INFO_LOG_FNAME = "replay_info.log"
     REPLAY_LOGGER_NAME = "replay_logger"
 
@@ -82,22 +80,13 @@ class ArtifactManager(object):
         self.tuning_steps_dpath = self.log_dpath / "tuning_steps"
         self.tuning_steps_dpath.mkdir(parents=True, exist_ok=True)
 
-        # Setup the root and replay loggers
-        formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
-        logging.basicConfig(format=formatter, level=logging.DEBUG, force=True)
-        output_log_handler = logging.FileHandler(
-            self.log_dpath / ArtifactManager.OUTPUT_LOG_FNAME
-        )
-        output_log_handler.setFormatter(logging.Formatter(formatter))
-        output_log_handler.setLevel(logging.DEBUG)
-        logging.getLogger().addHandler(output_log_handler)
-
+        # Create replay logger
         replay_info_log_handler = logging.FileHandler(
             self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME
         )
-        replay_info_log_handler.setFormatter(logging.Formatter(formatter))
+        replay_info_log_handler.setFormatter(logging.Formatter("%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"))
         replay_info_log_handler.setLevel(logging.INFO)
-        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME)
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).addHandler(replay_info_log_handler)
 
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None

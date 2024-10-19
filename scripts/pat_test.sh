@@ -7,9 +7,7 @@ INTENDED_DBDATA_HARDWARE=ssd
 . ./experiments/load_per_machine_envvars.sh
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
-python3 task.py tune protox agent hpo tpch --scale-factor $SCALE_FACTOR --num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01  --intended-dbdata-hardware $INTENDED_DBDATA_HARDWARE --dbdata-parent-dpath $DBDATA_PARENT_DPATH --build-space-good-for-boot
-python3 task.py tune protox agent tune tpch --scale-factor $SCALE_FACTOR --tune-duration-during-tune 0.02
-python3 task.py tune protox agent replay tpch --scale-factor $SCALE_FACTOR
+python3 task.py benchmark tpch data $SCALE_FACTOR
 exit 0
 
 # benchmark
