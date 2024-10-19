@@ -28,7 +28,7 @@ def task(ctx: click.Context) -> None:
 
 def _set_up_root_logger(dbgym_cfg: DBGymConfig) -> None:
     format = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
-    
+
     # Set this so that the root logger captures everything.
     logging.getLogger().setLevel(logging.DEBUG)
 
@@ -39,7 +39,9 @@ def _set_up_root_logger(dbgym_cfg: DBGymConfig) -> None:
     logging.getLogger().addHandler(console_handler)
 
     # Let it output everything to the output file.
-    file_handler = logging.FileHandler(dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "output.log")
+    file_handler = logging.FileHandler(
+        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "output.log"
+    )
     file_handler.setFormatter(logging.Formatter(format))
     file_handler.setLevel(logging.DEBUG)
     logging.getLogger().addHandler(file_handler)

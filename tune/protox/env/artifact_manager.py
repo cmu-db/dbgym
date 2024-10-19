@@ -84,9 +84,15 @@ class ArtifactManager(object):
         replay_info_log_handler = logging.FileHandler(
             self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME
         )
-        replay_info_log_handler.setFormatter(logging.Formatter("%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"))
+        replay_info_log_handler.setFormatter(
+            logging.Formatter(
+                "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
+            )
+        )
         replay_info_log_handler.setLevel(logging.INFO)
-        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).addHandler(replay_info_log_handler)
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).addHandler(
+            replay_info_log_handler
+        )
 
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None

@@ -798,7 +798,7 @@ def _produce_index_data(
     )
 
     print("e")
-    print(f"target={target}, len(modified_attrs[target])={len(modified_attrs[target])}")
+    print(f"target={target}")
 
     table_idx = 0
     if target is not None:
@@ -807,10 +807,12 @@ def _produce_index_data(
                 table_idx = i
                 break
 
+        print(f"len(modified_attrs[target])={len(modified_attrs[target])}")
+
         if len(modified_attrs[target]) == 0:
             # there are no indexes to generate.
             return
-        
+
     print("d")
 
     with create_psycopg_conn() as connection:
@@ -941,6 +943,6 @@ def _produce_index_data(
                 _write(accum_data, output, p)
                 gc.collect()
                 gc.collect()
-    
+
     # Log that we finished.
     logging.info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")

@@ -1,5 +1,5 @@
-import pickle
 import json
+import pickle
 import unittest
 from pathlib import Path
 from typing import Any, Tuple
@@ -46,13 +46,13 @@ class WorkloadTests(unittest.TestCase):
             deterministic_policy=True,
         )
         return w, i
-    
+
     def _test_workload(self, workload_name: str) -> None:
         # Build objects.
         tests_dpath = Path("tune/protox/tests")
         w, i = WorkloadTests.build(
             tests_dpath / f"unittest_benchmark_configs/unittest_{workload_name}.yaml",
-            (tests_dpath / f"unittest_{workload_name}_dir").resolve()
+            (tests_dpath / f"unittest_{workload_name}_dir").resolve(),
         )
 
         # Load reference objects.
