@@ -45,59 +45,35 @@ class WorkloadTests(unittest.TestCase):
             deterministic_policy=True,
         )
         return w, i
+    
+    def _test_workload(self, workload_name: str) -> None:
+        w, i = WorkloadTests.load(
+            f"tune/protox/tests/unittest_benchmark_configs/unittest_{workload_name}.yaml",
+            Path(f"tune/protox/tests/unittest_{workload_name}_dir").resolve(),
+        )
 
-    def diff_classmapping(
-        self, ref: dict[TableColTuple, int], target: dict[TableColTuple, int]
-    ) -> None:
-        for k, v in ref.items():
-            self.assertTrue(k in target, msg=f"{k} is missing.")
-            self.assertTrue(v == target[k])
+        # Check class mapping
+        with open(f"tune/protox/tests/unittest_ref_models/ref_{workload_name}_model.txt", "r") as f:
+            ref_class_mapping = json.load(f)["class_mapping"]
+            # Reformat it so that it's the same format as in the index space
+            ref_class_mapping = {(v["relname"], v["ord_column"]): int(k) for k, v in ref_class_mapping.items()}
+        self.assertEqual(i.class_mapping, ref_class_mapping)
+
+        # Check column usages
+        print(w.column_usages())
 
     def test_tpch(self) -> None:
-        with open("tune/protox/tests/unittest_ref_models/ref_tpch_model.txt", "r") as f:
-            ref = json.load(f)["class_mapping"]
-            ref = {(v["relname"], v["ord_column"]): int(k) for k, v in ref.items()}
+        self._test_workload("tpch")
 
-        w, i = WorkloadTests.load(
-            "tune/protox/tests/unittest_benchmark_configs/unittest_tpch.yaml",
-            Path("tune/protox/tests/unittest_tpch_dir").resolve(),
-        )
-        self.assertEqual(i.class_mapping, ref)
-
-    def test_job(self) -> None:
-        # don't call open_and_save() because this is a unittest
-        with open(
-            "tune/protox/tests/unittest_ref_models/ref_job_full_model.txt", "r"
-        ) as f:
-            ref = json.load(f)["class_mapping"]
-            ref = {(v["relname"], v["ord_column"]): int(k) for k, v in ref.items()}
-
-        w, i = WorkloadTests.load(
-            "tune/protox/tests/unittest_benchmark_configs/unittest_job_full.yaml",
-            Path("tune/protox/tests/unittest_job_full_dir").resolve(),
-        )
-        self.assertEqual(i.class_mapping, ref)
+    def test_jobfull(self) -> None:
+        self._test_workload("jobfull")
 
     def test_dsb(self) -> None:
-        # don't call open_and_save() because this is a unittest
-        with open("tune/protox/tests/unittest_ref_models/ref_dsb_model.txt", "r") as f:
-            ref = json.load(f)["class_mapping"]
-            ref = {(v["relname"], v["ord_column"]): int(k) for k, v in ref.items()}
-
-        w, i = WorkloadTests.load(
-            "tune/protox/tests/unittest_benchmark_configs/unittest_dsb.yaml",
-            Path("tune/protox/tests/unittest_dsb_dir").resolve(),
-        )
-        self.diff_classmapping(ref, i.class_mapping)
+        self._test_workload("dsb")
 
     def test_tpcc(self) -> None:
-        # don't call open_and_save() because this is a unittest
-        with open("tune/protox/tests/unittest_ref_models/ref_tpcc_model.txt", "r") as f:
-            ref = json.load(f)["class_mapping"]
-            ref = {(v["relname"], v["ord_column"]): int(k) for k, v in ref.items()}
+        self._test_workload("tpcc")
 
-        w, i = WorkloadTests.load(
-            "tune/protox/tests/unittest_benchmark_configs/unittest_tpcc.yaml",
-            Path("tune/protox/tests/unittest_tpcc_dir").resolve(),
-        )
-        self.assertEqual(i.class_mapping, ref)
+
+if __name__ == "__main__":
+    unittest.main()

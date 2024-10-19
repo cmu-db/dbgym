@@ -434,7 +434,7 @@ def _gen_traindata_dpath(
                     output = traindata_dpath / tbl
                 else:
                     output = traindata_dpath / tbl / col
-                Path(output).mkdir(parents=True, exist_ok=True)
+                output.mkdir(parents=True, exist_ok=True)
 
                 tbl_sample_limit = dir_gen_args.override_sample_limits.get(
                     tbl, dir_gen_args.default_sample_limit
@@ -768,6 +768,7 @@ def _produce_index_data(
     p: int,
     output: Path,
 ) -> None:
+    print("entering _produce_index_data()")
 
     models = None
     # FUTURE(oltp)
@@ -796,6 +797,9 @@ def _produce_index_data(
         deterministic_policy=False,
     )
 
+    print("e")
+    print(f"target={target}, len(modified_attrs[target])={len(modified_attrs[target])}")
+
     table_idx = 0
     if target is not None:
         for i, tbl in enumerate(tables):
@@ -806,6 +810,8 @@ def _produce_index_data(
         if len(modified_attrs[target]) == 0:
             # there are no indexes to generate.
             return
+        
+    print("d")
 
     with create_psycopg_conn() as connection:
         _fetch_server_indexes(connection)
@@ -814,6 +820,8 @@ def _produce_index_data(
                 connection.execute("CREATE EXTENSION IF NOT EXISTS hypopg")
             except:
                 pass
+
+        print("c")
 
         with connection.cursor() as cursor:
             reference_qs, table_reference_qs = _extract_refs(
@@ -926,9 +934,13 @@ def _produce_index_data(
                 accum["idx_class"] = int(idx_class)
                 accum_data.append(accum)
 
+            print("b")
+
             if len(accum_data) > 0:
-                _write(accum_data, Path(output), p)
+                print("a")
+                _write(accum_data, output, p)
                 gc.collect()
                 gc.collect()
+    
     # Log that we finished.
     logging.info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
