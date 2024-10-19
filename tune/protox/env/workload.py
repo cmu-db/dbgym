@@ -234,9 +234,7 @@ class Workload(object):
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
         self.artifact_manager = artifact_manager
-        logging.info(
-            f"Initialized with workload timeout {workload_timeout}"
-        )
+        logging.info(f"Initialized with workload timeout {workload_timeout}")
 
         self.tables: list[str] = tables
         self.attributes: TableAttrListMap = attributes
@@ -307,9 +305,7 @@ class Workload(object):
         else:
             self.workload_timeout = min(self.workload_timeout, metric)
 
-        logging.info(
-            f"Workload timeout set to: {self.workload_timeout}"
-        )
+        logging.info(f"Workload timeout set to: {self.workload_timeout}")
 
     def queries_for_table(self, table: str) -> list[str]:
         return [q for q in self.order if q in self.tbl_queries_usage[table]]

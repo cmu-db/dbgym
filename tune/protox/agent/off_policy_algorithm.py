@@ -192,7 +192,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 assert (
                     self.ray_trial_id != None if tuning_mode == TuningMode.HPO else True
                 ), "If we're doing HPO, we need to ensure that we're passing a non-None ray_trial_id to stash_results() to avoid conflicting folder names."
-                self.artifact_manager.stash_results(infos, ray_trial_id=self.ray_trial_id)
+                self.artifact_manager.stash_results(
+                    infos, ray_trial_id=self.ray_trial_id
+                )
 
             self.num_timesteps += 1
             num_collected_steps += 1

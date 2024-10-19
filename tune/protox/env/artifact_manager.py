@@ -26,7 +26,9 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
             # TODO(wz2): This is a hack to get a artifact_manager instance.
             first_arg = args[0]  # Ignore the indexing type error
-            assert hasattr(first_arg, "artifact_manager"), f"{first_arg} {type(first_arg)}"
+            assert hasattr(
+                first_arg, "artifact_manager"
+            ), f"{first_arg} {type(first_arg)}"
 
             if first_arg.artifact_manager is None:
                 # If there is no artifact_manager, just return.
@@ -35,7 +37,9 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             assert isinstance(first_arg.artifact_manager, ArtifactManager)
             if first_arg.artifact_manager is not None:
                 cls_name = type(first_arg).__name__
-                first_arg.artifact_manager.record(f"{cls_name}_{key}", time.time() - start)
+                first_arg.artifact_manager.record(
+                    f"{cls_name}_{key}", time.time() - start
+                )
             return ret
 
         return wrapped_f
@@ -61,6 +65,7 @@ class ArtifactManager(object):
     Initializing this class sets up the root logger. However, to use the root logger, you should
     directly use the logging library.
     """
+
     # The output log is the file that the root logger writes to
     OUTPUT_LOG_FNAME = "output.log"
     REPLAY_INFO_LOG_FNAME = "replay_info.log"
@@ -80,12 +85,16 @@ class ArtifactManager(object):
         # Setup the root and replay loggers
         formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
         logging.basicConfig(format=formatter, level=logging.DEBUG, force=True)
-        output_log_handler = logging.FileHandler(self.log_dpath / ArtifactManager.OUTPUT_LOG_FNAME)
+        output_log_handler = logging.FileHandler(
+            self.log_dpath / ArtifactManager.OUTPUT_LOG_FNAME
+        )
         output_log_handler.setFormatter(logging.Formatter(formatter))
         output_log_handler.setLevel(logging.DEBUG)
         logging.getLogger().addHandler(output_log_handler)
 
-        replay_info_log_handler = logging.FileHandler(self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME)
+        replay_info_log_handler = logging.FileHandler(
+            self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME
+        )
         replay_info_log_handler.setFormatter(logging.Formatter(formatter))
         replay_info_log_handler.setLevel(logging.INFO)
         logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME)
@@ -120,26 +129,23 @@ class ArtifactManager(object):
             # Orthogonal to whether name_override is used, ray_trial_id disambiguates between folders created
             # by different HPO trials so that the folders don't overwrite each other.
             dname += f"_{ray_trial_id}"
-        
+
         target_stash_dpath = self.tuning_steps_dpath / dname
 
         if (
             info_dict["results_dpath"] is not None
             and Path(info_dict["results_dpath"]).exists()
         ):
-            local["mv"][
-                info_dict["results_dpath"], str(target_stash_dpath)
-            ].run()
-            self.log_to_replay_info(f"mv src={info_dict['results_dpath']} dst={str(target_stash_dpath)}")
-        else:
-            target_stash_dpath.mkdir(
-                parents=True, exist_ok=True
+            local["mv"][info_dict["results_dpath"], str(target_stash_dpath)].run()
+            self.log_to_replay_info(
+                f"mv src={info_dict['results_dpath']} dst={str(target_stash_dpath)}"
             )
+        else:
+            target_stash_dpath.mkdir(parents=True, exist_ok=True)
 
         if info_dict["prior_pgconf"]:
             local["cp"][
-                info_dict["prior_pgconf"],
-                str(target_stash_dpath / "old_pg.conf")
+                info_dict["prior_pgconf"], str(target_stash_dpath / "old_pg.conf")
             ].run()
 
         if info_dict["prior_state_container"]:

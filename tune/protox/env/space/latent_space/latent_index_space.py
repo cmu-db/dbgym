@@ -261,13 +261,9 @@ class LatentIndexSpace(IndexSpace):
 
         exist_ia = ia in sc
         if exist_ia:
-            logging.debug(
-                "Contemplating %s (exist: True)", sc[sc.index(ia)]
-            )
+            logging.debug("Contemplating %s (exist: True)", sc[sc.index(ia)])
         else:
-            logging.debug(
-                "Contemplating %s (exist: False)", ia
-            )
+            logging.debug("Contemplating %s (exist: False)", ia)
             # Add the new index with the current index counter.
             sql_commands.append(ia.sql(add=True))
 

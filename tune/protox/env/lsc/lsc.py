@@ -54,16 +54,16 @@ class LSC(object):
         self.artifact_manager = artifact_manager
 
         logging.info("LSC Shift: %s", self.lsc_shift)
-        logging.info(
-            "LSC Shift Increment: %s", self.increment
-        )
+        logging.info("LSC Shift Increment: %s", self.increment)
         logging.info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
         if not self.enabled:
             return action
 
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], f"{action.shape} {self.vae_configuration['latent_dim']}"
+        assert (
+            action.shape[-1] == self.vae_configuration["latent_dim"]
+        ), f"{action.shape} {self.vae_configuration['latent_dim']}"
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
@@ -128,6 +128,4 @@ class LSC(object):
             # Increment the current bias with the increment.
             self.lsc_shift[:bound] += self.increment[:bound]
             self.lsc_shift = self.lsc_shift % self.max
-            logging.info(
-                "LSC Bias Update: %s", self.lsc_shift
-            )
+            logging.info("LSC Bias Update: %s", self.lsc_shift)

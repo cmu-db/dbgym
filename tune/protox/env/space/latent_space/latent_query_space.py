@@ -15,7 +15,10 @@ from tune.protox.env.types import (
 
 class LatentQuerySpace(LatentKnobSpace, QuerySpace):
     def __init__(
-        self, artifact_manager: Optional[ArtifactManager] = None, *args: Any, **kwargs: Any
+        self,
+        artifact_manager: Optional[ArtifactManager] = None,
+        *args: Any,
+        **kwargs: Any
     ) -> None:
         # Only manually initialize against QuerySpace.
         QuerySpace.__init__(self, *args, **kwargs)

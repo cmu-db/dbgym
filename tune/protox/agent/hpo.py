@@ -571,12 +571,14 @@ class TuneTrial:
         tune_duration = hpo_params["tune_duration"][str(self.tuning_mode)]
 
         self.timeout_checker = TuneTimeoutChecker(tune_duration)
-        self.artifact_manager, self.target_reset, self.env, self.agent, self.signal = build_trial(
-            self.dbgym_cfg,
-            self.tuning_mode,
-            seed=seed,
-            hpo_params=hpo_params,
-            ray_trial_id=self.ray_trial_id,
+        self.artifact_manager, self.target_reset, self.env, self.agent, self.signal = (
+            build_trial(
+                self.dbgym_cfg,
+                self.tuning_mode,
+                seed=seed,
+                hpo_params=hpo_params,
+                ray_trial_id=self.ray_trial_id,
+            )
         )
         logging.info("%s", hpo_params)
         logging.info(f"Seed: {seed}")
@@ -596,9 +598,7 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        logging.info(
-            f"Starting episode: {episode+1}, iteration: {it+1}"
-        )
+        logging.info(f"Starting episode: {episode+1}, iteration: {it+1}")
 
         if not self.env_init:
             _, infos = self.env.reset()

@@ -548,7 +548,9 @@ def build_trial(
     artifact_manager, reward_utility, pg_conn, workload = _build_utilities(
         dbgym_cfg, tuning_mode, port, hpo_params
     )
-    holon_space, lsc = _build_actions(dbgym_cfg, seed, hpo_params, workload, artifact_manager)
+    holon_space, lsc = _build_actions(
+        dbgym_cfg, seed, hpo_params, workload, artifact_manager
+    )
     observation_space = _build_observation_space(
         dbgym_cfg, holon_space, lsc, hpo_params, seed
     )

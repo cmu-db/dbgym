@@ -29,7 +29,10 @@ from tune.protox.env.types import (
 
 class LatentKnobSpace(KnobSpace):
     def __init__(
-        self, artifact_manager: Optional[ArtifactManager] = None, *args: Any, **kwargs: Any
+        self,
+        artifact_manager: Optional[ArtifactManager] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.final_dim = gym.spaces.utils.flatdim(self)

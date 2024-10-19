@@ -100,9 +100,7 @@ def _generate_queries(
 ) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    logging.info(
-        f"Generating queries: {data_path} [{seed_start}, {seed_end}]"
-    )
+    logging.info(f"Generating queries: {data_path} [{seed_start}, {seed_end}]")
     for seed in range(seed_start, seed_end + 1):
         expected_queries_symlink_dpath = data_path / (
             _get_queries_dname(seed, scale_factor) + ".link"
@@ -122,9 +120,7 @@ def _generate_queries(
             )
         queries_symlink_dpath = link_result(dbgym_cfg, real_dir)
         assert queries_symlink_dpath.samefile(expected_queries_symlink_dpath)
-    logging.info(
-        f"Generated queries: {data_path} [{seed_start}, {seed_end}]"
-    )
+    logging.info(f"Generated queries: {data_path} [{seed_start}, {seed_end}]")
 
 
 def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
@@ -134,9 +130,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
         data_path / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
     )
     if expected_tables_symlink_dpath.exists():
-        logging.info(
-            f"Skipping generation: {expected_tables_symlink_dpath}"
-        )
+        logging.info(f"Skipping generation: {expected_tables_symlink_dpath}")
         return
 
     logging.info(f"Generating: {expected_tables_symlink_dpath}")

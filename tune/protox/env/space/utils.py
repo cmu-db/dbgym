@@ -205,9 +205,7 @@ def fetch_server_knobs(
 
                 if not installed:
                     knob_targets[knobname] = 0.0
-                    logging.warning(
-                        f"Found missing alias for {knobname}"
-                    )
+                    logging.warning(f"Found missing alias for {knobname}")
             elif knob.knob_type == SettingType.BOOLEAN:
                 knob_targets[knobname] = 1.0
             elif knob.knob_name == "random_page_cost":

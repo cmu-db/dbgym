@@ -139,9 +139,7 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
     if not rebuild and expected_repo_symlink_dpath.exists():
-        logging.info(
-            f"Skipping _build_repo: {expected_repo_symlink_dpath}"
-        )
+        logging.info(f"Skipping _build_repo: {expected_repo_symlink_dpath}")
         return
 
     logging.info(f"Setting up repo in {expected_repo_symlink_dpath}")

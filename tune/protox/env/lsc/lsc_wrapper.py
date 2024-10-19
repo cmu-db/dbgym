@@ -9,7 +9,12 @@ from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 
 
 class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
-    def __init__(self, lsc: LSC, env: gym.Env[Any, Any], artifact_manager: Optional[ArtifactManager]):
+    def __init__(
+        self,
+        lsc: LSC,
+        env: gym.Env[Any, Any],
+        artifact_manager: Optional[ArtifactManager],
+    ):
         assert not isinstance(env, TargetResetWrapper)
         super().__init__(env)
         self.lsc = lsc
@@ -41,8 +46,6 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         new_bias = self.lsc.current_bias()
 
         lsc = state["lsc"]
-        logging.debug(
-            f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
-        )
+        logging.debug(f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})")
 
         return state, float(reward), term, trunc, info

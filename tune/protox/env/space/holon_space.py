@@ -50,7 +50,9 @@ class HolonSpace(spaces.Tuple):
 
         assert eq_fn(zero, carprod_embeds[0]), f"{zero} {carprod_embeds[0]}"
         assert eq_fn(last, carprod_embeds[-1]), f"{last} {carprod_embeds[-1]}"
-        assert eq_fn(first_d, carprod_embeds[first_drift]), f"{first_d} {carprod_embeds[first_drift]}"
+        assert eq_fn(
+            first_d, carprod_embeds[first_drift]
+        ), f"{first_d} {carprod_embeds[first_drift]}"
 
         logging.debug("Neighborhood Check passed.")
 
