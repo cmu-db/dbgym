@@ -11,8 +11,8 @@ from misc.utils import path_exists_dont_follow_symlinks
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
-# Make it DEBUG to see logs from verify_structure(). Make it INFO to not see logs.
-logging.basicConfig(level=logging.INFO)
+# Make it DEBUG to see logs from verify_structure(). Make it ERROR to not see logs.
+logging.basicConfig(level=logging.ERROR)
 
 
 FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
