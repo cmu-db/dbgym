@@ -1,3 +1,4 @@
+import pickle
 import json
 import unittest
 from pathlib import Path
@@ -12,9 +13,9 @@ from tune.protox.env.workload import Workload
 
 class WorkloadTests(unittest.TestCase):
     @staticmethod
-    def load(config_file: str, workload_path: Path) -> tuple[Workload, IndexSpace]:
+    def build(config_fpath: Path, workload_path: Path) -> tuple[Workload, IndexSpace]:
         # don't call open_and_save() because this is a unittest
-        with open(config_file, "r") as f:
+        with open(config_fpath, "r") as f:
             benchmark_config = yaml.safe_load(f)
             benchmark_key = [k for k in benchmark_config.keys()][0]
             benchmark_config = benchmark_config[benchmark_key]
@@ -47,20 +48,33 @@ class WorkloadTests(unittest.TestCase):
         return w, i
     
     def _test_workload(self, workload_name: str) -> None:
-        w, i = WorkloadTests.load(
-            f"tune/protox/tests/unittest_benchmark_configs/unittest_{workload_name}.yaml",
-            Path(f"tune/protox/tests/unittest_{workload_name}_dir").resolve(),
+        # Build objects.
+        tests_dpath = Path("tune/protox/tests")
+        w, i = WorkloadTests.build(
+            tests_dpath / f"unittest_benchmark_configs/unittest_{workload_name}.yaml",
+            (tests_dpath / f"unittest_{workload_name}_dir").resolve()
         )
 
-        # Check class mapping
-        with open(f"tune/protox/tests/unittest_ref_models/ref_{workload_name}_model.txt", "r") as f:
-            ref_class_mapping = json.load(f)["class_mapping"]
-            # Reformat it so that it's the same format as in the index space
-            ref_class_mapping = {(v["relname"], v["ord_column"]): int(k) for k, v in ref_class_mapping.items()}
-        self.assertEqual(i.class_mapping, ref_class_mapping)
+        # Load reference objects.
+        ref_dpath = tests_dpath / "unittest_ref"
+        ref_workload_fpath = ref_dpath / f"ref_{workload_name}_workload.pkl"
+        ref_idxspace_fpath = ref_dpath / f"ref_{workload_name}_idxspace.pkl"
+        with open(ref_workload_fpath, "rb") as f:
+            ref_w: Workload = pickle.load(f)
+        with open(ref_idxspace_fpath, "rb") as f:
+            ref_i: IndexSpace = pickle.load(f)
 
-        # Check column usages
-        print(w.column_usages())
+        # Check various workload fields.
+        self.assertEqual(w.column_usages(), ref_w.column_usages())
+
+        # Check various idxspace mapping.
+        self.assertEqual(i.class_mapping, ref_i.class_mapping)
+
+        # # Uncomment this to "update" the reference objects.
+        # with open(ref_workload_fpath, "wb") as f:
+        #     pickle.dump(w, f)
+        # with open(ref_idxspace_fpath, "wb") as f:
+        #     pickle.dump(i, f)
 
     def test_tpch(self) -> None:
         self._test_workload("tpch")
