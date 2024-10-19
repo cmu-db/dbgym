@@ -309,8 +309,8 @@ def datagen(
     )
     pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
-    _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
-    _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
+    _gen_traindata_dpath(dbgym_cfg, generic_args, dir_gen_args)
+    _combine_traindata_dpath_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     datagen_duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{datagen_duration}")
@@ -397,11 +397,11 @@ class EmbeddingFileGenArgs:
         self.rebias = rebias
 
 
-def get_traindata_dir(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
+def get_traindata_dpath(dbgym_cfg: DBGymConfig) -> Path:
+    return dbgym_cfg.cur_task_runs_data_path("traindata", mkdir=True)
 
 
-def _gen_traindata_dir(
+def _gen_traindata_dpath(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingDatagenGenericArgs,
     dir_gen_args: EmbeddingDirGenArgs,
@@ -418,7 +418,7 @@ def _gen_traindata_dir(
         dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
     )
     modified_attrs = workload.column_usages()
-    traindata_dir = get_traindata_dir(dbgym_cfg)
+    traindata_dpath = get_traindata_dpath(dbgym_cfg)
 
     with Pool(dir_gen_args.max_concurrent) as pool:
         results = []
@@ -431,9 +431,9 @@ def _gen_traindata_dir(
             )
             for colidx, col in enumerate(cols):
                 if col is None:
-                    output = traindata_dir / tbl
+                    output = traindata_dpath / tbl
                 else:
-                    output = traindata_dir / tbl / col
+                    output = traindata_dpath / tbl / col
                 Path(output).mkdir(parents=True, exist_ok=True)
 
                 tbl_sample_limit = dir_gen_args.override_sample_limits.get(
@@ -472,7 +472,7 @@ def _gen_traindata_dir(
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(
+def _combine_traindata_dpath_into_parquet(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingDatagenGenericArgs,
     file_gen_args: EmbeddingFileGenArgs,
@@ -485,8 +485,8 @@ def _combine_traindata_dir_into_parquet(
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
 
-    traindata_dir = get_traindata_dir(dbgym_cfg)
-    files = [f for f in Path(traindata_dir).rglob("*.parquet")]
+    traindata_dpath = get_traindata_dpath(dbgym_cfg)
+    files = [f for f in Path(traindata_dpath).rglob("*.parquet")]
 
     def read(file: Path) -> pd.DataFrame:
         tbl = Path(file).parts[-2]

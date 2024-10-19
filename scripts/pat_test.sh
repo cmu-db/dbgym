@@ -7,7 +7,7 @@ INTENDED_DBDATA_HARDWARE=ssd
 . ./experiments/load_per_machine_envvars.sh
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
-python3 task.py benchmark tpch data $SCALE_FACTOR
+python3 task.py tune protox embedding datagen tpch --scale-factor $SCALE_FACTOR --default-sample-limit 64 --file-limit 64 --intended-dbdata-hardware $INTENDED_DBDATA_HARDWARE --dbdata-parent-dpath $DBDATA_PARENT_DPATH # short datagen for testing
 exit 0
 
 # benchmark
