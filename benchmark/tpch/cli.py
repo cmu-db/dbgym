@@ -181,7 +181,7 @@ def _generate_workload(
                     and not sql_fpath.is_symlink()
                     and sql_fpath.is_absolute()
                 ), "We should only write existent real absolute paths to a file"
-                output = ",".join([f"S{seed}-Q{qnum}", str(sql_fpath)])
+                f.write(f"S{seed}-Q{qnum},{sql_fpath}\n")
                 # TODO(WAN): add option to deep-copy the workload.
 
     workload_symlink_dpath = link_result(dbgym_cfg, real_dpath)

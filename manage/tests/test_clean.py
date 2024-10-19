@@ -19,11 +19,6 @@ FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
 
 
 class CleanTests(unittest.TestCase):
-    """
-    I deemed "clean" important enough to write extensive unit tests for because a bug could lead to
-    losing important files.
-    """
-
     scratchspace_path: Path = Path()
 
     @staticmethod

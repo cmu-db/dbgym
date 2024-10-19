@@ -768,8 +768,6 @@ def _produce_index_data(
     p: int,
     output: Path,
 ) -> None:
-    print("entering _produce_index_data()")
-
     models = None
     # FUTURE(oltp)
     # if model_dir is not None:
@@ -797,9 +795,6 @@ def _produce_index_data(
         deterministic_policy=False,
     )
 
-    print("e")
-    print(f"target={target}")
-
     table_idx = 0
     if target is not None:
         for i, tbl in enumerate(tables):
@@ -807,13 +802,9 @@ def _produce_index_data(
                 table_idx = i
                 break
 
-        print(f"len(modified_attrs[target])={len(modified_attrs[target])}")
-
         if len(modified_attrs[target]) == 0:
             # there are no indexes to generate.
             return
-
-    print("d")
 
     with create_psycopg_conn() as connection:
         _fetch_server_indexes(connection)
@@ -822,8 +813,6 @@ def _produce_index_data(
                 connection.execute("CREATE EXTENSION IF NOT EXISTS hypopg")
             except:
                 pass
-
-        print("c")
 
         with connection.cursor() as cursor:
             reference_qs, table_reference_qs = _extract_refs(
@@ -936,10 +925,7 @@ def _produce_index_data(
                 accum["idx_class"] = int(idx_class)
                 accum_data.append(accum)
 
-            print("b")
-
             if len(accum_data) > 0:
-                print("a")
                 _write(accum_data, output, p)
                 gc.collect()
                 gc.collect()
