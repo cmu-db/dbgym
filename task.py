@@ -36,18 +36,29 @@ def task(ctx: click.Context) -> None:
     _set_up_warnings(dbgym_cfg)
 
 
+class LongLineFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        if record.args:
+            record.msg = str(record.msg) % record.args
+        return super().format(record)
+
+
 def _set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
     """
     Set up everything related to the logging library.
 
-    If you want to log things for real, use the logging library. Use the root logger unless you have a reason not to.
-
-    If you want to print things for debugging purposes, use print(). Other than this, don"t use print().
+    If your script needs to provide output, use the output logger (I usually use the info level). If you want to print things for
+    debugging purposes, use print(). If you want to log things, use the logging library. When using the logging library, use the
+    root logger unless you have a good reason not to.
     """
-    format = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
+    # The output logger behaves identically to print. We use it to indicate that something is not a debugging print but rather
+    # is actual output of the program.
+    output_format = "%(message)s"
+    _set_up_logger(logging.getLogger("output"), output_format, dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "output.log", console_level=logging.INFO)
 
     # The root logger is set up globally here. Do not reconfigure the root logger anywhere else.
-    _set_up_logger(logging.getLogger(), format, dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "root.log")
+    log_format = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
+    _set_up_logger(logging.getLogger(), log_format, dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "root.log")
 
     # Set up some of the third-party loggers.
     # Make sure to clear the handlers to remove the console handler that tensorflow creates by default.
@@ -55,22 +66,23 @@ def _set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
         logger = logging.root.manager.loggerDict[logger_name]
         assert isinstance(logger, Logger)
         logger.handlers.clear()
-        _set_up_logger(logger, format, dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"{logger_name}.log")
+        _set_up_logger(logger, log_format, dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"{logger_name}.log")
 
 
 def _set_up_logger(logger: Logger, format: str, output_log_fpath: Path, console_level: int=logging.ERROR, file_level: int=logging.DEBUG) -> None:
     # Set this so that the root logger captures everything.
     logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(format)
 
     # Only make it output warnings or higher to the console.
     console_handler = logging.StreamHandler()
     console_handler.setLevel(console_level)
-    console_handler.setFormatter(logging.Formatter(format))
+    console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
     # Let it output everything to the output file.
     file_handler = logging.FileHandler(output_log_fpath)
-    file_handler.setFormatter(logging.Formatter(format))
+    file_handler.setFormatter(formatter)
     file_handler.setLevel(file_level)
     logger.addHandler(file_handler)
 
