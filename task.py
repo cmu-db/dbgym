@@ -37,13 +37,6 @@ def task(ctx: click.Context) -> None:
     _set_up_warnings(dbgym_cfg)
 
 
-class LongLineFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        if record.args:
-            record.msg = str(record.msg) % record.args
-        return super().format(record)
-
-
 def _set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
     """
     Set up everything related to the logging library.
