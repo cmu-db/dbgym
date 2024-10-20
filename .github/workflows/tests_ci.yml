@@ -38,7 +38,7 @@ jobs:
 
     - name: Static type checking
       run: |
-        mypy --config-file scripts/mypy.ini .
+        ./scripts/mypy.sh
 
     - name: Run unit tests
       run: |
