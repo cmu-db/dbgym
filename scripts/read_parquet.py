@@ -4,14 +4,16 @@ from pathlib import Path
 
 import pandas as pd
 
+from util.log import DBGYM_OUTPUT_LOGGER_NAME
+
 
 def read_and_output_parquet(file_path: Path) -> None:
     # Read the Parquet file into a DataFrame
     df = pd.read_parquet(file_path)
 
     # Output the DataFrame
-    logging.getLogger("output").info("DataFrame:")
-    logging.getLogger("output").info(df)
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info("DataFrame:")
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(df)
 
 
 if __name__ == "__main__":

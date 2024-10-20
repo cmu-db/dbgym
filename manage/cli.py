@@ -13,6 +13,7 @@ from misc.utils import (
     is_child_path,
     parent_dpath_of_path,
 )
+from util.log import DBGYM_OUTPUT_LOGGER_NAME
 
 
 # This is used in test_clean.py. It's defined here to avoid a circular import.
@@ -46,7 +47,7 @@ def manage_clean(dbgym_cfg: DBGymConfig, mode: str) -> None:
 @click.pass_obj
 def manage_count(dbgym_cfg: DBGymConfig) -> None:
     num_files = _count_files_in_workspace(dbgym_cfg)
-    logging.getLogger("output").info(
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"The workspace ({dbgym_cfg.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
     )
 

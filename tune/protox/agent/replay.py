@@ -36,6 +36,7 @@ from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import ActionsInfo, HolonAction
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_OUTPUT_LOGGER_NAME
 
 REPLAY_DATA_FNAME = "replay_data.csv"
 
@@ -490,7 +491,7 @@ def replay_tuning_run(
     # Output.
     run_data_df = pd.DataFrame(run_data)
     pd.set_option("display.max_columns", 10)
-    logging.getLogger("output").info(
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
     )
     run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
