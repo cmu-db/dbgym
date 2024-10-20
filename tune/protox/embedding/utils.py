@@ -43,7 +43,9 @@ def parse_hyperopt_config(config: dict[str, Any]) -> dict[str, Any]:
             subspaces = [parse_hyperopt_config(c) for c in key_dict["subspaces"]]
             return hp.choice(key_dict["choice_name"], subspaces)
         else:
-            logging.getLogger(DBGYM_LOGGER_NAME).error("Unknown hyperopt config definition", key_dict)
+            logging.getLogger(DBGYM_LOGGER_NAME).error(
+                "Unknown hyperopt config definition", key_dict
+            )
             assert False
 
     parsed_config = {}

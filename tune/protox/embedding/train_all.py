@@ -147,7 +147,9 @@ def load_input_data(
     del train_x
     gc.collect()
     gc.collect()
-    logging.getLogger(DBGYM_LOGGER_NAME).info("Train Dataset Size: %s", len(train_dataset))
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        "Train Dataset Size: %s", len(train_dataset)
+    )
     return train_dataset, train_y, train_y[:, -1], val_dataset, num_classes
 
 

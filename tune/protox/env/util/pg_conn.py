@@ -114,7 +114,9 @@ class PostgresConn:
                 "stop", "--wait", "-t", "180", "-D", self.dbdata_dpath
             ].run(retcode=None)
             time.sleep(1)
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("Stop message: (%s, %s)", stdout, stderr)
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "Stop message: (%s, %s)", stdout, stderr
+            )
 
             # Wait until pg_isready fails.
             retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
@@ -201,7 +203,9 @@ class PostgresConn:
             if retcode == 0 or pid_lock.exists():
                 break
 
-            logging.getLogger(DBGYM_LOGGER_NAME).warning("startup encountered: (%s, %s)", stdout, stderr)
+            logging.getLogger(DBGYM_LOGGER_NAME).warning(
+                "startup encountered: (%s, %s)", stdout, stderr
+            )
             attempts += 1
             if attempts >= 5:
                 logging.getLogger(DBGYM_LOGGER_NAME).error(
@@ -214,7 +218,9 @@ class PostgresConn:
         while True:
             if self.connect_timeout is not None and num_cycles >= self.connect_timeout:
                 # In this case, we've failed to start postgres.
-                logging.getLogger(DBGYM_LOGGER_NAME).error("Failed to start postgres before timeout...")
+                logging.getLogger(DBGYM_LOGGER_NAME).error(
+                    "Failed to start postgres before timeout..."
+                )
                 return False
 
             retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
@@ -230,7 +236,9 @@ class PostgresConn:
 
             time.sleep(1)
             num_cycles += 1
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("Waiting for postgres to bootup but it is not...")
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "Waiting for postgres to bootup but it is not..."
+            )
 
         # Set up Boot if we're told to do so
         if self.enable_boot:

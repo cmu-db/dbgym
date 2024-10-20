@@ -30,10 +30,14 @@ def check_subspace(space: Union[Dict, spaces.Tuple], action: Any) -> bool:
             if isinstance(subspace, str):
                 assert isinstance(space, Dict)
                 if not space.spaces[subspace].contains(action[subspace]):
-                    logging.getLogger(DBGYM_LOGGER_NAME).error("Subspace %s rejects %s", subspace, action[subspace])
+                    logging.getLogger(DBGYM_LOGGER_NAME).error(
+                        "Subspace %s rejects %s", subspace, action[subspace]
+                    )
                     return False
             elif not cast(Space[Any], subspace).contains(action[i]):
-                logging.getLogger(DBGYM_LOGGER_NAME).error("Subspace %s rejects %s", subspace, action[i])
+                logging.getLogger(DBGYM_LOGGER_NAME).error(
+                    "Subspace %s rejects %s", subspace, action[i]
+                )
                 return False
     return True
 
@@ -132,7 +136,9 @@ def _parse_field(type: SettingType, value: Any) -> Any:
 
 
 def _project_pg_setting(knob: Knob, setting: Any) -> Any:
-    logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Projecting {setting} into knob {knob.knob_name}")
+    logging.getLogger(DBGYM_LOGGER_NAME).debug(
+        f"Projecting {setting} into knob {knob.knob_name}"
+    )
     value = _parse_field(knob.knob_type, setting)
     value = value if knob.knob_unit == 0 else value / knob.knob_unit
     return knob.project_scraped_setting(value)
@@ -206,7 +212,9 @@ def fetch_server_knobs(
 
                 if not installed:
                     knob_targets[knobname] = 0.0
-                    logging.getLogger(DBGYM_LOGGER_NAME).warning(f"Found missing alias for {knobname}")
+                    logging.getLogger(DBGYM_LOGGER_NAME).warning(
+                        f"Found missing alias for {knobname}"
+                    )
             elif knob.knob_type == SettingType.BOOLEAN:
                 knob_targets[knobname] = 1.0
             elif knob.knob_name == "random_page_cost":

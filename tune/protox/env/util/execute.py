@@ -54,10 +54,14 @@ def _time_query(
             qid_runtime = float(c["Execution Time"]) * 1e3
             explain_data = c
 
-        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"{prefix} evaluated in {qid_runtime/1e6}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"{prefix} evaluated in {qid_runtime/1e6}"
+        )
 
     except QueryCanceled:
-        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"{prefix} exceeded evaluation timeout {timeout}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"{prefix} exceeded evaluation timeout {timeout}"
+        )
         qid_runtime = timeout * 1e6
         did_time_out = True
     except Exception as e:
@@ -137,7 +141,9 @@ def execute_variations(
 
         # Log out the knobs that we are using.
         pqkk = [(knob.name(), val) for knob, val in qr.qknobs.items()]
-        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"{qr.prefix_qid} executing with {pqkk}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"{qr.prefix_qid} executing with {pqkk}"
+        )
 
         runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
             artifact_manager=artifact_manager,

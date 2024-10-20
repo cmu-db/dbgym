@@ -52,7 +52,9 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                 self.real_best_metric = self.best_metric
 
             if self.maximize_state:
-                logging.getLogger(DBGYM_LOGGER_NAME).info(f"Found new maximal state with {metric}.")
+                logging.getLogger(DBGYM_LOGGER_NAME).info(
+                    f"Found new maximal state with {metric}."
+                )
                 assert len(self.tracked_states) > 0
                 state = self._get_state()
                 if self.start_reset:

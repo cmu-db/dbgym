@@ -173,7 +173,9 @@ class WolpPolicy(BaseModel):
             noise = noise.view(-1, *noise.shape)
 
         if noise is not None:
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Perturbing with noise class {action_noise}")
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"Perturbing with noise class {action_noise}"
+            )
 
         assert hasattr(self.action_space, "transform_noise")
         raw_action = self.action_space.transform_noise(raw_action, noise=noise)

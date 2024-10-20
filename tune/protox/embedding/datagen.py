@@ -932,4 +932,6 @@ def _produce_index_data(
                 gc.collect()
 
     # Log that we finished.
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"{target} {p} progress update: {sample_limit} / {sample_limit}."
+    )

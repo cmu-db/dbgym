@@ -47,6 +47,8 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         new_bias = self.lsc.current_bias()
 
         lsc = state["lsc"]
-        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
+        )
 
         return state, float(reward), term, trunc, info

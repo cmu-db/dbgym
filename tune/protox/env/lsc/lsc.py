@@ -55,7 +55,9 @@ class LSC(object):
         self.artifact_manager = artifact_manager
 
         logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift: %s", self.lsc_shift)
-        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift Increment: %s", self.increment)
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            "LSC Shift Increment: %s", self.increment
+        )
         logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
@@ -129,4 +131,6 @@ class LSC(object):
             # Increment the current bias with the increment.
             self.lsc_shift[:bound] += self.increment[:bound]
             self.lsc_shift = self.lsc_shift % self.max
-            logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Bias Update: %s", self.lsc_shift)
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                "LSC Bias Update: %s", self.lsc_shift
+            )

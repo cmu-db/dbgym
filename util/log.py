@@ -1,9 +1,8 @@
 import logging
+import warnings
 from logging import Logger
 from pathlib import Path
 from typing import Any, Optional
-import warnings
-
 
 DBGYM_LOGGER_NAME = "dbgym"
 DBGYM_OUTPUT_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.output"

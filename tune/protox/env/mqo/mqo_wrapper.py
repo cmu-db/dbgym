@@ -111,7 +111,9 @@ def _regress_query_knobs(
                 value = 1.0 if "Index" in ams[qid_prefix][alias] else 0.0
             else:
                 # Log out the missing alias for debugging reference.
-                logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Found missing {alias} in the parsed {ams}.")
+                logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                    f"Found missing {alias} in the parsed {ams}."
+                )
                 value = 0.0
             global_qknobs[knob] = value
         elif knob.knob_type == SettingType.BOOLEAN:
@@ -189,7 +191,9 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                             None,
                             None,
                         )
-                        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
+                        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                            f"[best_observe] {qid}: {best_run.runtime/1e6}"
+                        )
 
     def step(  # type: ignore
         self,

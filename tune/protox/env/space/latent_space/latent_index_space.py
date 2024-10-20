@@ -262,9 +262,13 @@ class LatentIndexSpace(IndexSpace):
 
         exist_ia = ia in sc
         if exist_ia:
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("Contemplating %s (exist: True)", sc[sc.index(ia)])
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "Contemplating %s (exist: True)", sc[sc.index(ia)]
+            )
         else:
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("Contemplating %s (exist: False)", ia)
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "Contemplating %s (exist: False)", ia
+            )
             # Add the new index with the current index counter.
             sql_commands.append(ia.sql(add=True))
 

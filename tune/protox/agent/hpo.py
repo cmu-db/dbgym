@@ -599,7 +599,9 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Starting episode: {episode+1}, iteration: {it+1}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            f"Starting episode: {episode+1}, iteration: {it+1}"
+        )
 
         if not self.env_init:
             _, infos = self.env.reset()

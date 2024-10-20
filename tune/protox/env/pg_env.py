@@ -73,14 +73,18 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.workload.queries,
         )
 
-        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[Restored snapshot] {self.state_container}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"[Restored snapshot] {self.state_container}"
+        )
 
     @time_record("reset")
     def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
     ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
-        logging.getLogger(DBGYM_LOGGER_NAME).info("Resetting database system state to snapshot.")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            "Resetting database system state to snapshot."
+        )
         super().reset(seed=seed)
 
         target_config: Optional[TargetResetConfig] = None
@@ -135,7 +139,9 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             self.state_container = copy.deepcopy(config)
             self.current_state = env_state.copy()
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("[Finished] Reset to state (config): %s", config)
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "[Finished] Reset to state (config): %s", config
+            )
 
         else:
             # Restore a pristine snapshot of the world.
@@ -208,7 +214,9 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("step_before_execution")
     def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
-        logging.getLogger(DBGYM_LOGGER_NAME).debug("Selected action: %s", self.action_space.to_jsonable([action]))
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            "Selected action: %s", self.action_space.to_jsonable([action])
+        )
 
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
@@ -275,7 +283,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
         else:
             # Illegal configuration.
-            logging.getLogger(DBGYM_LOGGER_NAME).info("Found illegal configuration: %s", info["attempted_changes"])
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                "Found illegal configuration: %s", info["attempted_changes"]
+            )
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
@@ -398,13 +408,17 @@ class PostgresEnv(gym.Env[Any, Any]):
                             False
                         ), f"attempt_checkpoint() failed after 5 attempts with {e}"
 
-                    logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[attempt_checkpoint]: {e}")
+                    logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                        f"[attempt_checkpoint]: {e}"
+                    )
                     time.sleep(5)
 
         shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
-            logging.getLogger(DBGYM_LOGGER_NAME).info(f"Executing {sql} [{i+1}/{len(sql_commands)}]")
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                f"Executing {sql} [{i+1}/{len(sql_commands)}]"
+            )
 
             ret, stderr = self.pg_conn.psql(sql)
             if ret == -1:

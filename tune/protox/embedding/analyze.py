@@ -131,7 +131,9 @@ def _create_stats_for_part(
     models = [m for m in itertools.chain(*[part_dpath.rglob("config")])]
     for model_config in tqdm.tqdm(models):
         if ((Path(model_config).parent) / "FAILED").exists():
-            logging.getLogger(DBGYM_LOGGER_NAME).warning("Detected failure in: ", model_config)
+            logging.getLogger(DBGYM_LOGGER_NAME).warning(
+                "Detected failure in: ", model_config
+            )
             continue
 
         # don't use open_and_save() because we generated model_config in this run
