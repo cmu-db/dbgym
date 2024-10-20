@@ -8,12 +8,14 @@ from typing import Any, NewType, cast
 
 from manage.cli import MockDBGymConfig, clean_workspace
 from misc.utils import path_exists_dont_follow_symlinks
-from util.log import DBGYM_LOGGER_NAME
+
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
-# Make it DEBUG to see logs from verify_structure(). Make it ERROR to not see logs.
-logging.basicConfig(level=logging.ERROR)
+# Make it DEBUG to see logs from verify_structure(). Make it CRITICAL to not see any logs.
+# We use the root logger for unit tests to keep it separate from the standard logging subsystem which
+#   uses the dbgym.* loggers.
+logging.basicConfig(level=logging.CRITICAL)
 
 
 FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
@@ -59,11 +61,11 @@ class CleanTests(unittest.TestCase):
             for name, item in structure.items():
                 new_cur_path = cur_path / name
                 if not path_exists_dont_follow_symlinks(new_cur_path):
-                    logging.getLogger(DBGYM_LOGGER_NAME).debug(f"{new_cur_path} does not exist")
+                    logging.debug(f"{new_cur_path} does not exist")
                     return False
                 elif isinstance(item, dict):
                     if not new_cur_path.is_dir():
-                        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"expected {new_cur_path} to be a directory")
+                        logging.debug(f"expected {new_cur_path} to be a directory")
                         return False
                     if not verify_structure_internal(
                         root_path,
@@ -73,17 +75,17 @@ class CleanTests(unittest.TestCase):
                         return False
                 elif isinstance(item, tuple) and item[0] == "file":
                     if not new_cur_path.is_file():
-                        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"expected {new_cur_path} to be a regular file")
+                        logging.debug(f"expected {new_cur_path} to be a regular file")
                         return False
                 elif isinstance(item, tuple) and item[0] == "symlink":
                     if not new_cur_path.is_symlink():
-                        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"expected {new_cur_path} to be a symlink")
+                        logging.debug(f"expected {new_cur_path} to be a symlink")
                         return False
                     # If item[1] is None, this indicates that we expect the symlink to be broken
                     if item[1] != None:
                         expected_target = root_path / item[1]
                         if not new_cur_path.resolve().samefile(expected_target):
-                            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                            logging.debug(
                                 f"expected {new_cur_path} to link to {expected_target}, but it links to {new_cur_path.resolve()}"
                             )
                             return False
@@ -94,7 +96,7 @@ class CleanTests(unittest.TestCase):
             expected_names = set(structure.keys())
             actual_names = {entry.name for entry in cur_path.iterdir()}
             if not expected_names.issuperset(actual_names):
-                logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                logging.debug(
                     f"expected_names={expected_names}, actual_names={actual_names}"
                 )
                 return False
@@ -102,7 +104,7 @@ class CleanTests(unittest.TestCase):
             return True
 
         if not root_path.exists():
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"{root_path} does not exist")
+            logging.debug(f"{root_path} does not exist")
             return False
         return verify_structure_internal(root_path, root_path, structure)
 
