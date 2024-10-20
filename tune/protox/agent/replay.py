@@ -408,7 +408,9 @@ def replay_tuning_run(
                 index_acts.add(index_action)
                 assert len(index_acts) > 0
                 with open_and_save(
-                    dbgym_cfg, tuning_steps_dpath / last_folder / "prior_state.pkl", "rb"
+                    dbgym_cfg,
+                    tuning_steps_dpath / last_folder / "prior_state.pkl",
+                    "rb",
                 ) as f:
                     prior_states = pickle.load(f)
                     all_sc = set(prior_states[1])
