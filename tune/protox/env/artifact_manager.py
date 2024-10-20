@@ -13,6 +13,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from typing_extensions import ParamSpec
 
 from misc.utils import DBGymConfig
+from util.log import DBGYM_LOGGER_NAME
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -67,7 +68,7 @@ class ArtifactManager(object):
 
     # The output log is the file that the root logger writes to
     REPLAY_INFO_LOG_FNAME = "replay_info.log"
-    REPLAY_LOGGER_NAME = "replay_logger"
+    REPLAY_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.replay"
 
     def __init__(
         self,
