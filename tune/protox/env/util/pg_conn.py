@@ -201,7 +201,7 @@ class PostgresConn:
             if retcode == 0 or pid_lock.exists():
                 break
 
-            logging.warn("startup encountered: (%s, %s)", stdout, stderr)
+            logging.getLogger(DBGYM_LOGGER_NAME).warning("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
             if attempts >= 5:
                 logging.getLogger(DBGYM_LOGGER_NAME).error(
