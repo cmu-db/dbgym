@@ -7,7 +7,8 @@ INTENDED_DBDATA_HARDWARE=ssd
 . ./experiments/load_per_machine_envvars.sh
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
-# exit 0
+python3 task.py tune protox agent replay tpch --scale-factor $SCALE_FACTOR
+exit 0
 
 # benchmark
 python3 task.py benchmark tpch data $SCALE_FACTOR

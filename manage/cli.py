@@ -46,7 +46,7 @@ def manage_clean(dbgym_cfg: DBGymConfig, mode: str) -> None:
 @click.pass_obj
 def manage_count(dbgym_cfg: DBGymConfig) -> None:
     num_files = _count_files_in_workspace(dbgym_cfg)
-    print(
+    logging.getLogger("output").info(
         f"The workspace ({dbgym_cfg.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
     )
 
