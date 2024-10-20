@@ -6,6 +6,7 @@ import torch
 
 from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.types import ProtoAction
+from util.log import DBGYM_LOGGER_NAME
 
 T = TypeVar("T", torch.Tensor, np.typing.NDArray[np.float32])
 
@@ -53,9 +54,9 @@ class LSC(object):
         self.shift_after = lsc_parameters["shift_after"]
         self.artifact_manager = artifact_manager
 
-        logging.info("LSC Shift: %s", self.lsc_shift)
-        logging.info("LSC Shift Increment: %s", self.increment)
-        logging.info("LSC Shift Max: %s", self.max)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift: %s", self.lsc_shift)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift Increment: %s", self.increment)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
         if not self.enabled:
@@ -128,4 +129,4 @@ class LSC(object):
             # Increment the current bias with the increment.
             self.lsc_shift[:bound] += self.increment[:bound]
             self.lsc_shift = self.lsc_shift % self.max
-            logging.info("LSC Bias Update: %s", self.lsc_shift)
+            logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Bias Update: %s", self.lsc_shift)

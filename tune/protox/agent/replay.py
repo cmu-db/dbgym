@@ -36,7 +36,7 @@ from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import ActionsInfo, HolonAction
 from tune.protox.env.workload import Workload
-from util.log import DBGYM_OUTPUT_LOGGER_NAME
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 REPLAY_DATA_FNAME = "replay_data.csv"
 
@@ -258,10 +258,10 @@ def replay_tuning_run(
     def _execute_workload_wrapper(
         actions_info: ActionsInfo,
     ) -> tuple[int, int, bool, float]:
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n"
         )
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n"
         )
         assert (

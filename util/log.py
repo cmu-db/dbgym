@@ -8,7 +8,7 @@ from misc.utils import DBGymConfig
 
 
 DBGYM_LOGGER_NAME = "dbgym"
-DBGYM_OUTPUT_LOGGER_NAME = "dbgym.output"
+DBGYM_OUTPUT_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.output"
 
 
 def set_up_loggers(dbgym_cfg: DBGymConfig) -> None:

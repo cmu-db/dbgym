@@ -30,6 +30,7 @@ from tune.protox.env.types import (
     QuerySpaceKnobAction,
     QueryType,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 HolonSubSpace = Union[LatentKnobSpace, LatentIndexSpace, LatentQuerySpace]
 
@@ -54,7 +55,7 @@ class HolonSpace(spaces.Tuple):
             first_d, carprod_embeds[first_drift]
         ), f"{first_d} {carprod_embeds[first_drift]}"
 
-        logging.debug("Neighborhood Check passed.")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug("Neighborhood Check passed.")
 
     def __init__(
         self,

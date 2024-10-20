@@ -48,6 +48,7 @@ from misc.utils import (
     workload_name_fn,
 )
 from tune.protox.agent.build_trial import build_trial
+from util.log import DBGYM_LOGGER_NAME
 
 METRIC_NAME = "Best Metric"
 
@@ -580,8 +581,8 @@ class TuneTrial:
                 ray_trial_id=self.ray_trial_id,
             )
         )
-        logging.info("%s", hpo_params)
-        logging.info(f"Seed: {seed}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info("%s", hpo_params)
+        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Seed: {seed}")
 
         # Attach the timeout checker and loggers.
         self.agent.set_timeout_checker(self.timeout_checker)
@@ -598,7 +599,7 @@ class TuneTrial:
 
         episode = self.agent._episode_num
         it = self.agent.num_timesteps
-        logging.info(f"Starting episode: {episode+1}, iteration: {it+1}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Starting episode: {episode+1}, iteration: {it+1}")
 
         if not self.env_init:
             _, infos = self.env.reset()
@@ -607,7 +608,7 @@ class TuneTrial:
                 infos["baseline_metric"],
             )
             metric_reward_message = f"Baseline Metric: {baseline_metric}. Baseline Reward: {baseline_reward}"
-            logging.info(metric_reward_message)
+            logging.getLogger(DBGYM_LOGGER_NAME).info(metric_reward_message)
             self.artifact_manager.log_to_replay_info(metric_reward_message)
             self.env_init = True
 
@@ -789,7 +790,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     if results.num_errors > 0:
         for i in range(len(results)):
             if results[i].error:
-                logging.error(f"Trial {results[i]} FAILED")
+                logging.getLogger(DBGYM_LOGGER_NAME).error(f"Trial {results[i]} FAILED")
         assert False, "Encountered exceptions!"
 
     # Save the best params.json.

@@ -6,6 +6,7 @@ import gymnasium as gym
 from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
+from util.log import DBGYM_LOGGER_NAME
 
 
 class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
@@ -26,7 +27,7 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
 
         state["lsc"] = self.lsc.current_scale()
         lsc = state["lsc"]
-        logging.debug(f"Attaching LSC: {lsc}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Attaching LSC: {lsc}")
 
         return state, info
 
@@ -46,6 +47,6 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         new_bias = self.lsc.current_bias()
 
         lsc = state["lsc"]
-        logging.debug(f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})")
 
         return state, float(reward), term, trunc, info

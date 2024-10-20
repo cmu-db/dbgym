@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from pytorch_metric_learning import losses, reducers
 from pytorch_metric_learning.utils import common_functions as c_f
 
+from util.log import DBGYM_LOGGER_NAME
+
 
 def gen_vae_collate(
     max_categorical: int, infer: bool = False
@@ -70,7 +72,7 @@ def acquire_loss_function(
         )
         if torch.isnan(recon_loss).any():
             # Dump any found nan in the loss.
-            logging.error(preds[torch.isnan(recon_loss)])
+            logging.getLogger(DBGYM_LOGGER_NAME).error(preds[torch.isnan(recon_loss)])
             assert False
 
         recon_loss = recon_loss.sum(dim=(1,))

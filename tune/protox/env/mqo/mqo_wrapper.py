@@ -23,6 +23,7 @@ from tune.protox.env.types import (
     QuerySpaceKnobAction,
     QueryTableAccessMap,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 
 def _mutilate_action_with_metrics(
@@ -110,7 +111,7 @@ def _regress_query_knobs(
                 value = 1.0 if "Index" in ams[qid_prefix][alias] else 0.0
             else:
                 # Log out the missing alias for debugging reference.
-                logging.debug(f"Found missing {alias} in the parsed {ams}.")
+                logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Found missing {alias} in the parsed {ams}.")
                 value = 0.0
             global_qknobs[knob] = value
         elif knob.knob_type == SettingType.BOOLEAN:
@@ -174,7 +175,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                         None,
                     )
                     assert best_run.runtime is not None
-                    logging.debug(
+                    logging.getLogger(DBGYM_LOGGER_NAME).debug(
                         f"[best_observe] {qid}: {best_run.runtime/1e6} (force: {force_overwrite})"
                     )
                 elif not best_run.timed_out:
@@ -188,7 +189,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                             None,
                             None,
                         )
-                        logging.debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
+                        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[best_observe] {qid}: {best_run.runtime/1e6}")
 
     def step(  # type: ignore
         self,
@@ -305,7 +306,7 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
             )
 
         # Execute.
-        logging.info("MQOWrapper called step_execute()")
+        logging.getLogger(DBGYM_LOGGER_NAME).info("MQOWrapper called step_execute()")
         success, info = self.unwrapped.step_execute(success, runs, info)
         if info["query_metric_data"]:
             self._update_best_observed(info["query_metric_data"])
@@ -420,6 +421,6 @@ class MQOWrapper(gym.Wrapper[Any, Any, Any, Any]):
                     prev_result=metric,
                 )
 
-            logging.debug("Maximized on reset.")
+            logging.getLogger(DBGYM_LOGGER_NAME).debug("Maximized on reset.")
 
         return state, info

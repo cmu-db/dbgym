@@ -8,6 +8,7 @@ from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.types import EnvInfoDict, HolonStateContainer, TargetResetConfig
 from tune.protox.env.util.reward import RewardUtility
+from util.log import DBGYM_LOGGER_NAME
 
 
 class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
@@ -51,7 +52,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                 self.real_best_metric = self.best_metric
 
             if self.maximize_state:
-                logging.info(f"Found new maximal state with {metric}.")
+                logging.getLogger(DBGYM_LOGGER_NAME).info(f"Found new maximal state with {metric}.")
                 assert len(self.tracked_states) > 0
                 state = self._get_state()
                 if self.start_reset:

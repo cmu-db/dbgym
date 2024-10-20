@@ -44,6 +44,7 @@ from tune.protox.env.util.workload_analysis import (
     extract_columns,
     extract_sqltypes,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 
 class Workload(object):
@@ -234,7 +235,7 @@ class Workload(object):
         self.workload_timeout = workload_timeout
         self.workload_timeout_penalty = workload_timeout_penalty
         self.artifact_manager = artifact_manager
-        logging.info(f"Initialized with workload timeout {workload_timeout}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Initialized with workload timeout {workload_timeout}")
 
         self.tables: list[str] = tables
         self.attributes: TableAttrListMap = attributes
@@ -305,7 +306,7 @@ class Workload(object):
         else:
             self.workload_timeout = min(self.workload_timeout, metric)
 
-        logging.info(f"Workload timeout set to: {self.workload_timeout}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Workload timeout set to: {self.workload_timeout}")
 
     def queries_for_table(self, table: str) -> list[str]:
         return [q for q in self.order if q in self.tbl_queries_usage[table]]
@@ -651,7 +652,7 @@ class Workload(object):
         first: bool = False,
     ) -> tuple[bool, float, float, Union[str, Path], bool, dict[str, BestQueryRun]]:
         success = True
-        logging.info("Starting to run benchmark...")
+        logging.getLogger(DBGYM_LOGGER_NAME).info("Starting to run benchmark...")
 
         # Generate a unique temporary directory to store results in.
         results_dpath = Path(tempfile.mkdtemp())
@@ -693,7 +694,7 @@ class Workload(object):
                 results_dpath=results_dpath, update=update, did_error=not success
             )
 
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Benchmark iteration with metric {metric} (reward: {reward}) (did_anything_timeout: {did_anything_time_out})"
         )
         return (

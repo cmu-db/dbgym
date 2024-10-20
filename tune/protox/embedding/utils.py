@@ -3,6 +3,8 @@ from typing import Any
 
 from hyperopt import hp
 
+from util.log import DBGYM_LOGGER_NAME
+
 
 def f_unpack_dict(dct: dict[str, Any]) -> dict[str, Any]:
     """
@@ -41,7 +43,7 @@ def parse_hyperopt_config(config: dict[str, Any]) -> dict[str, Any]:
             subspaces = [parse_hyperopt_config(c) for c in key_dict["subspaces"]]
             return hp.choice(key_dict["choice_name"], subspaces)
         else:
-            logging.error("Unknown hyperopt config definition", key_dict)
+            logging.getLogger(DBGYM_LOGGER_NAME).error("Unknown hyperopt config definition", key_dict)
             assert False
 
     parsed_config = {}

@@ -6,6 +6,7 @@ from typing import Optional, Tuple, Union
 import pandas as pd
 
 from tune.protox.env.artifact_manager import ArtifactManager
+from util.log import DBGYM_LOGGER_NAME
 
 # Initial penalty to apply to create the "worst" perf from the baseline.
 INITIAL_PENALTY_MULTIPLIER = 4.0
@@ -38,7 +39,7 @@ class RewardUtility(object):
     def set_relative_baseline(
         self, relative_baseline: float, prev_result: Optional[float] = None
     ) -> None:
-        logging.debug(f"[set_relative_baseline]: {relative_baseline}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[set_relative_baseline]: {relative_baseline}")
         self.relative_baseline = relative_baseline
         self.previous_result = prev_result
         if self.worst_perf is None:
@@ -60,7 +61,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        logging.debug(f"Reading TPS metric from file: {summary}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Reading TPS metric from file: {summary}")
         # don't call open_and_save() because summary is generated from this run
         with open(summary, "r") as f:
             s = json.load(f)
@@ -75,7 +76,7 @@ class RewardUtility(object):
         assert len(files) == 1
 
         summary = files[0]
-        logging.debug(f"Reading TPS metric from file: {summary}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Reading TPS metric from file: {summary}")
         # don't call open_and_save() because summary is generated from this run
         with open(summary, "r") as f:
             tps = json.load(f)["Throughput (requests/second)"]
@@ -108,7 +109,7 @@ class RewardUtility(object):
         #
         # minimum memory before start trading...)
         assert did_error or results_dpath is not None or metric is not None
-        logging.debug(f"[reward_calc]: {results_dpath} {metric} {update} {did_error}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"[reward_calc]: {results_dpath} {metric} {update} {did_error}")
 
         if metric is None:
             # Either it errored or we have a result directory to process.

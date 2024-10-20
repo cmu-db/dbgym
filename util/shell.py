@@ -4,6 +4,8 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from util.log import DBGYM_LOGGER_NAME
+
 
 def subprocess_run(
     c: str,
@@ -14,7 +16,7 @@ def subprocess_run(
     cwd_msg = f"(cwd: {cwd if cwd is not None else os.getcwd()})"
 
     if verbose:
-        logging.info(f"Running {cwd_msg}: {c}")
+        logging.getLogger(DBGYM_LOGGER_NAME).info(f"Running {cwd_msg}: {c}")
 
     with subprocess.Popen(
         c,
@@ -30,7 +32,7 @@ def subprocess_run(
             assert proc.stdout is not None
             for line in proc.stdout:
                 if verbose:
-                    logging.info(line)
+                    logging.getLogger(DBGYM_LOGGER_NAME).info(line)
             if not loop:
                 break
         if check_returncode and proc.returncode != 0:

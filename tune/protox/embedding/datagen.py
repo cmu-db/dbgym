@@ -47,6 +47,7 @@ from tune.protox.env.types import (
     TableAttrListMap,
 )
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
 from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
 
@@ -823,7 +824,7 @@ def _produce_index_data(
             # Repeatedly...
             for i in range(sample_limit):
                 if (i % 1024) == 0:
-                    logging.info(
+                    logging.getLogger(DBGYM_LOGGER_NAME).info(
                         f"{target} {leading_col_name} {p} progress update: {i} / {sample_limit}."
                     )
 
@@ -931,4 +932,4 @@ def _produce_index_data(
                 gc.collect()
 
     # Log that we finished.
-    logging.info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")

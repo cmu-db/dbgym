@@ -21,6 +21,7 @@ from tune.protox.env.types import (
     TableAttrAccessSetsMap,
     TableAttrListMap,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 
 class LatentIndexSpace(IndexSpace):
@@ -208,7 +209,7 @@ class LatentIndexSpace(IndexSpace):
             num_attempts += 1
             if num_attempts >= 100:
                 # Log but don't crash.
-                logging.error(
+                logging.getLogger(DBGYM_LOGGER_NAME).error(
                     "Spent 100 iterations and could not find any valid index action. This should not happen."
                 )
                 allow_random_samples = True
@@ -261,9 +262,9 @@ class LatentIndexSpace(IndexSpace):
 
         exist_ia = ia in sc
         if exist_ia:
-            logging.debug("Contemplating %s (exist: True)", sc[sc.index(ia)])
+            logging.getLogger(DBGYM_LOGGER_NAME).debug("Contemplating %s (exist: True)", sc[sc.index(ia)])
         else:
-            logging.debug("Contemplating %s (exist: False)", ia)
+            logging.getLogger(DBGYM_LOGGER_NAME).debug("Contemplating %s (exist: False)", ia)
             # Add the new index with the current index counter.
             sql_commands.append(ia.sql(add=True))
 

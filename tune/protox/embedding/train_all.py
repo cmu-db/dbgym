@@ -45,6 +45,7 @@ from tune.protox.env.types import (
     TableColTuple,
 )
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
 
 
 def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> tuple[int, int]:
@@ -146,7 +147,7 @@ def load_input_data(
     del train_x
     gc.collect()
     gc.collect()
-    logging.info("Train Dataset Size: %s", len(train_dataset))
+    logging.getLogger(DBGYM_LOGGER_NAME).info("Train Dataset Size: %s", len(train_dataset))
     return train_dataset, train_y, train_y[:, -1], val_dataset, num_classes
 
 
@@ -252,15 +253,15 @@ def train_all_embeddings(
     )
 
     results = tuner.fit()
-    logging.info(
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
         "Best hyperparameters found were: ",
         results.get_best_result(metric="loss", mode="min").config,
     )
     if results.num_errors > 0:
-        logging.error("Encountered exceptions!")
+        logging.getLogger(DBGYM_LOGGER_NAME).error("Encountered exceptions!")
         for i in range(len(results)):
             if results[i].error:
-                logging.error(f"Trial {results[i]} FAILED")
+                logging.getLogger(DBGYM_LOGGER_NAME).error(f"Trial {results[i]} FAILED")
         assert False
 
     train_all_embeddings_duration = time.time() - start_time
@@ -313,7 +314,7 @@ def _hpo_train(
     config["seed"] = seed
     config["iterations_per_epoch"] = train_all_args.iterations_per_epoch
 
-    logging.info(config)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(config)
 
     # Build trainer and train.
     trainer, epoch_end = _build_trainer(

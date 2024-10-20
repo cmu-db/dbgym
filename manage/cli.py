@@ -13,7 +13,7 @@ from misc.utils import (
     is_child_path,
     parent_dpath_of_path,
 )
-from util.log import DBGYM_OUTPUT_LOGGER_NAME
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 
 # This is used in test_clean.py. It's defined here to avoid a circular import.
@@ -182,10 +182,10 @@ def clean_workspace(
     ending_num_files = _count_files_in_workspace(dbgym_cfg)
 
     if verbose:
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files"
         )
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}"
         )
 

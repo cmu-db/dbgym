@@ -10,6 +10,7 @@ from typing import IO, Any, Callable, Optional, Tuple
 import redis
 import yaml
 
+from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 
 # Enums
@@ -675,5 +676,5 @@ def is_ssd(path: Path) -> bool:
                 return is_ssd
         return False
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        logging.getLogger(DBGYM_LOGGER_NAME).error(f"An error occurred: {e}")
         return False

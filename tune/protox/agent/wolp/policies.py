@@ -20,6 +20,7 @@ from tune.protox.env.types import (
     HolonAction,
     NeighborParameters,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 DETERMINISTIC_NEIGHBOR_PARAMETERS = {
     "knob_num_nearest": 1,
@@ -72,8 +73,8 @@ class WolpPolicy(BaseModel):
         self.gamma = gamma
 
         # Log all the networks.
-        logging.info("Actor: %s", self.actor)
-        logging.info("Critic: %s", self.critic)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("Actor: %s", self.actor)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("Critic: %s", self.critic)
 
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         raise NotImplementedError()
@@ -172,7 +173,7 @@ class WolpPolicy(BaseModel):
             noise = noise.view(-1, *noise.shape)
 
         if noise is not None:
-            logging.debug(f"Perturbing with noise class {action_noise}")
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Perturbing with noise class {action_noise}")
 
         assert hasattr(self.action_space, "transform_noise")
         raw_action = self.action_space.transform_noise(raw_action, noise=noise)
@@ -185,7 +186,7 @@ class WolpPolicy(BaseModel):
         )
 
         # Log the neighborhood we are observing.
-        logging.debug(f"Neighborhood Sizes {actions_dim}")
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Neighborhood Sizes {actions_dim}")
 
         if random_act:
             # If we want a random action, don't use Q-value estimate.
