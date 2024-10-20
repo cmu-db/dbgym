@@ -31,8 +31,9 @@ def task(ctx: click.Context) -> None:
     dbgym_cfg = DBGymConfig(dbgym_config_path)
     ctx.obj = dbgym_cfg
 
-    set_up_loggers(dbgym_cfg)
-    set_up_warnings(dbgym_cfg)
+    log_dpath = dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+    set_up_loggers(log_dpath)
+    set_up_warnings(log_dpath)
 
 
 if __name__ == "__main__":

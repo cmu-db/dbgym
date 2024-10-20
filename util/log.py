@@ -4,14 +4,12 @@ from pathlib import Path
 from typing import Any, Optional
 import warnings
 
-from misc.utils import DBGymConfig
-
 
 DBGYM_LOGGER_NAME = "dbgym"
 DBGYM_OUTPUT_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.output"
 
 
-def set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
+def set_up_loggers(log_dpath: Path) -> None:
     """
     Set up everything related to the logging library.
 
@@ -24,7 +22,7 @@ def set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
     _set_up_logger(
         logging.getLogger(DBGYM_LOGGER_NAME),
         log_format,
-        dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"{DBGYM_LOGGER_NAME}.log",
+        log_dpath / f"{DBGYM_LOGGER_NAME}.log",
     )
 
     # The output logger is meant to output things to the console. We use it instead of using print to indicate that something is
@@ -49,7 +47,7 @@ def set_up_loggers(dbgym_cfg: DBGymConfig) -> None:
         _set_up_logger(
             logger,
             log_format,
-            dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / f"{logger_name}.log",
+            log_dpath / f"{logger_name}.log",
         )
 
 
@@ -78,11 +76,11 @@ def _set_up_logger(
         logger.addHandler(file_handler)
 
 
-def set_up_warnings(dbgym_cfg: DBGymConfig) -> None:
+def set_up_warnings(log_dpath: Path) -> None:
     """
     Some libraries (like torch) use warnings instead of logging for warnings. I want to redirect these too to avoid cluttering the console.
     """
-    warnings_fpath = dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True) / "warnings.log"
+    warnings_fpath = log_dpath / "warnings.log"
 
     def write_warning_to_file(
         message: Any,
