@@ -3,14 +3,14 @@ from pathlib import Path
 
 import click
 
+from util.log import DBGYM_LOGGER_NAME
+from util.shell import subprocess_run
 from util.workspace import (
     DBGymConfig,
     get_scale_factor_string,
     link_result,
     workload_name_fn,
 )
-from util.log import DBGYM_LOGGER_NAME
-from util.shell import subprocess_run
 
 
 @click.group(name="tpch")

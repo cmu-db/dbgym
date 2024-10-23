@@ -1,9 +1,9 @@
 import click
 
-from util.workspace import DBGymConfig
 from tune.protox.agent.hpo import hpo
 from tune.protox.agent.replay import replay
 from tune.protox.agent.tune import tune
+from util.workspace import DBGymConfig
 
 
 @click.group("agent")

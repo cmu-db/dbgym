@@ -7,6 +7,8 @@ from pathlib import Path
 import click
 import pandas as pd
 
+from tune.protox.agent.coerce_config import coerce_config
+from tune.protox.agent.hpo import TuneTrial, build_space
 from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_BOOT_CONFIG_FPATH,
@@ -21,8 +23,6 @@ from util.workspace import (
     open_and_save,
     workload_name_fn,
 )
-from tune.protox.agent.coerce_config import coerce_config
-from tune.protox.agent.hpo import TuneTrial, build_space
 
 
 # This is used when you already have a good set of HPOs and just want to tune the DBMS

@@ -1,7 +1,7 @@
 import click
 
-from util.workspace import DBGymConfig
 from tune.protox.cli import protox_group
+from util.workspace import DBGymConfig
 
 
 @click.group(name="tune")

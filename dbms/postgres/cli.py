@@ -17,18 +17,6 @@ import sqlalchemy
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import (
-    WORKSPACE_PATH_PLACEHOLDER,
-    DBGymConfig,
-    conv_inputpath_to_realabspath,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
-    get_dbdata_tgz_name,
-    is_ssd,
-    link_result,
-    open_and_save,
-    save_file,
-)
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
@@ -42,6 +30,18 @@ from util.pg import (
     sqlalchemy_conn_execute,
 )
 from util.shell import subprocess_run
+from util.workspace import (
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    conv_inputpath_to_realabspath,
+    default_dbdata_parent_dpath,
+    default_pgbin_path,
+    get_dbdata_tgz_name,
+    is_ssd,
+    link_result,
+    open_and_save,
+    save_file,
+)
 
 
 @click.group(name="postgres")

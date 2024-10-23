@@ -1,8 +1,10 @@
 """
 At a high level, this file's goal is to provide helpers to manage a Postgres instance during
-    agent tuning.
+agent tuning.
+
 On the other hand, the goal of dbms.postgres.cli is to (1) install+build postgres and (2)
-    create dbdata.
+create dbdata.
+
 util.pg provides helpers used by *both* of the above files (as well as other files).
 """
 
@@ -20,7 +22,6 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
@@ -29,6 +30,7 @@ from util.pg import (
     DBGYM_POSTGRES_USER,
     SHARED_PRELOAD_LIBRARIES,
 )
+from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 
 
 class PostgresConn:

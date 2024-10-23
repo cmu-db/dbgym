@@ -18,6 +18,15 @@ import pandas as pd
 import tqdm
 from dateutil.parser import parse
 
+from tune.protox.agent.build_trial import build_trial
+from tune.protox.env.artifact_manager import ArtifactManager
+from tune.protox.env.pg_env import PostgresEnv
+from tune.protox.env.space.holon_space import HolonSpace
+from tune.protox.env.space.primitive.index import IndexAction
+from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
+from tune.protox.env.types import ActionsInfo, HolonAction
+from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymConfig,
     TuningMode,
@@ -28,15 +37,6 @@ from util.workspace import (
     save_file,
     workload_name_fn,
 )
-from tune.protox.agent.build_trial import build_trial
-from tune.protox.env.artifact_manager import ArtifactManager
-from tune.protox.env.pg_env import PostgresEnv
-from tune.protox.env.space.holon_space import HolonSpace
-from tune.protox.env.space.primitive.index import IndexAction
-from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import ActionsInfo, HolonAction
-from tune.protox.env.workload import Workload
-from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 REPLAY_DATA_FNAME = "replay_data.csv"
 

@@ -9,12 +9,12 @@ import pandas as pd
 import tqdm
 from pandas import DataFrame
 
-from util.workspace import DBGymConfig, default_embedder_dname, link_result
 from tune.protox.embedding.analyze import RANGES_FNAME, STATS_FNAME
 from tune.protox.embedding.train_args import (
     EmbeddingSelectArgs,
     EmbeddingTrainGenericArgs,
 )
+from util.workspace import DBGymConfig, default_embedder_dname, link_result
 
 
 def select_best_embeddings(

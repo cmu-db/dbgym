@@ -15,7 +15,6 @@ import torch
 import tqdm
 import yaml
 
-from util.workspace import DBGymConfig, open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
     create_vae_model,
@@ -33,6 +32,7 @@ from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpa
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME
+from util.workspace import DBGymConfig, open_and_save
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"

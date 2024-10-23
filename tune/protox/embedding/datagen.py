@@ -19,6 +19,18 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from dbms.postgres.cli import start_postgres, stop_postgres
+from tune.protox.embedding.loss import COST_COLUMNS
+from tune.protox.env.space.primitive_space.index_space import IndexSpace
+from tune.protox.env.types import (
+    QuerySpec,
+    QueryType,
+    TableAttrAccessSetsMap,
+    TableAttrListMap,
+)
+from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
+from util.pg import create_psycopg_conn
+from util.shell import subprocess_run
 from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
@@ -38,18 +50,6 @@ from util.workspace import (
     traindata_fname,
     workload_name_fn,
 )
-from tune.protox.embedding.loss import COST_COLUMNS
-from tune.protox.env.space.primitive_space.index_space import IndexSpace
-from tune.protox.env.types import (
-    QuerySpec,
-    QueryType,
-    TableAttrAccessSetsMap,
-    TableAttrListMap,
-)
-from tune.protox.env.workload import Workload
-from util.log import DBGYM_LOGGER_NAME
-from util.pg import create_psycopg_conn
-from util.shell import subprocess_run
 
 # FUTURE(oltp)
 # try:

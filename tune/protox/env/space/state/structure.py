@@ -7,7 +7,6 @@ import psycopg
 import torch as th
 from gymnasium import spaces
 
-from util.workspace import DBGymConfig
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import (
     LatentIndexSpace,
@@ -18,6 +17,7 @@ from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import check_subspace
 from tune.protox.env.types import IndexSpaceRawSample, KnobSpaceAction, QuerySpaceAction
+from util.workspace import DBGymConfig
 
 
 class StructureStateSpace(StateSpace, spaces.Dict):

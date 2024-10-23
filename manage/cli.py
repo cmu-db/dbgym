@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymConfig,
     get_runs_path_from_workspace_path,
@@ -13,7 +14,6 @@ from util.workspace import (
     is_child_path,
     parent_dpath_of_path,
 )
-from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 
 # This is used in test_clean.py. It's defined here to avoid a circular import.

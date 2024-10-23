@@ -29,7 +29,6 @@ from torch.optim import Adam  # type: ignore[attr-defined]
 from torch.utils.data import TensorDataset
 from typing_extensions import ParamSpec
 
-from util.workspace import DBGymConfig, open_and_save, restart_ray, save_file
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
 from tune.protox.embedding.train_args import (
     EmbeddingTrainAllArgs,
@@ -46,6 +45,7 @@ from tune.protox.env.types import (
 )
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME
+from util.workspace import DBGymConfig, open_and_save, restart_ray, save_file
 
 
 def fetch_vae_parameters_from_workload(w: Workload, ntables: int) -> tuple[int, int]:

@@ -22,6 +22,8 @@ from ray.tune import Trainable, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
+from tune.protox.agent.build_trial import build_trial
+from util.log import DBGYM_LOGGER_NAME
 from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_BOOT_CONFIG_FPATH,
@@ -47,8 +49,6 @@ from util.workspace import (
     restart_ray,
     workload_name_fn,
 )
-from tune.protox.agent.build_trial import build_trial
-from util.log import DBGYM_LOGGER_NAME
 
 METRIC_NAME = "Best Metric"
 

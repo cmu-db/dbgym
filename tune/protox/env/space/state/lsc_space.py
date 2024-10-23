@@ -3,12 +3,12 @@ from typing import Any
 import psycopg
 from gymnasium.spaces import Box
 
-from util.workspace import DBGymConfig
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.metric import MetricStateSpace
 from tune.protox.env.space.state.structure import StructureStateSpace
 from tune.protox.env.space.utils import check_subspace
+from util.workspace import DBGymConfig
 
 
 class LSCStructureStateSpace(StructureStateSpace):

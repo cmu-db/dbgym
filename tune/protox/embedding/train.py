@@ -7,18 +7,6 @@ import click
 import numpy as np
 import torch
 
-from util.workspace import (
-    BENCHMARK_NAME_PLACEHOLDER,
-    DEFAULT_HPO_SPACE_PATH,
-    WORKLOAD_NAME_PLACEHOLDER,
-    WORKSPACE_PATH_PLACEHOLDER,
-    DBGymConfig,
-    conv_inputpath_to_realabspath,
-    default_benchmark_config_path,
-    default_traindata_path,
-    default_workload_path,
-    workload_name_fn,
-)
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
     STATS_FNAME,
@@ -33,6 +21,18 @@ from tune.protox.embedding.train_args import (
     EmbeddingSelectArgs,
     EmbeddingTrainAllArgs,
     EmbeddingTrainGenericArgs,
+)
+from util.workspace import (
+    BENCHMARK_NAME_PLACEHOLDER,
+    DEFAULT_HPO_SPACE_PATH,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    conv_inputpath_to_realabspath,
+    default_benchmark_config_path,
+    default_traindata_path,
+    default_workload_path,
+    workload_name_fn,
 )
 
 
