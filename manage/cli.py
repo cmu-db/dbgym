@@ -13,9 +13,7 @@ from misc.utils import (
     is_child_path,
     parent_dpath_of_path,
 )
-
-task_logger = logging.getLogger("task")
-task_logger.setLevel(logging.INFO)
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 
 # This is used in test_clean.py. It's defined here to avoid a circular import.
@@ -49,7 +47,7 @@ def manage_clean(dbgym_cfg: DBGymConfig, mode: str) -> None:
 @click.pass_obj
 def manage_count(dbgym_cfg: DBGymConfig) -> None:
     num_files = _count_files_in_workspace(dbgym_cfg)
-    print(
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"The workspace ({dbgym_cfg.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
     )
 
@@ -184,10 +182,10 @@ def clean_workspace(
     ending_num_files = _count_files_in_workspace(dbgym_cfg)
 
     if verbose:
-        task_logger.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files"
         )
-        task_logger.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}"
         )
 

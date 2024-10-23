@@ -29,6 +29,7 @@ from misc.utils import (
     open_and_save,
     save_file,
 )
+from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
     DBGYM_POSTGRES_PASS,
@@ -41,9 +42,6 @@ from util.pg import (
     sqlalchemy_conn_execute,
 )
 from util.shell import subprocess_run
-
-dbms_postgres_logger = logging.getLogger("dbms/postgres")
-dbms_postgres_logger.setLevel(logging.INFO)
 
 
 @click.group(name="postgres")
@@ -142,12 +140,14 @@ def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
 def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
     if not rebuild and expected_repo_symlink_dpath.exists():
-        dbms_postgres_logger.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Skipping _build_repo: {expected_repo_symlink_dpath}"
         )
         return
 
-    dbms_postgres_logger.info(f"Setting up repo in {expected_repo_symlink_dpath}")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"Setting up repo in {expected_repo_symlink_dpath}"
+    )
     repo_real_dpath = dbgym_cfg.cur_task_runs_build_path("repo", mkdir=True)
     subprocess_run(
         f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_cfg.cur_source_path()
@@ -156,7 +156,9 @@ def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     # only link at the end so that the link only ever points to a complete repo
     repo_symlink_dpath = link_result(dbgym_cfg, repo_real_dpath)
     assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
-    dbms_postgres_logger.info(f"Set up repo in {expected_repo_symlink_dpath}")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"Set up repo in {expected_repo_symlink_dpath}"
+    )
 
 
 def _create_dbdata(
@@ -207,7 +209,9 @@ def _create_dbdata(
     # Create symlink.
     # Only link at the end so that the link only ever points to a complete dbdata.
     dbdata_tgz_symlink_path = link_result(dbgym_cfg, dbdata_tgz_real_fpath)
-    dbms_postgres_logger.info(f"Created dbdata in {dbdata_tgz_symlink_path}")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"Created dbdata in {dbdata_tgz_symlink_path}"
+    )
 
 
 def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:

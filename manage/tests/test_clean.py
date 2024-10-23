@@ -11,19 +11,16 @@ from misc.utils import path_exists_dont_follow_symlinks
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
-# Make it DEBUG to see logs from verify_structure(). Make it INFO to not see logs.
-logging.basicConfig(level=logging.INFO)
+# Make it DEBUG to see logs from verify_structure(). Make it CRITICAL to not see any logs.
+# We use the root logger for unit tests to keep it separate from the standard logging subsystem which
+#   uses the dbgym.* loggers.
+logging.basicConfig(level=logging.CRITICAL)
 
 
 FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
 
 
 class CleanTests(unittest.TestCase):
-    """
-    I deemed "clean" important enough to write extensive unit tests for because a bug could lead to
-    losing important files.
-    """
-
     scratchspace_path: Path = Path()
 
     @staticmethod

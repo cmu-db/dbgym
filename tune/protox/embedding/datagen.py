@@ -1,5 +1,6 @@
 import copy
 import gc
+import logging
 import math
 import os
 import random
@@ -46,6 +47,7 @@ from tune.protox.env.types import (
     TableAttrListMap,
 )
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
 from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
 
@@ -308,8 +310,8 @@ def datagen(
     )
     pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
-    _gen_traindata_dir(dbgym_cfg, generic_args, dir_gen_args)
-    _combine_traindata_dir_into_parquet(dbgym_cfg, generic_args, file_gen_args)
+    _gen_traindata_dpath(dbgym_cfg, generic_args, dir_gen_args)
+    _combine_traindata_dpath_into_parquet(dbgym_cfg, generic_args, file_gen_args)
     datagen_duration = time.time() - start_time
     with open(f"{dbgym_cfg.dbgym_this_run_path}/datagen_time.txt", "w") as f:
         f.write(f"{datagen_duration}")
@@ -396,11 +398,11 @@ class EmbeddingFileGenArgs:
         self.rebias = rebias
 
 
-def get_traindata_dir(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.dbgym_this_run_path / "traindata_dir"
+def get_traindata_dpath(dbgym_cfg: DBGymConfig) -> Path:
+    return dbgym_cfg.cur_task_runs_data_path("traindata", mkdir=True)
 
 
-def _gen_traindata_dir(
+def _gen_traindata_dpath(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingDatagenGenericArgs,
     dir_gen_args: EmbeddingDirGenArgs,
@@ -417,7 +419,7 @@ def _gen_traindata_dir(
         dbgym_cfg, tables, attributes, query_spec, generic_args.workload_path, pid=None
     )
     modified_attrs = workload.column_usages()
-    traindata_dir = get_traindata_dir(dbgym_cfg)
+    traindata_dpath = get_traindata_dpath(dbgym_cfg)
 
     with Pool(dir_gen_args.max_concurrent) as pool:
         results = []
@@ -430,10 +432,10 @@ def _gen_traindata_dir(
             )
             for colidx, col in enumerate(cols):
                 if col is None:
-                    output = traindata_dir / tbl
+                    output = traindata_dpath / tbl
                 else:
-                    output = traindata_dir / tbl / col
-                Path(output).mkdir(parents=True, exist_ok=True)
+                    output = traindata_dpath / tbl / col
+                output.mkdir(parents=True, exist_ok=True)
 
                 tbl_sample_limit = dir_gen_args.override_sample_limits.get(
                     tbl, dir_gen_args.default_sample_limit
@@ -471,7 +473,7 @@ def _gen_traindata_dir(
             result.get()
 
 
-def _combine_traindata_dir_into_parquet(
+def _combine_traindata_dpath_into_parquet(
     dbgym_cfg: DBGymConfig,
     generic_args: EmbeddingDatagenGenericArgs,
     file_gen_args: EmbeddingFileGenArgs,
@@ -484,8 +486,8 @@ def _combine_traindata_dir_into_parquet(
         for i, tbl in enumerate(tables):
             tbl_dirs[tbl] = i
 
-    traindata_dir = get_traindata_dir(dbgym_cfg)
-    files = [f for f in Path(traindata_dir).rglob("*.parquet")]
+    traindata_dpath = get_traindata_dpath(dbgym_cfg)
+    files = [f for f in Path(traindata_dpath).rglob("*.parquet")]
 
     def read(file: Path) -> pd.DataFrame:
         tbl = Path(file).parts[-2]
@@ -767,7 +769,6 @@ def _produce_index_data(
     p: int,
     output: Path,
 ) -> None:
-
     models = None
     # FUTURE(oltp)
     # if model_dir is not None:
@@ -823,7 +824,7 @@ def _produce_index_data(
             # Repeatedly...
             for i in range(sample_limit):
                 if (i % 1024) == 0:
-                    print(
+                    logging.getLogger(DBGYM_LOGGER_NAME).info(
                         f"{target} {leading_col_name} {p} progress update: {i} / {sample_limit}."
                     )
 
@@ -856,7 +857,6 @@ def _produce_index_data(
                             )
                         ]
                         if len(r) == 0:
-                            print(cmds)
                             assert False
 
                         global _INDEX_SERVER_COUNTS
@@ -927,8 +927,11 @@ def _produce_index_data(
                 accum_data.append(accum)
 
             if len(accum_data) > 0:
-                _write(accum_data, Path(output), p)
+                _write(accum_data, output, p)
                 gc.collect()
                 gc.collect()
+
     # Log that we finished.
-    print(f"{target} {p} progress update: {sample_limit} / {sample_limit}.")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"{target} {p} progress update: {sample_limit} / {sample_limit}."
+    )

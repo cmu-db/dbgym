@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
 
@@ -13,6 +14,7 @@ from tune.protox.agent.wolp.policies import (
     DETERMINISTIC_NEIGHBOR_PARAMETERS,
     WolpPolicy,
 )
+from util.log import DBGYM_LOGGER_NAME
 
 
 class Wolp(OffPolicyAlgorithm):
@@ -173,10 +175,9 @@ class Wolp(OffPolicyAlgorithm):
 
         actor_losses, critic_losses = [], []
         for gs in range(gradient_steps):
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
-                    f"Training agent gradient step {gs}"
-                )
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"Training agent gradient step {gs}"
+            )
             self._n_updates += 1
             # Sample replay buffer
             replay_data = self.replay_buffer.sample(batch_size)

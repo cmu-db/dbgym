@@ -24,16 +24,19 @@ from misc.utils import (
     conv_inputpath_to_realabspath,
     default_tuning_steps_dpath,
     open_and_save,
+    parent_dpath_of_path,
     save_file,
     workload_name_fn,
 )
 from tune.protox.agent.build_trial import build_trial
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import ActionsInfo, HolonAction
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 
 REPLAY_DATA_FNAME = "replay_data.csv"
 
@@ -192,15 +195,18 @@ def replay_tuning_run(
         str(TuningMode.REPLAY)
     ] = replay_args.workload_timeout_during_replay
 
-    # Go through output.log and find the tuning_steps/[time]/ folders
+    # Go through replay_info.log and find the tuning_steps/[time]/ folders
     # This finds all the [time] folders in tuning_steps/ (except "baseline" since we ignore that in `_is_tuning_step_line()`),
     #   so you could just do `ls tuning_steps/` if you wanted to.
     folders = []
     start_time: Optional[datetime] = None
     start_found = False
-    output_log_fpath = tuning_steps_dpath / "output.log"
+    output_log_fpath = tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME
     with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
         for line in f:
+            assert isinstance(line, str), "This is done for typing purposes."
+            line = line.strip()
+
             if not start_found:
                 if "Baseline Metric" in line:
                     start_time = parse(
@@ -211,10 +217,10 @@ def replay_tuning_run(
                     start_found = True
             else:
                 if _is_tuning_step_line(line):
-                    repo = eval(line.split("Running ")[-1])[-1]
+                    repo = line.split("dst=")[-1]
                     last_folder = repo.split("/")[-1]
                     time_since_start = parse(
-                        line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
+                        line.split("INFO:")[-1].split(" mv")[0].split(" [")[0]
                     )
                     assert type(start_time) is datetime
                     if (
@@ -252,10 +258,10 @@ def replay_tuning_run(
     def _execute_workload_wrapper(
         actions_info: ActionsInfo,
     ) -> tuple[int, int, bool, float]:
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"\n\nfetch_server_knobs(): {fetch_server_knobs(pg_env.pg_conn.conn(), action_space.get_knob_space().tables, action_space.get_knob_space().knobs, pg_env.workload.queries)}\n\n"
         )
-        logging.info(
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"\n\nfetch_server_indexes(): {fetch_server_indexes(pg_env.pg_conn.conn(), action_space.get_knob_space().tables)}\n\n"
         )
         assert (
@@ -313,6 +319,9 @@ def replay_tuning_run(
         existing_index_acts: set[IndexAction] = set()
 
         for line in f:
+            assert isinstance(line, str), "This is done for typing purposes."
+            line = line.strip()
+
             # Keep going until we've found the start.
             if not start_found:
                 if "Baseline Metric" in line:
@@ -326,13 +335,14 @@ def replay_tuning_run(
                 continue
 
             elif _is_tuning_step_line(line):
-                repo = eval(line.split("Running ")[-1])[-1]
+                repo = line.split("dst=")[-1]
+                last_folder = repo.split("/")[-1]
                 time_since_start = parse(
-                    line.split("DEBUG:")[-1].split(" Running")[0].split("[")[0]
+                    line.split("INFO:")[-1].split(" mv")[0].split(" [")[0]
                 )
 
                 # Get the original runtime as well as whether any individual queries and/or the full workload timed out.
-                run_raw_csv_fpath = tuning_steps_dpath / repo / "run.raw.csv"
+                run_raw_csv_fpath = tuning_steps_dpath / last_folder / "run.raw.csv"
                 save_file(dbgym_cfg, run_raw_csv_fpath)
                 run_raw_csv = pd.read_csv(run_raw_csv_fpath)
                 assert len(run_raw_csv.columns) == 7
@@ -366,7 +376,7 @@ def replay_tuning_run(
 
                 # Extract the necessary values from action.pkl
                 with open_and_save(
-                    dbgym_cfg, tuning_steps_dpath / repo / "action.pkl", "rb"
+                    dbgym_cfg, tuning_steps_dpath / last_folder / "action.pkl", "rb"
                 ) as f:
                     actions_info: ActionsInfo = pickle.load(f)
                     all_holon_action_variations = actions_info[
@@ -399,7 +409,9 @@ def replay_tuning_run(
                 index_acts.add(index_action)
                 assert len(index_acts) > 0
                 with open_and_save(
-                    dbgym_cfg, tuning_steps_dpath / repo / "prior_state.pkl", "rb"
+                    dbgym_cfg,
+                    tuning_steps_dpath / last_folder / "prior_state.pkl",
+                    "rb",
                 ) as f:
                     prior_states = pickle.load(f)
                     all_sc = set(prior_states[1])
@@ -465,8 +477,6 @@ def replay_tuning_run(
                     "num_timed_out_queries_in_replay": num_timed_out_queries_in_replay,
                     "did_workload_time_out_in_replay": did_workload_time_out_in_replay,
                 }
-                # Log before performing checks to help with debugging.
-                logging.info(f"this_step_run_data={this_step_run_data}")
                 assert not (
                     num_timed_out_queries_in_replay > 0
                     and not did_workload_time_out_in_replay
@@ -474,15 +484,14 @@ def replay_tuning_run(
                 run_data.append(this_step_run_data)
                 current_step += 1
 
-                run_folder = repo.split("/")[-1]
-                if run_folder in folders and run_folder == folders[-1]:
+                if last_folder in folders and last_folder == folders[-1]:
                     break
             progess_bar.update(1)
 
     # Output.
     run_data_df = pd.DataFrame(run_data)
     pd.set_option("display.max_columns", 10)
-    print(
+    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
     )
     run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)

@@ -66,7 +66,7 @@ def extract_aliases(stmts: pglast.ast.Node) -> TableAliasMap:
                     if alias not in aliases[relname]:
                         aliases[relname].append(alias)
                     # else:
-                    #    logging.warn(f"Squashing {relname} {alias} on {sql_file}")
+                    #    logging.getLogger(DBGYM_LOGGER_NAME).warning(f"Squashing {relname} {alias} on {sql_file}")
     return TableAliasMap({k: v for k, v in aliases.items() if k not in ctes})
 
 

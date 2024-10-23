@@ -2,7 +2,7 @@ from typing import Any, Optional, Tuple
 
 import psycopg
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.space.latent_space.latent_knob_space import LatentKnobSpace
 from tune.protox.env.space.primitive_space import QuerySpace
 from tune.protox.env.types import (
@@ -15,11 +15,14 @@ from tune.protox.env.types import (
 
 class LatentQuerySpace(LatentKnobSpace, QuerySpace):
     def __init__(
-        self, logger: Optional[Logger] = None, *args: Any, **kwargs: Any
+        self,
+        artifact_manager: Optional[ArtifactManager] = None,
+        *args: Any,
+        **kwargs: Any
     ) -> None:
         # Only manually initialize against QuerySpace.
         QuerySpace.__init__(self, *args, **kwargs)
-        self.logger = logger
+        self.artifact_manager = artifact_manager
         self.name = "query"
 
     def uses_embed(self) -> bool:

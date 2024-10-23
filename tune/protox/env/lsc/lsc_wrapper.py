@@ -1,27 +1,33 @@
+import logging
 from typing import Any, Optional, Tuple
 
 import gymnasium as gym
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.lsc.lsc import LSC
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
+from util.log import DBGYM_LOGGER_NAME
 
 
 class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
-    def __init__(self, lsc: LSC, env: gym.Env[Any, Any], logger: Optional[Logger]):
+    def __init__(
+        self,
+        lsc: LSC,
+        env: gym.Env[Any, Any],
+        artifact_manager: Optional[ArtifactManager],
+    ):
         assert not isinstance(env, TargetResetWrapper)
         super().__init__(env)
         self.lsc = lsc
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
     def reset(self, *args: Any, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         state, info = self.env.reset(*args, **kwargs)
         self.lsc.reset()
 
         state["lsc"] = self.lsc.current_scale()
-        if self.logger:
-            lsc = state["lsc"]
-            self.logger.get_logger(__name__).debug(f"Attaching LSC: {lsc}")
+        lsc = state["lsc"]
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Attaching LSC: {lsc}")
 
         return state, info
 
@@ -40,10 +46,9 @@ class LSCWrapper(gym.Wrapper[Any, Any, Any, Any]):
         state["lsc"] = self.lsc.current_scale()
         new_bias = self.lsc.current_bias()
 
-        if self.logger:
-            lsc = state["lsc"]
-            self.logger.get_logger(__name__).debug(
-                f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
-            )
+        lsc = state["lsc"]
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"Shifting LSC: {old_lsc} ({old_bias}) -> {lsc} ({new_bias})"
+        )
 
         return state, float(reward), term, trunc, info

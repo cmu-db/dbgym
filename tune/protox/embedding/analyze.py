@@ -2,6 +2,7 @@ import copy
 import gc
 import itertools
 import json
+import logging
 import math
 import os
 import shutil
@@ -31,6 +32,7 @@ from tune.protox.embedding.vae import VAELoss, gen_vae_collate
 from tune.protox.env.space.latent_space.latent_index_space import LatentIndexSpace
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
 
 STATS_FNAME = "stats.txt"
 RANGES_FNAME = "ranges.txt"
@@ -129,7 +131,9 @@ def _create_stats_for_part(
     models = [m for m in itertools.chain(*[part_dpath.rglob("config")])]
     for model_config in tqdm.tqdm(models):
         if ((Path(model_config).parent) / "FAILED").exists():
-            print("Detected failure in: ", model_config)
+            logging.getLogger(DBGYM_LOGGER_NAME).warning(
+                "Detected failure in: ", model_config
+            )
             continue
 
         # don't use open_and_save() because we generated model_config in this run
@@ -404,7 +408,7 @@ def _create_ranges_for_embedder(
         index_output_transform=index_output_transform,
         # No-op noise.
         index_noise_scale=index_noise_scale,
-        logger=None,
+        artifact_manager=None,
     )
 
     output_scale = config["metric_loss_md"]["output_scale"]

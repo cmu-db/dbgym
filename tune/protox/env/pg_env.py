@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any, Optional, Tuple, Union
@@ -9,7 +10,7 @@ import psycopg
 from plumbum import local
 
 from misc.utils import DBGymConfig, TuningMode
-from tune.protox.env.logger import Logger, time_record
+from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
@@ -23,6 +24,7 @@ from tune.protox.env.types import (
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
+from util.log import DBGYM_LOGGER_NAME
 
 
 class PostgresEnv(gym.Env[Any, Any]):
@@ -38,13 +40,13 @@ class PostgresEnv(gym.Env[Any, Any]):
         pg_conn: PostgresConn,
         query_timeout: int,
         benchbase_config: dict[str, Any],
-        logger: Optional[Logger] = None,
+        artifact_manager: Optional[ArtifactManager] = None,
     ):
         super().__init__()
 
         self.dbgym_cfg = dbgym_cfg
         self.tuning_mode = tuning_mode
-        self.logger = logger
+        self.artifact_manager = artifact_manager
         self.action_space = action_space
         self.observation_space = observation_space
         self.workload = workload
@@ -71,20 +73,18 @@ class PostgresEnv(gym.Env[Any, Any]):
             self.workload.queries,
         )
 
-        if self.logger:
-            self.logger.get_logger(__name__).debug(
-                f"[Restored snapshot] {self.state_container}"
-            )
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            f"[Restored snapshot] {self.state_container}"
+        )
 
     @time_record("reset")
     def reset(  # type: ignore
         self, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None
     ) -> tuple[Any, EnvInfoDict]:
         reset_start = time.time()
-        if self.logger:
-            self.logger.get_logger(__name__).info(
-                "Resetting database system state to snapshot."
-            )
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            "Resetting database system state to snapshot."
+        )
         super().reset(seed=seed)
 
         target_config: Optional[TargetResetConfig] = None
@@ -139,10 +139,9 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             self.state_container = copy.deepcopy(config)
             self.current_state = env_state.copy()
-            if self.logger:
-                self.logger.get_logger(__name__).debug(
-                    "[Finished] Reset to state (config): %s", config
-                )
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                "[Finished] Reset to state (config): %s", config
+            )
 
         else:
             # Restore a pristine snapshot of the world.
@@ -215,10 +214,9 @@ class PostgresEnv(gym.Env[Any, Any]):
     @time_record("step_before_execution")
     def step_before_execution(self, action: HolonAction) -> tuple[bool, EnvInfoDict]:
         # Log the action in debug mode.
-        if self.logger:
-            self.logger.get_logger(__name__).debug(
-                "Selected action: %s", self.action_space.to_jsonable([action])
-            )
+        logging.getLogger(DBGYM_LOGGER_NAME).debug(
+            "Selected action: %s", self.action_space.to_jsonable([action])
+        )
 
         # Get the prior state.
         prior_state = copy.deepcopy(self.state_container)
@@ -256,14 +254,13 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert isinstance(self.observation_space, StateSpace)
             assert isinstance(self.action_space, HolonSpace)
             # Evaluate the benchmark.
-            assert self.logger is not None
-            self.logger.get_logger(__name__).info(
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
                 f"\n\nfetch_server_knobs(): {fetch_server_knobs(self.pg_conn.conn(), self.action_space.get_knob_space().tables, self.action_space.get_knob_space().knobs, self.workload.queries)}\n\n"
             )
-            self.logger.get_logger(__name__).info(
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
                 f"\n\nfetch_server_indexes(): {fetch_server_indexes(self.pg_conn.conn(), self.action_space.get_knob_space().tables)}\n\n"
             )
-            self.logger.get_logger(__name__).info(
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
                 f"\n\naction_names: {[a[0] for a in all_holon_action_variations]}\n\n"
             )
             (
@@ -286,10 +283,9 @@ class PostgresEnv(gym.Env[Any, Any]):
             )
         else:
             # Illegal configuration.
-            if self.logger:
-                self.logger.get_logger(__name__).info(
-                    "Found illegal configuration: %s", info["attempted_changes"]
-                )
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                "Found illegal configuration: %s", info["attempted_changes"]
+            )
             success = False
             # Since we reached an invalid area, just set the next state to be the current state.
             metric, reward = self.reward_utility(did_error=True)
@@ -412,24 +408,22 @@ class PostgresEnv(gym.Env[Any, Any]):
                             False
                         ), f"attempt_checkpoint() failed after 5 attempts with {e}"
 
-                    if self.logger:
-                        self.logger.get_logger(__name__).debug(
-                            f"[attempt_checkpoint]: {e}"
-                        )
+                    logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                        f"[attempt_checkpoint]: {e}"
+                    )
                     time.sleep(5)
 
         shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
-            if self.logger:
-                self.logger.get_logger(__name__).info(
-                    f"Executing {sql} [{i+1}/{len(sql_commands)}]"
-                )
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                f"Executing {sql} [{i+1}/{len(sql_commands)}]"
+            )
 
             ret, stderr = self.pg_conn.psql(sql)
             if ret == -1:
                 if stderr:
-                    print(stderr, flush=True)
+                    logging.getLogger(DBGYM_LOGGER_NAME).warning(stderr)
                     assert (
                         "index row requires" in stderr
                         or "canceling statement" in stderr
@@ -439,7 +433,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                     attempt_checkpoint(self.pg_conn.get_connstr())
                 return False
 
-            assert ret == 0, print(stderr)
+            assert ret == 0, stderr
 
         # Now try and perform the configuration changes.
         return self.pg_conn.start_with_changes(

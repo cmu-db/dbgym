@@ -1,4 +1,5 @@
 import itertools
+import logging
 import random
 from typing import Any, Callable, Iterator, Optional, Tuple, Union
 
@@ -9,6 +10,8 @@ from numpy.typing import NDArray
 from pytorch_metric_learning import trainers
 from pytorch_metric_learning.utils import common_functions as c_f
 from torch.utils.data import Sampler
+
+from util.log import DBGYM_LOGGER_NAME
 
 
 class StratifiedRandomSampler(Sampler[int]):
@@ -165,7 +168,7 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
         self.initialize_dataloader()
         for self.epoch in range(start_epoch, num_epochs + 1):
             self.set_to_train()
-            c_f.LOGGER.info("TRAINING EPOCH %d" % self.epoch)
+            logging.getLogger(DBGYM_LOGGER_NAME).info("TRAINING EPOCH %d" % self.epoch)
 
             if not self.disable_tqdm:
                 pbar = tqdm.tqdm(range(self.iterations_per_epoch))
@@ -211,7 +214,6 @@ class VAETrainer(trainers.BaseTrainer):  # type: ignore
                             "Recon Loss is invalid ({ml}, {vl}, {self.last_recon_loss}"
                         )
 
-                    print(self.fail_msg)
                     return
 
                 if not self.disable_tqdm:

@@ -1,12 +1,14 @@
+import logging
 import random
 from typing import Any, Optional, Tuple, cast
 
 import gymnasium as gym
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.types import EnvInfoDict, HolonStateContainer, TargetResetConfig
 from tune.protox.env.util.reward import RewardUtility
+from util.log import DBGYM_LOGGER_NAME
 
 
 class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
@@ -16,7 +18,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
         maximize_state: bool,
         reward_utility: RewardUtility,
         start_reset: bool,
-        logger: Optional[Logger],
+        artifact_manager: Optional[ArtifactManager],
     ):
         super().__init__(env)
         self.maximize_state = maximize_state
@@ -25,7 +27,7 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
         self.tracked_states: list[TargetResetConfig] = []
         self.best_metric = None
         self.real_best_metric = None
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
     def _get_state(self) -> HolonStateContainer:
         # There is a state_container at the bottom.
@@ -50,10 +52,9 @@ class TargetResetWrapper(gym.core.Wrapper[Any, Any, Any, Any]):
                 self.real_best_metric = self.best_metric
 
             if self.maximize_state:
-                if self.logger:
-                    self.logger.get_logger(__name__).info(
-                        f"Found new maximal state with {metric}."
-                    )
+                logging.getLogger(DBGYM_LOGGER_NAME).info(
+                    f"Found new maximal state with {metric}."
+                )
                 assert len(self.tracked_states) > 0
                 state = self._get_state()
                 if self.start_reset:

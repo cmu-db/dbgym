@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import subprocess
@@ -9,6 +10,7 @@ from typing import IO, Any, Callable, Optional, Tuple
 import redis
 import yaml
 
+from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 
 # Enums
@@ -107,8 +109,8 @@ default_tuning_steps_dname: Callable[[str, str, bool], str] = (
 #  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
 #  - By convention, symlinks should end with ".link". The bug that motivated this decision involved replaying a tuning run. When
 #    replaying a tuning run, you read the tuning_steps/ folder of the tuning run. Earlier, I created a symlink to that tuning_steps/
-#    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an output.log file, which goes in
-#    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the output.log file of the
+#    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
+#    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
 #    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
 default_traindata_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -674,5 +676,5 @@ def is_ssd(path: Path) -> bool:
                 return is_ssd
         return False
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.getLogger(DBGYM_LOGGER_NAME).error(f"An error occurred: {e}")
         return False

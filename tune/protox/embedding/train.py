@@ -231,7 +231,6 @@ def train(
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    logging.getLogger().setLevel(logging.INFO)
 
     workload_path = conv_inputpath_to_realabspath(
         dbgym_cfg,

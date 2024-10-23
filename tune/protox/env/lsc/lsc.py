@@ -1,10 +1,12 @@
+import logging
 from typing import Any, Optional, TypeVar, cast
 
 import numpy as np
 import torch
 
-from tune.protox.env.logger import Logger
+from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.types import ProtoAction
+from util.log import DBGYM_LOGGER_NAME
 
 T = TypeVar("T", torch.Tensor, np.typing.NDArray[np.float32])
 
@@ -15,7 +17,7 @@ class LSC(object):
         horizon: int,
         lsc_parameters: dict[str, Any],
         vae_config: dict[str, Any],
-        logger: Optional[Logger],
+        artifact_manager: Optional[ArtifactManager],
     ):
         self.frozen = False
         self.horizon = horizon
@@ -50,22 +52,21 @@ class LSC(object):
         self.increment = np.array(lsc_increments)
         self.max = np.array(lsc_max)
         self.shift_after = lsc_parameters["shift_after"]
-        self.logger = logger
+        self.artifact_manager = artifact_manager
 
-        if self.logger:
-            self.logger.get_logger(__name__).info("LSC Shift: %s", self.lsc_shift)
-            self.logger.get_logger(__name__).info(
-                "LSC Shift Increment: %s", self.increment
-            )
-            self.logger.get_logger(__name__).info("LSC Shift Max: %s", self.max)
+        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift: %s", self.lsc_shift)
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            "LSC Shift Increment: %s", self.increment
+        )
+        logging.getLogger(DBGYM_LOGGER_NAME).info("LSC Shift Max: %s", self.max)
 
     def apply_bias(self, action: ProtoAction) -> ProtoAction:
         if not self.enabled:
             return action
 
-        assert action.shape[-1] == self.vae_configuration["latent_dim"], print(
-            action.shape, self.vae_configuration["latent_dim"]
-        )
+        assert (
+            action.shape[-1] == self.vae_configuration["latent_dim"]
+        ), f"{action.shape} {self.vae_configuration['latent_dim']}"
 
         # Get the LSC shift associated with the current episode.
         lsc_shift = self.lsc_shift[(self.num_steps % self.horizon)]
@@ -130,7 +131,6 @@ class LSC(object):
             # Increment the current bias with the increment.
             self.lsc_shift[:bound] += self.increment[:bound]
             self.lsc_shift = self.lsc_shift % self.max
-            if self.logger:
-                self.logger.get_logger(__name__).info(
-                    "LSC Bias Update: %s", self.lsc_shift
-                )
+            logging.getLogger(DBGYM_LOGGER_NAME).info(
+                "LSC Bias Update: %s", self.lsc_shift
+            )

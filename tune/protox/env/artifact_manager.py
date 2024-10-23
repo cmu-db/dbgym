@@ -13,6 +13,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from typing_extensions import ParamSpec
 
 from misc.utils import DBGymConfig
+from util.log import DBGYM_LOGGER_NAME
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -24,18 +25,22 @@ def time_record(key: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
             start = time.time()
             ret = f(*args, **kwargs)
 
-            # TODO(wz2): This is a hack to get a logger instance.
+            # TODO(wz2): This is a hack to get a artifact_manager instance.
             first_arg = args[0]  # Ignore the indexing type error
-            assert hasattr(first_arg, "logger"), print(first_arg, type(first_arg))
+            assert hasattr(
+                first_arg, "artifact_manager"
+            ), f"{first_arg} {type(first_arg)}"
 
-            if first_arg.logger is None:
-                # If there is no logger, just return.
+            if first_arg.artifact_manager is None:
+                # If there is no artifact_manager, just return.
                 return ret
 
-            assert isinstance(first_arg.logger, Logger)
-            if first_arg.logger is not None:
+            assert isinstance(first_arg.artifact_manager, ArtifactManager)
+            if first_arg.artifact_manager is not None:
                 cls_name = type(first_arg).__name__
-                first_arg.logger.record(f"{cls_name}_{key}", time.time() - start)
+                first_arg.artifact_manager.record(
+                    f"{cls_name}_{key}", time.time() - start
+                )
             return ret
 
         return wrapped_f
@@ -54,29 +59,41 @@ class Encoder(json.JSONEncoder):
         return super(Encoder, self).default(obj)
 
 
-class Logger(object):
+class ArtifactManager(object):
+    """
+    This class manages the following artifacts of Proto-X: info for replaying and TensorBoard output.
+
+    Note that the root logger is set up globally inside the upper-most task.py file. Do not reconfigure it here.
+    """
+
+    # The output log is the file that the root logger writes to
+    REPLAY_INFO_LOG_FNAME = "replay_info.log"
+    REPLAY_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.replay"
+
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
         trace: bool,
-        verbose: bool,
     ) -> None:
         self.log_dpath = dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
         self.trace = trace
-        self.verbose = verbose
         self.tensorboard_dpath = self.log_dpath / "tboard"
         self.tuning_steps_dpath = self.log_dpath / "tuning_steps"
         self.tuning_steps_dpath.mkdir(parents=True, exist_ok=True)
 
-        level = logging.INFO if not self.verbose else logging.DEBUG
-        formatter = "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
-        logging.basicConfig(format=formatter, level=level, force=True)
-
-        # Setup the file logger.
-        file_logger = logging.FileHandler(self.tuning_steps_dpath / "output.log")
-        file_logger.setFormatter(logging.Formatter(formatter))
-        file_logger.setLevel(level)
-        logging.getLogger().addHandler(file_logger)
+        # Create replay logger
+        replay_info_log_handler = logging.FileHandler(
+            self.tuning_steps_dpath / ArtifactManager.REPLAY_INFO_LOG_FNAME
+        )
+        replay_info_log_handler.setFormatter(
+            logging.Formatter(
+                "%(levelname)s:%(asctime)s [%(filename)s:%(lineno)s]  %(message)s"
+            )
+        )
+        replay_info_log_handler.setLevel(logging.INFO)
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).addHandler(
+            replay_info_log_handler
+        )
 
         # Setup the writer.
         self.writer: Union[SummaryWriter, None] = None
@@ -87,10 +104,8 @@ class Logger(object):
         self.iteration = 1
         self.iteration_data: dict[str, Any] = {}
 
-    def get_logger(self, name: Optional[str]) -> logging.Logger:
-        if name is None:
-            return logging.getLogger()
-        return logging.getLogger(name)
+    def log_to_replay_info(self, message: str) -> None:
+        logging.getLogger(ArtifactManager.REPLAY_LOGGER_NAME).info(message)
 
     def stash_results(
         self,
@@ -111,31 +126,31 @@ class Logger(object):
             # by different HPO trials so that the folders don't overwrite each other.
             dname += f"_{ray_trial_id}"
 
+        target_stash_dpath = self.tuning_steps_dpath / dname
+
         if (
             info_dict["results_dpath"] is not None
             and Path(info_dict["results_dpath"]).exists()
         ):
-            local["mv"][
-                info_dict["results_dpath"], f"{self.tuning_steps_dpath}/{dname}"
-            ].run()
-        else:
-            Path(f"{self.tuning_steps_dpath}/{dname}").mkdir(
-                parents=True, exist_ok=True
+            local["mv"][info_dict["results_dpath"], str(target_stash_dpath)].run()
+            self.log_to_replay_info(
+                f"mv src={info_dict['results_dpath']} dst={str(target_stash_dpath)}"
             )
+        else:
+            target_stash_dpath.mkdir(parents=True, exist_ok=True)
 
         if info_dict["prior_pgconf"]:
             local["cp"][
-                info_dict["prior_pgconf"],
-                f"{self.tuning_steps_dpath}/{dname}/old_pg.conf",
+                info_dict["prior_pgconf"], str(target_stash_dpath / "old_pg.conf")
             ].run()
 
         if info_dict["prior_state_container"]:
-            with open(self.tuning_steps_dpath / dname / "prior_state.pkl", "wb") as f:
+            with open(target_stash_dpath / "prior_state.pkl", "wb") as f:
                 # info_dict["prior_state_container"] is a somewhat complex object so we use pickle over json
                 pickle.dump(info_dict["prior_state_container"], f)
 
         if info_dict["actions_info"]:
-            with open(self.tuning_steps_dpath / dname / "action.pkl", "wb") as f:
+            with open(target_stash_dpath / "action.pkl", "wb") as f:
                 pickle.dump(info_dict["actions_info"], f)
 
     def advance(self) -> None:

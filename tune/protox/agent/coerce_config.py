@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import yaml
@@ -24,7 +25,6 @@ def coerce_config(
         benchmark_config["query_spec"].update(mqs)
 
         defaults = {
-            "verbose": True,
             "trace": True,
             "seed": hpo_params["mythril_args"]["seed"],
             "tune_duration": {
@@ -89,7 +89,7 @@ def coerce_config(
             elif s == "space_version":
                 continue
             else:
-                assert False, print(f"{s} unable to coerce.")
+                assert False, f"{s} unable to coerce."
 
         return new_config
 
