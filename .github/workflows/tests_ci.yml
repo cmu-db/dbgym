@@ -47,7 +47,8 @@ jobs:
 
     - name: Run integration tests
       # Delete the workspace. Run once with a clean workspace. Run again from the existing workspace.
-      # Note that we need to run with a non-root user in order to start Postgres.
+      # Note that we need to run with a non-root user in order to start Postgres. This is configured in the .yaml
+      # file for our self-hosted GHA runners.
       run: |
         . "$HOME/.cargo/env"
         rm -rf ../dbgym_integtest_workspace
