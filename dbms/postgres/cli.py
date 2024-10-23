@@ -17,7 +17,7 @@ import sqlalchemy
 
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import (
+from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     conv_inputpath_to_realabspath,

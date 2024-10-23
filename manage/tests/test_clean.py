@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, NewType, cast
 
 from manage.cli import MockDBGymConfig, clean_workspace
-from misc.utils import path_exists_dont_follow_symlinks
+from util.workspace import path_exists_dont_follow_symlinks
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.

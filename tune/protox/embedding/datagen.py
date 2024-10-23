@@ -19,7 +19,7 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from dbms.postgres.cli import start_postgres, stop_postgres
-from misc.utils import (
+from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     SCALE_FACTOR_PLACEHOLDER,
     WORKLOAD_NAME_PLACEHOLDER,

@@ -15,7 +15,7 @@ import torch
 import tqdm
 import yaml
 
-from misc.utils import DBGymConfig, open_and_save
+from util.workspace import DBGymConfig, open_and_save
 from tune.protox.embedding.loss import CostLoss, get_bias_fn
 from tune.protox.embedding.train_all import (
     create_vae_model,

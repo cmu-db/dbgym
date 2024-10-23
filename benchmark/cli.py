@@ -1,7 +1,7 @@
 import click
 
 from benchmark.tpch.cli import tpch_group
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 
 
 @click.group(name="benchmark")

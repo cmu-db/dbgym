@@ -6,7 +6,7 @@ from pathlib import Path
 
 import click
 
-from misc.utils import (
+from util.workspace import (
     DBGymConfig,
     get_runs_path_from_workspace_path,
     get_symlinks_path_from_workspace_path,

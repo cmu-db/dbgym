@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 import pandas as pd
 
-from misc.utils import (
+from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_BOOT_CONFIG_FPATH,
     WORKLOAD_NAME_PLACEHOLDER,

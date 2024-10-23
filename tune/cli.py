@@ -1,6 +1,6 @@
 import click
 
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 from tune.protox.cli import protox_group
 
 

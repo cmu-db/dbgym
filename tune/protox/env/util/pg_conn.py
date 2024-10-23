@@ -12,7 +12,7 @@ import shutil
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import psutil
 import psycopg
@@ -20,7 +20,7 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
+from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (

@@ -7,7 +7,7 @@ import psycopg
 import torch as th
 from gymnasium import spaces
 
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import (
     LatentIndexSpace,

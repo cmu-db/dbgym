@@ -9,7 +9,7 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
-from misc.utils import DBGymConfig, TuningMode
+from util.workspace import DBGymConfig, TuningMode
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace

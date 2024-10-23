@@ -16,7 +16,7 @@ from gymnasium.wrappers import (  # type: ignore[attr-defined]
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
-from misc.utils import (
+from util.workspace import (
     DBGymConfig,
     TuningMode,
     make_redis_started,

@@ -7,7 +7,7 @@ import click
 import numpy as np
 import torch
 
-from misc.utils import (
+from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_HPO_SPACE_PATH,
     WORKLOAD_NAME_PLACEHOLDER,

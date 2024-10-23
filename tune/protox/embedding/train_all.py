@@ -29,7 +29,7 @@ from torch.optim import Adam  # type: ignore[attr-defined]
 from torch.utils.data import TensorDataset
 from typing_extensions import ParamSpec
 
-from misc.utils import DBGymConfig, open_and_save, restart_ray, save_file
+from util.workspace import DBGymConfig, open_and_save, restart_ray, save_file
 from tune.protox.embedding.loss import COST_COLUMNS, CostLoss, get_bias_fn
 from tune.protox.embedding.train_args import (
     EmbeddingTrainAllArgs,

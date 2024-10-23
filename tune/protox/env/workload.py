@@ -12,7 +12,7 @@ import numpy as np
 import pglast
 from plumbum import local
 
-from misc.utils import DBGymConfig, open_and_save
+from util.workspace import DBGymConfig, open_and_save
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace

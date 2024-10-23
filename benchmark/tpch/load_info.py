@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from dbms.load_info_base_class import LoadInfoBaseClass
-from misc.utils import DBGymConfig, get_scale_factor_string
+from util.workspace import DBGymConfig, get_scale_factor_string
 
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
 TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"

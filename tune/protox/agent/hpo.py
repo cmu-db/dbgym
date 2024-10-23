@@ -22,7 +22,7 @@ from ray.tune import Trainable, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
-from misc.utils import (
+from util.workspace import (
     BENCHMARK_NAME_PLACEHOLDER,
     DEFAULT_BOOT_CONFIG_FPATH,
     DEFAULT_SYSKNOBS_PATH,

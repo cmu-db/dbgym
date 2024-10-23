@@ -1,6 +1,6 @@
 import click
 
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 from tune.protox.agent.hpo import hpo
 from tune.protox.agent.replay import replay
 from tune.protox.agent.tune import tune

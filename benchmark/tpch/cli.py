@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from misc.utils import (
+from util.workspace import (
     DBGymConfig,
     get_scale_factor_string,
     link_result,
