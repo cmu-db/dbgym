@@ -38,7 +38,7 @@ def clear_workspace(workspace_dpath: Path) -> None:
     if workspace_dpath.exists():
         if actual_workspace_dpath.exists():
             assert not workspace_dpath.samefile(
-                "../dbgym_workspace"
+                actual_workspace_dpath
             ), "YOU MAY BE ABOUT TO DELETE YOUR ACTUAL WORKSPACE"
         shutil.rmtree(workspace_dpath)
 
