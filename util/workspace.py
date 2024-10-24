@@ -171,11 +171,14 @@ default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] 
 default_dbdata_parent_dpath: Callable[[Path], Path] = (
     lambda workspace_path: get_tmp_path_from_workspace_path(workspace_path)
 )
-default_pgbin_path: Callable[[Path], Path] = (
+default_repo_path: Callable[[Path], Path] = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_dbms_postgres"
     / "build"
     / "repo.link"
+)
+default_pgbin_path: Callable[[Path], Path] = (
+    lambda workspace_path: default_repo_path(workspace_path)
     / "boot"
     / "build"
     / "postgres"

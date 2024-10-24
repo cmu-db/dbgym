@@ -5,10 +5,11 @@ import subprocess
 
 import yaml
 
-from util.workspace import default_tables_path, workload_name_fn, default_workload_path
+from util.workspace import default_tables_path, workload_name_fn, default_workload_path, default_repo_path
 
 
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
+DBMS = "postgres"
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
 INTEGTEST_DBGYM_CONFIG_FPATH = Path("scripts/integtest_dbgym_config.yaml")
@@ -40,11 +41,16 @@ if __name__ == "__main__":
     # subprocess.run(f"python task.py benchmark {BENCHMARK} data {SCALE_FACTOR}".split(), check=True)
     # assert(tables_dpath.exists())
 
-    workload_name = workload_name_fn(SCALE_FACTOR, 15721, 15721, "all")
-    workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
-    assert(not workload_dpath.exists())
-    subprocess.run(f"python task.py benchmark {BENCHMARK} workload --scale-factor {SCALE_FACTOR}".split(), check=True)
-    assert(workload_dpath.exists())
+    # workload_name = workload_name_fn(SCALE_FACTOR, 15721, 15721, "all")
+    # workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
+    # assert(not workload_dpath.exists())
+    # subprocess.run(f"python task.py benchmark {BENCHMARK} workload --scale-factor {SCALE_FACTOR}".split(), check=True)
+    # assert(workload_dpath.exists())
+
+    repo_dpath = default_repo_path(workspace_dpath)
+    assert(not repo_dpath.exists())
+    subprocess.run(f"python task.py dbms {DBMS} build".split(), check=True)
+    assert(repo_dpath.exists())
 
     # Clear it at the end as well to avoid leaving artifacts.
     # clear_workspace(workspace_dpath)
