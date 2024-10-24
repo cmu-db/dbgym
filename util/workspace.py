@@ -106,6 +106,9 @@ default_hpoed_agent_params_fname: Callable[[str, str], str] = (
 default_tuning_steps_dname: Callable[[str, str, bool], str] = (
     lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
 )
+default_replay_data_fname: Callable[[str, str, bool], str] = (
+    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
+)
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
@@ -192,6 +195,19 @@ default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
     / "artifacts"
     / (
         default_tuning_steps_dname(
+            benchmark_name, workload_name, boot_enabled_during_tune
+        )
+        + ".link"
+    )
+)
+default_replay_data_fpath: Callable[[Path, str, str, bool], Path] = (
+    lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / "dbgym_tune_protox_agent"
+    / "data"
+    / (
+        default_replay_data_fname(
             benchmark_name, workload_name, boot_enabled_during_tune
         )
         + ".link"

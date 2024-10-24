@@ -6,7 +6,7 @@ import sys
 
 import yaml
 
-from util.workspace import default_tables_path, workload_name_fn, default_workload_path, default_repo_path, default_pristine_dbdata_snapshot_path, default_embedder_path, default_traindata_path, default_hpoed_agent_params_path
+from util.workspace import default_tables_path, workload_name_fn, default_workload_path, default_repo_path, default_pristine_dbdata_snapshot_path, default_embedder_path, default_traindata_path, default_hpoed_agent_params_path, default_tuning_steps_dpath, default_replay_data_fpath
 
 
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
@@ -63,18 +63,28 @@ if __name__ == "__main__":
 
     # traindata_dpath = default_traindata_path(workspace_dpath, BENCHMARK, workload_name)
     # assert(not traindata_dpath.exists())
-    # subprocess.run(f"python3 task.py tune {AGENT} embedding datagen {BENCHMARK} --scale-factor {SCALE_FACTOR} --override-sample-limits lineitem,32768 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
+    # subprocess.run(f"python task.py tune {AGENT} embedding datagen {BENCHMARK} --scale-factor {SCALE_FACTOR} --override-sample-limits lineitem,32768 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
     # assert(traindata_dpath.exists())
 
     # embedder_dpath = default_embedder_path(workspace_dpath, BENCHMARK, workload_name)
     # assert(not embedder_dpath.exists())
-    # subprocess.run(f"python3 task.py tune {AGENT} embedding train {BENCHMARK} --scale-factor {SCALE_FACTOR} --iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2".split(), check=True)
+    # subprocess.run(f"python task.py tune {AGENT} embedding train {BENCHMARK} --scale-factor {SCALE_FACTOR} --iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2".split(), check=True)
     # assert(embedder_dpath.exists())
 
-    hpoed_agent_params_fpath = default_hpoed_agent_params_path(workspace_dpath, BENCHMARK, workload_name)
-    assert(not hpoed_agent_params_fpath.exists())
-    subprocess.run(f"python3 task.py tune {AGENT} agent hpo {BENCHMARK} --scale-factor {SCALE_FACTOR} --num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
-    assert(hpoed_agent_params_fpath.exists())
+    # hpoed_agent_params_fpath = default_hpoed_agent_params_path(workspace_dpath, BENCHMARK, workload_name)
+    # assert(not hpoed_agent_params_fpath.exists())
+    # subprocess.run(f"python task.py tune {AGENT} agent hpo {BENCHMARK} --scale-factor {SCALE_FACTOR} --num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
+    # assert(hpoed_agent_params_fpath.exists())
+
+    # tuning_steps_dpath = default_tuning_steps_dpath(workspace_dpath, BENCHMARK, workload_name, False)
+    # assert(not tuning_steps_dpath.exists())
+    # subprocess.run(f"python task.py tune {AGENT} agent tune {BENCHMARK} --scale-factor {SCALE_FACTOR}".split(), check=True)
+    # assert(tuning_steps_dpath.exists())
+
+    replay_data_fpath = default_replay_data_fpath(workspace_dpath, BENCHMARK, workload_name, False)
+    assert(not replay_data_fpath.exists())
+    subprocess.run(f"python3 task.py tune {AGENT} agent replay {BENCHMARK} --scale-factor {SCALE_FACTOR}".split(), check=True)
+    assert(replay_data_fpath.exists())
 
     # Clear it at the end as well to avoid leaving artifacts.
     # clear_workspace(workspace_dpath)
