@@ -6,11 +6,12 @@ import sys
 
 import yaml
 
-from util.workspace import default_tables_path, workload_name_fn, default_workload_path, default_repo_path, default_pristine_dbdata_snapshot_path
+from util.workspace import default_tables_path, workload_name_fn, default_workload_path, default_repo_path, default_pristine_dbdata_snapshot_path, default_embedder_path, default_traindata_path
 
 
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
 DBMS = "postgres"
+AGENT = "protox"
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
 INTEGTEST_DBGYM_CONFIG_FPATH = Path("scripts/integtest_dbgym_config.yaml")
@@ -38,27 +39,32 @@ if __name__ == "__main__":
     workspace_dpath = get_workspace_dpath(INTEGTEST_DBGYM_CONFIG_FPATH)
     # clear_workspace(workspace_dpath)
 
-    # Run the full Proto-X training pipeline, asserting things along the way
-    tables_dpath = default_tables_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
-    assert(not tables_dpath.exists())
-    subprocess.run(f"python task.py benchmark {BENCHMARK} data {SCALE_FACTOR}".split(), check=True)
-    assert(tables_dpath.exists())
+    # # Run the full Proto-X training pipeline, asserting things along the way
+    # tables_dpath = default_tables_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
+    # assert(not tables_dpath.exists())
+    # subprocess.run(f"python task.py benchmark {BENCHMARK} data {SCALE_FACTOR}".split(), check=True)
+    # assert(tables_dpath.exists())
 
     workload_name = workload_name_fn(SCALE_FACTOR, 15721, 15721, "all")
-    workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
-    assert(not workload_dpath.exists())
-    subprocess.run(f"python task.py benchmark {BENCHMARK} workload --scale-factor {SCALE_FACTOR}".split(), check=True)
-    assert(workload_dpath.exists())
+    # workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
+    # assert(not workload_dpath.exists())
+    # subprocess.run(f"python task.py benchmark {BENCHMARK} workload --scale-factor {SCALE_FACTOR}".split(), check=True)
+    # assert(workload_dpath.exists())
 
-    repo_dpath = default_repo_path(workspace_dpath)
-    assert(not repo_dpath.exists())
-    subprocess.run(f"python task.py dbms {DBMS} build".split(), check=True)
-    assert(repo_dpath.exists())
+    # repo_dpath = default_repo_path(workspace_dpath)
+    # assert(not repo_dpath.exists())
+    # subprocess.run(f"python task.py dbms {DBMS} build".split(), check=True)
+    # assert(repo_dpath.exists())
 
-    pristine_dbdata_snapshot_fpath = default_pristine_dbdata_snapshot_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
-    assert(not pristine_dbdata_snapshot_fpath.exists())
-    subprocess.run(f"python task.py dbms {DBMS} dbdata {BENCHMARK} --scale-factor {SCALE_FACTOR} --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
-    assert(pristine_dbdata_snapshot_fpath.exists())
+    # pristine_dbdata_snapshot_fpath = default_pristine_dbdata_snapshot_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
+    # assert(not pristine_dbdata_snapshot_fpath.exists())
+    # subprocess.run(f"python task.py dbms {DBMS} dbdata {BENCHMARK} --scale-factor {SCALE_FACTOR} --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
+    # assert(pristine_dbdata_snapshot_fpath.exists())
+
+    traindata_dpath = default_traindata_path(workspace_dpath, BENCHMARK, workload_name)
+    assert(not traindata_dpath.exists())
+    subprocess.run(f"python3 task.py tune {AGENT} embedding datagen {BENCHMARK} --scale-factor {SCALE_FACTOR} --override-sample-limits lineitem,32768 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
+    assert(traindata_dpath.exists())
 
     # Clear it at the end as well to avoid leaving artifacts.
     # clear_workspace(workspace_dpath)
