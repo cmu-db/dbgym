@@ -7,10 +7,10 @@ from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
     DBGymConfig,
+    default_tables_dname,
     get_scale_factor_string,
     link_result,
     workload_name_fn,
-    default_tables_dname,
 )
 
 

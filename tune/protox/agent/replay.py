@@ -31,13 +31,13 @@ from util.workspace import (
     DBGymConfig,
     TuningMode,
     conv_inputpath_to_realabspath,
+    default_replay_data_fname,
     default_tuning_steps_dpath,
     link_result,
     open_and_save,
     parent_dpath_of_path,
     save_file,
     workload_name_fn,
-    default_replay_data_fname,
 )
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -505,7 +505,18 @@ def replay_tuning_run(
     logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"Finished replaying with replay_data_df=\n{replay_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
     )
-    replay_data_fpath = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "replay_data.csv"
+    replay_data_fpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "replay_data.csv"
+    )
     replay_data_df.to_csv(replay_data_fpath, index=False)
-    link_result(dbgym_cfg, replay_data_fpath, custom_result_name=default_replay_data_fname(replay_args.benchmark_name, replay_args.workload_name, replay_args.boot_enabled_during_tune) + ".link")
+    link_result(
+        dbgym_cfg,
+        replay_data_fpath,
+        custom_result_name=default_replay_data_fname(
+            replay_args.benchmark_name,
+            replay_args.workload_name,
+            replay_args.boot_enabled_during_tune,
+        )
+        + ".link",
+    )
     pg_env.close()

@@ -42,12 +42,12 @@ from util.workspace import (
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
+    default_traindata_fname,
     default_workload_path,
     is_ssd,
     link_result,
     open_and_save,
     save_file,
-    default_traindata_fname,
     workload_name_fn,
 )
 
@@ -576,9 +576,9 @@ def _combine_traindata_dpath_into_parquet(
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / default_traindata_fname(
-        generic_args.benchmark_name, generic_args.workload_name
-    )
+    traindata_path = dbgym_cfg.cur_task_runs_data_path(
+        mkdir=True
+    ) / default_traindata_fname(generic_args.benchmark_name, generic_args.workload_name)
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 
