@@ -63,7 +63,9 @@ def tboard_to_minimal_json(tfevent_fpath: Path) -> list[dict[str, Any]]:
 
 
 # An "instr_time_event" is an event with a "tag" that looks like "instr_time/*"
-def get_total_instr_time_event(minimal_json: list[dict[str, Any]], event_regex: str) -> float:
+def get_total_instr_time_event(
+    minimal_json: list[dict[str, Any]], event_regex: str
+) -> float:
     event_pattern = re.compile(event_regex)
     total_time = 0
 
