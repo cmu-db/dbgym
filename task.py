@@ -12,10 +12,10 @@ import tensorflow
 
 del os.environ["TF_CPP_MIN_LOG_LEVEL"]
 
+from analyze.cli import analyze_group
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
 from manage.cli import manage_group
-from analyze.cli import analyze_group
 from tune.cli import tune_group
 from util.workspace import DBGymConfig
 
