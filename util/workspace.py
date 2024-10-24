@@ -91,7 +91,10 @@ workload_name_fn: Callable[[float | str, int, int, str], str] = (
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.
-traindata_fname: Callable[[str, str], str] = (
+default_tables_dname: Callable[[float | str], str] = (
+    lambda scale_factor: f"tables_sf{get_scale_factor_string(scale_factor)}"
+)
+default_traindata_fname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
 default_embedder_dname: Callable[[str, str], str] = (
@@ -123,7 +126,7 @@ default_traindata_path: Callable[[Path, str, str], Path] = (
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / (traindata_fname(benchmark_name, workload_name) + ".link")
+    / (default_traindata_fname(benchmark_name, workload_name) + ".link")
 )
 default_embedder_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -140,6 +143,14 @@ default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     / "dbgym_tune_protox_agent"
     / "data"
     / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
+)
+default_tables_path: Callable[[Path, str, float | str], Path] = (
+    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_benchmark_{benchmark_name}"
+    / "data"
+    / (default_tables_dname(scale_factor) + ".link")
 )
 default_workload_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
