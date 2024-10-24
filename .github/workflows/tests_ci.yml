@@ -52,4 +52,4 @@ jobs:
       # file for our self-hosted GHA runners.
       run: |
         . "$HOME/.cargo/env"
-        python scripts/run_protox_integration_test.py ssd
+        python -m scripts.run_protox_integration_test ssd
