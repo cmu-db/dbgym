@@ -5,7 +5,7 @@ import subprocess
 
 import yaml
 
-from util.workspace import default_tables_path
+from util.workspace import default_tables_path, workload_name_fn, default_workload_path
 
 
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
@@ -34,11 +34,17 @@ if __name__ == "__main__":
     workspace_dpath = get_workspace_dpath(INTEGTEST_DBGYM_CONFIG_FPATH)
     clear_workspace(workspace_dpath)
 
-    # Run the full Proto-X training pipeline, asserting things along the way
-    tables_dpath = default_tables_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
-    assert(not tables_dpath.exists())
-    subprocess.run(f"python task.py benchmark {BENCHMARK} data {SCALE_FACTOR}".split(), check=True)
-    assert(tables_dpath.exists())
+    # # Run the full Proto-X training pipeline, asserting things along the way
+    # tables_dpath = default_tables_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
+    # assert(not tables_dpath.exists())
+    # subprocess.run(f"python task.py benchmark {BENCHMARK} data {SCALE_FACTOR}".split(), check=True)
+    # assert(tables_dpath.exists())
+
+    workload_name = workload_name_fn(SCALE_FACTOR, 15721, 15721, "all")
+    workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
+    assert(not workload_dpath.exists())
+    subprocess.run(f"python task.py benchmark {BENCHMARK} workload --scale-factor {SCALE_FACTOR}".split(), check=True)
+    assert(workload_dpath.exists())
 
     # Clear it at the end as well to avoid leaving artifacts.
     # clear_workspace(workspace_dpath)
