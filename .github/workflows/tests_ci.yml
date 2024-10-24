@@ -7,6 +7,7 @@ on:
 
 jobs:
   ci:
+    # The code for the self-hosted runners is at https://github.com/wangpatrick57/dbgym-runners.
     runs-on: self-hosted
 
     steps:
@@ -51,6 +52,4 @@ jobs:
       # file for our self-hosted GHA runners.
       run: |
         . "$HOME/.cargo/env"
-        rm -rf ../dbgym_integtest_workspace
-        ./scripts/integration_test.sh ssd
-        ./scripts/integration_test.sh ssd
+        python scripts/run_protox_integration_test.py ssd

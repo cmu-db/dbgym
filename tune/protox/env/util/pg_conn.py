@@ -155,12 +155,6 @@ class PostgresConn:
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
-            # save_auto_conf_path = (
-            #     self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True)
-            #     / "postgresql.auto.conf"
-            # )
-            # local["cp"][dbdata_auto_conf_path, save_auto_conf_path].run()
-            # link_result(self.dbgym_cfg, save_auto_conf_path)
 
         # Start postgres instance.
         self.shutdown_postgres()
