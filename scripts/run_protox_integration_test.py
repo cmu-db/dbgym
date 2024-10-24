@@ -61,10 +61,15 @@ if __name__ == "__main__":
     # subprocess.run(f"python task.py dbms {DBMS} dbdata {BENCHMARK} --scale-factor {SCALE_FACTOR} --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
     # assert(pristine_dbdata_snapshot_fpath.exists())
 
-    traindata_dpath = default_traindata_path(workspace_dpath, BENCHMARK, workload_name)
-    assert(not traindata_dpath.exists())
-    subprocess.run(f"python3 task.py tune {AGENT} embedding datagen {BENCHMARK} --scale-factor {SCALE_FACTOR} --override-sample-limits lineitem,32768 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
-    assert(traindata_dpath.exists())
+    # traindata_dpath = default_traindata_path(workspace_dpath, BENCHMARK, workload_name)
+    # assert(not traindata_dpath.exists())
+    # subprocess.run(f"python3 task.py tune {AGENT} embedding datagen {BENCHMARK} --scale-factor {SCALE_FACTOR} --override-sample-limits lineitem,32768 --intended-dbdata-hardware {intended_dbdata_hardware}".split(), check=True)
+    # assert(traindata_dpath.exists())
+
+    embedder_dpath = default_embedder_path(workspace_dpath, BENCHMARK, workload_name)
+    assert(not embedder_dpath.exists())
+    subprocess.run(f"python3 task.py tune {AGENT} embedding train {BENCHMARK} --scale-factor {SCALE_FACTOR} --iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2".split(), check=True)
+    assert(embedder_dpath.exists())
 
     # Clear it at the end as well to avoid leaving artifacts.
     # clear_workspace(workspace_dpath)
