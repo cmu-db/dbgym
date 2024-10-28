@@ -1,8 +1,11 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+# TODO: add check for the tfevents file and run tfevents analyze in integtest
 
 import yaml
 
@@ -16,6 +19,7 @@ from util.workspace import (
     default_traindata_path,
     default_tuning_steps_dpath,
     default_workload_path,
+    get_latest_run_path_from_workspace_path,
     workload_name_fn,
 )
 
@@ -54,6 +58,7 @@ if __name__ == "__main__":
     clear_workspace(workspace_dpath)
 
     # Run the full Proto-X training pipeline, asserting things along the way
+    # Setup (workload and database)
     tables_dpath = default_tables_path(workspace_dpath, BENCHMARK, SCALE_FACTOR)
     assert not tables_dpath.exists()
     subprocess.run(
@@ -85,6 +90,7 @@ if __name__ == "__main__":
     )
     assert pristine_dbdata_snapshot_fpath.exists()
 
+    # Training (embedding and tuning)
     traindata_dpath = default_traindata_path(workspace_dpath, BENCHMARK, workload_name)
     assert not traindata_dpath.exists()
     subprocess.run(
@@ -119,8 +125,17 @@ if __name__ == "__main__":
         f"python task.py tune {AGENT} agent tune {BENCHMARK} --scale-factor {SCALE_FACTOR}".split(),
         check=True,
     )
+    tboard_dpath = get_latest_run_path_from_workspace_path(workspace_dpath) / "dbgym_tune_protox_agent" / "artifacts" / "tboard"
     assert tuning_steps_dpath.exists()
+    tboard_dpath = tboard_dpath.resolve() # Resolve it since latest_run.link will be updated by future runs.
+    assert tboard_dpath.exists()
+    pattern = re.compile(r"events\.out\.tfevents.*")
+    tfevents_fpaths = [file for file in tboard_dpath.iterdir() if file.is_file() and pattern.search(file.name)]
+    assert len(tfevents_fpaths) == 1, "There should only be one .tfevents file because this is a tuning run, not an HPO run."
+    tfevents_fpath = tfevents_fpaths[0]
+    assert tfevents_fpath.exists()
 
+    # Post-training (replay and analysis)
     replay_data_fpath = default_replay_data_fpath(
         workspace_dpath, BENCHMARK, workload_name, False
     )
@@ -130,6 +145,11 @@ if __name__ == "__main__":
         check=True,
     )
     assert replay_data_fpath.exists()
+
+    subprocess.run(
+        f"python3 task.py analyze tfevents {tfevents_fpath}".split(),
+        check=True,
+    )
 
     # Clear it at the end as well to avoid leaving artifacts.
     clear_workspace(workspace_dpath)
