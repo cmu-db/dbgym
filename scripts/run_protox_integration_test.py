@@ -24,7 +24,6 @@ from util.workspace import (
 # TODO: add check for the tfevents file and run tfevents analyze in integtest
 
 
-
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
 DBMS = "postgres"
 AGENT = "protox"
