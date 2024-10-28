@@ -278,6 +278,9 @@ class DBGymConfig:
         )
         # `exist_ok` is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+        self.dbgym_latest_run_path = self.dbgym_runs_path / "latest_run.link"
+        try_remove_file(self.dbgym_latest_run_path)
+        try_create_symlink(self.dbgym_this_run_path, self.dbgym_latest_run_path)
 
     # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
@@ -640,6 +643,7 @@ def try_create_symlink(src_path: Path, dst_path: Path) -> None:
     Our functions that create symlinks might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to create a symlink.
     """
+    assert dst_path.suffix == ".link"
     try:
         os.symlink(src_path, dst_path)
     except FileExistsError:
