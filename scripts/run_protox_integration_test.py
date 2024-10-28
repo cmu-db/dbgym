@@ -5,8 +5,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-# TODO: add check for the tfevents file and run tfevents analyze in integtest
-
 import yaml
 
 from util.workspace import (
@@ -22,6 +20,10 @@ from util.workspace import (
     get_latest_run_path_from_workspace_path,
     workload_name_fn,
 )
+
+# TODO: add check for the tfevents file and run tfevents analyze in integtest
+
+
 
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
 DBMS = "postgres"
@@ -125,13 +127,26 @@ if __name__ == "__main__":
         f"python task.py tune {AGENT} agent tune {BENCHMARK} --scale-factor {SCALE_FACTOR}".split(),
         check=True,
     )
-    tboard_dpath = get_latest_run_path_from_workspace_path(workspace_dpath) / "dbgym_tune_protox_agent" / "artifacts" / "tboard"
+    tboard_dpath = (
+        get_latest_run_path_from_workspace_path(workspace_dpath)
+        / "dbgym_tune_protox_agent"
+        / "artifacts"
+        / "tboard"
+    )
     assert tuning_steps_dpath.exists()
-    tboard_dpath = tboard_dpath.resolve() # Resolve it since latest_run.link will be updated by future runs.
+    tboard_dpath = (
+        tboard_dpath.resolve()
+    )  # Resolve it since latest_run.link will be updated by future runs.
     assert tboard_dpath.exists()
     pattern = re.compile(r"events\.out\.tfevents.*")
-    tfevents_fpaths = [file for file in tboard_dpath.iterdir() if file.is_file() and pattern.search(file.name)]
-    assert len(tfevents_fpaths) == 1, "There should only be one .tfevents file because this is a tuning run, not an HPO run."
+    tfevents_fpaths = [
+        file
+        for file in tboard_dpath.iterdir()
+        if file.is_file() and pattern.search(file.name)
+    ]
+    assert (
+        len(tfevents_fpaths) == 1
+    ), "There should only be one .tfevents file because this is a tuning run, not an HPO run."
     tfevents_fpath = tfevents_fpaths[0]
     assert tfevents_fpath.exists()
 

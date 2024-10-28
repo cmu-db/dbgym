@@ -256,7 +256,9 @@ class DBGymConfig:
         self.dbgym_repo_path = Path(os.getcwd())
         self.dbgym_workspace_path = dbgym_workspace_path
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_runs_path = get_runs_path_from_workspace_path(self.dbgym_workspace_path)
+        self.dbgym_runs_path = get_runs_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
             self.dbgym_workspace_path
@@ -282,7 +284,9 @@ class DBGymConfig:
         )
         # `exist_ok` is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
-        self.dbgym_latest_run_path = get_latest_run_path_from_workspace_path(self.dbgym_workspace_path)
+        self.dbgym_latest_run_path = get_latest_run_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
         try_remove_file(self.dbgym_latest_run_path)
         try_create_symlink(self.dbgym_this_run_path, self.dbgym_latest_run_path)
 
