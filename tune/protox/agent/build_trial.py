@@ -39,7 +39,7 @@ from tune.protox.env.space.state import LSCMetricStateSpace, LSCStructureStateSp
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
-from tune.protox.env.util.pg_conn import PostgresConn
+from tune.env.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
 from util.workspace import (
