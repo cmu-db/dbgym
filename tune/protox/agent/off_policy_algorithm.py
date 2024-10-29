@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
-from misc.utils import TuningMode
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.base_class import BaseAlgorithm
 from tune.protox.agent.buffers import ReplayBuffer
@@ -15,6 +14,7 @@ from tune.protox.agent.utils import (
     TrainFrequencyUnit,
     should_collect_more_steps,
 )
+from util.workspace import TuningMode
 
 
 class OffPolicyAlgorithm(BaseAlgorithm):

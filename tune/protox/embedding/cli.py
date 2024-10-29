@@ -1,8 +1,8 @@
 import click
 
-from misc.utils import DBGymConfig
 from tune.protox.embedding.datagen import datagen
 from tune.protox.embedding.train import train
+from util.workspace import DBGymConfig
 
 
 @click.group("embedding")

@@ -19,25 +19,6 @@ import yaml
 from sklearn.preprocessing import quantile_transform
 
 from dbms.postgres.cli import start_postgres, stop_postgres
-from misc.utils import (
-    BENCHMARK_NAME_PLACEHOLDER,
-    SCALE_FACTOR_PLACEHOLDER,
-    WORKLOAD_NAME_PLACEHOLDER,
-    WORKSPACE_PATH_PLACEHOLDER,
-    DBGymConfig,
-    conv_inputpath_to_realabspath,
-    default_benchmark_config_path,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
-    default_pristine_dbdata_snapshot_path,
-    default_workload_path,
-    is_ssd,
-    link_result,
-    open_and_save,
-    save_file,
-    traindata_fname,
-    workload_name_fn,
-)
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
 from tune.protox.env.types import (
@@ -50,6 +31,25 @@ from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import create_psycopg_conn
 from util.shell import subprocess_run
+from util.workspace import (
+    BENCHMARK_NAME_PLACEHOLDER,
+    SCALE_FACTOR_PLACEHOLDER,
+    WORKLOAD_NAME_PLACEHOLDER,
+    WORKSPACE_PATH_PLACEHOLDER,
+    DBGymConfig,
+    conv_inputpath_to_realabspath,
+    default_benchmark_config_path,
+    default_dbdata_parent_dpath,
+    default_pgbin_path,
+    default_pristine_dbdata_snapshot_path,
+    default_traindata_fname,
+    default_workload_path,
+    is_ssd,
+    link_result,
+    open_and_save,
+    save_file,
+    workload_name_fn,
+)
 
 # FUTURE(oltp)
 # try:
@@ -576,9 +576,9 @@ def _combine_traindata_dpath_into_parquet(
             cur_bias -= sep_bias
         df = pd.concat(datum, ignore_index=True)
 
-    traindata_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True) / traindata_fname(
-        generic_args.benchmark_name, generic_args.workload_name
-    )
+    traindata_path = dbgym_cfg.cur_task_runs_data_path(
+        mkdir=True
+    ) / default_traindata_fname(generic_args.benchmark_name, generic_args.workload_name)
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 

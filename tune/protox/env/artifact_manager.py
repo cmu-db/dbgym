@@ -12,8 +12,8 @@ from plumbum import local
 from torch.utils.tensorboard.writer import SummaryWriter
 from typing_extensions import ParamSpec
 
-from misc.utils import DBGymConfig
 from util.log import DBGYM_LOGGER_NAME
+from util.workspace import DBGymConfig
 
 P = ParamSpec("P")
 T = TypeVar("T")

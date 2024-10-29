@@ -1,8 +1,8 @@
 import click
 
-from misc.utils import DBGymConfig
 from tune.protox.agent.cli import agent_group
 from tune.protox.embedding.cli import embedding_group
+from util.workspace import DBGymConfig
 
 
 @click.group(name="protox")

@@ -6,7 +6,7 @@ import psycopg
 import sqlalchemy
 from sqlalchemy import create_engine, text
 
-from misc.utils import DBGymConfig, open_and_save
+from util.workspace import DBGymConfig, open_and_save
 
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"

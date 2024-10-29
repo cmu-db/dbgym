@@ -5,7 +5,7 @@ from typing import Any, Union
 from gymnasium import spaces
 from psycopg import Connection
 
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 
 
 class StateSpace(ABC, spaces.Space[Any]):

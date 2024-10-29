@@ -1,7 +1,7 @@
 import click
 
 from dbms.postgres.cli import postgres_group
-from misc.utils import DBGymConfig
+from util.workspace import DBGymConfig
 
 
 @click.group(name="dbms")

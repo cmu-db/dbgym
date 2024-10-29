@@ -1,8 +1,10 @@
 """
 At a high level, this file's goal is to provide helpers to manage a Postgres instance during
-    agent tuning.
+agent tuning.
+
 On the other hand, the goal of dbms.postgres.cli is to (1) install+build postgres and (2)
-    create dbdata.
+create dbdata.
+
 util.pg provides helpers used by *both* of the above files (as well as other files).
 """
 
@@ -12,7 +14,7 @@ import shutil
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import psutil
 import psycopg
@@ -20,7 +22,6 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from misc.utils import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
@@ -29,6 +30,7 @@ from util.pg import (
     DBGYM_POSTGRES_USER,
     SHARED_PRELOAD_LIBRARIES,
 )
+from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 
 
 class PostgresConn:
@@ -153,12 +155,6 @@ class PostgresConn:
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
                 f.write("\n".join(conf_changes))
-            save_auto_conf_path = (
-                self.dbgym_cfg.cur_task_runs_data_path(".", mkdir=True)
-                / "postgresql.auto.conf"
-            )
-            local["cp"][dbdata_auto_conf_path, save_auto_conf_path].run()
-            link_result(self.dbgym_cfg, save_auto_conf_path)
 
         # Start postgres instance.
         self.shutdown_postgres()

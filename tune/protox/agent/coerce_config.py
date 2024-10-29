@@ -3,7 +3,7 @@ from typing import Any
 
 import yaml
 
-from misc.utils import DBGymConfig, TuningMode, open_and_save
+from util.workspace import DBGymConfig, TuningMode, open_and_save
 
 
 def coerce_config(

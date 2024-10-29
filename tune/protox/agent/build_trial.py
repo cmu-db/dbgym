@@ -16,13 +16,6 @@ from gymnasium.wrappers import (  # type: ignore[attr-defined]
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
-from misc.utils import (
-    DBGymConfig,
-    TuningMode,
-    make_redis_started,
-    open_and_save,
-    save_file,
-)
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -49,6 +42,13 @@ from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
 from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
+from util.workspace import (
+    DBGymConfig,
+    TuningMode,
+    make_redis_started,
+    open_and_save,
+    save_file,
+)
 
 
 def _parse_activation_fn(act_type: str) -> type[nn.Module]:

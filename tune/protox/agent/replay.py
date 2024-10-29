@@ -18,16 +18,6 @@ import pandas as pd
 import tqdm
 from dateutil.parser import parse
 
-from misc.utils import (
-    DBGymConfig,
-    TuningMode,
-    conv_inputpath_to_realabspath,
-    default_tuning_steps_dpath,
-    open_and_save,
-    parent_dpath_of_path,
-    save_file,
-    workload_name_fn,
-)
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
@@ -37,6 +27,18 @@ from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
 from tune.protox.env.types import ActionsInfo, HolonAction
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
+from util.workspace import (
+    DBGymConfig,
+    TuningMode,
+    conv_inputpath_to_realabspath,
+    default_replay_data_fname,
+    default_tuning_steps_dpath,
+    link_result,
+    open_and_save,
+    parent_dpath_of_path,
+    save_file,
+    workload_name_fn,
+)
 
 REPLAY_DATA_FNAME = "replay_data.csv"
 
@@ -44,6 +46,9 @@ REPLAY_DATA_FNAME = "replay_data.csv"
 class ReplayArgs:
     def __init__(
         self,
+        benchmark_name: str,
+        workload_name: str,
+        boot_enabled_during_tune: bool,
         # If it's None, it'll get set later on inside replay_tuning_run().
         workload_timeout_during_replay: Optional[float],
         replay_all_variations: bool,
@@ -52,6 +57,9 @@ class ReplayArgs:
         cutoff: Optional[float],
         blocklist: list[str],
     ):
+        self.benchmark_name = benchmark_name
+        self.workload_name = workload_name
+        self.boot_enabled_during_tune = boot_enabled_during_tune
         self.workload_timeout_during_replay = workload_timeout_during_replay
         self.replay_all_variations = replay_all_variations
         self.simulated = simulated
@@ -157,6 +165,9 @@ def replay(
 
     # Group args together to reduce the # of parameters we pass into functions
     replay_args = ReplayArgs(
+        benchmark_name,
+        workload_name,
+        boot_enabled_during_tune,
         workload_timeout_during_replay,
         replay_all_variations,
         simulated,
@@ -310,7 +321,7 @@ def replay_tuning_run(
             workload_runtime,
         )
 
-    run_data = []
+    replay_data = []
     progess_bar = tqdm.tqdm(total=num_lines)
     with open_and_save(dbgym_cfg, output_log_fpath, "r") as f:
         current_step = 0
@@ -463,9 +474,9 @@ def replay_tuning_run(
                         original_workload_runtime,
                     )
 
-                # Perform some validity checks and then add this tuning step's data to `run_data``.
+                # Perform some validity checks and then add this tuning step's data to `replay_data``.
                 assert isinstance(start_time, datetime)
-                this_step_run_data = {
+                this_step_replay_data = {
                     "step": current_step,
                     "time_since_start": (time_since_start - start_time).total_seconds(),
                     "original_workload_runtime": original_workload_runtime,
@@ -481,7 +492,7 @@ def replay_tuning_run(
                     num_timed_out_queries_in_replay > 0
                     and not did_workload_time_out_in_replay
                 ), "During replay, individual queries should not time out unless they timed out because the whole workload timed out."
-                run_data.append(this_step_run_data)
+                replay_data.append(this_step_replay_data)
                 current_step += 1
 
                 if last_folder in folders and last_folder == folders[-1]:
@@ -489,10 +500,23 @@ def replay_tuning_run(
             progess_bar.update(1)
 
     # Output.
-    run_data_df = pd.DataFrame(run_data)
+    replay_data_df = pd.DataFrame(replay_data)
     pd.set_option("display.max_columns", 10)
     logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
-        f"Finished replaying with run_data_df=\n{run_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
+        f"Finished replaying with replay_data_df=\n{replay_data_df}\n. Data stored in {dbgym_cfg.cur_task_runs_path()}."
     )
-    run_data_df.to_csv(dbgym_cfg.cur_task_runs_data_path("run_data.csv"), index=False)
+    replay_data_fpath = (
+        dbgym_cfg.cur_task_runs_data_path(mkdir=True) / "replay_data.csv"
+    )
+    replay_data_df.to_csv(replay_data_fpath, index=False)
+    link_result(
+        dbgym_cfg,
+        replay_data_fpath,
+        custom_result_name=default_replay_data_fname(
+            replay_args.benchmark_name,
+            replay_args.workload_name,
+            replay_args.boot_enabled_during_tune,
+        )
+        + ".link",
+    )
     pg_env.close()

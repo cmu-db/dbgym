@@ -2,8 +2,7 @@ import os
 import sys
 import unittest
 
-# Do this to suppress the logs we'd usually get when importing tensorflow
-# By importing tensorflow in run_unit_tests.py, we avoid it being imported in any other file since run_unit_tests.py is always entered first when running unit tests.
+# See comment in the base task.py file for why we do this.
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow
 

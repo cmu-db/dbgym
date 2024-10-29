@@ -8,9 +8,9 @@ from gymnasium import spaces
 from gymnasium.spaces import Box, Space
 from psycopg.rows import dict_row
 
-from misc.utils import DBGymConfig, open_and_save
 from tune.protox.env.space.state.space import StateSpace
 from util.pg import DBGYM_POSTGRES_DBNAME
+from util.workspace import DBGymConfig, open_and_save
 
 # Defines the relevant metrics that we care about from benchbase.
 # <filter_db>: whether to filter with the benchbase database.

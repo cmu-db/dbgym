@@ -3,14 +3,15 @@ from pathlib import Path
 
 import click
 
-from misc.utils import (
+from util.log import DBGYM_LOGGER_NAME
+from util.shell import subprocess_run
+from util.workspace import (
     DBGymConfig,
+    default_tables_dname,
     get_scale_factor_string,
     link_result,
     workload_name_fn,
 )
-from util.log import DBGYM_LOGGER_NAME
-from util.shell import subprocess_run
 
 
 @click.group(name="tpch")
@@ -134,7 +135,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
     data_path = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
     expected_tables_symlink_dpath = (
-        data_path / f"tables_sf{get_scale_factor_string(scale_factor)}.link"
+        data_path / f"{default_tables_dname(scale_factor)}.link"
     )
     if expected_tables_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -147,7 +148,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     )
     subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=tpch_kit_dpath / "dbgen")
     real_dir = dbgym_cfg.cur_task_runs_data_path(
-        f"tables_sf{get_scale_factor_string(scale_factor)}", mkdir=True
+        default_tables_dname(scale_factor), mkdir=True
     )
     subprocess_run(f"mv ./*.tbl {real_dir}", cwd=tpch_kit_dpath / "dbgen")
 

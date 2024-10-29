@@ -1,3 +1,8 @@
+"""
+This file contains everything needed to manage the workspace (the dbgym_workspace/ folder).
+TODO: it has some things specific to Proto-X which should be moved somewhere else in the future.
+"""
+
 import logging
 import os
 import shutil
@@ -46,6 +51,10 @@ def get_runs_path_from_workspace_path(workspace_path: Path) -> Path:
     return workspace_path / "task_runs"
 
 
+def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
+    return get_runs_path_from_workspace_path(workspace_path) / "latest_run.link"
+
+
 def get_scale_factor_string(scale_factor: float | str) -> str:
     if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
         return scale_factor
@@ -86,7 +95,10 @@ workload_name_fn: Callable[[float | str, int, int, str], str] = (
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.
-traindata_fname: Callable[[str, str], str] = (
+default_tables_dname: Callable[[float | str], str] = (
+    lambda scale_factor: f"tables_sf{get_scale_factor_string(scale_factor)}"
+)
+default_traindata_fname: Callable[[str, str], str] = (
     lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
 )
 default_embedder_dname: Callable[[str, str], str] = (
@@ -97,6 +109,9 @@ default_hpoed_agent_params_fname: Callable[[str, str], str] = (
 )
 default_tuning_steps_dname: Callable[[str, str, bool], str] = (
     lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
+)
+default_replay_data_fname: Callable[[str, str, bool], str] = (
+    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
 )
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
@@ -118,7 +133,7 @@ default_traindata_path: Callable[[Path, str, str], Path] = (
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / (traindata_fname(benchmark_name, workload_name) + ".link")
+    / (default_traindata_fname(benchmark_name, workload_name) + ".link")
 )
 default_embedder_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -135,6 +150,14 @@ default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     / "dbgym_tune_protox_agent"
     / "data"
     / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
+)
+default_tables_path: Callable[[Path, str, float | str], Path] = (
+    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / f"dbgym_benchmark_{benchmark_name}"
+    / "data"
+    / (default_tables_dname(scale_factor) + ".link")
 )
 default_workload_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -155,11 +178,14 @@ default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] 
 default_dbdata_parent_dpath: Callable[[Path], Path] = (
     lambda workspace_path: get_tmp_path_from_workspace_path(workspace_path)
 )
-default_pgbin_path: Callable[[Path], Path] = (
+default_repo_path: Callable[[Path], Path] = (
     lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
     / "dbgym_dbms_postgres"
     / "build"
     / "repo.link"
+)
+default_pgbin_path: Callable[[Path], Path] = (
+    lambda workspace_path: default_repo_path(workspace_path)
     / "boot"
     / "build"
     / "postgres"
@@ -173,6 +199,19 @@ default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
     / "artifacts"
     / (
         default_tuning_steps_dname(
+            benchmark_name, workload_name, boot_enabled_during_tune
+        )
+        + ".link"
+    )
+)
+default_replay_data_fpath: Callable[[Path, str, str, bool], Path] = (
+    lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
+        workspace_path
+    )
+    / "dbgym_tune_protox_agent"
+    / "data"
+    / (
+        default_replay_data_fname(
             benchmark_name, workload_name, boot_enabled_during_tune
         )
         + ".link"
@@ -217,7 +256,9 @@ class DBGymConfig:
         self.dbgym_repo_path = Path(os.getcwd())
         self.dbgym_workspace_path = dbgym_workspace_path
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
-        self.dbgym_runs_path = self.dbgym_workspace_path / "task_runs"
+        self.dbgym_runs_path = get_runs_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
         self.dbgym_runs_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
             self.dbgym_workspace_path
@@ -243,6 +284,11 @@ class DBGymConfig:
         )
         # `exist_ok` is False because we don't want to override a previous task run's data.
         self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+        self.dbgym_latest_run_path = get_latest_run_path_from_workspace_path(
+            self.dbgym_workspace_path
+        )
+        try_remove_file(self.dbgym_latest_run_path)
+        try_create_symlink(self.dbgym_this_run_path, self.dbgym_latest_run_path)
 
     # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is
     #   explained further in the documentation.
@@ -605,6 +651,7 @@ def try_create_symlink(src_path: Path, dst_path: Path) -> None:
     Our functions that create symlinks might be called by multiple processes at once
     during HPO. Thus, this is a thread-safe way to create a symlink.
     """
+    assert dst_path.suffix == ".link"
     try:
         os.symlink(src_path, dst_path)
     except FileExistsError:
