@@ -1,7 +1,7 @@
 import streamlit as st
 
 from tune.env.pg_conn import PostgresConn
-from util.pg import DEFAULT_POSTGRES_PORT
+from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running
 from util.workspace import (
     DBGymConfig,
     make_standard_dbgym_cfg,
@@ -40,11 +40,24 @@ class Demo:
             False,
             DEFAULT_BOOT_CONFIG_FPATH,
         )
+    
+    def main(self):
+        is_postgres_running = get_is_postgres_running()
 
+        if is_postgres_running:
+            st.write("Postgres is running")
+
+            if st.button("Stop Postgres"):
+                self.pg_conn.shutdown_postgres()
+                st.rerun()
+        else:
+            st.write("Postgres is not running")
+
+            if st.button("Start Postgres"):
+                self.pg_conn.restore_pristine_snapshot()
+                self.pg_conn.start_with_changes()
+                st.rerun()
 
 if __name__ == "__main__":
-    if 'initialized' not in st.session_state:
-        st.session_state['initialized'] = True
-        demo = Demo()
-
-    st.write("hia")
+    demo = Demo()
+    demo.main()
