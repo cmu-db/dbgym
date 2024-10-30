@@ -33,12 +33,12 @@ jobs:
       run: |
         ./dependencies/install_dependencies.sh
 
-  demo:
-    <<: *setup
+  # demo:
+  #   <<: *setup
 
-    - name: Test
-      run: |
-        echo hi
+  #   - name: Test
+  #     run: |
+  #       echo hi
 
   ci:
     <<: *setup
