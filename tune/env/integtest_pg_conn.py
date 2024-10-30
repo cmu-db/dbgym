@@ -16,14 +16,14 @@ from util.workspace import (
     get_tmp_path_from_workspace_path,
 )
 
-ENV_TESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_tests_dbgym_config.yaml")
+ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_integtests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
 BASE_PGPORT = 5432
 
 
 def get_unittest_workspace_path() -> Path:
-    with open(ENV_TESTS_DBGYM_CONFIG_FPATH) as f:
+    with open(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
         return Path(yaml.safe_load(f)["dbgym_workspace_path"])
     assert False
 
@@ -34,9 +34,9 @@ class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
         if not get_unittest_workspace_path().exists():
-            subprocess.run(["./tune/env/set_up_env_tests.sh"], check=True)
+            subprocess.run(["./tune/env/set_up_env_integtests.sh"], check=True)
 
-        PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_TESTS_DBGYM_CONFIG_FPATH)
+        PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
     def setUp(self) -> None:
         self.assertFalse(
