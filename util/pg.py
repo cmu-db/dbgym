@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, List, NewType, Union
 
 import pglast
+import psutil
 import psycopg
 import sqlalchemy
 from sqlalchemy import create_engine, text
@@ -69,3 +70,28 @@ def create_sqlalchemy_conn(
         execution_options={"isolation_level": "AUTOCOMMIT"},
     )
     return engine.connect()
+
+
+def get_is_postgres_running() -> bool:
+    return len(get_running_postgres_ports()) > 0
+
+
+def get_running_postgres_ports() -> list[int]:
+    """
+    Returns a list of all ports on which Postgres is currently running.
+
+    There are ways to check with psycopg/sqlalchemy. However, I chose to check using
+    psutil to keep it as simple as possible and orthogonal to how connections work.
+    """
+    running_ports = []
+
+    for conn in psutil.net_connections(kind='inet'):
+        if conn.status == 'LISTEN':
+            try:
+                proc = psutil.Process(conn.pid)
+                if proc.name() == 'postgres':
+                    running_ports.append(conn.laddr.port)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+    
+    return running_ports

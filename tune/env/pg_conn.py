@@ -143,7 +143,8 @@ class PostgresConn:
         save_checkpoint: bool = False,
     ) -> bool:
         """
-        This function assumes that some snapshot has already been untarred into self.dbdata_dpath
+        This function assumes that some snapshot has already been untarred into self.dbdata_dpath.
+        You can do this by calling one of the wrappers around _restore_snapshot().
         """
         # Install the new configuration changes.
         if conf_changes is not None:
