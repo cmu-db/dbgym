@@ -1,14 +1,13 @@
 import copy
-import json
 import logging
 import time
-from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional
 
 import gymnasium as gym
 import psycopg
 from plumbum import local
 
+from tune.env.pg_conn import PostgresConn
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
@@ -20,7 +19,6 @@ from tune.protox.env.types import (
     HolonStateContainer,
     TargetResetConfig,
 )
-from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME
@@ -430,7 +428,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                         # We've killed the index operation.
                         or "operational" in stderr
                     )
-                    attempt_checkpoint(self.pg_conn.get_connstr())
+                    attempt_checkpoint(self.pg_conn.get_kv_connstr())
                 return False
 
             assert ret == 0, stderr

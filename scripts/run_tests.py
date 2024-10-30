@@ -10,7 +10,7 @@ del os.environ["TF_CPP_MIN_LOG_LEVEL"]
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()
-    suite = loader.discover(".")
+    suite = loader.discover(".", pattern=sys.argv[1])
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
     if not result.wasSuccessful():

@@ -16,6 +16,7 @@ from gymnasium.wrappers import (  # type: ignore[attr-defined]
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
+from tune.env.pg_conn import PostgresConn
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -39,7 +40,6 @@ from tune.protox.env.space.state import LSCMetricStateSpace, LSCStructureStateSp
 from tune.protox.env.space.state.space import StateSpace
 from tune.protox.env.target_reset.target_reset_wrapper import TargetResetWrapper
 from tune.protox.env.types import ProtoAction, TableAttrAccessSetsMap
-from tune.protox.env.util.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
 from util.workspace import (
@@ -179,9 +179,8 @@ def _build_utilities(
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
         boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
-        connect_timeout=300,
-        artifact_manager=artifact_manager,
     )
+    # TODO(phw2): I removed artifact_manager here. Fix this later.
 
     workload = Workload(
         dbgym_cfg=dbgym_cfg,

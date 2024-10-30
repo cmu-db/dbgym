@@ -289,6 +289,11 @@ def _load_into_dbdata(
         sql_file_execute(dbgym_cfg, conn, constraints_fpath)
 
 
+# The start and stop functions slightly duplicate functionality from pg_conn.py. However, I chose to do it this way
+# because what the `dbms` CLI needs in terms of starting and stopping Postgres is much simpler than what an agent
+# that is tuning the database needs. Because these functions are so simple, I think it's okay to leave them here
+# even though they are a little redundant. It seems better than making `dbms` depend on the behavior of the
+# tuning environment.
 def start_postgres(
     dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path
 ) -> None:

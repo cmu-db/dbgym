@@ -22,18 +22,16 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
-from util.pg import (
-    DBGYM_POSTGRES_DBNAME,
-    DBGYM_POSTGRES_PASS,
-    DBGYM_POSTGRES_USER,
-    SHARED_PRELOAD_LIBRARIES,
-)
-from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
+from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from util.workspace import DBGymConfig, open_and_save, parent_dpath_of_path
+
+DEFAULT_CONNECT_TIMEOUT = 300
 
 
 class PostgresConn:
+    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) is so that
+    # it's fully decoupled from how the files are organized in the workspace.
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
@@ -41,10 +39,9 @@ class PostgresConn:
         pristine_dbdata_snapshot_fpath: Path,
         dbdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
-        connect_timeout: int,
         enable_boot: bool,
         boot_config_fpath: Path,
-        artifact_manager: ArtifactManager,
+        connect_timeout: int = DEFAULT_CONNECT_TIMEOUT,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
@@ -54,7 +51,6 @@ class PostgresConn:
         self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
-        self.artifact_manager = artifact_manager
 
         # All the paths related to dbdata
         # pristine_dbdata_snapshot_fpath is the .tgz snapshot that represents the starting state
@@ -75,13 +71,13 @@ class PostgresConn:
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def get_connstr(self) -> str:
-        return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
+    def get_kv_connstr(self) -> str:
+        return get_kv_connstr(self.pgport)
 
     def conn(self) -> psycopg.Connection[Any]:
         if self._conn is None:
             self._conn = psycopg.connect(
-                self.get_connstr(), autocommit=True, prepare_threshold=None
+                self.get_kv_connstr(), autocommit=True, prepare_threshold=None
             )
         return self._conn
 
@@ -103,7 +99,6 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
-    @time_record("shutdown")
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()
@@ -134,7 +129,6 @@ class PostgresConn:
             if not exists and retcode != 0:
                 break
 
-    @time_record("start")
     def start_with_changes(
         self,
         conf_changes: Optional[list[str]] = None,
@@ -142,7 +136,8 @@ class PostgresConn:
         save_checkpoint: bool = False,
     ) -> bool:
         """
-        This function assumes that some snapshot has already been untarred into self.dbdata_dpath
+        This function assumes that some snapshot has already been untarred into self.dbdata_dpath.
+        You can do this by calling one of the wrappers around _restore_snapshot().
         """
         # Install the new configuration changes.
         if conf_changes is not None:
@@ -299,7 +294,6 @@ class PostgresConn:
         self.conn().execute(f"SET boot.mu_hyp_stdev={mu_hyp_stdev}")
         logging.getLogger(DBGYM_LOGGER_NAME).debug("Set up boot")
 
-    @time_record("psql")
     def psql(self, sql: str) -> tuple[int, Optional[str]]:
         low_sql = sql.lower()
 
@@ -329,7 +323,7 @@ class PostgresConn:
         conn.execute("SET statement_timeout = 300000")
 
         try:
-            timer = threading.Timer(300.0, cancel_fn, args=(self.get_connstr(),))
+            timer = threading.Timer(300.0, cancel_fn, args=(self.get_kv_connstr(),))
             timer.start()
 
             conn.execute(sql)
@@ -362,7 +356,6 @@ class PostgresConn:
     def restore_checkpointed_snapshot(self) -> bool:
         return self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
 
-    @time_record("restore")
     def _restore_snapshot(
         self,
         dbdata_snapshot_path: Path,

@@ -1,7 +1,12 @@
+"""
+There are multiple parts of the codebase which interact with Postgres. This file contains helpers common to all those parts.
+"""
+
 from pathlib import Path
-from typing import Any, List, NewType, Union
+from typing import Any
 
 import pglast
+import psutil
 import psycopg
 import sqlalchemy
 from sqlalchemy import create_engine, text
@@ -54,6 +59,10 @@ def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg: bool = True) -
     return connstr_prefix + "://" + connstr_suffix
 
 
+def get_kv_connstr(pgport: int = DEFAULT_POSTGRES_PORT) -> str:
+    return f"host=localhost port={pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
+
+
 def create_psycopg_conn(pgport: int = DEFAULT_POSTGRES_PORT) -> psycopg.Connection[Any]:
     connstr = get_connstr(use_psycopg=True, pgport=pgport)
     psycopg_conn = psycopg.connect(connstr, autocommit=True, prepare_threshold=None)
@@ -69,3 +78,38 @@ def create_sqlalchemy_conn(
         execution_options={"isolation_level": "AUTOCOMMIT"},
     )
     return engine.connect()
+
+
+def get_is_postgres_running() -> bool:
+    """
+    This is often used in assertions to ensure that Postgres isn't running before we
+    execute some code.
+
+    I intentionally do not have a function that forcefully *stops* all Postgres instances.
+    This is risky because it could accidentally stop instances it wasn't supposed (e.g.
+    Postgres instances run by other users on the same machine).
+
+    Stopping Postgres instances is thus a responsibility of the human to take care of.
+    """
+    return len(get_running_postgres_ports()) > 0
+
+
+def get_running_postgres_ports() -> list[int]:
+    """
+    Returns a list of all ports on which Postgres is currently running.
+
+    There are ways to check with psycopg/sqlalchemy. However, I chose to check using
+    psutil to keep it as simple as possible and orthogonal to how connections work.
+    """
+    running_ports = []
+
+    for conn in psutil.net_connections(kind="inet"):
+        if conn.status == "LISTEN":
+            try:
+                proc = psutil.Process(conn.pid)
+                if proc.name() == "postgres":
+                    running_ports.append(conn.laddr.port)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+    return running_ports
