@@ -6,7 +6,26 @@ on:
     branches: [main]
 
 jobs:
-  _setup: &setup
+  demo:
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        ./dependencies/install_dependencies.sh
+
+    - name: Test
+      run: |
+        echo hi
+
+  ci:
     # The code for the self-hosted runners is at https://github.com/wangpatrick57/dbgym-runners.
     runs-on: self-hosted
 
@@ -32,16 +51,6 @@ jobs:
     - name: Install dependencies
       run: |
         ./dependencies/install_dependencies.sh
-
-  # demo:
-  #   <<: *setup
-
-  #   - name: Test
-  #     run: |
-  #       echo hi
-
-  ci:
-    <<: *setup
 
     - name: Check formatting
       run: |
