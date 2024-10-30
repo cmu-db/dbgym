@@ -342,6 +342,16 @@ class DBGymConfig:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
+def make_standard_dbgym_cfg() -> DBGymConfig:
+    """
+    The "standard" way to make a DBGymConfig using the DBGYM_CONFIG_PATH envvar and the
+    default path of dbgym_config.yaml.
+    """
+    dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
+    dbgym_cfg = DBGymConfig(dbgym_config_path)
+    return dbgym_cfg
+
+
 def conv_inputpath_to_realabspath(
     dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]
 ) -> Path:
