@@ -5,7 +5,11 @@ from pathlib import Path
 import yaml
 
 from tune.env.pg_conn import PostgresConn
-from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running, get_running_postgres_ports
+from util.pg import (
+    DEFAULT_POSTGRES_PORT,
+    get_is_postgres_running,
+    get_running_postgres_ports,
+)
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
     DBGymConfig,
@@ -83,7 +87,8 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn1.restore_pristine_snapshot()
         pg_conn1.start_with_changes()
         self.assertEqual(
-            set(get_running_postgres_ports()), {DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_PORT + 1}
+            set(get_running_postgres_ports()),
+            {DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_PORT + 1},
         )
 
         # Clean up
