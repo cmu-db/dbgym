@@ -5,7 +5,11 @@ from pathlib import Path
 import yaml
 
 from tune.env.pg_conn import PostgresConn
-from util.pg import get_is_postgres_running, get_running_postgres_ports
+from util.pg import (
+    DEFAULT_POSTGRES_PORT,
+    get_is_postgres_running,
+    get_running_postgres_ports,
+)
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
     DBGymConfig,
@@ -17,7 +21,6 @@ from util.workspace import (
 ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_integtests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
-BASE_PGPORT = 5432
 
 
 def get_unittest_workspace_path() -> Path:
@@ -54,7 +57,7 @@ class PostgresConnTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.assertFalse(get_is_postgres_running())
 
-    def create_pg_conn(self, pgport: int = BASE_PGPORT) -> PostgresConn:
+    def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
             PostgresConnTests.dbgym_cfg,
             pgport,
@@ -79,12 +82,13 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn0 = self.create_pg_conn()
         pg_conn0.restore_pristine_snapshot()
         pg_conn0.start_with_changes()
-        self.assertEqual(set(get_running_postgres_ports()), {BASE_PGPORT})
-        pg_conn1 = self.create_pg_conn(BASE_PGPORT + 1)
+        self.assertEqual(set(get_running_postgres_ports()), {DEFAULT_POSTGRES_PORT})
+        pg_conn1 = self.create_pg_conn(DEFAULT_POSTGRES_PORT + 1)
         pg_conn1.restore_pristine_snapshot()
         pg_conn1.start_with_changes()
         self.assertEqual(
-            set(get_running_postgres_ports()), {BASE_PGPORT, BASE_PGPORT + 1}
+            set(get_running_postgres_ports()),
+            {DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_PORT + 1},
         )
 
         # Clean up
