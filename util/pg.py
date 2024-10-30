@@ -73,6 +73,16 @@ def create_sqlalchemy_conn(
 
 
 def get_is_postgres_running() -> bool:
+    """
+    This is often used in assertions to ensure that Postgres isn't running before we
+    execute some code.
+
+    I intentionally do not have a function that forcefully *stops* all Postgres instances.
+    This is risky because it could accidentally stop instances it wasn't supposed (e.g.
+    Postgres instances run by other users on the same machine).
+
+    Stopping Postgres instances is thus a responsibility of the human to take care of.
+    """
     return len(get_running_postgres_ports()) > 0
 
 
