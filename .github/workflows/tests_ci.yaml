@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  ci:
+  _setup: &setup
     # The code for the self-hosted runners is at https://github.com/wangpatrick57/dbgym-runners.
     runs-on: self-hosted
 
@@ -33,6 +33,16 @@ jobs:
       run: |
         ./dependencies/install_dependencies.sh
 
+  demo:
+    <<: *setup
+
+    - name: Test
+      run: |
+        echo hi
+
+  ci:
+    <<: *setup
+
     - name: Check formatting
       run: |
         ./scripts/check_format.sh
@@ -50,11 +60,12 @@ jobs:
     - name: Run integration tests
       # Integration tests do require external systems to be running (most commonly a database instance).
       # Unlike end-to-end tests though, they test a specific module in a detailed manner, much like a unit test does.
-      #
-      # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `./tune/env/set_up_env_integtests.sh`.
+      env:
+        # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `./tune/env/set_up_env_integtests.sh`.
+        INTENDED_DBDATA_HARDWARE: ssd
       run: |
         . "$HOME/.cargo/env"
-        export INTENDED_DBDATA_HARDWARE=ssd
+        export 
         ./scripts/run_integration_tests.sh
 
     - name: Run end-to-end tests
