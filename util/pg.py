@@ -85,13 +85,13 @@ def get_running_postgres_ports() -> list[int]:
     """
     running_ports = []
 
-    for conn in psutil.net_connections(kind='inet'):
-        if conn.status == 'LISTEN':
+    for conn in psutil.net_connections(kind="inet"):
+        if conn.status == "LISTEN":
             try:
                 proc = psutil.Process(conn.pid)
-                if proc.name() == 'postgres':
+                if proc.name() == "postgres":
                     running_ports.append(conn.laddr.port)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-    
+
     return running_ports

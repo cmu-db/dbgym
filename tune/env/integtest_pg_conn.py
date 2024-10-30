@@ -1,13 +1,20 @@
-from pathlib import Path
 import subprocess
 import unittest
+from pathlib import Path
 
 import yaml
 
 from tune.env.pg_conn import PostgresConn
 from util.pg import get_is_postgres_running, get_running_postgres_ports
-from util.workspace import DEFAULT_BOOT_CONFIG_FPATH, DBGymConfig, get_symlinks_path_from_workspace_path, default_pristine_dbdata_snapshot_path, default_dbdata_parent_dpath, default_pgbin_path, get_tmp_path_from_workspace_path
-
+from util.workspace import (
+    DEFAULT_BOOT_CONFIG_FPATH,
+    DBGymConfig,
+    default_dbdata_parent_dpath,
+    default_pgbin_path,
+    default_pristine_dbdata_snapshot_path,
+    get_symlinks_path_from_workspace_path,
+    get_tmp_path_from_workspace_path,
+)
 
 ENV_TESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_tests_dbgym_config.yaml")
 BENCHMARK = "tpch"
@@ -22,27 +29,29 @@ def get_unittest_workspace_path() -> Path:
 
 
 class PostgresConnTests(unittest.TestCase):
+    dbgym_cfg: DBGymConfig
+
     @staticmethod
-    def setUpClass():
+    def setUpClass() -> None:
         if not get_unittest_workspace_path().exists():
             subprocess.run(["./tune/env/set_up_env_tests.sh"], check=True)
 
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_TESTS_DBGYM_CONFIG_FPATH)
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.assertFalse(get_is_postgres_running())
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
-            self.dbgym_cfg.dbgym_workspace_path,
-            BENCHMARK,
-            SCALE_FACTOR
+            self.dbgym_cfg.dbgym_workspace_path, BENCHMARK, SCALE_FACTOR
         )
-        self.dbdata_parent_dpath = default_dbdata_parent_dpath(self.dbgym_cfg.dbgym_workspace_path)
+        self.dbdata_parent_dpath = default_dbdata_parent_dpath(
+            self.dbgym_cfg.dbgym_workspace_path
+        )
         self.pgbin_dpath = default_pgbin_path(self.dbgym_cfg.dbgym_workspace_path)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.assertFalse(get_is_postgres_running())
 
-    def create_pg_conn(self, pgport: int=BASE_PGPORT) -> PostgresConn:
+    def create_pg_conn(self, pgport: int = BASE_PGPORT) -> PostgresConn:
         return PostgresConn(
             PostgresConnTests.dbgym_cfg,
             pgport,
@@ -50,7 +59,7 @@ class PostgresConnTests(unittest.TestCase):
             self.dbdata_parent_dpath,
             self.pgbin_dpath,
             False,
-            DEFAULT_BOOT_CONFIG_FPATH
+            DEFAULT_BOOT_CONFIG_FPATH,
         )
 
     def test_init(self) -> None:
@@ -71,7 +80,9 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn1 = self.create_pg_conn(BASE_PGPORT + 1)
         pg_conn1.restore_pristine_snapshot()
         pg_conn1.start_with_changes()
-        self.assertEqual(set(get_running_postgres_ports()), {BASE_PGPORT, BASE_PGPORT + 1})
+        self.assertEqual(
+            set(get_running_postgres_ports()), {BASE_PGPORT, BASE_PGPORT + 1}
+        )
 
         # Clean up
         pg_conn0.shutdown_postgres()
@@ -87,8 +98,10 @@ class PostgresConnTests(unittest.TestCase):
         self.assertIsNone(pg_conn._conn)
         conn = pg_conn.conn()
         self.assertIsNotNone(conn)
-        self.assertIs(conn, pg_conn._conn) # The conn should be cached so these objects should be the same
-        self.assertIs(conn, pg_conn.conn()) # Same thing here
+        self.assertIs(
+            conn, pg_conn._conn
+        )  # The conn should be cached so these objects should be the same
+        self.assertIs(conn, pg_conn.conn())  # Same thing here
         pg_conn.disconnect()
         self.assertIsNone(pg_conn._conn)
 

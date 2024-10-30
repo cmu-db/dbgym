@@ -9,6 +9,7 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
+from tune.env.pg_conn import PostgresConn
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
@@ -20,7 +21,6 @@ from tune.protox.env.types import (
     HolonStateContainer,
     TargetResetConfig,
 )
-from tune.env.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME

@@ -21,15 +21,12 @@ from util.workspace import (
     workload_name_fn,
 )
 
-# TODO: add check for the tfevents file and run tfevents analyze in integtest
-
-
 # Be careful when changing these constants. The integration test is hardcoded to work for these specific constants.
 DBMS = "postgres"
 AGENT = "protox"
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
-INTEGTEST_DBGYM_CONFIG_FPATH = Path("scripts/integtest_dbgym_config.yaml")
+E2ETEST_DBGYM_CONFIG_FPATH = Path("scripts/e2e_test_dbgym_config.yaml")
 
 
 def get_workspace_dpath(config_fpath: Path) -> Path:
@@ -52,10 +49,10 @@ if __name__ == "__main__":
     intended_dbdata_hardware = sys.argv[1] if len(sys.argv) > 1 else "hdd"
 
     # Set the config file so that we use resources that don't conflict with normal usage (e.g. a different workspace, different ports, etc.).
-    os.environ["DBGYM_CONFIG_PATH"] = str(INTEGTEST_DBGYM_CONFIG_FPATH)
+    os.environ["DBGYM_CONFIG_PATH"] = str(E2ETEST_DBGYM_CONFIG_FPATH)
 
     # Clear the integration testing workspace so we always run the test with a clean slate.
-    workspace_dpath = get_workspace_dpath(INTEGTEST_DBGYM_CONFIG_FPATH)
+    workspace_dpath = get_workspace_dpath(E2ETEST_DBGYM_CONFIG_FPATH)
     clear_workspace(workspace_dpath)
 
     # Run the full Proto-X training pipeline, asserting things along the way

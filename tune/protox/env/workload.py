@@ -12,6 +12,7 @@ import numpy as np
 import pglast
 from plumbum import local
 
+from tune.env.pg_conn import PostgresConn
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.latent_space import LatentKnobSpace, LatentQuerySpace
@@ -36,7 +37,6 @@ from tune.protox.env.util.execute import (
     _acquire_metrics_around_query,
     execute_variations,
 )
-from tune.env.pg_conn import PostgresConn
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.util.workload_analysis import (
     extract_aliases,

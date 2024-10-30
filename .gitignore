@@ -3,7 +3,6 @@ __pycache__/
 .conda/
 .idea/
 test_clean_scratchspace/
-tune/env/env_unittest_workspace/
 
 workspace/
 default_*_benchbase_config_*.xml

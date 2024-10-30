@@ -32,7 +32,6 @@ from util.pg import (
 )
 from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 
-
 DEFAULT_CONNECT_TIMEOUT = 300
 
 
@@ -48,7 +47,7 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         enable_boot: bool,
         boot_config_fpath: Path,
-        connect_timeout: int=DEFAULT_CONNECT_TIMEOUT,
+        connect_timeout: int = DEFAULT_CONNECT_TIMEOUT,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
