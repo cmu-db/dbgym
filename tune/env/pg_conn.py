@@ -22,6 +22,7 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
+# TODO: remove this import
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
