@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m streamlit tune.demo.main
+python -m streamlit run tune/demo/main.py

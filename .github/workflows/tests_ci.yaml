@@ -23,7 +23,7 @@ jobs:
 
     - name: Run demo
       run: |
-        ./scripts/run_demo.sh
+        ./scripts/run_demo.sh &
 
   # ci:
   #   # The code for the self-hosted runners is at https://github.com/wangpatrick57/dbgym-runners.
