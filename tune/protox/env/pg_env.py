@@ -1,9 +1,7 @@
 import copy
-import json
 import logging
 import time
-from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional
 
 import gymnasium as gym
 import psycopg
@@ -430,7 +428,7 @@ class PostgresEnv(gym.Env[Any, Any]):
                         # We've killed the index operation.
                         or "operational" in stderr
                     )
-                    attempt_checkpoint(self.pg_conn.get_connstr())
+                    attempt_checkpoint(self.pg_conn.get_kv_connstr())
                 return False
 
             assert ret == 0, stderr

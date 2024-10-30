@@ -22,15 +22,9 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-# TODO: remove this import
 from util.log import DBGYM_LOGGER_NAME
-from util.pg import (
-    DBGYM_POSTGRES_DBNAME,
-    DBGYM_POSTGRES_PASS,
-    DBGYM_POSTGRES_USER,
-    SHARED_PRELOAD_LIBRARIES,
-)
-from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
+from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from util.workspace import DBGymConfig, open_and_save, parent_dpath_of_path
 
 DEFAULT_CONNECT_TIMEOUT = 300
 
@@ -77,13 +71,13 @@ class PostgresConn:
 
         self._conn: Optional[psycopg.Connection[Any]] = None
 
-    def get_connstr(self) -> str:
-        return f"host=localhost port={self.pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
+    def get_kv_connstr(self) -> str:
+        return get_kv_connstr(self.pgport)
 
     def conn(self) -> psycopg.Connection[Any]:
         if self._conn is None:
             self._conn = psycopg.connect(
-                self.get_connstr(), autocommit=True, prepare_threshold=None
+                self.get_kv_connstr(), autocommit=True, prepare_threshold=None
             )
         return self._conn
 
@@ -329,7 +323,7 @@ class PostgresConn:
         conn.execute("SET statement_timeout = 300000")
 
         try:
-            timer = threading.Timer(300.0, cancel_fn, args=(self.get_connstr(),))
+            timer = threading.Timer(300.0, cancel_fn, args=(self.get_kv_connstr(),))
             timer.start()
 
             conn.execute(sql)

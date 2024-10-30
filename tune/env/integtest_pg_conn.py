@@ -1,4 +1,3 @@
-import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -13,8 +12,6 @@ from util.workspace import (
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
-    get_symlinks_path_from_workspace_path,
-    get_tmp_path_from_workspace_path,
 )
 
 ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_integtests_dbgym_config.yaml")

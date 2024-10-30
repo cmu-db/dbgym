@@ -1,5 +1,9 @@
+"""
+There are multiple parts of the codebase which interact with Postgres. This file contains helpers common to all those parts.
+"""
+
 from pathlib import Path
-from typing import Any, List, NewType, Union
+from typing import Any
 
 import pglast
 import psutil
@@ -53,6 +57,10 @@ def get_connstr(pgport: int = DEFAULT_POSTGRES_PORT, use_psycopg: bool = True) -
     #   using the psycopg.connect() function
     connstr_prefix = "postgresql" if use_psycopg else "postgresql+psycopg"
     return connstr_prefix + "://" + connstr_suffix
+
+
+def get_kv_connstr(pgport: int = DEFAULT_POSTGRES_PORT) -> str:
+    return f"host=localhost port={pgport} user={DBGYM_POSTGRES_USER} password={DBGYM_POSTGRES_PASS} dbname={DBGYM_POSTGRES_DBNAME}"
 
 
 def create_psycopg_conn(pgport: int = DEFAULT_POSTGRES_PORT) -> psycopg.Connection[Any]:

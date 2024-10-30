@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -19,7 +18,6 @@ from util.workspace import (
     default_traindata_path,
     default_tuning_steps_dpath,
     default_workload_path,
-    get_latest_run_path_from_workspace_path,
     workload_name_fn,
 )
 
