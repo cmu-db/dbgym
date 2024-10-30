@@ -1,3 +1,4 @@
+import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -33,6 +34,7 @@ class PostgresConnTests(unittest.TestCase):
 
     @staticmethod
     def setUpClass() -> None:
+        # If you're running the test locally, this check makes runs past the first one much faster.
         if not get_unittest_workspace_path().exists():
             subprocess.run(["./tune/env/set_up_env_integtests.sh"], check=True)
 

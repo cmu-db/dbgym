@@ -50,8 +50,11 @@ jobs:
     - name: Run integration tests
       # Integration tests do require external systems to be running (most commonly a database instance).
       # Unlike end-to-end tests though, they test a specific module in a detailed manner, much like a unit test does.
+      #
+      # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `./tune/env/set_up_env_integtests.sh`.
       run: |
         . "$HOME/.cargo/env"
+        export INTENDED_DBDATA_HARDWARE=ssd
         ./scripts/run_integration_tests.sh
 
     - name: Run end-to-end tests

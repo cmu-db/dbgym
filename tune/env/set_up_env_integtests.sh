@@ -8,7 +8,8 @@
 
 set -euxo pipefail
 
-INTENDED_DBDATA_HARDWARE="${1:-hdd}"
+# INTENDED_DBDATA_HARDWARE can be set elsewhere (e.g. by tests_ci.yaml) but we use hdd by default.
+INTENDED_DBDATA_HARDWARE="${INTENDED_DBDATA_HARDWARE:-hdd}"
 BENCHMARK=tpch
 SCALE_FACTOR=0.01
 export DBGYM_CONFIG_PATH=tune/env/env_integtests_dbgym_config.yaml # Note that this envvar needs to be exported.
