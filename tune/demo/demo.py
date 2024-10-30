@@ -3,6 +3,7 @@ import streamlit as st
 from tune.env.pg_conn import PostgresConn
 from util.pg import DEFAULT_POSTGRES_PORT
 from util.workspace import (
+    DBGymConfig,
     make_standard_dbgym_cfg,
     DEFAULT_BOOT_CONFIG_FPATH,
     default_dbdata_parent_dpath,
@@ -11,12 +12,18 @@ from util.workspace import (
 )
 
 
+# This ensures that DBGymConfig is only created once. Check DBGymConfig.__init__() for why we must do this.
+@st.cache_resource
+def make_dbgym_cfg() -> DBGymConfig:
+    return make_standard_dbgym_cfg()
+
+
 class Demo:
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
 
     def __init__(self):
-        self.dbgym_cfg = make_standard_dbgym_cfg()
+        self.dbgym_cfg = make_dbgym_cfg()
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             self.dbgym_cfg.dbgym_workspace_path, Demo.BENCHMARK, Demo.SCALE_FACTOR
         )
@@ -36,4 +43,8 @@ class Demo:
 
 
 if __name__ == "__main__":
-    demo = Demo()
+    if 'initialized' not in st.session_state:
+        st.session_state['initialized'] = True
+        demo = Demo()
+
+    st.write("hia")
