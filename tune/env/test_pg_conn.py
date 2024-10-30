@@ -12,7 +12,7 @@ from util.workspace import DEFAULT_BOOT_CONFIG_FPATH, DBGymConfig, get_symlinks_
 ENV_TESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_tests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
-PGPORT = 5432
+BASE_PGPORT = 5432
 
 
 def get_unittest_workspace_path() -> Path:
@@ -42,10 +42,10 @@ class PostgresConnTests(unittest.TestCase):
     def tearDown(self):
         self.assertFalse(get_is_postgres_running())
 
-    def create_pg_conn(self) -> PostgresConn:
+    def create_pg_conn(self, pgport: int=BASE_PGPORT) -> PostgresConn:
         return PostgresConn(
             PostgresConnTests.dbgym_cfg,
-            PGPORT,
+            pgport,
             self.pristine_dbdata_snapshot_path,
             self.dbdata_parent_dpath,
             self.pgbin_dpath,
@@ -62,6 +62,20 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn.start_with_changes()
         self.assertTrue(get_is_postgres_running())
         pg_conn.shutdown_postgres()
+
+    def test_start_on_multiple_ports(self) -> None:
+        pg_conn0 = self.create_pg_conn()
+        pg_conn0.restore_pristine_snapshot()
+        pg_conn0.start_with_changes()
+        self.assertEqual(set(get_running_postgres_ports()), {BASE_PGPORT})
+        pg_conn1 = self.create_pg_conn(BASE_PGPORT + 1)
+        pg_conn1.restore_pristine_snapshot()
+        pg_conn1.start_with_changes()
+        self.assertEqual(set(get_running_postgres_ports()), {BASE_PGPORT, BASE_PGPORT + 1})
+
+        # Clean up
+        pg_conn0.shutdown_postgres()
+        pg_conn1.shutdown_postgres()
 
     def test_connect_and_disconnect(self) -> None:
         # Setup
