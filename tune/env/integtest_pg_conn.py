@@ -39,7 +39,11 @@ class PostgresConnTests(unittest.TestCase):
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_TESTS_DBGYM_CONFIG_FPATH)
 
     def setUp(self) -> None:
-        self.assertFalse(get_is_postgres_running())
+        self.assertFalse(
+            get_is_postgres_running(),
+            "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way" + 
+            "to ensure this. Be careful about accidentally taking down other people's Postgres instances though."
+        )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             self.dbgym_cfg.dbgym_workspace_path, BENCHMARK, SCALE_FACTOR
         )
