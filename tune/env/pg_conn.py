@@ -23,7 +23,6 @@ from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 # TODO: remove this import
-from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
@@ -34,7 +33,12 @@ from util.pg import (
 from util.workspace import DBGymConfig, link_result, open_and_save, parent_dpath_of_path
 
 
+DEFAULT_CONNECT_TIMEOUT = 300
+
+
 class PostgresConn:
+    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) is so that
+    # it's fully decoupled from how the files are organized in the workspace.
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
@@ -42,10 +46,9 @@ class PostgresConn:
         pristine_dbdata_snapshot_fpath: Path,
         dbdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
-        connect_timeout: int,
         enable_boot: bool,
         boot_config_fpath: Path,
-        artifact_manager: ArtifactManager,
+        connect_timeout: int=DEFAULT_CONNECT_TIMEOUT,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
@@ -55,7 +58,6 @@ class PostgresConn:
         self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
-        self.artifact_manager = artifact_manager
 
         # All the paths related to dbdata
         # pristine_dbdata_snapshot_fpath is the .tgz snapshot that represents the starting state
@@ -104,7 +106,6 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
-    @time_record("shutdown")
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()
@@ -135,7 +136,6 @@ class PostgresConn:
             if not exists and retcode != 0:
                 break
 
-    @time_record("start")
     def start_with_changes(
         self,
         conf_changes: Optional[list[str]] = None,
@@ -300,7 +300,6 @@ class PostgresConn:
         self.conn().execute(f"SET boot.mu_hyp_stdev={mu_hyp_stdev}")
         logging.getLogger(DBGYM_LOGGER_NAME).debug("Set up boot")
 
-    @time_record("psql")
     def psql(self, sql: str) -> tuple[int, Optional[str]]:
         low_sql = sql.lower()
 
@@ -363,7 +362,6 @@ class PostgresConn:
     def restore_checkpointed_snapshot(self) -> bool:
         return self._restore_snapshot(self.checkpoint_dbdata_snapshot_fpath)
 
-    @time_record("restore")
     def _restore_snapshot(
         self,
         dbdata_snapshot_path: Path,

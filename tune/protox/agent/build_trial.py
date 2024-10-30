@@ -179,7 +179,6 @@ def _build_utilities(
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
         enable_boot=enable_boot,
         boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
-        connect_timeout=300,
         artifact_manager=artifact_manager,
     )
 

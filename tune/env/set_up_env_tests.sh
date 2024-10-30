@@ -9,10 +9,11 @@
 set -euxo pipefail
 
 INTENDED_DBDATA_HARDWARE="${1:-hdd}"
+BENCHMARK=tpch
 SCALE_FACTOR=0.01
 export DBGYM_CONFIG_PATH=tune/env/env_tests_dbgym_config.yaml # This envvar needs to be exported.
 WORKSPACE_PATH=$(grep 'dbgym_workspace_path:' $DBGYM_CONFIG_PATH | sed 's/dbgym_workspace_path: //')
 
-python3 task.py benchmark tpch data $SCALE_FACTOR
+python3 task.py benchmark $BENCHMARK data $SCALE_FACTOR
 python3 task.py dbms postgres build
-python3 task.py dbms postgres dbdata tpch --scale-factor $SCALE_FACTOR --intended-dbdata-hardware $INTENDED_DBDATA_HARDWARE
+python3 task.py dbms postgres dbdata $BENCHMARK --scale-factor $SCALE_FACTOR --intended-dbdata-hardware $INTENDED_DBDATA_HARDWARE
