@@ -32,7 +32,7 @@ from util.workspace import (
     default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
-    workload_name_fn,
+    get_workload_name,
 )
 
 
@@ -208,7 +208,7 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
     if traindata_path is None:
         traindata_path = default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

@@ -37,7 +37,7 @@ from util.workspace import (
     open_and_save,
     parent_dpath_of_path,
     save_file,
-    workload_name_fn,
+    get_workload_name,
 )
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -150,7 +150,7 @@ def replay(
     blocklist: list[str],
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
 
     if tuning_steps_dpath is None:
         tuning_steps_dpath = default_tuning_steps_dpath(

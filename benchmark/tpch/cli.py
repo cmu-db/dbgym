@@ -10,7 +10,7 @@ from util.workspace import (
     default_tables_dname,
     get_scale_factor_string,
     link_result,
-    workload_name_fn,
+    get_workload_name,
 )
 
 
@@ -61,8 +61,8 @@ def tpch_workload(
         seed_start <= seed_end
     ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
     _clone_tpch_kit(dbgym_cfg)
-    _generate_queries(dbgym_cfg, seed_start, seed_end, scale_factor)
-    _generate_workload(dbgym_cfg, seed_start, seed_end, query_subset, scale_factor)
+    _generate_tpch_queries(dbgym_cfg, seed_start, seed_end, scale_factor)
+    _generate_tpch_workload(dbgym_cfg, seed_start, seed_end, query_subset, scale_factor)
 
 
 def _get_queries_dname(seed: int, scale_factor: float) -> str:
@@ -99,7 +99,7 @@ def _get_tpch_kit_dpath(dbgym_cfg: DBGymConfig) -> Path:
     return tpch_kit_dpath
 
 
-def _generate_queries(
+def _generate_tpch_queries(
     dbgym_cfg: DBGymConfig, seed_start: int, seed_end: int, scale_factor: float
 ) -> None:
     tpch_kit_dpath = _get_tpch_kit_dpath(dbgym_cfg)
@@ -159,7 +159,7 @@ def _generate_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     )
 
 
-def _generate_workload(
+def _generate_tpch_workload(
     dbgym_cfg: DBGymConfig,
     seed_start: int,
     seed_end: int,
@@ -167,7 +167,7 @@ def _generate_workload(
     scale_factor: float,
 ) -> None:
     symlink_data_dpath = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
     expected_workload_symlink_dpath = symlink_data_dpath / (workload_name + ".link")
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(

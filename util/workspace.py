@@ -89,9 +89,8 @@ default_benchbase_config_path: Callable[[str], Path] = (
 )
 
 # Generally useful functions
-workload_name_fn: Callable[[float | str, int, int, str], str] = (
-    lambda scale_factor, seed_start, seed_end, query_subset: f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
-)
+def get_workload_name(scale_factor: float | str, seed_start: int, seed_end: int, query_subset: str) -> str:
+    return f"workload_sf{get_scale_factor_string(scale_factor)}_{seed_start}_{seed_end}_{query_subset}"
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.

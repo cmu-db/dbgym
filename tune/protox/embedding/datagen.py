@@ -48,7 +48,7 @@ from util.workspace import (
     link_result,
     open_and_save,
     save_file,
-    workload_name_fn,
+    get_workload_name,
 )
 
 # FUTURE(oltp)
@@ -216,7 +216,7 @@ def datagen(
     # set args to defaults programmatically (do this before doing anything else in the function)
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
     if benchmark_config_path is None:
         benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if workload_path is None:

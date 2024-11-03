@@ -47,7 +47,7 @@ from util.workspace import (
     link_result,
     open_and_save,
     restart_ray,
-    workload_name_fn,
+    get_workload_name,
 )
 
 METRIC_NAME = "Best Metric"
@@ -277,7 +277,7 @@ def hpo(
     build_space_good_for_boot: bool,
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
     if embedder_path is None:
         embedder_path = default_embedder_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

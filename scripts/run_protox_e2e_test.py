@@ -18,7 +18,7 @@ from util.workspace import (
     default_traindata_path,
     default_tuning_steps_dpath,
     default_workload_path,
-    workload_name_fn,
+    get_workload_name,
 )
 
 # Be careful when changing these constants. In some places, the E2E test is hardcoded to work for these specific constants.
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         )
         assert tables_dpath.exists()
 
-    workload_name = workload_name_fn(SCALE_FACTOR, 15721, 15721, "all")
+    workload_name = get_workload_name(SCALE_FACTOR, 15721, 15721, "all")
     workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
     if Stage.Workload in STAGES_TO_RUN:
         assert not workload_dpath.exists()

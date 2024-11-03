@@ -21,7 +21,7 @@ from util.workspace import (
     default_tuning_steps_dname,
     link_result,
     open_and_save,
-    workload_name_fn,
+    get_workload_name,
 )
 
 
@@ -88,7 +88,7 @@ def tune(
 ) -> None:
     """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters"."""
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
     if hpoed_agent_params_path is None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
