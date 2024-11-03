@@ -33,11 +33,12 @@ from util.workspace import (
     conv_inputpath_to_realabspath,
     default_replay_data_fname,
     default_tuning_steps_dpath,
+    get_default_workload_name_suffix,
+    get_workload_name,
     link_result,
     open_and_save,
     parent_dpath_of_path,
     save_file,
-    get_workload_name,
 )
 
 REPLAY_DATA_FNAME = "replay_data.csv"
@@ -71,21 +72,10 @@ class ReplayArgs:
 @click.pass_obj
 @click.argument("benchmark-name")
 @click.option(
-    "--seed-start",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
-)
-@click.option(
-    "--seed-end",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
-)
-@click.option(
-    "--query-subset",
-    type=click.Choice(["all", "even", "odd"]),
-    default="all",
+    "--workload-name-suffix",
+    type=str,
+    default=None,
+    help=f"The suffix of the workload name (the part after the scale factor).",
 )
 @click.option(
     "--scale-factor",
@@ -137,9 +127,7 @@ class ReplayArgs:
 def replay(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    seed_start: int,
-    seed_end: int,
-    query_subset: str,
+    workload_name_suffix: str,
     scale_factor: float,
     boot_enabled_during_tune: bool,
     tuning_steps_dpath: Optional[Path],
@@ -150,7 +138,9 @@ def replay(
     blocklist: list[str],
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
+    if workload_name_suffix is None:
+        workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
+    workload_name = get_workload_name(scale_factor, workload_name_suffix)
 
     if tuning_steps_dpath is None:
         tuning_steps_dpath = default_tuning_steps_dpath(

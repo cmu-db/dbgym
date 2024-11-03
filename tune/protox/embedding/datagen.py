@@ -44,11 +44,12 @@ from util.workspace import (
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
     default_workload_path,
+    get_default_workload_name_suffix,
+    get_workload_name,
     is_ssd,
     link_result,
     open_and_save,
     save_file,
-    get_workload_name,
 )
 
 # FUTURE(oltp)
@@ -71,21 +72,10 @@ QueryBatches = NewType(
 # generic args
 @click.argument("benchmark-name")
 @click.option(
-    "--seed-start",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
-)
-@click.option(
-    "--seed-end",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
-)
-@click.option(
-    "--query-subset",
-    type=click.Choice(["all", "even", "odd"]),
-    default="all",
+    "--workload-name-suffix",
+    type=str,
+    default=None,
+    help=f"The suffix of the workload name (the part after the scale factor).",
 )
 @click.option(
     "--scale-factor",
@@ -181,9 +171,7 @@ QueryBatches = NewType(
 def datagen(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    seed_start: int,
-    seed_end: int,
-    query_subset: str,
+    workload_name_suffix: str,
     scale_factor: float,
     pgbin_path: Optional[Path],
     pristine_dbdata_snapshot_path: Optional[Path],
@@ -208,21 +196,18 @@ def datagen(
     Outputs all this data as a .parquet file in the run_*/ dir.
     Updates the symlink in the data/ dir to point to the new .parquet file.
     """
-    # check args
-    assert (
-        seed_start <= seed_end
-    ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
-
-    # set args to defaults programmatically (do this before doing anything else in the function)
+    # Set args to defaults programmatically (do this before doing anything else in the function).
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
-    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
-    if benchmark_config_path is None:
-        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+    if workload_name_suffix is None:
+        workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
+    workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if workload_path is None:
         workload_path = default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
+    if benchmark_config_path is None:
+        benchmark_config_path = default_benchmark_config_path(benchmark_name)
     if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if pristine_dbdata_snapshot_path is None:

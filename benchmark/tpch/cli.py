@@ -9,8 +9,8 @@ from util.workspace import (
     DBGymConfig,
     default_tables_dname,
     get_scale_factor_string,
-    link_result,
     get_workload_name,
+    link_result,
 )
 
 
@@ -167,7 +167,9 @@ def _generate_tpch_workload(
     scale_factor: float,
 ) -> None:
     symlink_data_dpath = dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
+    workload_name = get_workload_name(
+        scale_factor, f"{seed_start}_{seed_end}_{query_subset}"
+    )
     expected_workload_symlink_dpath = symlink_data_dpath / (workload_name + ".link")
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(

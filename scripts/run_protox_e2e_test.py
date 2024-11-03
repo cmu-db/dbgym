@@ -93,7 +93,7 @@ if __name__ == "__main__":
         )
         assert tables_dpath.exists()
 
-    workload_name = get_workload_name(SCALE_FACTOR, 15721, 15721, "all")
+    workload_name = get_workload_name(SCALE_FACTOR, "15721_15721_all")
     workload_dpath = default_workload_path(workspace_dpath, BENCHMARK, workload_name)
     if Stage.Workload in STAGES_TO_RUN:
         assert not workload_dpath.exists()

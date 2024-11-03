@@ -19,9 +19,10 @@ from util.workspace import (
     conv_inputpath_to_realabspath,
     default_hpoed_agent_params_path,
     default_tuning_steps_dname,
+    get_default_workload_name_suffix,
+    get_workload_name,
     link_result,
     open_and_save,
-    get_workload_name,
 )
 
 
@@ -30,21 +31,10 @@ from util.workspace import (
 @click.pass_obj
 @click.argument("benchmark-name")
 @click.option(
-    "--seed-start",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
-)
-@click.option(
-    "--seed-end",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
-)
-@click.option(
-    "--query-subset",
-    type=click.Choice(["all", "even", "odd"]),
-    default="all",
+    "--workload-name-suffix",
+    type=str,
+    default=None,
+    help=f"The suffix of the workload name (the part after the scale factor).",
 )
 @click.option(
     "--scale-factor",
@@ -77,9 +67,7 @@ from util.workspace import (
 def tune(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    seed_start: int,
-    seed_end: int,
-    query_subset: str,
+    workload_name_suffix: str,
     scale_factor: float,
     hpoed_agent_params_path: Path,
     enable_boot_during_tune: bool,
@@ -88,7 +76,9 @@ def tune(
 ) -> None:
     """IMPORTANT: The "tune" here is the one in "tune a DBMS". This is *different* from the "tune" in ray.tune.TuneConfig, which means to "tune hyperparameters"."""
     # Set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = get_workload_name(scale_factor, seed_start, seed_end, query_subset)
+    if workload_name_suffix is None:
+        workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
+    workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if hpoed_agent_params_path is None:
         hpoed_agent_params_path = default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

@@ -1,10 +1,10 @@
 import logging
+
 import click
 
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import DBGymConfig, link_result
-
 
 JOB_TABLES_URL = "https://homepages.cwi.nl/~boncz/job/imdb.tgz"
 
@@ -38,7 +38,7 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
             f"Skipping download: {expected_symlink_dpath}"
         )
         return
-    
+
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
     subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path)
