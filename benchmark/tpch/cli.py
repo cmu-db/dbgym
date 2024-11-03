@@ -26,7 +26,7 @@ def tpch_group(dbgym_cfg: DBGymConfig) -> None:
 # The reason generate data is separate from create dbdata is because generate-data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
 def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
-    _clone(dbgym_cfg)
+    _clone_tpch_kit(dbgym_cfg)
     _generate_data(dbgym_cfg, scale_factor)
 
 
@@ -60,7 +60,7 @@ def tpch_workload(
     assert (
         seed_start <= seed_end
     ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
-    _clone(dbgym_cfg)
+    _clone_tpch_kit(dbgym_cfg)
     _generate_queries(dbgym_cfg, seed_start, seed_end, scale_factor)
     _generate_workload(dbgym_cfg, seed_start, seed_end, query_subset, scale_factor)
 
@@ -69,7 +69,7 @@ def _get_queries_dname(seed: int, scale_factor: float) -> str:
     return f"queries_{seed}_sf{get_scale_factor_string(scale_factor)}"
 
 
-def _clone(dbgym_cfg: DBGymConfig) -> None:
+def _clone_tpch_kit(dbgym_cfg: DBGymConfig) -> None:
     expected_symlink_dpath = (
         dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "tpch-kit.link"
     )
@@ -82,7 +82,7 @@ def _clone(dbgym_cfg: DBGymConfig) -> None:
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
     real_build_path = dbgym_cfg.cur_task_runs_build_path()
     subprocess_run(
-        f"./tpch_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
+        f"./clone_tpch_kit.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
     )
     symlink_dpath = link_result(dbgym_cfg, real_build_path / "tpch-kit")
     assert expected_symlink_dpath.samefile(symlink_dpath)

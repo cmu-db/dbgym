@@ -17,12 +17,18 @@ def job_group(dbgym_cfg: DBGymConfig) -> None:
 # The reason generate data is separate from create dbdata is because generate-data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
 def job_data(dbgym_cfg: DBGymConfig) -> None:
-    _clone(dbgym_cfg)
+    pass
 
 
-def _clone(dbgym_cfg: DBGymConfig) -> None:
+@job_group.command(name="workload")
+@click.pass_obj
+def tpch_workload(dbgym_cfg: DBGymConfig) -> None:
+    _clone_job_queries(dbgym_cfg)
+
+
+def _clone_job_queries(dbgym_cfg: DBGymConfig) -> None:
     expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "job-kit-gym.link"
+        dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "job-queries.link"
     )
     if expected_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -33,8 +39,8 @@ def _clone(dbgym_cfg: DBGymConfig) -> None:
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
     real_build_path = dbgym_cfg.cur_task_runs_build_path()
     subprocess_run(
-        f"./job_setup.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
+        f"./clone_job_queries.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
     )
-    symlink_dpath = link_result(dbgym_cfg, real_build_path / "job-kit-gym")
+    symlink_dpath = link_result(dbgym_cfg, real_build_path / "job-queries")
     assert expected_symlink_dpath.samefile(symlink_dpath)
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_dpath}")
