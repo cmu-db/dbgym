@@ -1,5 +1,5 @@
 -- Copied over from https://github.com/cmu-db/benchbase/blob/main/src/main/resources/benchmarks/tpch/ddl-postgres.sql
--- as of bfa3184e7a09c0b9a57beff38cc5b6794fab53c3 , FKs and indexes in a separate file.
+-- We copied it over so that we have control over the schema, not tpch-kit.
 
 DROP TABLE IF EXISTS nation CASCADE;
 DROP TABLE IF EXISTS region CASCADE;

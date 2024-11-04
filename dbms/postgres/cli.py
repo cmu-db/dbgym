@@ -15,6 +15,7 @@ from typing import Optional
 import click
 import sqlalchemy
 
+from benchmark.job.load_info import JobLoadInfo
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
 from util.log import DBGYM_LOGGER_NAME
@@ -256,6 +257,8 @@ def _load_benchmark_into_dbdata(
     with create_sqlalchemy_conn() as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
+        elif benchmark_name == "job":
+            load_info = JobLoadInfo(dbgym_cfg)
         else:
             raise AssertionError(
                 f"_load_benchmark_into_dbdata(): the benchmark of name {benchmark_name} is not implemented"
@@ -269,16 +272,16 @@ def _load_into_dbdata(
 ) -> None:
     sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
 
-    # truncate all tables first before even loading a single one
+    # Truncate all tables first before even loading a single one.
     for table, _ in load_info.get_tables_and_fpaths():
         sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
-    # then, load the tables
+    # Then, load the tables.
     for table, table_fpath in load_info.get_tables_and_fpaths():
         with open_and_save(dbgym_cfg, table_fpath, "r") as table_csv:
             assert conn.connection.dbapi_connection is not None
             cur = conn.connection.dbapi_connection.cursor()
             try:
-                with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '|'") as copy:
+                with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '{load_info.get_table_file_delimiter()}' ESCAPE '\\'") as copy:
                     while data := table_csv.read(8192):
                         copy.write(data)
             finally:
