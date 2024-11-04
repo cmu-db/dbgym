@@ -97,6 +97,8 @@ def get_workload_name(scale_factor: float | str, suffix: str) -> str:
 def get_default_workload_name_suffix(benchmark_name: str) -> str:
     if benchmark_name == "tpch":
         return "15721_15721_all"
+    if benchmark_name == "job":
+        return "all"
     else:
         assert False
 
