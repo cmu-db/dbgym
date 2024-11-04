@@ -14,6 +14,9 @@ from util.workspace import (
 )
 
 
+NUM_TPCH_QUERIES = 22
+
+
 @click.group(name="tpch")
 @click.pass_obj
 def tpch_group(dbgym_cfg: DBGymConfig) -> None:
@@ -117,7 +120,7 @@ def _generate_tpch_queries(
         real_dir = dbgym_cfg.cur_task_runs_data_path(
             _get_queries_dname(seed, scale_factor), mkdir=True
         )
-        for i in range(1, 22 + 1):
+        for i in range(1, NUM_TPCH_QUERIES + 1):
             target_sql = (real_dir / f"{i}.sql").resolve()
             subprocess_run(
                 f"DSS_QUERY=./queries ./qgen {i} -r {seed} -s {scale_factor} > {target_sql}",
@@ -177,29 +180,29 @@ def _generate_tpch_workload(
     )
     real_dpath = dbgym_cfg.cur_task_runs_data_path(workload_name, mkdir=True)
 
-    queries = None
+    query_names = None
     if query_subset == "all":
-        queries = [f"{i}" for i in range(1, 22 + 1)]
+        query_names = [f"{i}" for i in range(1, NUM_TPCH_QUERIES + 1)]
     elif query_subset == "even":
-        queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 0]
+        query_names = [f"{i}" for i in range(1, NUM_TPCH_QUERIES + 1) if i % 2 == 0]
     elif query_subset == "odd":
-        queries = [f"{i}" for i in range(1, 22 + 1) if i % 2 == 1]
+        query_names = [f"{i}" for i in range(1, NUM_TPCH_QUERIES + 1) if i % 2 == 1]
     else:
         assert False
 
     with open(real_dpath / "order.txt", "w") as f:
         for seed in range(seed_start, seed_end + 1):
-            for qnum in queries:
+            for qname in query_names:
                 sql_fpath = (
                     symlink_data_dpath
                     / (_get_queries_dname(seed, scale_factor) + ".link")
-                ).resolve() / f"{qnum}.sql"
+                ).resolve() / f"{qname}.sql"
                 assert (
                     sql_fpath.exists()
                     and not sql_fpath.is_symlink()
                     and sql_fpath.is_absolute()
                 ), "We should only write existent real absolute paths to a file"
-                f.write(f"S{seed}-Q{qnum},{sql_fpath}\n")
+                f.write(f"S{seed}-Q{qname},{sql_fpath}\n")
                 # TODO(WAN): add option to deep-copy the workload.
 
     workload_symlink_dpath = link_result(dbgym_cfg, real_dpath)
