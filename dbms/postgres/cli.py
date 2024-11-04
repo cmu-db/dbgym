@@ -254,6 +254,8 @@ def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:
 def _load_benchmark_into_dbdata(
     dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
 ) -> None:
+    load_info: LoadInfoBaseClass
+
     with create_sqlalchemy_conn() as conn:
         if benchmark_name == "tpch":
             load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
@@ -281,7 +283,9 @@ def _load_into_dbdata(
             assert conn.connection.dbapi_connection is not None
             cur = conn.connection.dbapi_connection.cursor()
             try:
-                with cur.copy(f"COPY {table} FROM STDIN CSV DELIMITER '{load_info.get_table_file_delimiter()}' ESCAPE '\\'") as copy:
+                with cur.copy(
+                    f"COPY {table} FROM STDIN CSV DELIMITER '{load_info.get_table_file_delimiter()}' ESCAPE '\\'"
+                ) as copy:
                     while data := table_csv.read(8192):
                         copy.write(data)
             finally:

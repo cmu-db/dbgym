@@ -5,7 +5,7 @@ import click
 from benchmark.job.load_info import JobLoadInfo
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
-from util.workspace import DBGymConfig, link_result, default_tables_dname
+from util.workspace import DBGymConfig, default_tables_dname, link_result
 
 JOB_TABLES_URL = "https://homepages.cwi.nl/~boncz/job/imdb.tgz"
 
@@ -32,7 +32,8 @@ def tpch_workload(dbgym_cfg: DBGymConfig) -> None:
 
 def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
     expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_data_path(mkdir=True) / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
+        dbgym_cfg.cur_symlinks_data_path(mkdir=True)
+        / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
     )
     if expected_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -43,7 +44,9 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
     subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path)
-    job_data_dpath = dbgym_cfg.cur_task_runs_data_path(default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR), mkdir=True)
+    job_data_dpath = dbgym_cfg.cur_task_runs_data_path(
+        default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR), mkdir=True
+    )
     subprocess_run("tar -zxvf ../imdb.tgz", cwd=job_data_dpath)
     subprocess_run(f"rm imdb.tgz", cwd=real_data_path)
     symlink_dpath = link_result(dbgym_cfg, job_data_dpath)

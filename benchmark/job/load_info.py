@@ -32,7 +32,7 @@ class JobLoadInfo(LoadInfoBaseClass):
         "name",
         "person_info",
         "role_type",
-        "title"
+        "title",
     ]
 
     def __init__(self, dbgym_cfg: DBGymConfig):
@@ -52,7 +52,8 @@ class JobLoadInfo(LoadInfoBaseClass):
             dbgym_cfg.dbgym_symlinks_path / JobLoadInfo.CODEBASE_DNAME / "data"
         )
         tables_symlink_dpath = (
-            data_root_dpath / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
+            data_root_dpath
+            / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
         )
         tables_dpath = tables_symlink_dpath.resolve()
         assert (
