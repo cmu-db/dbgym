@@ -13,7 +13,6 @@ from util.workspace import (
     link_result,
 )
 
-
 NUM_TPCH_QUERIES = 22
 
 
