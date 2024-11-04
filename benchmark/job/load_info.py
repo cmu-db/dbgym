@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.load_info_base_class import LoadInfoBaseClass
 from util.workspace import DBGymConfig, default_tables_dname
 
@@ -8,7 +9,6 @@ JOB_SCHEMA_FNAME = "job_schema.sql"
 
 
 class JobLoadInfo(LoadInfoBaseClass):
-    JOB_SCALE_FACTOR = 1
     CODEBASE_PATH_COMPONENTS = ["dbgym", "benchmark", "job"]
     CODEBASE_DNAME = "_".join(CODEBASE_PATH_COMPONENTS)
     TABLES = [
@@ -53,7 +53,7 @@ class JobLoadInfo(LoadInfoBaseClass):
         )
         tables_symlink_dpath = (
             data_root_dpath
-            / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
+            / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
         )
         tables_dpath = tables_symlink_dpath.resolve()
         assert (

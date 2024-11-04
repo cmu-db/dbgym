@@ -2,6 +2,7 @@ import logging
 
 import click
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
@@ -147,7 +148,7 @@ def job_data(dbgym_cfg: DBGymConfig) -> None:
 @job_group.command(name="workload")
 @click.option(
     "--query-subset",
-    type=click.Choice(["all", "demo"]),
+    type=click.Choice(["all", "a", "demo"]),
     default="all",
 )
 @click.pass_obj
@@ -159,7 +160,7 @@ def job_workload(dbgym_cfg: DBGymConfig, query_subset: str) -> None:
 def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
     expected_symlink_dpath = (
         dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-        / f"{default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR)}.link"
+        / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
     )
     if expected_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -171,7 +172,7 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
     subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path)
     job_data_dpath = dbgym_cfg.cur_task_runs_data_path(
-        default_tables_dname(JobLoadInfo.JOB_SCALE_FACTOR), mkdir=True
+        default_tables_dname(DEFAULT_SCALE_FACTOR), mkdir=True
     )
     subprocess_run("tar -zxvf ../imdb.tgz", cwd=job_data_dpath)
     subprocess_run(f"rm imdb.tgz", cwd=real_data_path)
@@ -204,7 +205,7 @@ def _generate_job_workload(
     dbgym_cfg: DBGymConfig,
     query_subset: str,
 ) -> None:
-    workload_name = get_workload_name(JobLoadInfo.JOB_SCALE_FACTOR, query_subset)
+    workload_name = get_workload_name(DEFAULT_SCALE_FACTOR, query_subset)
     expected_workload_symlink_dpath = dbgym_cfg.cur_symlinks_data_path(mkdir=True) / (
         workload_name + ".link"
     )
@@ -217,6 +218,8 @@ def _generate_job_workload(
     query_names = None
     if query_subset == "all":
         query_names = JOB_QUERY_NAMES
+    elif query_subset == "a":
+        query_names = [qname for qname in JOB_QUERY_NAMES if qname[-1] == "a"]
     elif query_subset == "demo":
         query_names = [f"{i}a" for i in range(1, 6)]
     else:
