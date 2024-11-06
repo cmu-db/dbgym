@@ -7,6 +7,7 @@ import click
 import numpy as np
 import torch
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
     STATS_FNAME,
@@ -52,7 +53,7 @@ from util.workspace import (
 @click.option(
     "--scale-factor",
     type=float,
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(

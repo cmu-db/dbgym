@@ -138,10 +138,13 @@ def job_group(dbgym_cfg: DBGymConfig) -> None:
 
 
 @job_group.command(name="data")
+# We expose this option to keep its interface consistent with other workloads, but you should never pass in something other than DEFAULT_SCALE_FACTOR.
+@click.argument("scale-factor", type=float)
 @click.pass_obj
 # The reason generate data is separate from create dbdata is because generate-data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
-def job_data(dbgym_cfg: DBGymConfig) -> None:
+def job_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
+    assert scale_factor == DEFAULT_SCALE_FACTOR
     _download_job_data(dbgym_cfg)
 
 
@@ -151,8 +154,10 @@ def job_data(dbgym_cfg: DBGymConfig) -> None:
     type=click.Choice(["all", "a", "demo"]),
     default="all",
 )
+@click.option("--scale-factor", type=float, default=DEFAULT_SCALE_FACTOR)
 @click.pass_obj
-def job_workload(dbgym_cfg: DBGymConfig, query_subset: str) -> None:
+def job_workload(dbgym_cfg: DBGymConfig, query_subset: str, scale_factor: float) -> None:
+    assert scale_factor == DEFAULT_SCALE_FACTOR
     _clone_job_queries(dbgym_cfg)
     _generate_job_workload(dbgym_cfg, query_subset)
 

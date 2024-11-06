@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 import pandas as pd
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from tune.protox.agent.coerce_config import coerce_config
 from tune.protox.agent.hpo import TuneTrial, build_space
 from util.workspace import (
@@ -38,7 +39,7 @@ from util.workspace import (
 )
 @click.option(
     "--scale-factor",
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(

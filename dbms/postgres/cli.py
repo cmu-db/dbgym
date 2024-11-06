@@ -15,6 +15,7 @@ from typing import Optional
 import click
 import sqlalchemy
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
@@ -71,7 +72,7 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
 )
 @click.pass_obj
 @click.argument("benchmark_name", type=str)
-@click.option("--scale-factor", type=float, default=1)
+@click.option("--scale-factor", type=float, default=DEFAULT_SCALE_FACTOR)
 @click.option(
     "--pgbin-path",
     type=Path,

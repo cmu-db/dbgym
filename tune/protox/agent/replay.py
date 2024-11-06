@@ -18,6 +18,7 @@ import pandas as pd
 import tqdm
 from dateutil.parser import parse
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from tune.protox.agent.build_trial import build_trial
 from tune.protox.env.artifact_manager import ArtifactManager
 from tune.protox.env.pg_env import PostgresEnv
@@ -80,7 +81,7 @@ class ReplayArgs:
 @click.option(
     "--scale-factor",
     type=float,
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help="The scale factor used when generating the data of the benchmark.",
 )
 @click.option(

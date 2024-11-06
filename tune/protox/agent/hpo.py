@@ -22,6 +22,7 @@ from ray.tune import Trainable, TuneConfig
 from ray.tune.schedulers import FIFOScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from tune.protox.agent.build_trial import build_trial
 from util.log import DBGYM_LOGGER_NAME
 from util.workspace import (
@@ -112,7 +113,7 @@ class AgentHPOArgs:
 @click.option(
     "--scale-factor",
     type=float,
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(

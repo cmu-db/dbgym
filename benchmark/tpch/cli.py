@@ -3,6 +3,7 @@ from pathlib import Path
 
 import click
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
@@ -50,7 +51,7 @@ def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
     type=click.Choice(["all", "even", "odd"]),
     default="all",
 )
-@click.option("--scale-factor", type=float, default=1)
+@click.option("--scale-factor", type=float, default=DEFAULT_SCALE_FACTOR)
 @click.pass_obj
 def tpch_workload(
     dbgym_cfg: DBGymConfig,

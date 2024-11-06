@@ -18,6 +18,7 @@ import psycopg
 import yaml
 from sklearn.preprocessing import quantile_transform
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.postgres.cli import start_postgres, stop_postgres
 from tune.protox.embedding.loss import COST_COLUMNS
 from tune.protox.env.space.primitive_space.index_space import IndexSpace
@@ -80,7 +81,7 @@ QueryBatches = NewType(
 @click.option(
     "--scale-factor",
     type=float,
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
