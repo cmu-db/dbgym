@@ -156,7 +156,9 @@ def job_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
 )
 @click.option("--scale-factor", type=float, default=DEFAULT_SCALE_FACTOR)
 @click.pass_obj
-def job_workload(dbgym_cfg: DBGymConfig, query_subset: str, scale_factor: float) -> None:
+def job_workload(
+    dbgym_cfg: DBGymConfig, query_subset: str, scale_factor: float
+) -> None:
     assert scale_factor == DEFAULT_SCALE_FACTOR
     _clone_job_queries(dbgym_cfg)
     _generate_job_workload(dbgym_cfg, query_subset)
