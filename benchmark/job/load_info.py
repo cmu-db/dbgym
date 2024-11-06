@@ -52,8 +52,7 @@ class JobLoadInfo(LoadInfoBaseClass):
             dbgym_cfg.dbgym_symlinks_path / JobLoadInfo.CODEBASE_DNAME / "data"
         )
         tables_symlink_dpath = (
-            data_root_dpath
-            / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
+            data_root_dpath / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
         )
         tables_dpath = tables_symlink_dpath.resolve()
         assert (
