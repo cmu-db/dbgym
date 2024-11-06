@@ -47,23 +47,23 @@ jobs:
         . "$HOME/.cargo/env"
         ./scripts/run_unit_tests.sh
 
-    # - name: Run integration tests
-    #   # Integration tests do require external systems to be running (most commonly a database instance).
-    #   # Unlike end-to-end tests though, they test a specific module in a detailed manner, much like a unit test does.
-    #   env:
-    #     # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `./tune/env/set_up_env_integtests.sh`.
-    #     INTENDED_DBDATA_HARDWARE: ssd
-    #   run: |
-    #     . "$HOME/.cargo/env"
-    #     export 
-    #     ./scripts/run_integration_tests.sh
+    - name: Run integration tests
+      # Integration tests do require external systems to be running (most commonly a database instance).
+      # Unlike end-to-end tests though, they test a specific module in a detailed manner, much like a unit test does.
+      env:
+        # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `./tune/env/set_up_env_integtests.sh`.
+        INTENDED_DBDATA_HARDWARE: ssd
+      run: |
+        . "$HOME/.cargo/env"
+        export 
+        ./scripts/run_integration_tests.sh
 
-    # - name: Run end-to-end tests
-    #   # End-to-end tests are like integration tests in that they require external systems to be running.
-    #   # Unlike integration tests though, they don't perform detailed checks for any individual module.
-    #   #
-    #   # Note that we need to run with a non-root user in order to start Postgres. This is configured in the .yaml
-    #   # file for our self-hosted GHA runners.
-    #   run: |
-    #     . "$HOME/.cargo/env"
-    #     python -m scripts.run_protox_e2e_test ssd
+    - name: Run end-to-end tests
+      # End-to-end tests are like integration tests in that they require external systems to be running.
+      # Unlike integration tests though, they don't perform detailed checks for any individual module.
+      #
+      # Note that we need to run with a non-root user in order to start Postgres. This is configured in the .yaml
+      # file for our self-hosted GHA runners.
+      run: |
+        . "$HOME/.cargo/env"
+        python -m scripts.run_protox_e2e_test ssd
