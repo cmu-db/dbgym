@@ -39,6 +39,7 @@ from util.workspace import (
 )
 @click.option(
     "--scale-factor",
+    type=float,
     default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
