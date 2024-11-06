@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.pg import get_is_postgres_running
 from util.workspace import (
     default_embedder_path,
@@ -76,7 +77,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         embedding_train_args = "--iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2"
         tune_hpo_args = "--num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01"
     elif benchmark_name == "job":
-        scale_factor = 1
+        scale_factor = DEFAULT_SCALE_FACTOR
         query_subset = "demo"
         workload_name_suffix = query_subset
         embedding_datagen_args = ""
