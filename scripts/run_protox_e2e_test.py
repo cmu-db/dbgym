@@ -198,3 +198,4 @@ if __name__ == "__main__":
     os.environ["DBGYM_CONFIG_PATH"] = str(E2ETEST_DBGYM_CONFIG_FPATH)
 
     run_e2e_for_benchmark("tpch", intended_dbdata_hardware)
+    run_e2e_for_benchmark("job", intended_dbdata_hardware)
