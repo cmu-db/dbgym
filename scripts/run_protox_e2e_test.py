@@ -70,13 +70,15 @@ STAGES_TO_RUN = ALL_STAGES
 def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) -> None:
     if benchmark_name == "tpch":
         scale_factor = 0.01
-        workload_name_suffix = "15721_15721_all"
+        query_subset = "all"
+        workload_name_suffix = f"15721_15721_{query_subset}"
         embedding_datagen_args = "--override-sample-limits lineitem,32768"
         embedding_train_args = "--iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2"
         tune_hpo_args = "--num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01"
     elif benchmark_name == "job":
         scale_factor = 1
-        workload_name_suffix = "all"
+        query_subset = "demo"
+        workload_name_suffix = query_subset
         embedding_datagen_args = ""
         embedding_train_args = "--iterations-per-epoch 1 --num-points-to-sample 2 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2"
         tune_hpo_args = "--num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 2 --tune-duration-during-hpo 0.03"
@@ -108,7 +110,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.Workload in STAGES_TO_RUN:
         assert not workload_dpath.exists()
         subprocess.run(
-            f"python task.py benchmark {benchmark_name} workload --scale-factor {scale_factor}".split(),
+            f"python task.py benchmark {benchmark_name} workload --query-subset {query_subset} --scale-factor {scale_factor}".split(),
             check=True,
         )
         assert workload_dpath.exists()
