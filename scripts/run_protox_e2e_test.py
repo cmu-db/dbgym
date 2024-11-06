@@ -139,7 +139,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.EmbeddingData in STAGES_TO_RUN:
         assert not traindata_dpath.exists()
         subprocess.run(
-            f"python task.py tune {AGENT} embedding datagen {benchmark_name} --scale-factor {scale_factor} {embedding_datagen_args} --intended-dbdata-hardware {intended_dbdata_hardware}".split(),
+            f"python task.py tune {AGENT} embedding datagen {benchmark_name} --workload-name-suffix {workload_name_suffix} --scale-factor {scale_factor} {embedding_datagen_args} --intended-dbdata-hardware {intended_dbdata_hardware}".split(),
             check=True,
         )
         assert traindata_dpath.exists()
@@ -150,7 +150,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.EmbeddingModel in STAGES_TO_RUN:
         assert not embedder_dpath.exists()
         subprocess.run(
-            f"python task.py tune {AGENT} embedding train {benchmark_name} --scale-factor {scale_factor} {embedding_train_args}".split(),
+            f"python task.py tune {AGENT} embedding train {benchmark_name} --workload-name-suffix {workload_name_suffix} --scale-factor {scale_factor} {embedding_train_args}".split(),
             check=True,
         )
         assert embedder_dpath.exists()
@@ -161,7 +161,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.TuneHPO in STAGES_TO_RUN:
         assert not hpoed_agent_params_fpath.exists()
         subprocess.run(
-            f"python task.py tune {AGENT} agent hpo {benchmark_name} --scale-factor {scale_factor} {tune_hpo_args} --intended-dbdata-hardware {intended_dbdata_hardware}".split(),
+            f"python task.py tune {AGENT} agent hpo {benchmark_name} --workload-name-suffix {workload_name_suffix} --scale-factor {scale_factor} {tune_hpo_args} --intended-dbdata-hardware {intended_dbdata_hardware}".split(),
             check=True,
         )
         assert hpoed_agent_params_fpath.exists()
@@ -172,7 +172,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.TuneTune in STAGES_TO_RUN:
         assert not tuning_steps_dpath.exists()
         subprocess.run(
-            f"python task.py tune {AGENT} agent tune {benchmark_name} --scale-factor {scale_factor}".split(),
+            f"python task.py tune {AGENT} agent tune {benchmark_name} --workload-name-suffix {workload_name_suffix} --scale-factor {scale_factor}".split(),
             check=True,
         )
         assert tuning_steps_dpath.exists()
@@ -184,7 +184,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if Stage.Replay in STAGES_TO_RUN:
         assert not replay_data_fpath.exists()
         subprocess.run(
-            f"python3 task.py tune {AGENT} agent replay {benchmark_name} --scale-factor {scale_factor}".split(),
+            f"python3 task.py tune {AGENT} agent replay {benchmark_name} --workload-name-suffix {workload_name_suffix} --scale-factor {scale_factor}".split(),
             check=True,
         )
         assert replay_data_fpath.exists()
