@@ -16,7 +16,7 @@ from gymnasium.wrappers import (  # type: ignore[attr-defined]
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise

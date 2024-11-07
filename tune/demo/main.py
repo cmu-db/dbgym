@@ -1,6 +1,6 @@
 import streamlit as st
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,

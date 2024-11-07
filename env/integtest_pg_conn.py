@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,
@@ -18,7 +18,7 @@ from util.workspace import (
     default_pristine_dbdata_snapshot_path,
 )
 
-ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_integtests_dbgym_config.yaml")
+ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("env/env_integtests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
 
@@ -36,7 +36,7 @@ class PostgresConnTests(unittest.TestCase):
     def setUpClass() -> None:
         # If you're running the test locally, this check makes runs past the first one much faster.
         if not get_unittest_workspace_path().exists():
-            subprocess.run(["./tune/env/set_up_env_integtests.sh"], check=True)
+            subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
 
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
