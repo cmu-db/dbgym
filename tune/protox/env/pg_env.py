@@ -109,7 +109,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             else:
                 # Instead of restoring a pristine snapshot, just reset the knobs.
                 # This in effect "resets" the baseline knob settings.
-                self.pg_conn.start_with_changes(conf_changes=[])
+                self.pg_conn.restart_with_changes(conf_changes=[])
 
             # Maneuver the state into the requested state/config.
             assert isinstance(self.action_space, HolonSpace)
@@ -411,7 +411,6 @@ class PostgresEnv(gym.Env[Any, Any]):
                     )
                     time.sleep(5)
 
-        shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
             logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -434,7 +433,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             assert ret == 0, stderr
 
         # Now try and perform the configuration changes.
-        return self.pg_conn.start_with_changes(
+        return self.pg_conn.restart_with_changes(
             conf_changes=config_changes,
             dump_page_cache=dump_page_cache,
             save_checkpoint=self.workload.oltp_workload and self.horizon > 1,

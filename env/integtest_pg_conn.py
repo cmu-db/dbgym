@@ -1,3 +1,4 @@
+import copy
 import subprocess
 import unittest
 from pathlib import Path
@@ -74,18 +75,18 @@ class PostgresConnTests(unittest.TestCase):
     def test_start_and_stop(self) -> None:
         pg_conn = self.create_pg_conn()
         pg_conn.restore_pristine_snapshot()
-        pg_conn.start_with_changes()
+        pg_conn.restart_postgres()
         self.assertTrue(get_is_postgres_running())
         pg_conn.shutdown_postgres()
 
     def test_start_on_multiple_ports(self) -> None:
         pg_conn0 = self.create_pg_conn()
         pg_conn0.restore_pristine_snapshot()
-        pg_conn0.start_with_changes()
+        pg_conn0.restart_postgres()
         self.assertEqual(set(get_running_postgres_ports()), {DEFAULT_POSTGRES_PORT})
         pg_conn1 = self.create_pg_conn(DEFAULT_POSTGRES_PORT + 1)
         pg_conn1.restore_pristine_snapshot()
-        pg_conn1.start_with_changes()
+        pg_conn1.restart_postgres()
         self.assertEqual(
             set(get_running_postgres_ports()),
             {DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_PORT + 1},
@@ -99,7 +100,7 @@ class PostgresConnTests(unittest.TestCase):
         # Setup
         pg_conn = self.create_pg_conn()
         pg_conn.restore_pristine_snapshot()
-        pg_conn.start_with_changes()
+        pg_conn.restart_postgres()
 
         # Test
         self.assertIsNone(pg_conn._conn)
@@ -111,6 +112,25 @@ class PostgresConnTests(unittest.TestCase):
         self.assertIs(conn, pg_conn.conn())  # Same thing here
         pg_conn.disconnect()
         self.assertIsNone(pg_conn._conn)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_start_with_changes(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        KNOB_TO_CHANGE = "wal_buffers"
+        INITIAL_KNOB_VALUE = "4MB"
+        NEW_KNOB_VALUE = "8MB"
+        initial_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(initial_sysknobs[KNOB_TO_CHANGE], INITIAL_KNOB_VALUE)
+        pg_conn.restart_with_changes([f"{KNOB_TO_CHANGE}={NEW_KNOB_VALUE}"])
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs[KNOB_TO_CHANGE], NEW_KNOB_VALUE)
 
         # Cleanup
         pg_conn.shutdown_postgres()

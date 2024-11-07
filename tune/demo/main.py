@@ -55,7 +55,7 @@ class Demo:
 
             if st.button("Start Postgres"):
                 self.pg_conn.restore_pristine_snapshot()
-                self.pg_conn.start_with_changes()
+                self.pg_conn.restart_postgres()
                 st.rerun()
 
 
