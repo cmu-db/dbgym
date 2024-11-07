@@ -134,7 +134,7 @@ class PostgresConn:
 
     def restart_with_changes(
         self,
-        conf_changes: Optional[list[str]],
+        conf_changes: Optional[list[tuple[str, str]]],
         dump_page_cache: bool = False,
         save_checkpoint: bool = False,
     ) -> bool:
@@ -146,14 +146,13 @@ class PostgresConn:
         # Install the new configuration changes.
         if conf_changes is not None:
             if SHARED_PRELOAD_LIBRARIES:
-                # This way of doing it works for both single or multiple libraries. An example of a way
-                # that *doesn't* work is `f"shared_preload_libraries='"{SHARED_PRELOAD_LIBRARIES}"'"`
+                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
                 conf_changes.append(
-                    f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'"
+                    ("shared_preload_libraries", f"'{SHARED_PRELOAD_LIBRARIES}'")
                 )
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
-                f.write("\n".join(conf_changes))
+                f.write("\n".join([f"{knob} = {val}" for knob, val in conf_changes]))
 
         # Start postgres instance.
         self.shutdown_postgres()

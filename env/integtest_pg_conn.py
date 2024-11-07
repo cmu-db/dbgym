@@ -128,7 +128,7 @@ class PostgresConnTests(unittest.TestCase):
         NEW_KNOB_VALUE = "8MB"
         initial_sysknobs = pg_conn.get_system_knobs()
         self.assertEqual(initial_sysknobs[KNOB_TO_CHANGE], INITIAL_KNOB_VALUE)
-        pg_conn.restart_with_changes([f"{KNOB_TO_CHANGE}={NEW_KNOB_VALUE}"])
+        pg_conn.restart_with_changes([(KNOB_TO_CHANGE, NEW_KNOB_VALUE)])
         new_sysknobs = pg_conn.get_system_knobs()
         self.assertEqual(new_sysknobs[KNOB_TO_CHANGE], NEW_KNOB_VALUE)
 

@@ -432,9 +432,17 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             assert ret == 0, stderr
 
+        # LatentKnobSpace returns a config change in the form "{knob} = {val}" when restart_with_changes() wants (knob, val), so we convert it here.
+        # The reason LatentKnobSpace returns a list[str] instead of a list[tuple[str, str]] is because it must follow the same interface as the other
+        # spaces, which return list[str].
+        tuple_config_changes = []
+        for conf_change in config_changes:
+            knob, val = conf_change.split(" = ")
+            tuple_config_changes.append((knob, val))
+
         # Now try and perform the configuration changes.
         return self.pg_conn.restart_with_changes(
-            conf_changes=config_changes,
+            conf_changes=tuple_config_changes,
             dump_page_cache=dump_page_cache,
             save_checkpoint=self.workload.oltp_workload and self.horizon > 1,
         )
