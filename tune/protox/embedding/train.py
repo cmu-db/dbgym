@@ -7,6 +7,7 @@ import click
 import numpy as np
 import torch
 
+from benchmark.constants import DEFAULT_SCALE_FACTOR
 from tune.protox.embedding.analyze import (
     RANGES_FNAME,
     STATS_FNAME,
@@ -32,7 +33,8 @@ from util.workspace import (
     default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
-    workload_name_fn,
+    get_default_workload_name_suffix,
+    get_workload_name,
 )
 
 
@@ -43,26 +45,15 @@ from util.workspace import (
 # generic args
 @click.argument("benchmark-name", type=str)
 @click.option(
-    "--seed-start",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
-)
-@click.option(
-    "--seed-end",
-    type=int,
-    default=15721,
-    help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
-)
-@click.option(
-    "--query-subset",
-    type=click.Choice(["all", "even", "odd"]),
-    default="all",
+    "--workload-name-suffix",
+    type=str,
+    default=None,
+    help=f"The suffix of the workload name (the part after the scale factor).",
 )
 @click.option(
     "--scale-factor",
     type=float,
-    default=1.0,
+    default=DEFAULT_SCALE_FACTOR,
     help=f"The scale factor used when generating the data of the benchmark.",
 )
 @click.option(
@@ -176,9 +167,7 @@ from util.workspace import (
 def train(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    seed_start: int,
-    seed_end: int,
-    query_subset: str,
+    workload_name_suffix: str,
     scale_factor: float,
     benchmark_config_path: Optional[Path],
     traindata_path: Optional[Path],
@@ -208,7 +197,9 @@ def train(
     Selects the best embedding(s) and packages it as a .pth file in the run_*/ dir.
     """
     # set args to defaults programmatically (do this before doing anything else in the function)
-    workload_name = workload_name_fn(scale_factor, seed_start, seed_end, query_subset)
+    if workload_name_suffix is None:
+        workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
+    workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if traindata_path is None:
         traindata_path = default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

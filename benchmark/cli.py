@@ -1,5 +1,6 @@
 import click
 
+from benchmark.job.cli import job_group
 from benchmark.tpch.cli import tpch_group
 from util.workspace import DBGymConfig
 
@@ -11,3 +12,4 @@ def benchmark_group(dbgym_cfg: DBGymConfig) -> None:
 
 
 benchmark_group.add_command(tpch_group)
+benchmark_group.add_command(job_group)
