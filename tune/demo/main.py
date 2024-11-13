@@ -52,13 +52,12 @@ class Demo:
         is_postgres_running = get_is_postgres_running()
 
         if is_postgres_running:
-            st.write("Postgres is running")
+            st.write("Postgres is RUNNING")
 
             if st.button("Stop Postgres"):
                 self.pg_conn.shutdown_postgres()
                 st.rerun()
 
-            st.write("Reconfigure Postgres")
             with st.form("reconfig", clear_on_submit=True, enter_to_submit=False):
                 knob = st.text_input("Knob", placeholder="Enter text here...")
                 val = st.text_input("Value", placeholder="Enter text here...")
@@ -74,7 +73,7 @@ class Demo:
             with st.expander("Other knobs", expanded=False):
                 st.json(unimportant_knobs)
         else:
-            st.write("Postgres is not running")
+            st.write("Postgres is STOPPED")
 
             if st.button("Start Postgres"):
                 self.pg_conn.restore_pristine_snapshot()
