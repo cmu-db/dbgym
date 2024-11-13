@@ -89,7 +89,7 @@ class Demo:
                 if knob != "" and val != "":
                     if "conf_changes" not in st.session_state:
                         st.session_state.conf_changes = dict()
-                    
+
                     # By using st.session_state, we persist changes across st.rerun() (though not across reloading the browser).
                     st.session_state.conf_changes[knob] = val
                     self.pg_conn.restart_with_changes(st.session_state.conf_changes)

@@ -153,7 +153,8 @@ class PostgresConn:
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
                 f.write(
-                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()]) + "\n"
+                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
+                    + "\n"
                 )
 
                 assert (
