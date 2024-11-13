@@ -87,7 +87,12 @@ class Demo:
                 submit_button = st.form_submit_button("Reconfigure")
             if submit_button:
                 if knob != "" and val != "":
-                    self.pg_conn.restart_with_changes({knob: val})
+                    if "conf_changes" not in st.session_state:
+                        st.session_state.conf_changes = dict()
+                    
+                    # By using st.session_state, we persist changes across st.rerun() (though not across reloading the browser).
+                    st.session_state.conf_changes[knob] = val
+                    self.pg_conn.restart_with_changes(st.session_state.conf_changes)
                     st.rerun()
 
             important_knobs, unimportant_knobs = self._get_categorized_system_knobs()
