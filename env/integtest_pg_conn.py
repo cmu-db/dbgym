@@ -44,7 +44,7 @@ class PostgresConnTests(unittest.TestCase):
     def setUp(self) -> None:
         self.assertFalse(
             get_is_postgres_running(),
-            "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way"
+            "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
@@ -123,14 +123,37 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn.restart_postgres()
 
         # Test
-        KNOB_TO_CHANGE = "wal_buffers"
-        INITIAL_KNOB_VALUE = "4MB"
-        NEW_KNOB_VALUE = "8MB"
         initial_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(initial_sysknobs[KNOB_TO_CHANGE], INITIAL_KNOB_VALUE)
-        pg_conn.restart_with_changes([(KNOB_TO_CHANGE, NEW_KNOB_VALUE)])
+        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
+        pg_conn.restart_with_changes([("wal_buffers", "8MB")])
         new_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(new_sysknobs[KNOB_TO_CHANGE], NEW_KNOB_VALUE)
+        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_multiple_start_with_changes(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        initial_sysknobs = pg_conn.get_system_knobs()
+
+        # First call
+        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
+        pg_conn.restart_with_changes([("wal_buffers", "8MB")])
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
+
+        # Second call
+        self.assertEqual(initial_sysknobs["shared_buffers"], "128MB")
+        pg_conn.restart_with_changes([("shared_buffers", "256MB")])
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs["shared_buffers"], "256MB")
+        # The changes should be additive
+        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
 
         # Cleanup
         pg_conn.shutdown_postgres()
