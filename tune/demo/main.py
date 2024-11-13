@@ -44,8 +44,12 @@ class Demo:
     def get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
         IMPORTANT_KNOBS = {"shared_buffers", "wal_buffers"}
         all_knobs = self.pg_conn.get_system_knobs()
-        important_knobs = {knob: val for knob, val in all_knobs.items() if knob in IMPORTANT_KNOBS}
-        unimportant_knobs = {knob: val for knob, val in all_knobs.items() if knob not in IMPORTANT_KNOBS}
+        important_knobs = {
+            knob: val for knob, val in all_knobs.items() if knob in IMPORTANT_KNOBS
+        }
+        unimportant_knobs = {
+            knob: val for knob, val in all_knobs.items() if knob not in IMPORTANT_KNOBS
+        }
         return important_knobs, unimportant_knobs
 
     def main(self) -> None:
@@ -65,7 +69,7 @@ class Demo:
             if submit_button:
                 self.pg_conn.restart_with_changes([(knob, val)])
                 st.rerun()
-            
+
             important_knobs, unimportant_knobs = self.get_categorized_system_knobs()
             with st.expander("Important knobs", expanded=True):
                 st.json(important_knobs)
