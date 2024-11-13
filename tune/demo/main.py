@@ -41,6 +41,13 @@ class Demo:
             DEFAULT_BOOT_CONFIG_FPATH,
         )
 
+    def get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
+        IMPORTANT_KNOBS = {"shared_buffers", "wal_buffers"}
+        all_knobs = self.pg_conn.get_system_knobs()
+        important_knobs = {knob: val for knob, val in all_knobs.items() if knob in IMPORTANT_KNOBS}
+        unimportant_knobs = {knob: val for knob, val in all_knobs.items() if knob not in IMPORTANT_KNOBS}
+        return important_knobs, unimportant_knobs
+
     def main(self) -> None:
         is_postgres_running = get_is_postgres_running()
 
@@ -50,6 +57,13 @@ class Demo:
             if st.button("Stop Postgres"):
                 self.pg_conn.shutdown_postgres()
                 st.rerun()
+            
+            important_knobs, unimportant_knobs = self.get_categorized_system_knobs()
+            with st.expander("Important knobs", expanded=True):
+                st.json(important_knobs)
+
+            with st.expander("Other knobs", expanded=False):
+                st.json(unimportant_knobs)
         else:
             st.write("Postgres is not running")
 
