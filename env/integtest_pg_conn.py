@@ -158,6 +158,21 @@ class PostgresConnTests(unittest.TestCase):
         # Cleanup
         pg_conn.shutdown_postgres()
 
+    def test_start_with_changes_doesnt_modify_input(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        conf_changes = {"wal_buffers": "8MB"}
+        orig_conf_changes = copy.deepcopy(conf_changes)
+        pg_conn.restart_with_changes(conf_changes)
+        self.assertEqual(conf_changes, orig_conf_changes)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -148,22 +148,20 @@ class PostgresConn:
         snapshot. If you want it to be additive without the overhead of saving a snapshot, pass in
         multiple changes to `conf_changes`.
         """
-        assert (
-            conf_changes is None or "shared_preload_libraries" not in conf_changes
-        ), f"You should not set these manually."
-
         # Install the new configuration changes.
         if conf_changes is not None:
-            if SHARED_PRELOAD_LIBRARIES:
-                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
-                conf_changes["shared_preload_libraries"] = (
-                    f"'{SHARED_PRELOAD_LIBRARIES}'"
-                )
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
                 f.write(
-                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
+                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()]) + "\n"
                 )
+
+                assert (
+                    "shared_preload_libraries" not in conf_changes
+                ), f"You should not set shared_preload_libraries manually."
+
+                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
+                f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
 
         # Start postgres instance.
         self.shutdown_postgres()
