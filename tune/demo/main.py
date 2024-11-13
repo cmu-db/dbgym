@@ -57,6 +57,15 @@ class Demo:
             if st.button("Stop Postgres"):
                 self.pg_conn.shutdown_postgres()
                 st.rerun()
+
+            st.write("Reconfigure Postgres")
+            with st.form("reconfig", clear_on_submit=True, enter_to_submit=False):
+                knob = st.text_input("Knob", placeholder="Enter text here...")
+                val = st.text_input("Value", placeholder="Enter text here...")
+                submit_button = st.form_submit_button("Reconfigure")
+            if submit_button:
+                self.pg_conn.restart_with_changes([(knob, val)])
+                st.rerun()
             
             important_knobs, unimportant_knobs = self.get_categorized_system_knobs()
             with st.expander("Important knobs", expanded=True):
