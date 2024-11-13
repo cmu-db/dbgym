@@ -36,7 +36,7 @@ class Demo:
         )
 
     def _get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
-        IMPORTANT_KNOBS = {"shared_buffers", "wal_buffers"}
+        IMPORTANT_KNOBS = {"shared_buffers", "enable_nestloop"}
         all_knobs = self.pg_conn.get_system_knobs()
         important_knobs = {
             knob: val for knob, val in all_knobs.items() if knob in IMPORTANT_KNOBS
@@ -79,13 +79,7 @@ class Demo:
                 st.rerun()
 
 
-# This ensures that Demo is only created once. This avoids us recreating the PostgresConn each time, allowing changes
-# to be "saved" even when we call st.rerun(). The only thing that we call on every st.rerun() is Demo.main().
-@st.cache_resource
-def make_demo() -> Demo:
-    return Demo()
-
-
 if __name__ == "__main__":
-    demo = make_demo()
-    demo.main()
+    if "demo" not in st.session_state:
+        st.session_state.demo = Demo()
+    st.session_state.demo.main()
