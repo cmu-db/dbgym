@@ -12,18 +12,12 @@ from util.workspace import (
 )
 
 
-# This ensures that DBGymConfig is only created once. Check DBGymConfig.__init__() for why we must do this.
-@st.cache_resource
-def make_dbgym_cfg() -> DBGymConfig:
-    return make_standard_dbgym_cfg()
-
-
 class Demo:
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
 
     def __init__(self) -> None:
-        self.dbgym_cfg = make_dbgym_cfg()
+        self.dbgym_cfg = make_standard_dbgym_cfg()
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             self.dbgym_cfg.dbgym_workspace_path, Demo.BENCHMARK, Demo.SCALE_FACTOR
         )
@@ -41,7 +35,7 @@ class Demo:
             DEFAULT_BOOT_CONFIG_FPATH,
         )
 
-    def get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
+    def _get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
         IMPORTANT_KNOBS = {"shared_buffers", "wal_buffers"}
         all_knobs = self.pg_conn.get_system_knobs()
         important_knobs = {
@@ -70,12 +64,12 @@ class Demo:
                 self.pg_conn.restart_with_changes([(knob, val)])
                 st.rerun()
 
-            important_knobs, unimportant_knobs = self.get_categorized_system_knobs()
+            important_knobs, unimportant_knobs = self._get_categorized_system_knobs()
             with st.expander("Important knobs", expanded=True):
-                st.json(important_knobs)
+                st.write(important_knobs)
 
             with st.expander("Other knobs", expanded=False):
-                st.json(unimportant_knobs)
+                st.write(unimportant_knobs)
         else:
             st.write("Postgres is STOPPED")
 
@@ -85,6 +79,13 @@ class Demo:
                 st.rerun()
 
 
+# This ensures that Demo is only created once. This avoids us recreating the PostgresConn each time, allowing changes
+# to be "saved" even when we call st.rerun(). The only thing that we call on every st.rerun() is Demo.main().
+@st.cache_resource
+def make_demo() -> Demo:
+    return Demo()
+
+
 if __name__ == "__main__":
-    demo = Demo()
+    demo = make_demo()
     demo.main()
