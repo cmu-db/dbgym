@@ -148,12 +148,12 @@ class PostgresConnTests(unittest.TestCase):
         self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
 
         # Second call
-        self.assertEqual(initial_sysknobs["shared_buffers"], "128MB")
-        pg_conn.restart_with_changes([("shared_buffers", "256MB")])
+        self.assertEqual(initial_sysknobs["enable_nestloop"], "on")
+        pg_conn.restart_with_changes([("enable_nestloop", "off")])
         new_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(new_sysknobs["shared_buffers"], "256MB")
-        # The changes should be additive
-        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
+        self.assertEqual(new_sysknobs["enable_nestloop"], "off")
+        # The changes should not be additive. The "wal_buffers" should have "reset" to 4MB.
+        self.assertEqual(new_sysknobs["wal_buffers"], "4MB")
 
         # Cleanup
         pg_conn.shutdown_postgres()

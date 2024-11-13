@@ -142,6 +142,10 @@ class PostgresConn:
         This function is called "(re)start" because it also shuts down Postgres before starting it.
         This function assumes that some snapshot has already been untarred into self.dbdata_dpath.
         You can do this by calling one of the wrappers around _restore_snapshot().
+
+        Note that multiple calls are not "additive". Calling this will restart from the latest saved
+        snapshot. If you want it to be additive without the overhead of saving a snapshot, pass in
+        multiple changes to `conf_changes`.
         """
         # Install the new configuration changes.
         if conf_changes is not None:
