@@ -61,7 +61,7 @@ class Demo:
                 val = st.text_input("Value", placeholder="Enter text here...")
                 submit_button = st.form_submit_button("Reconfigure")
             if submit_button:
-                self.pg_conn.restart_with_changes([(knob, val)])
+                self.pg_conn.restart_with_changes({knob: val})
                 st.rerun()
 
             important_knobs, unimportant_knobs = self._get_categorized_system_knobs()

@@ -130,11 +130,12 @@ class PostgresConn:
                 break
 
     def restart_postgres(self) -> bool:
-        return self.restart_with_changes(None)
+        # TODO: check if we still get the shared preload libraries correctly if we do None
+        return self.restart_with_changes(conf_changes=None)
 
     def restart_with_changes(
         self,
-        conf_changes: Optional[list[tuple[str, str]]],
+        conf_changes: Optional[dict[str, str]],
         dump_page_cache: bool = False,
         save_checkpoint: bool = False,
     ) -> bool:
@@ -147,16 +148,22 @@ class PostgresConn:
         snapshot. If you want it to be additive without the overhead of saving a snapshot, pass in
         multiple changes to `conf_changes`.
         """
+        assert (
+            conf_changes is None or "shared_preload_libraries" not in conf_changes
+        ), f"You should not set these manually."
+
         # Install the new configuration changes.
         if conf_changes is not None:
             if SHARED_PRELOAD_LIBRARIES:
                 # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
-                conf_changes.append(
-                    ("shared_preload_libraries", f"'{SHARED_PRELOAD_LIBRARIES}'")
+                conf_changes["shared_preload_libraries"] = (
+                    f"'{SHARED_PRELOAD_LIBRARIES}'"
                 )
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
-                f.write("\n".join([f"{knob} = {val}" for knob, val in conf_changes]))
+                f.write(
+                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
+                )
 
         # Start postgres instance.
         self.shutdown_postgres()
@@ -409,4 +416,4 @@ class PostgresConn:
             >> f"{self.dbdata_dpath}/postgresql.conf"
         )()
 
-        return self.restart_with_changes(conf_changes=None)
+        return self.restart_postgres()
