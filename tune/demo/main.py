@@ -12,12 +12,37 @@ from util.workspace import (
 )
 
 
+# The rationale behind this code is very subtle. I'll first go over streamlit concepts before describing why this function exists.
+#
+# First, in streamlit, there are three kinds of "script reruns". These are ordered from least to most "disruptive":
+#  1. st.rerun(). Will reset any local variables but will not reset st.session_state.
+#  2. Reloading the browser page (perhaps if you changed some code). Will reset local vars and st.session_state but not things
+#     cached with @st.cache_resource.
+#  3. Restarting the streamlit server. If you're running the server locally, you can restart it by doing Ctrl-C, `pkill python`,
+#     and then `streamlit run ...` (or `./scripts/run_demo.sh`). Will reset local vars, st.session_state, and things cached with
+#     @st.cache_resource, but will not reset things persisted to disk (though we currently don't persist anything to disk). Doing
+#     `pkill python` is critical here to actually reset the things cached with @st.cache_resource.
+#
+# Next, DBGymConfig has a safeguard where it can only be created once per instance of the Python interpreter. If you just put it
+# in st.session_state, it would get re-created when you reloaded the browser page, causing it to trip the assertion that checks
+# DBGymConfig.num_times_created_this_run == 1. Thus, we use @st.cache_resource to avoid this.
+#
+# I considered modifying num_times_created_this_run to instead be num_active_instances and doing `num_active_instances -= 1` in
+# DBGymConfig.__del__(). However, streamlit doesn't actually destroy objects when you reload the browser page; it only destroys
+# objects when you restart the streamlit server.
+#
+# If you modify the code of DBGymConfig, you will need to fully restart the streamlit server for those changes to be propagated.
+@st.cache_resource
+def make_dbgym_cfg_cached() -> DBGymConfig:
+    return make_standard_dbgym_cfg()
+
+
 class Demo:
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
 
     def __init__(self) -> None:
-        self.dbgym_cfg = make_standard_dbgym_cfg()
+        self.dbgym_cfg = make_dbgym_cfg_cached()
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             self.dbgym_cfg.dbgym_workspace_path, Demo.BENCHMARK, Demo.SCALE_FACTOR
         )
@@ -80,6 +105,5 @@ class Demo:
 
 
 if __name__ == "__main__":
-    if "demo" not in st.session_state:
-        st.session_state.demo = Demo()
-    st.session_state.demo.main()
+    demo = Demo()
+    demo.main()
