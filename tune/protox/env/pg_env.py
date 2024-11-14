@@ -7,7 +7,7 @@ import gymnasium as gym
 import psycopg
 from plumbum import local
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from tune.protox.env.artifact_manager import ArtifactManager, time_record
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.state.space import StateSpace
@@ -109,7 +109,7 @@ class PostgresEnv(gym.Env[Any, Any]):
             else:
                 # Instead of restoring a pristine snapshot, just reset the knobs.
                 # This in effect "resets" the baseline knob settings.
-                self.pg_conn.start_with_changes(conf_changes=[])
+                self.pg_conn.restart_with_changes(conf_changes=dict())
 
             # Maneuver the state into the requested state/config.
             assert isinstance(self.action_space, HolonSpace)
@@ -411,7 +411,6 @@ class PostgresEnv(gym.Env[Any, Any]):
                     )
                     time.sleep(5)
 
-        shift_start = time.time()
         # First enforce the SQL command changes.
         for i, sql in enumerate(sql_commands):
             logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -433,9 +432,17 @@ class PostgresEnv(gym.Env[Any, Any]):
 
             assert ret == 0, stderr
 
+        # LatentKnobSpace returns a config change in the form "{knob} = {val}" when restart_with_changes() wants (knob, val), so we convert it here.
+        # The reason LatentKnobSpace returns a list[str] instead of a list[tuple[str, str]] is because it must follow the same interface as the other
+        # spaces, which return list[str].
+        dict_config_changes = dict()
+        for conf_change in config_changes:
+            knob, val = conf_change.split(" = ")
+            dict_config_changes[knob] = val
+
         # Now try and perform the configuration changes.
-        return self.pg_conn.start_with_changes(
-            conf_changes=config_changes,
+        return self.pg_conn.restart_with_changes(
+            conf_changes=dict_config_changes,
             dump_page_cache=dump_page_cache,
             save_checkpoint=self.workload.oltp_workload and self.horizon > 1,
         )

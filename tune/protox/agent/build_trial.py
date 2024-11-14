@@ -16,7 +16,7 @@ from gymnasium.wrappers import (  # type: ignore[attr-defined]
 from torch import nn
 from torch.optim import Adam  # type: ignore[attr-defined]
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from tune.protox.agent.agent_env import AgentEnv
 from tune.protox.agent.buffers import ReplayBuffer
 from tune.protox.agent.noise import ClampNoise
@@ -163,7 +163,7 @@ def _build_utilities(
         artifact_manager=artifact_manager,
     )
 
-    # If we're using Boot, PostgresConn.start_with_changes() assumes that Redis is running. Thus,
+    # If we're using Boot, PostgresConn.restart_postgres() assumes that Redis is running. Thus,
     #   we start Redis here if necessary.
     enable_boot = hpo_params["enable_boot"][str(tuning_mode)]
     if enable_boot:

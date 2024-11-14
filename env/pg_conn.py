@@ -129,27 +129,40 @@ class PostgresConn:
             if not exists and retcode != 0:
                 break
 
-    def start_with_changes(
+    def restart_postgres(self) -> bool:
+        # TODO: check if we still get the shared preload libraries correctly if we do None
+        return self.restart_with_changes(conf_changes=None)
+
+    def restart_with_changes(
         self,
-        conf_changes: Optional[list[str]] = None,
+        conf_changes: Optional[dict[str, str]],
         dump_page_cache: bool = False,
         save_checkpoint: bool = False,
     ) -> bool:
         """
+        This function is called "(re)start" because it also shuts down Postgres before starting it.
         This function assumes that some snapshot has already been untarred into self.dbdata_dpath.
         You can do this by calling one of the wrappers around _restore_snapshot().
+
+        Note that multiple calls are not "additive". Calling this will restart from the latest saved
+        snapshot. If you want it to be additive without the overhead of saving a snapshot, pass in
+        multiple changes to `conf_changes`.
         """
         # Install the new configuration changes.
         if conf_changes is not None:
-            if SHARED_PRELOAD_LIBRARIES:
-                # This way of doing it works for both single or multiple libraries. An example of a way
-                # that *doesn't* work is `f"shared_preload_libraries='"{SHARED_PRELOAD_LIBRARIES}"'"`
-                conf_changes.append(
-                    f"shared_preload_libraries='{SHARED_PRELOAD_LIBRARIES}'"
-                )
             dbdata_auto_conf_path = self.dbdata_dpath / "postgresql.auto.conf"
             with open(dbdata_auto_conf_path, "w") as f:
-                f.write("\n".join(conf_changes))
+                f.write(
+                    "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
+                    + "\n"
+                )
+
+                assert (
+                    "shared_preload_libraries" not in conf_changes
+                ), f"You should not set shared_preload_libraries manually."
+
+                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
+                f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
 
         # Start postgres instance.
         self.shutdown_postgres()
@@ -295,7 +308,16 @@ class PostgresConn:
         logging.getLogger(DBGYM_LOGGER_NAME).debug("Set up boot")
 
     def psql(self, sql: str) -> tuple[int, Optional[str]]:
-        low_sql = sql.lower()
+        """
+        Execute a SQL command (equivalent to psql -C "[cmd]") and return a status code and its stderr.
+
+        This is meant for commands that modify the database, not those that get information from the database, which
+        is why it doesn't return a Cursor with the result. I designed it this way because it's difficult to provide
+        a general-purpose API which returns results for arbitrary SQL queries as those results could be very large.
+
+        A return code of 0 means success while a non-zero return code means failure. The stderr will be None if success
+        and a string if failure.
+        """
 
         def cancel_fn(conn_str: str) -> None:
             with psycopg.connect(
@@ -350,6 +372,18 @@ class PostgresConn:
         self.disconnect()
         return 0, None
 
+    def get_system_knobs(self) -> dict[str, str]:
+        """
+        System knobs are those applied across the entire system. They do not include table-specific
+        knobs, query-specific knobs (aka query hints), or indexes.
+        """
+        conn = self.conn()
+        result = conn.execute("SHOW ALL").fetchall()
+        knobs = {}
+        for row in result:
+            knobs[row[0]] = row[1]
+        return knobs
+
     def restore_pristine_snapshot(self) -> bool:
         return self._restore_snapshot(self.pristine_dbdata_snapshot_fpath)
 
@@ -381,4 +415,4 @@ class PostgresConn:
             >> f"{self.dbdata_dpath}/postgresql.conf"
         )()
 
-        return self.start_with_changes(conf_changes=None)
+        return self.restart_postgres()

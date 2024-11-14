@@ -1,10 +1,11 @@
+import copy
 import subprocess
 import unittest
 from pathlib import Path
 
 import yaml
 
-from tune.env.pg_conn import PostgresConn
+from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,
@@ -18,7 +19,7 @@ from util.workspace import (
     default_pristine_dbdata_snapshot_path,
 )
 
-ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("tune/env/env_integtests_dbgym_config.yaml")
+ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("env/env_integtests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
 
@@ -36,14 +37,14 @@ class PostgresConnTests(unittest.TestCase):
     def setUpClass() -> None:
         # If you're running the test locally, this check makes runs past the first one much faster.
         if not get_unittest_workspace_path().exists():
-            subprocess.run(["./tune/env/set_up_env_integtests.sh"], check=True)
+            subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
 
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
     def setUp(self) -> None:
         self.assertFalse(
             get_is_postgres_running(),
-            "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way"
+            "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
@@ -74,18 +75,18 @@ class PostgresConnTests(unittest.TestCase):
     def test_start_and_stop(self) -> None:
         pg_conn = self.create_pg_conn()
         pg_conn.restore_pristine_snapshot()
-        pg_conn.start_with_changes()
+        pg_conn.restart_postgres()
         self.assertTrue(get_is_postgres_running())
         pg_conn.shutdown_postgres()
 
     def test_start_on_multiple_ports(self) -> None:
         pg_conn0 = self.create_pg_conn()
         pg_conn0.restore_pristine_snapshot()
-        pg_conn0.start_with_changes()
+        pg_conn0.restart_postgres()
         self.assertEqual(set(get_running_postgres_ports()), {DEFAULT_POSTGRES_PORT})
         pg_conn1 = self.create_pg_conn(DEFAULT_POSTGRES_PORT + 1)
         pg_conn1.restore_pristine_snapshot()
-        pg_conn1.start_with_changes()
+        pg_conn1.restart_postgres()
         self.assertEqual(
             set(get_running_postgres_ports()),
             {DEFAULT_POSTGRES_PORT, DEFAULT_POSTGRES_PORT + 1},
@@ -99,7 +100,7 @@ class PostgresConnTests(unittest.TestCase):
         # Setup
         pg_conn = self.create_pg_conn()
         pg_conn.restore_pristine_snapshot()
-        pg_conn.start_with_changes()
+        pg_conn.restart_postgres()
 
         # Test
         self.assertIsNone(pg_conn._conn)
@@ -111,6 +112,63 @@ class PostgresConnTests(unittest.TestCase):
         self.assertIs(conn, pg_conn.conn())  # Same thing here
         pg_conn.disconnect()
         self.assertIsNone(pg_conn._conn)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_start_with_changes(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        initial_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
+        pg_conn.restart_with_changes({"wal_buffers": "8MB"})
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_multiple_start_with_changes(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        initial_sysknobs = pg_conn.get_system_knobs()
+
+        # First call
+        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
+        pg_conn.restart_with_changes({"wal_buffers": "8MB"})
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
+
+        # Second call
+        self.assertEqual(initial_sysknobs["enable_nestloop"], "on")
+        pg_conn.restart_with_changes({"enable_nestloop": "off"})
+        new_sysknobs = pg_conn.get_system_knobs()
+        self.assertEqual(new_sysknobs["enable_nestloop"], "off")
+        # The changes should not be additive. The "wal_buffers" should have "reset" to 4MB.
+        self.assertEqual(new_sysknobs["wal_buffers"], "4MB")
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_start_with_changes_doesnt_modify_input(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        conf_changes = {"wal_buffers": "8MB"}
+        orig_conf_changes = copy.deepcopy(conf_changes)
+        pg_conn.restart_with_changes(conf_changes)
+        self.assertEqual(conf_changes, orig_conf_changes)
 
         # Cleanup
         pg_conn.shutdown_postgres()
