@@ -99,6 +99,83 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
+    def force_statement_timeout(self, timeout: float) -> None:
+        timeout_ms = timeout * 1000
+        retry = True
+        while retry:
+            retry = False
+            try:
+                self.conn().execute(f"SET statement_timeout = {timeout_ms}")
+            except QueryCanceled:
+                retry = True
+
+    def time_query(
+        self,
+        query: str,
+        query_knobs: list[str] = [],
+        add_explain: bool = False,
+        timeout: float = 0,
+    ) -> tuple[float, bool, Optional[dict[str, Any]]]:
+        """
+        Run a query with a timeout (in seconds). Following Postgres's convention, timeout=0 indicates "disable timeout".
+
+        Use query_knobs to pass query knobs. An example input is query_knobs=["SET (enable_sort on)", "IndexOnlyScan(it)"].
+
+        It returns the runtime, whether the query timed out, and the explain data if add_explain is True. Note that if
+        the query timed out, it won't have any explain data and thus explain_data will be None.
+
+        If you write explain in the query manually instead of setting add_explain, it won't return explain_data. This
+        is because it won't know the format of the explain data.
+        """
+        if timeout > 0:
+            self.force_statement_timeout(timeout)
+        else:
+            assert (
+                timeout == 0
+            ), f'Setting timeout to 0 indicates "disable timeout". However, setting timeout ({timeout}) < 0 is a bug.'
+
+        did_time_out = False
+        explain_data = None
+
+        try:
+            if query_knobs:
+                query = f"/*+ {' '.join(query_knobs)} */ {query}"
+
+            if add_explain:
+                assert (
+                    "explain" not in query.lower()
+                ), "If you're using add_explain, don't also write explain manually in the query."
+                query = f"explain (analyze, format json, timing off) {query}"
+
+            start_time = time.time()
+            cursor = self.conn().execute(query)
+            qid_runtime = (time.time() - start_time) * 1e6
+
+            if add_explain:
+                c = [c for c in cursor][0][0][0]
+                assert "Execution Time" in c
+                qid_runtime = float(c["Execution Time"]) * 1e3
+                explain_data = c
+
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"{query} evaluated in {qid_runtime/1e6}"
+            )
+
+        except QueryCanceled:
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"{query} exceeded evaluation timeout {timeout}"
+            )
+            qid_runtime = timeout * 1e6
+            did_time_out = True
+        except Exception as e:
+            assert False, e
+        finally:
+            # Wipe the statement timeout.
+            self.force_statement_timeout(0)
+
+        # qid_runtime is in microseconds.
+        return qid_runtime, did_time_out, explain_data
+
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()

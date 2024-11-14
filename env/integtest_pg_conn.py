@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 import yaml
+from psycopg.errors import QueryCanceled
 
 from env.pg_conn import PostgresConn
 from util.pg import (
@@ -124,22 +125,6 @@ class PostgresConnTests(unittest.TestCase):
 
         # Test
         initial_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
-        pg_conn.restart_with_changes({"wal_buffers": "8MB"})
-        new_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
-
-        # Cleanup
-        pg_conn.shutdown_postgres()
-
-    def test_multiple_start_with_changes(self) -> None:
-        # Setup
-        pg_conn = self.create_pg_conn()
-        pg_conn.restore_pristine_snapshot()
-        pg_conn.restart_postgres()
-
-        # Test
-        initial_sysknobs = pg_conn.get_system_knobs()
 
         # First call
         self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
@@ -169,6 +154,37 @@ class PostgresConnTests(unittest.TestCase):
         orig_conf_changes = copy.deepcopy(conf_changes)
         pg_conn.restart_with_changes(conf_changes)
         self.assertEqual(conf_changes, orig_conf_changes)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_time_query(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        # Testing no explain no timeout.
+        runtime, did_time_out, explain_data = pg_conn.time_query("select pg_sleep(1)")
+        # The runtime should be about 1 second.
+        self.assertTrue(abs(runtime - 1_000_000) < 100_000)
+        self.assertFalse(did_time_out)
+        self.assertIsNone(explain_data)
+
+        # Testing with explain.
+        runtime, did_time_out, explain_data = pg_conn.time_query(
+            "select pg_sleep(1)", add_explain=True
+        )
+        self.assertTrue(abs(runtime - 1_000_000) < 100_000)
+        self.assertFalse(did_time_out)
+        self.assertIsNotNone(explain_data)
+
+        # Testing with timeout.
+        runtime, did_time_out, _ = pg_conn.time_query("select pg_sleep(3)", timeout=2)
+        # The runtime should be about what the timeout is.
+        self.assertTrue(abs(runtime - 2_000_000) < 100_000)
+        self.assertTrue(did_time_out)
 
         # Cleanup
         pg_conn.shutdown_postgres()
