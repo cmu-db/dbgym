@@ -125,22 +125,6 @@ class PostgresConnTests(unittest.TestCase):
 
         # Test
         initial_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
-        pg_conn.restart_with_changes({"wal_buffers": "8MB"})
-        new_sysknobs = pg_conn.get_system_knobs()
-        self.assertEqual(new_sysknobs["wal_buffers"], "8MB")
-
-        # Cleanup
-        pg_conn.shutdown_postgres()
-
-    def test_multiple_start_with_changes(self) -> None:
-        # Setup
-        pg_conn = self.create_pg_conn()
-        pg_conn.restore_pristine_snapshot()
-        pg_conn.restart_postgres()
-
-        # Test
-        initial_sysknobs = pg_conn.get_system_knobs()
 
         # First call
         self.assertEqual(initial_sysknobs["wal_buffers"], "4MB")
