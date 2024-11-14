@@ -173,6 +173,22 @@ class PostgresConnTests(unittest.TestCase):
         # Cleanup
         pg_conn.shutdown_postgres()
 
+    def test_time_query(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
+
+        # Test
+        runtime, did_time_out, explain_data = pg_conn.time_query("select 1", 5)
+        # The runtime (in microseconds) should be within these two orders of magnitude.
+        self.assertTrue(100 <= runtime < 10000)
+        self.assertFalse(did_time_out)
+        self.assertIsNone(explain_data)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
 
 if __name__ == "__main__":
     unittest.main()
