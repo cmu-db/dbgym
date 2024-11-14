@@ -50,9 +50,7 @@ def _acquire_metrics_around_query(
             query_timeout == 0
         ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
-    qid_runtime, did_time_out, explain_data = pg_conn.time_query(
-        query, query_timeout
-    )
+    qid_runtime, did_time_out, explain_data = pg_conn.time_query(query, query_timeout)
 
     # Wipe the statement timeout.
     _force_statement_timeout(pg_conn.conn(), 0)

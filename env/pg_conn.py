@@ -99,9 +99,7 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
-    def time_query(
-        self, query: str, timeout: float
-    ) -> tuple[float, bool, Any]:
+    def time_query(self, query: str, timeout: float) -> tuple[float, bool, Any]:
         """
         Run a query with a timeout. If you want to attach per-query knobs, attach them to the query string itself.
 
