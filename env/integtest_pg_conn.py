@@ -180,11 +180,18 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn.restart_postgres()
 
         # Test
-        runtime, did_time_out, explain_data = pg_conn.time_query("select 1", 5)
-        # The runtime (in microseconds) should be within these two orders of magnitude.
-        self.assertTrue(100 <= runtime < 10000)
+        # No explain
+        runtime, did_time_out, explain_data = pg_conn.time_query("select pg_sleep(1)", 2)
+        # The runtime should be about 1 second.
+        self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNone(explain_data)
+
+        # With explain
+        runtime, did_time_out, explain_data = pg_conn.time_query("explain (analyze, format json, timing off) select pg_sleep(1)", 2)
+        self.assertTrue(abs(runtime - 1_000_000) < 100_000)
+        self.assertFalse(did_time_out)
+        self.assertIsNotNone(explain_data)
 
         # Cleanup
         pg_conn.shutdown_postgres()

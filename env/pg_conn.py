@@ -106,7 +106,7 @@ class PostgresConn:
         It returns the runtime, whether the query timed out, and the explain data.
         """
         did_time_out = False
-        has_explain = "EXPLAIN" in query
+        has_explain = "explain" in query.lower()
         explain_data = None
 
         try:
