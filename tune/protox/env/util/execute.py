@@ -34,7 +34,6 @@ def _force_statement_timeout(
 
 
 def _acquire_metrics_around_query(
-    prefix: str,
     pg_conn: PostgresConn,
     query: str,
     query_timeout: float = 0.0,
@@ -52,7 +51,7 @@ def _acquire_metrics_around_query(
         ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
     qid_runtime, did_time_out, explain_data = pg_conn.time_query(
-        prefix, query, query_timeout
+        query, query_timeout
     )
 
     # Wipe the statement timeout.
@@ -108,7 +107,6 @@ def execute_variations(
         )
 
         runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
-            prefix=qr.prefix_qid,
             pg_conn=pg_conn,
             query=pqk_query,
             query_timeout=timeout_limit,

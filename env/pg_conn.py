@@ -100,8 +100,13 @@ class PostgresConn:
             self.log_step += 1
 
     def time_query(
-        self, prefix: str, query: str, timeout: float
+        self, query: str, timeout: float
     ) -> tuple[float, bool, Any]:
+        """
+        Run a query with a timeout. If you want to attach per-query knobs, attach them to the query string itself.
+
+        It returns the runtime, whether the query timed out, and the explain data.
+        """
         did_time_out = False
         has_explain = "EXPLAIN" in query
         explain_data = None
@@ -118,12 +123,12 @@ class PostgresConn:
                 explain_data = c
 
             logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{prefix} evaluated in {qid_runtime/1e6}"
+                f"{query} evaluated in {qid_runtime/1e6}"
             )
 
         except QueryCanceled:
             logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{prefix} exceeded evaluation timeout {timeout}"
+                f"{query} exceeded evaluation timeout {timeout}"
             )
             qid_runtime = timeout * 1e6
             did_time_out = True
