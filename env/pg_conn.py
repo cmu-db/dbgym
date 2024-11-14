@@ -99,8 +99,8 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
-    def force_statement_timeout(self, timeout_sec: float) -> None:
-        timeout_ms = timeout_sec * 1000
+    def force_statement_timeout(self, timeout: float) -> None:
+        timeout_ms = timeout * 1000
         retry = True
         while retry:
             retry = False
@@ -110,31 +110,39 @@ class PostgresConn:
                 retry = True
 
     def time_query(
-        self, query: str, timeout_sec: float = 0
+        self, query: str, add_explain: bool = False, timeout: float = 0
     ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
-        Run a query with a timeout. If you want to attach per-query knobs, attach them to the query string itself.
-        Following Postgres's convention, timeout=0 indicates "disable timeout"
+        Run a query with a timeout (in seconds). If you want to attach per-query knobs, attach them to the query string
+        itself. Following Postgres's convention, timeout=0 indicates "disable timeout"
 
-        It returns the runtime, whether the query timed out, and the explain data.
+        It returns the runtime, whether the query timed out, and the explain data if add_explain is True.
+
+        If you write explain in the query manually instead of setting add_explain, it won't return explain_data. This
+        is because it won't know the format of the explain data.
         """
-        if timeout_sec > 0:
-            self.force_statement_timeout(timeout_sec)
+        if timeout > 0:
+            self.force_statement_timeout(timeout)
         else:
             assert (
-                timeout_sec == 0
-            ), f'Setting timeout_sec to 0 indicates "disable timeout". However, setting timeout_sec ({timeout_sec}) < 0 is a bug.'
+                timeout == 0
+            ), f'Setting timeout to 0 indicates "disable timeout". However, setting timeout ({timeout}) < 0 is a bug.'
 
         did_time_out = False
-        has_explain = "explain" in query.lower()
         explain_data = None
 
         try:
+            if add_explain:
+                assert (
+                    "explain" not in query.lower()
+                ), "If you're using add_explain, don't also write explain manually in the query."
+                query = f"explain (analyze, format json, timing off) {query}"
+
             start_time = time.time()
             cursor = self.conn().execute(query)
             qid_runtime = (time.time() - start_time) * 1e6
 
-            if has_explain:
+            if add_explain:
                 c = [c for c in cursor][0][0][0]
                 assert "Execution Time" in c
                 qid_runtime = float(c["Execution Time"]) * 1e3
@@ -146,9 +154,9 @@ class PostgresConn:
 
         except QueryCanceled:
             logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{query} exceeded evaluation timeout {timeout_sec}"
+                f"{query} exceeded evaluation timeout {timeout}"
             )
-            qid_runtime = timeout_sec * 1e6
+            qid_runtime = timeout * 1e6
             did_time_out = True
         except Exception as e:
             assert False, e

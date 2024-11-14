@@ -190,14 +190,14 @@ class PostgresConnTests(unittest.TestCase):
 
         # Testing with explain.
         runtime, did_time_out, explain_data = pg_conn.time_query(
-            "explain (analyze, format json, timing off) select pg_sleep(1)"
+            "select pg_sleep(1)", add_explain=True
         )
         self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNotNone(explain_data)
 
         # Testing with timeout.
-        runtime, did_time_out, _ = pg_conn.time_query("select pg_sleep(3)", 2)
+        runtime, did_time_out, _ = pg_conn.time_query("select pg_sleep(3)", timeout=2)
         # The runtime should be about what the timeout is.
         self.assertTrue(abs(runtime - 2_000_000) < 100_000)
         self.assertTrue(did_time_out)

@@ -26,12 +26,15 @@ def _acquire_metrics_around_query(
     query: str,
     query_timeout: float = 0.0,
     observation_space: Optional[StateSpace] = None,
-) -> tuple[float, bool, Any, Any]:
+) -> tuple[float, bool, dict[str, Any], Any]:
     pg_conn.force_statement_timeout(0)
     if observation_space and observation_space.require_metrics():
         initial_metrics = observation_space.construct_online(pg_conn.conn())
 
-    qid_runtime, did_time_out, explain_data = pg_conn.time_query(query, query_timeout)
+    qid_runtime, did_time_out, explain_data = pg_conn.time_query(
+        query, add_explain=True, timeout=query_timeout
+    )
+    assert explain_data is not None
 
     if observation_space and observation_space.require_metrics():
         final_metrics = observation_space.construct_online(pg_conn.conn())
@@ -74,8 +77,6 @@ def execute_variations(
             + " */"
             + query
         )
-        # Log the query plan.
-        pqk_query = "EXPLAIN (ANALYZE, FORMAT JSON, TIMING OFF) " + pqk_query
 
         # Log out the knobs that we are using.
         pqkk = [(knob.name(), val) for knob, val in qr.qknobs.items()]
