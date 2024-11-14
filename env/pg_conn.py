@@ -109,7 +109,9 @@ class PostgresConn:
             except QueryCanceled:
                 retry = True
 
-    def time_query(self, query: str, timeout_sec: float = 0) -> tuple[float, bool, Any]:
+    def time_query(
+        self, query: str, timeout_sec: float = 0
+    ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
         Run a query with a timeout. If you want to attach per-query knobs, attach them to the query string itself.
         Following Postgres's convention, timeout=0 indicates "disable timeout"

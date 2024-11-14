@@ -7,7 +7,11 @@ import yaml
 from psycopg.errors import QueryCanceled
 
 from env.pg_conn import PostgresConn
-from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running, get_running_postgres_ports
+from util.pg import (
+    DEFAULT_POSTGRES_PORT,
+    get_is_postgres_running,
+    get_running_postgres_ports,
+)
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
     DBGymConfig,
