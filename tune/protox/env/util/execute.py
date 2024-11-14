@@ -21,39 +21,18 @@ from tune.protox.env.types import (
 from util.log import DBGYM_LOGGER_NAME
 
 
-def _force_statement_timeout(
-    connection: psycopg.Connection[Any], timeout_ms: float
-) -> None:
-    retry = True
-    while retry:
-        retry = False
-        try:
-            connection.execute(f"SET statement_timeout = {timeout_ms}")
-        except QueryCanceled:
-            retry = True
-
-
 def _acquire_metrics_around_query(
     pg_conn: PostgresConn,
     query: str,
     query_timeout: float = 0.0,
     observation_space: Optional[StateSpace] = None,
 ) -> tuple[float, bool, Any, Any]:
-    _force_statement_timeout(pg_conn.conn(), 0)
+    pg_conn.force_statement_timeout(0)
     if observation_space and observation_space.require_metrics():
         initial_metrics = observation_space.construct_online(pg_conn.conn())
 
-    if query_timeout > 0:
-        _force_statement_timeout(pg_conn.conn(), query_timeout * 1000)
-    else:
-        assert (
-            query_timeout == 0
-        ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
-
     qid_runtime, did_time_out, explain_data = pg_conn.time_query(query, query_timeout)
 
-    # Wipe the statement timeout.
-    _force_statement_timeout(pg_conn.conn(), 0)
     if observation_space and observation_space.require_metrics():
         final_metrics = observation_space.construct_online(pg_conn.conn())
         diff = observation_space.state_delta(initial_metrics, final_metrics)

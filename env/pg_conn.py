@@ -99,12 +99,30 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
-    def time_query(self, query: str, timeout: float) -> tuple[float, bool, Any]:
+    def force_statement_timeout(self, timeout_sec: float) -> None:
+        timeout_ms = timeout_sec * 1000
+        retry = True
+        while retry:
+            retry = False
+            try:
+                self.conn().execute(f"SET statement_timeout = {timeout_ms}")
+            except QueryCanceled:
+                retry = True
+
+    def time_query(self, query: str, timeout_sec: float = 0) -> tuple[float, bool, Any]:
         """
         Run a query with a timeout. If you want to attach per-query knobs, attach them to the query string itself.
+        Following Postgres's convention, timeout=0 indicates "disable timeout"
 
         It returns the runtime, whether the query timed out, and the explain data.
         """
+        if timeout_sec > 0:
+            self.force_statement_timeout(timeout_sec)
+        else:
+            assert (
+                timeout_sec == 0
+            ), f'Setting timeout_sec to 0 indicates "disable timeout". However, setting timeout_sec ({timeout_sec}) < 0 is a bug.'
+
         did_time_out = False
         has_explain = "explain" in query.lower()
         explain_data = None
@@ -126,12 +144,16 @@ class PostgresConn:
 
         except QueryCanceled:
             logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{query} exceeded evaluation timeout {timeout}"
+                f"{query} exceeded evaluation timeout {timeout_sec}"
             )
-            qid_runtime = timeout * 1e6
+            qid_runtime = timeout_sec * 1e6
             did_time_out = True
         except Exception as e:
             assert False, e
+        finally:
+            # Wipe the statement timeout.
+            self.force_statement_timeout(0)
+
         # qid_runtime is in microseconds.
         return qid_runtime, did_time_out, explain_data
 

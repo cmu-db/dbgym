@@ -4,13 +4,10 @@ import unittest
 from pathlib import Path
 
 import yaml
+from psycopg.errors import QueryCanceled
 
 from env.pg_conn import PostgresConn
-from util.pg import (
-    DEFAULT_POSTGRES_PORT,
-    get_is_postgres_running,
-    get_running_postgres_ports,
-)
+from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running, get_running_postgres_ports
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
     DBGymConfig,
@@ -180,18 +177,26 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn.restart_postgres()
 
         # Test
-        # No explain
-        runtime, did_time_out, explain_data = pg_conn.time_query("select pg_sleep(1)", 2)
+        # Testing no explain no timeout.
+        runtime, did_time_out, explain_data = pg_conn.time_query("select pg_sleep(1)")
         # The runtime should be about 1 second.
         self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNone(explain_data)
 
-        # With explain
-        runtime, did_time_out, explain_data = pg_conn.time_query("explain (analyze, format json, timing off) select pg_sleep(1)", 2)
+        # Testing with explain.
+        runtime, did_time_out, explain_data = pg_conn.time_query(
+            "explain (analyze, format json, timing off) select pg_sleep(1)"
+        )
         self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNotNone(explain_data)
+
+        # Testing with timeout.
+        runtime, did_time_out, _ = pg_conn.time_query("select pg_sleep(3)", 2)
+        # The runtime should be about what the timeout is.
+        self.assertTrue(abs(runtime - 2_000_000) < 100_000)
+        self.assertTrue(did_time_out)
 
         # Cleanup
         pg_conn.shutdown_postgres()
