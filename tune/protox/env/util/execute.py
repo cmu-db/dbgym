@@ -33,7 +33,6 @@ def _force_statement_timeout(
 
 
 def _time_query(
-    artifact_manager: Optional[ArtifactManager],
     prefix: str,
     connection: psycopg.Connection[Any],
     query: str,
@@ -90,7 +89,7 @@ def _acquire_metrics_around_query(
         ), f'Setting query_timeout to 0 indicates "timeout". However, setting query_timeout ({query_timeout}) < 0 is a bug.'
 
     qid_runtime, did_time_out, explain_data = _time_query(
-        artifact_manager, prefix, connection, query, query_timeout
+        prefix, connection, query, query_timeout
     )
 
     # Wipe the statement timeout.
