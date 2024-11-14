@@ -26,7 +26,7 @@ def _acquire_metrics_around_query(
     query: str,
     query_timeout: float = 0.0,
     observation_space: Optional[StateSpace] = None,
-) -> tuple[float, bool, dict[str, Any], Any]:
+) -> tuple[float, bool, Optional[dict[str, Any]], Any]:
     pg_conn.force_statement_timeout(0)
     if observation_space and observation_space.require_metrics():
         initial_metrics = observation_space.construct_online(pg_conn.conn())
@@ -34,7 +34,6 @@ def _acquire_metrics_around_query(
     qid_runtime, did_time_out, explain_data = pg_conn.time_query(
         query, add_explain=True, timeout=query_timeout
     )
-    assert explain_data is not None
 
     if observation_space and observation_space.require_metrics():
         final_metrics = observation_space.construct_online(pg_conn.conn())

@@ -116,7 +116,8 @@ class PostgresConn:
         Run a query with a timeout (in seconds). If you want to attach per-query knobs, attach them to the query string
         itself. Following Postgres's convention, timeout=0 indicates "disable timeout"
 
-        It returns the runtime, whether the query timed out, and the explain data if add_explain is True.
+        It returns the runtime, whether the query timed out, and the explain data if add_explain is True. Note that if
+        the query timed out, it won't have any explain data and thus explain_data will be None.
 
         If you write explain in the query manually instead of setting add_explain, it won't return explain_data. This
         is because it won't know the format of the explain data.
