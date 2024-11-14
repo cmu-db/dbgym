@@ -99,6 +99,39 @@ class PostgresConn:
             shutil.move(pglog_fpath, pglog_this_step_fpath)
             self.log_step += 1
 
+    def time_query(
+        self, prefix: str, query: str, timeout: float
+    ) -> tuple[float, bool, Any]:
+        did_time_out = False
+        has_explain = "EXPLAIN" in query
+        explain_data = None
+
+        try:
+            start_time = time.time()
+            cursor = self.conn().execute(query)
+            qid_runtime = (time.time() - start_time) * 1e6
+
+            if has_explain:
+                c = [c for c in cursor][0][0][0]
+                assert "Execution Time" in c
+                qid_runtime = float(c["Execution Time"]) * 1e3
+                explain_data = c
+
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"{prefix} evaluated in {qid_runtime/1e6}"
+            )
+
+        except QueryCanceled:
+            logging.getLogger(DBGYM_LOGGER_NAME).debug(
+                f"{prefix} exceeded evaluation timeout {timeout}"
+            )
+            qid_runtime = timeout * 1e6
+            did_time_out = True
+        except Exception as e:
+            assert False, e
+        # qid_runtime is in microseconds.
+        return qid_runtime, did_time_out, explain_data
+
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()
