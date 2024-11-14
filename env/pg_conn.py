@@ -110,11 +110,16 @@ class PostgresConn:
                 retry = True
 
     def time_query(
-        self, query: str, add_explain: bool = False, timeout: float = 0
+        self,
+        query: str,
+        query_knobs: list[str] = [],
+        add_explain: bool = False,
+        timeout: float = 0,
     ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
-        Run a query with a timeout (in seconds). If you want to attach per-query knobs, attach them to the query string
-        itself. Following Postgres's convention, timeout=0 indicates "disable timeout"
+        Run a query with a timeout (in seconds). Following Postgres's convention, timeout=0 indicates "disable timeout".
+
+        Use query_knobs to pass query knobs. An example input is query_knobs=["SET (enable_sort on)", "IndexOnlyScan(it)"].
 
         It returns the runtime, whether the query timed out, and the explain data if add_explain is True. Note that if
         the query timed out, it won't have any explain data and thus explain_data will be None.
@@ -133,6 +138,9 @@ class PostgresConn:
         explain_data = None
 
         try:
+            if query_knobs:
+                query = f"/*+ {' '.join(query_knobs)} */ {query}"
+
             if add_explain:
                 assert (
                     "explain" not in query.lower()

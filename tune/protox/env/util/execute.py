@@ -24,6 +24,7 @@ from util.log import DBGYM_LOGGER_NAME
 def _acquire_metrics_around_query(
     pg_conn: PostgresConn,
     query: str,
+    query_knobs: list[str],
     query_timeout: float = 0.0,
     observation_space: Optional[StateSpace] = None,
 ) -> tuple[float, bool, Optional[dict[str, Any]], Any]:
@@ -32,7 +33,7 @@ def _acquire_metrics_around_query(
         initial_metrics = observation_space.construct_online(pg_conn.conn())
 
     qid_runtime, did_time_out, explain_data = pg_conn.time_query(
-        query, add_explain=True, timeout=query_timeout
+        query, query_knobs=query_knobs, add_explain=True, timeout=query_timeout
     )
 
     if observation_space and observation_space.require_metrics():
@@ -61,31 +62,24 @@ def execute_variations(
     best_qr = BestQueryRun(None, None, True, None, None)
 
     for qr in runs:
-        # Attach the specific per-query knobs.
-        pqk_query = (
-            "/*+ "
-            + " ".join(
-                [
-                    knob.resolve_per_query_knob(
-                        value,
-                        all_knobs=sysknobs if sysknobs else KnobSpaceContainer({}),
-                    )
-                    for knob, value in qr.qknobs.items()
-                ]
+        # Get the per-query knobs for this query in the form list[str].
+        query_knobs = [
+            knob.resolve_per_query_knob(
+                value,
+                all_knobs=sysknobs if sysknobs else KnobSpaceContainer({}),
             )
-            + " */"
-            + query
-        )
+            for knob, value in qr.qknobs.items()
+        ]
 
         # Log out the knobs that we are using.
-        pqkk = [(knob.name(), val) for knob, val in qr.qknobs.items()]
         logging.getLogger(DBGYM_LOGGER_NAME).debug(
-            f"{qr.prefix_qid} executing with {pqkk}"
+            f"{qr.prefix_qid} executing with {query_knobs}"
         )
 
         runtime, did_time_out, explain_data, metric = _acquire_metrics_around_query(
             pg_conn=pg_conn,
-            query=pqk_query,
+            query=query,
+            query_knobs=query_knobs,
             query_timeout=timeout_limit,
             observation_space=observation_space,
         )
