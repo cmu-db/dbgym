@@ -14,6 +14,8 @@ class MockTuningAgent(TuningAgent):
 
 
 class PostgresConnTests(unittest.TestCase):
+    dbgym_cfg: DBGymConfig
+    
     @staticmethod
     def setUpClass() -> None:
         # If you're running the test locally, this check makes runs past the first one much faster.
