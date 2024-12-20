@@ -5,7 +5,10 @@ from pathlib import Path
 
 import yaml
 
-from env.integtest_util import ENV_INTEGTESTS_DBGYM_CONFIG_FPATH, get_integtest_workspace_path
+from env.integtest_util import (
+    ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
+    get_integtest_workspace_path,
+)
 from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,

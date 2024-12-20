@@ -1,8 +1,11 @@
 import subprocess
 import unittest
 
-from env.agent import TuningAgent
-from env.integtest_util import ENV_INTEGTESTS_DBGYM_CONFIG_FPATH, get_integtest_workspace_path
+from env.integtest_util import (
+    ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
+    get_integtest_workspace_path,
+)
+from env.tuning_agent import TuningAgent
 from util.workspace import DBGymConfig
 
 

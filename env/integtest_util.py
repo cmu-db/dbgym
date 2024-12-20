@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("env/env_integtests_dbgym_config.yaml")
 
 

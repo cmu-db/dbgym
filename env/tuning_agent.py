@@ -2,7 +2,12 @@ from util.workspace import DBGymConfig
 
 
 class DBMSConfig:
-    def __init__(self, indexes: list[str], sysknobs: dict[str, str], query_knobs: dict[str, list[str]]) -> None:
+    def __init__(
+        self,
+        indexes: list[str],
+        sysknobs: dict[str, str],
+        query_knobs: dict[str, list[str]],
+    ) -> None:
         self.indexes = indexes
         self.sysknobs = sysknobs
         self.query_knobs = query_knobs
