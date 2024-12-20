@@ -26,3 +26,6 @@ class TuningAgent:
     # Subclasses should override this function.
     def _step(self) -> DBMSConfig:
         raise NotImplementedError
+    
+    def get_past_config(self, step_num: int) -> DBMSConfig:
+        assert step_num >= 0 and step_num < self.next_step_num
