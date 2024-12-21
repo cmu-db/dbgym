@@ -11,8 +11,8 @@ class DBMSConfigDelta:
     This class represents a DBMS config delta. A "DBMS config" is the indexes, system knobs,
     and query knobs set by the tuning agent. A "delta" is the change from the prior config.
 
-    `indexes` contains a list of SQL statements for creating indexes. If you're using the class
-    as a config delta, it also might contain "DROP ..." statements.
+    `indexes` contains a list of SQL statements for creating indexes. Note that since it's a
+    config delta, it might contain "DROP ..." statements.
 
     `sysknobs` contains a mapping from knob names to their values.
 
