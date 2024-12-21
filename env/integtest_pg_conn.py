@@ -153,13 +153,21 @@ class PostgresConnTests(unittest.TestCase):
         pg_conn.restore_pristine_snapshot()
         pg_conn.restart_postgres()
 
-        # Test
         # Testing no explain no timeout.
         runtime, did_time_out, explain_data = pg_conn.time_query("select pg_sleep(1)")
         # The runtime should be about 1 second.
         self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNone(explain_data)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_time_query_with_explain(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
 
         # Testing with explain.
         runtime, did_time_out, explain_data = pg_conn.time_query(
@@ -168,6 +176,15 @@ class PostgresConnTests(unittest.TestCase):
         self.assertTrue(abs(runtime - 1_000_000) < 100_000)
         self.assertFalse(did_time_out)
         self.assertIsNotNone(explain_data)
+
+        # Cleanup
+        pg_conn.shutdown_postgres()
+
+    def test_time_query_with_timeout(self) -> None:
+        # Setup
+        pg_conn = self.create_pg_conn()
+        pg_conn.restore_pristine_snapshot()
+        pg_conn.restart_postgres()
 
         # Testing with timeout.
         runtime, did_time_out, _ = pg_conn.time_query("select pg_sleep(3)", timeout=2)
