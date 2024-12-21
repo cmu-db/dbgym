@@ -33,12 +33,36 @@ class PostgresConnTests(unittest.TestCase):
 
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
-    def test_test(self) -> None:
+    @staticmethod
+    def make_config(letter: str) -> DBMSConfig:
+        return DBMSConfig([letter], {letter: letter}, {letter: [letter]})
+
+    def test_get_step_delta(self) -> None:
         agent = MockTuningAgent(PostgresConnTests.dbgym_cfg)
-        config_a = DBMSConfig(["a"], {"a": "a"}, {"a": ["a"]})
-        agent.config_to_return = config_a
+
+        agent.config_to_return = PostgresConnTests.make_config("a")
         agent.step()
-        self.assertEqual(agent.get_step_delta(0), config_a)
+        agent.config_to_return = PostgresConnTests.make_config("b")
+        agent.step()
+        agent.config_to_return = PostgresConnTests.make_config("c")
+        agent.step()
+
+        self.assertEqual(agent.get_step_delta(1), PostgresConnTests.make_config("b"))
+        self.assertEqual(agent.get_step_delta(0), PostgresConnTests.make_config("a"))
+        self.assertEqual(agent.get_step_delta(1), PostgresConnTests.make_config("b"))
+        self.assertEqual(agent.get_step_delta(2), PostgresConnTests.make_config("c"))
+
+    def test_get_all_deltas(self) -> None:
+        agent = MockTuningAgent(PostgresConnTests.dbgym_cfg)
+
+        agent.config_to_return = PostgresConnTests.make_config("a")
+        agent.step()
+        agent.config_to_return = PostgresConnTests.make_config("b")
+        agent.step()
+        agent.config_to_return = PostgresConnTests.make_config("c")
+        agent.step()
+
+        self.assertEqual(agent.get_all_deltas(), [PostgresConnTests.make_config("a"), PostgresConnTests.make_config("b"), PostgresConnTests.make_config("c")])
 
 
 if __name__ == "__main__":
