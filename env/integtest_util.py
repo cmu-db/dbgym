@@ -4,7 +4,6 @@ import yaml
 
 from util.workspace import DBGymConfig
 
-
 ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("env/env_integtests_dbgym_config.yaml")
 INTEGTEST_DBGYM_CFG = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
