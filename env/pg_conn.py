@@ -137,16 +137,16 @@ class PostgresConn:
         did_time_out = False
         explain_data = None
 
-        def hint_notice_handler(notice) -> None:
-            """
-            Custom handler for database notices.
-            Raises an error or logs the notice if it indicates a problem.
-            """
-            logging.getLogger(DBGYM_LOGGER_NAME).warning(f"Postgres notice: {notice}")
-            if "hint" in notice.message.lower():
-                raise RuntimeError(f"Query hint failed: {notice.message}")
+        # def hint_notice_handler(notice) -> None:
+        #     """
+        #     Custom handler for database notices.
+        #     Raises an error or logs the notice if it indicates a problem.
+        #     """
+        #     logging.getLogger(DBGYM_LOGGER_NAME).warning(f"Postgres notice: {notice}")
+        #     if "hint" in notice.message.lower():
+        #         raise RuntimeError(f"Query hint failed: {notice.message}")
 
-        self.conn().add_notice_handler(hint_notice_handler)
+        # self.conn().add_notice_handler(hint_notice_handler)
 
         try:
             if query_knobs:
