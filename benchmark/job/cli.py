@@ -3,7 +3,6 @@ import logging
 import click
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
-from benchmark.job.load_info import JobLoadInfo
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
@@ -13,7 +12,8 @@ from util.workspace import (
     link_result,
 )
 
-JOB_TABLES_URL = "https://homepages.cwi.nl/~boncz/job/imdb.tgz"
+# JOB_TABLES_URL = "https://homepages.cwi.nl/~boncz/job/imdb.tgz" # This link stopped working for me
+JOB_TABLES_URL = "https://drive.google.com/uc?id=19m0zDpphAw0Bu9Irr_ta9EGr5k85hiN1"
 JOB_QUERY_NAMES = [
     "1a",
     "1b",
@@ -177,7 +177,8 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
-    subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path)
+    # subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path) # This is if we're using a non-Google-Drive link
+    subprocess_run(f"gdown {JOB_TABLES_URL}", cwd=real_data_path)
     job_data_dpath = dbgym_cfg.cur_task_runs_data_path(
         default_tables_dname(DEFAULT_SCALE_FACTOR), mkdir=True
     )
