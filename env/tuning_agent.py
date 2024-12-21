@@ -58,11 +58,9 @@ class TuningAgent:
 
     def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.next_step_num
-        delta = None
         with self.get_step_delta_fpath(step_num).open("r") as f:
-            delta = DBMSConfigDelta(**json.load(f))
-        assert delta is not None
-        return delta
+            return DBMSConfigDelta(**json.load(f))
+        assert False
 
     def get_all_deltas(self) -> list[DBMSConfigDelta]:
         return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]
