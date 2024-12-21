@@ -1,6 +1,7 @@
-from dataclasses import asdict, dataclass
 import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
+
 from util.workspace import DBGymConfig
 
 
@@ -18,6 +19,7 @@ class DBMSConfig:
     to prepend to the start of the query. The knobs are a list[str] instead of a dict[str, str]
     because knobs can be settings ("SET (enable_sort on)") or flags ("IndexOnlyScan(it)").
     """
+
     indexes: list[str]
     sysknobs: dict[str, str]
     qknobs: dict[str, list[str]]
@@ -26,7 +28,9 @@ class DBMSConfig:
 class TuningAgent:
     def __init__(self, dbgym_cfg: DBGymConfig) -> None:
         self.dbgym_cfg = dbgym_cfg
-        self.dbms_cfg_deltas_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path("dbms_cfg_deltas", mkdir=True)
+        self.dbms_cfg_deltas_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path(
+            "dbms_cfg_deltas", mkdir=True
+        )
         self.next_step_num = 0
 
     def step(self) -> None:
@@ -50,7 +54,7 @@ class TuningAgent:
         This should return the delta in the config caused by this step.
         """
         raise NotImplementedError
-    
+
     def get_step_delta(self, step_num: int) -> DBMSConfig:
         assert step_num >= 0 and step_num < self.next_step_num
         delta = None
@@ -58,6 +62,6 @@ class TuningAgent:
             delta = DBMSConfig(**json.load(f))
         assert delta is not None
         return delta
-    
+
     def get_all_deltas(self) -> list[DBMSConfig]:
         return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]

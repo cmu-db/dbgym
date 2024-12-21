@@ -1,4 +1,5 @@
 import subprocess
+from typing import Any, Optional
 import unittest
 
 from env.integtest_util import (
@@ -10,9 +11,9 @@ from util.workspace import DBGymConfig
 
 
 class MockTuningAgent(TuningAgent):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.config_to_return = None
+        self.config_to_return: Optional[DBMSConfig] = None
 
     def _step(self) -> DBMSConfig:
         assert self.config_to_return is not None
@@ -62,7 +63,14 @@ class PostgresConnTests(unittest.TestCase):
         agent.config_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        self.assertEqual(agent.get_all_deltas(), [PostgresConnTests.make_config("a"), PostgresConnTests.make_config("b"), PostgresConnTests.make_config("c")])
+        self.assertEqual(
+            agent.get_all_deltas(),
+            [
+                PostgresConnTests.make_config("a"),
+                PostgresConnTests.make_config("b"),
+                PostgresConnTests.make_config("c"),
+            ],
+        )
 
 
 if __name__ == "__main__":
