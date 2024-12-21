@@ -1,12 +1,10 @@
 import copy
 import subprocess
 import unittest
-from pathlib import Path
-
-import yaml
 
 from env.integtest_util import (
     ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
+    INTEGTEST_DBGYM_CFG,
     get_integtest_workspace_path,
 )
 from env.pg_conn import PostgresConn
@@ -36,8 +34,6 @@ class PostgresConnTests(unittest.TestCase):
         if not get_integtest_workspace_path().exists():
             subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
 
-        PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
-
     def setUp(self) -> None:
         self.assertFalse(
             get_is_postgres_running(),
@@ -45,19 +41,19 @@ class PostgresConnTests(unittest.TestCase):
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
-            self.dbgym_cfg.dbgym_workspace_path, BENCHMARK, SCALE_FACTOR
+            INTEGTEST_DBGYM_CFG.dbgym_workspace_path, BENCHMARK, SCALE_FACTOR
         )
         self.dbdata_parent_dpath = default_dbdata_parent_dpath(
-            self.dbgym_cfg.dbgym_workspace_path
+            INTEGTEST_DBGYM_CFG.dbgym_workspace_path
         )
-        self.pgbin_dpath = default_pgbin_path(self.dbgym_cfg.dbgym_workspace_path)
+        self.pgbin_dpath = default_pgbin_path(INTEGTEST_DBGYM_CFG.dbgym_workspace_path)
 
     def tearDown(self) -> None:
         self.assertFalse(get_is_postgres_running())
 
     def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
-            PostgresConnTests.dbgym_cfg,
+            INTEGTEST_DBGYM_CFG,
             pgport,
             self.pristine_dbdata_snapshot_path,
             self.dbdata_parent_dpath,

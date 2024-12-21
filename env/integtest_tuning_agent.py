@@ -3,11 +3,10 @@ import unittest
 from typing import Any, Optional
 
 from env.integtest_util import (
-    ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
+    INTEGTEST_DBGYM_CFG,
     get_integtest_workspace_path,
 )
 from env.tuning_agent import DBMSConfigDelta, TuningAgent
-from util.workspace import DBGymConfig
 
 
 class MockTuningAgent(TuningAgent):
@@ -24,22 +23,18 @@ class MockTuningAgent(TuningAgent):
 
 
 class PostgresConnTests(unittest.TestCase):
-    dbgym_cfg: DBGymConfig
-
     @staticmethod
     def setUpClass() -> None:
         # If you're running the test locally, this check makes runs past the first one much faster.
         if not get_integtest_workspace_path().exists():
             subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
 
-        PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
-
     @staticmethod
     def make_config(letter: str) -> DBMSConfigDelta:
         return DBMSConfigDelta([letter], {letter: letter}, {letter: [letter]})
 
     def test_get_step_delta(self) -> None:
-        agent = MockTuningAgent(PostgresConnTests.dbgym_cfg)
+        agent = MockTuningAgent(INTEGTEST_DBGYM_CFG)
 
         agent.config_to_return = PostgresConnTests.make_config("a")
         agent.step()
@@ -54,7 +49,7 @@ class PostgresConnTests(unittest.TestCase):
         self.assertEqual(agent.get_step_delta(2), PostgresConnTests.make_config("c"))
 
     def test_get_all_deltas(self) -> None:
-        agent = MockTuningAgent(PostgresConnTests.dbgym_cfg)
+        agent = MockTuningAgent(INTEGTEST_DBGYM_CFG)
 
         agent.config_to_return = PostgresConnTests.make_config("a")
         agent.step()
