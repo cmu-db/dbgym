@@ -1,7 +1,6 @@
 name: Static, Unit, Integration, and End-to-End Tests
 
 on:
-  push: {}
   pull_request:
     branches: [main]
 
