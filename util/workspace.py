@@ -10,7 +10,7 @@ import subprocess
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import IO, Any, Callable, Optional, Tuple
+from typing import IO, Any, Callable, Optional
 
 import redis
 import yaml
