@@ -1,21 +1,21 @@
 import subprocess
-from typing import Any, Optional
 import unittest
+from typing import Any, Optional
 
 from env.integtest_util import (
     ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
     get_integtest_workspace_path,
 )
-from env.tuning_agent import DBMSConfig, TuningAgent
+from env.tuning_agent import DBMSConfigDelta, TuningAgent
 from util.workspace import DBGymConfig
 
 
 class MockTuningAgent(TuningAgent):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfig] = None
+        self.config_to_return: Optional[DBMSConfigDelta] = None
 
-    def _step(self) -> DBMSConfig:
+    def _step(self) -> DBMSConfigDelta:
         assert self.config_to_return is not None
         ret = self.config_to_return
         # Setting this ensures you must set self.config_to_return every time.
@@ -35,8 +35,8 @@ class PostgresConnTests(unittest.TestCase):
         PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
 
     @staticmethod
-    def make_config(letter: str) -> DBMSConfig:
-        return DBMSConfig([letter], {letter: letter}, {letter: [letter]})
+    def make_config(letter: str) -> DBMSConfigDelta:
+        return DBMSConfigDelta([letter], {letter: letter}, {letter: [letter]})
 
     def test_get_step_delta(self) -> None:
         agent = MockTuningAgent(PostgresConnTests.dbgym_cfg)

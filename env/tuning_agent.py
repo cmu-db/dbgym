@@ -6,9 +6,10 @@ from util.workspace import DBGymConfig
 
 
 @dataclass
-class DBMSConfig:
+class DBMSConfigDelta:
     """
-    This class can either represent a config or a config delta.
+    This class represents a DBMS config delta. A "DBMS config" is the indexes, system knobs,
+    and query knobs set by the tuning agent. A "delta" is the change from the prior config.
 
     `indexes` contains a list of SQL statements for creating indexes. If you're using the class
     as a config delta, it also might contain "DROP ..." statements.
@@ -47,7 +48,7 @@ class TuningAgent:
         return self.dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
 
     # Subclasses should override this function.
-    def _step(self) -> DBMSConfig:
+    def _step(self) -> DBMSConfigDelta:
         """
         This should be overridden by subclasses.
 
@@ -55,13 +56,13 @@ class TuningAgent:
         """
         raise NotImplementedError
 
-    def get_step_delta(self, step_num: int) -> DBMSConfig:
+    def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.next_step_num
         delta = None
         with self.get_step_delta_fpath(step_num).open("r") as f:
-            delta = DBMSConfig(**json.load(f))
+            delta = DBMSConfigDelta(**json.load(f))
         assert delta is not None
         return delta
 
-    def get_all_deltas(self) -> list[DBMSConfig]:
+    def get_all_deltas(self) -> list[DBMSConfigDelta]:
         return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]
