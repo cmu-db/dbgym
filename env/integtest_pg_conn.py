@@ -1,11 +1,7 @@
 import copy
-import subprocess
 import unittest
-from pathlib import Path
 
-import yaml
-from psycopg.errors import QueryCanceled
-
+from env.integtest_util import IntegtestWorkspace
 from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
@@ -20,15 +16,8 @@ from util.workspace import (
     default_pristine_dbdata_snapshot_path,
 )
 
-ENV_INTEGTESTS_DBGYM_CONFIG_FPATH = Path("env/env_integtests_dbgym_config.yaml")
 BENCHMARK = "tpch"
 SCALE_FACTOR = 0.01
-
-
-def get_unittest_workspace_path() -> Path:
-    with open(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
-        return Path(yaml.safe_load(f)["dbgym_workspace_path"])
-    assert False
 
 
 class PostgresConnTests(unittest.TestCase):
@@ -36,11 +25,7 @@ class PostgresConnTests(unittest.TestCase):
 
     @staticmethod
     def setUpClass() -> None:
-        # If you're running the test locally, this check makes runs past the first one much faster.
-        if not get_unittest_workspace_path().exists():
-            subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
-
-        PostgresConnTests.dbgym_cfg = DBGymConfig(ENV_INTEGTESTS_DBGYM_CONFIG_FPATH)
+        IntegtestWorkspace.set_up_workspace()
 
     def setUp(self) -> None:
         self.assertFalse(
@@ -49,19 +34,23 @@ class PostgresConnTests(unittest.TestCase):
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
-            self.dbgym_cfg.dbgym_workspace_path, BENCHMARK, SCALE_FACTOR
+            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path,
+            BENCHMARK,
+            SCALE_FACTOR,
         )
         self.dbdata_parent_dpath = default_dbdata_parent_dpath(
-            self.dbgym_cfg.dbgym_workspace_path
+            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path
         )
-        self.pgbin_dpath = default_pgbin_path(self.dbgym_cfg.dbgym_workspace_path)
+        self.pgbin_dpath = default_pgbin_path(
+            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path
+        )
 
     def tearDown(self) -> None:
         self.assertFalse(get_is_postgres_running())
 
     def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
-            PostgresConnTests.dbgym_cfg,
+            IntegtestWorkspace.get_dbgym_cfg(),
             pgport,
             self.pristine_dbdata_snapshot_path,
             self.dbdata_parent_dpath,
