@@ -6,6 +6,7 @@ from env.integtest_util import (
     ENV_INTEGTESTS_DBGYM_CONFIG_FPATH,
     INTEGTEST_DBGYM_CFG,
     get_integtest_workspace_path,
+    set_up_integtest_workspace,
 )
 from env.pg_conn import PostgresConn
 from util.pg import (
@@ -30,9 +31,7 @@ class PostgresConnTests(unittest.TestCase):
 
     @staticmethod
     def setUpClass() -> None:
-        # If you're running the test locally, this check makes runs past the first one much faster.
-        if not get_integtest_workspace_path().exists():
-            subprocess.run(["./env/set_up_env_integtests.sh"], check=True)
+        set_up_integtest_workspace()
 
     def setUp(self) -> None:
         self.assertFalse(
