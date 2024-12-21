@@ -137,7 +137,7 @@ class PostgresConn:
         did_time_out = False
         explain_data = None
 
-        def hint_notice_handler(notice):
+        def hint_notice_handler(notice) -> None:
             """
             Custom handler for database notices.
             Raises an error or logs the notice if it indicates a problem.
