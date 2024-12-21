@@ -15,10 +15,10 @@ class MockTuningAgent(TuningAgent):
         self.config_to_return = None
 
     def _step(self) -> DBMSConfig:
+        assert self.config_to_return is not None
         ret = self.config_to_return
-        assert ret is not None
-        # This ensures you must set self.config_to_return every time
-        ret = None
+        # Setting this ensures you must set self.config_to_return every time.
+        self.config_to_return = None
         return ret
 
 
@@ -38,7 +38,7 @@ class PostgresConnTests(unittest.TestCase):
         config_a = DBMSConfig(["a"], {"a": "a"}, {"a": ["a"]})
         agent.config_to_return = config_a
         agent.step()
-        self.assertEqual(agent.get_past_config(0), config_a)
+        self.assertEqual(agent.get_step_delta(0), config_a)
 
 
 if __name__ == "__main__":
