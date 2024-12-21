@@ -2,7 +2,11 @@ import subprocess
 import unittest
 from typing import Any, Optional
 
-from env.integtest_util import INTEGTEST_DBGYM_CFG, get_integtest_workspace_path, set_up_integtest_workspace
+from env.integtest_util import (
+    INTEGTEST_DBGYM_CFG,
+    get_integtest_workspace_path,
+    set_up_integtest_workspace,
+)
 from env.tuning_agent import DBMSConfigDelta, TuningAgent
 
 
