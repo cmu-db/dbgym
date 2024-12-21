@@ -179,7 +179,7 @@ class PostgresConn:
             qid_runtime = timeout * 1e6
             did_time_out = True
         except Exception as e:
-            assert False, e
+            raise e
         finally:
             # Wipe the statement timeout.
             self.force_statement_timeout(0)

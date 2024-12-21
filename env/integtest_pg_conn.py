@@ -1,6 +1,8 @@
 import copy
 import unittest
 
+import psycopg
+
 from env.integtest_util import IntegtestWorkspace
 from env.pg_conn import PostgresConn
 from util.pg import (
@@ -135,12 +137,26 @@ class PostgresConnTests(unittest.TestCase):
         self.assertIsNotNone(explain_data)
 
     def test_time_query_with_timeout(self) -> None:
-        runtime, did_time_out, _ = self.pg_conn.time_query(
+        runtime, did_time_out, explain_data = self.pg_conn.time_query(
             "select pg_sleep(3)", timeout=2
         )
         # The runtime should be about what the timeout is.
         self.assertTrue(abs(runtime - 2_000_000) < 100_000)
         self.assertTrue(did_time_out)
+        self.assertIsNone(explain_data)
+
+    def test_time_query_with_valid_table(self) -> None:
+        _, did_time_out, explain_data = self.pg_conn.time_query(
+            "select * from lineitem limit 10"
+        )
+        self.assertFalse(did_time_out)
+        self.assertIsNone(explain_data)
+
+    def test_time_query_with_invalid_table(self) -> None:
+        with self.assertRaises(psycopg.errors.UndefinedTable):
+            self.pg_conn.time_query(
+                "select * from itemline limit 10"
+            )
 
 
 if __name__ == "__main__":
