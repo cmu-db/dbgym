@@ -129,6 +129,7 @@ JOB_QUERY_NAMES = [
     "33b",
     "33c",
 ]
+JOB_QUERIES_DNAME = "job-queries"
 
 
 @click.group(name="job")
@@ -174,7 +175,7 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
 
 
 def _download_job_queries(dbgym_cfg: DBGymConfig) -> None:
-    _download_and_untar_dir(dbgym_cfg, JOB_QUERIES_URL, "job.tgz", "job-queries")
+    _download_and_untar_dir(dbgym_cfg, JOB_QUERIES_URL, "job.tgz", JOB_QUERIES_DNAME)
 
 
 def _download_and_untar_dir(
@@ -230,7 +231,8 @@ def _generate_job_workload(
     with open(real_dpath / "order.txt", "w") as f:
         for qname in query_names:
             sql_fpath = (
-                dbgym_cfg.cur_symlinks_build_path(mkdir=True) / ("job-queries.link")
+                dbgym_cfg.cur_symlinks_data_path(mkdir=True)
+                / (f"{JOB_QUERIES_DNAME}.link")
             ).resolve() / f"{qname}.sql"
             assert (
                 sql_fpath.exists()
