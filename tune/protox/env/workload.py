@@ -33,10 +33,7 @@ from tune.protox.env.types import (
     TableAttrSetMap,
     TableColTuple,
 )
-from tune.protox.env.util.execute import (
-    _acquire_metrics_around_query,
-    execute_variations,
-)
+from tune.protox.env.util.execute import execute_variations
 from tune.protox.env.util.reward import RewardUtility
 from tune.protox.env.util.workload_analysis import (
     extract_aliases,
@@ -476,7 +473,7 @@ class Workload(object):
 
                 if not skip_execute:
                     best_run: BestQueryRun = execute_variations(
-                        connection=pg_conn.conn(),
+                        pg_conn=pg_conn,
                         runs=runs,
                         query=query,
                         query_timeout=min(
