@@ -164,27 +164,12 @@ def job_workload(
 
 
 def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
-    expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-        / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
+    _download_and_untar_dir(
+        dbgym_cfg,
+        JOB_TABLES_URL,
+        "imdb.tgz",
+        default_tables_dname(DEFAULT_SCALE_FACTOR),
     )
-    if expected_symlink_dpath.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping download: {expected_symlink_dpath}"
-        )
-        return
-
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
-    real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
-    subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path)
-    job_data_dpath = dbgym_cfg.cur_task_runs_data_path(
-        default_tables_dname(DEFAULT_SCALE_FACTOR), mkdir=True
-    )
-    subprocess_run("tar -zxvf ../imdb.tgz", cwd=job_data_dpath)
-    subprocess_run(f"rm imdb.tgz", cwd=real_data_path)
-    symlink_dpath = link_result(dbgym_cfg, job_data_dpath)
-    assert expected_symlink_dpath.samefile(symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_dpath}")
 
 
 def _clone_job_queries(dbgym_cfg: DBGymConfig) -> None:
@@ -205,6 +190,32 @@ def _clone_job_queries(dbgym_cfg: DBGymConfig) -> None:
     symlink_dpath = link_result(dbgym_cfg, real_build_path / "job-queries")
     assert expected_symlink_dpath.samefile(symlink_dpath)
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_dpath}")
+
+
+def _download_and_untar_dir(
+    dbgym_cfg: DBGymConfig,
+    download_url: str,
+    download_tarred_fname: str,
+    untarred_dname: str,
+) -> None:
+    expected_symlink_dpath = (
+        dbgym_cfg.cur_symlinks_data_path(mkdir=True) / f"{untarred_dname}.link"
+    )
+    if expected_symlink_dpath.exists():
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            f"Skipping download: {expected_symlink_dpath}"
+        )
+        return
+
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
+    real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
+    subprocess_run(f"curl -O {download_url}", cwd=real_data_path)
+    untarred_data_dpath = dbgym_cfg.cur_task_runs_data_path(untarred_dname, mkdir=True)
+    subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_dpath)
+    subprocess_run(f"rm {download_tarred_fname}", cwd=real_data_path)
+    symlink_dpath = link_result(dbgym_cfg, untarred_data_dpath)
+    assert expected_symlink_dpath.samefile(symlink_dpath)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_dpath}")
 
 
 def _generate_job_workload(
