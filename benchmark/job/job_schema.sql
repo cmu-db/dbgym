@@ -1,5 +1,5 @@
--- Copied over from https://github.com/wangpatrick57/job-queries/blob/master/schema.sql (from an older commit)
--- We copied it over so that we have control over the schema, not job-queries.
+-- Copied over from https://event.cwi.nl/da/job/job.tgz.
+-- We copied it over so that we have control over the schema.
 CREATE TABLE aka_name (
     id integer NOT NULL PRIMARY KEY,
     person_id integer NOT NULL,

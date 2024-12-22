@@ -13,6 +13,7 @@ from util.workspace import (
 )
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
+JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"
 JOB_QUERY_NAMES = [
     "1a",
     "1b",
@@ -159,7 +160,7 @@ def job_workload(
     dbgym_cfg: DBGymConfig, query_subset: str, scale_factor: float
 ) -> None:
     assert scale_factor == DEFAULT_SCALE_FACTOR
-    _clone_job_queries(dbgym_cfg)
+    _download_job_queries(dbgym_cfg)
     _generate_job_workload(dbgym_cfg, query_subset)
 
 
@@ -172,24 +173,8 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
     )
 
 
-def _clone_job_queries(dbgym_cfg: DBGymConfig) -> None:
-    expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "job-queries.link"
-    )
-    if expected_symlink_dpath.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping clone: {expected_symlink_dpath}"
-        )
-        return
-
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
-    real_build_path = dbgym_cfg.cur_task_runs_build_path(mkdir=True)
-    subprocess_run(
-        f"./clone_job_queries.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
-    )
-    symlink_dpath = link_result(dbgym_cfg, real_build_path / "job-queries")
-    assert expected_symlink_dpath.samefile(symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_dpath}")
+def _download_job_queries(dbgym_cfg: DBGymConfig) -> None:
+    _download_and_untar_dir(dbgym_cfg, JOB_QUERIES_URL, "job.tgz", "job-queries")
 
 
 def _download_and_untar_dir(
