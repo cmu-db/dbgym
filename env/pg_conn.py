@@ -70,6 +70,7 @@ class PostgresConn:
         self.dbdata_dpath = self.dbdata_parent_dpath / f"dbdata{self.pgport}"
 
         self._conn: Optional[psycopg.Connection[Any]] = None
+        self.hint_check_failed_with: Optional[str] = None
 
     def get_kv_connstr(self) -> str:
         return get_kv_connstr(self.pgport)
@@ -79,6 +80,21 @@ class PostgresConn:
             self._conn = psycopg.connect(
                 self.get_kv_connstr(), autocommit=True, prepare_threshold=None
             )
+
+            def hint_check_notice_handler(notice: psycopg.errors.Diagnostic) -> None:
+                """
+                Custom handler for raising errors if hints fail.
+                """
+                if (
+                    notice.message_detail is not None
+                    and "hint" in notice.message_detail.lower()
+                ):
+                    self.hint_check_failed_with = notice.message_detail
+
+            # We add the notice handler when the _conn is created instead of before executing a
+            # query to avoid adding it more than once.
+            self._conn.add_notice_handler(hint_check_notice_handler)
+
         return self._conn
 
     def disconnect(self) -> None:
@@ -137,17 +153,6 @@ class PostgresConn:
         did_time_out = False
         explain_data = None
 
-        # def hint_notice_handler(notice) -> None:
-        #     """
-        #     Custom handler for database notices.
-        #     Raises an error or logs the notice if it indicates a problem.
-        #     """
-        #     logging.getLogger(DBGYM_LOGGER_NAME).warning(f"Postgres notice: {notice}")
-        #     if "hint" in notice.message.lower():
-        #         raise RuntimeError(f"Query hint failed: {notice.message}")
-
-        # self.conn().add_notice_handler(hint_notice_handler)
-
         try:
             if query_knobs:
                 query = f"/*+ {' '.join(query_knobs)} */ {query}"
@@ -158,9 +163,15 @@ class PostgresConn:
                 ), "If you're using add_explain, don't also write explain manually in the query."
                 query = f"explain (analyze, format json, timing off) {query}"
 
+            # Reset this every time before calling execute() so that hint_check_notice_handler works correctly.
+            self.hint_check_failed_with = None
+
             start_time = time.time()
             cursor = self.conn().execute(query)
             qid_runtime = (time.time() - start_time) * 1e6
+
+            if self.hint_check_failed_with is not None:
+                raise RuntimeError(f"Query hint failed: {self.hint_check_failed_with}")
 
             if add_explain:
                 c = [c for c in cursor][0][0][0]

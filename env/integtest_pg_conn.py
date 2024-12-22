@@ -129,9 +129,7 @@ class PostgresConnTests(unittest.TestCase):
         self.assertIsNone(explain_data)
 
     def test_time_query_with_explain(self) -> None:
-        _, _, explain_data = self.pg_conn.time_query(
-            "select pg_sleep(1)", add_explain=True
-        )
+        _, _, explain_data = self.pg_conn.time_query("select 1", add_explain=True)
         self.assertIsNotNone(explain_data)
 
     def test_time_query_with_timeout(self) -> None:
@@ -150,7 +148,7 @@ class PostgresConnTests(unittest.TestCase):
         with self.assertRaises(psycopg.errors.UndefinedTable):
             self.pg_conn.time_query("select * from itemline limit 10")
 
-    def test_time_query_with_hint(self) -> None:
+    def test_time_query_with_valid_hints(self) -> None:
         join_query = """SELECT *
 FROM orders
 JOIN lineitem ON o_orderkey = l_orderkey
@@ -168,8 +166,16 @@ LIMIT 10"""
                 query_knobs=[f"{hint_join_type}(lineitem orders)"],
                 add_explain=True,
             )
+            assert explain_data is not None  # This assertion is for mypy.
             actual_join_type = explain_data["Plan"]["Plans"][0]["Node Type"]
             self.assertEqual(expected_join_type, actual_join_type)
+
+    def test_time_query_with_invalid_hint(self) -> None:
+        with self.assertRaises(RuntimeError) as context:
+            self.pg_conn.time_query("select 1", query_knobs=["dbgym"])
+            self.assertTrue(
+                'Unrecognized hint keyword "dbgym"' in str(context.exception)
+            )
 
 
 if __name__ == "__main__":
