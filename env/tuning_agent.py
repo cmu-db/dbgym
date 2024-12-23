@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import NewType, TypedDict
 
-from util.workspace import DBGymConfig
+from util.workspace import DBGymConfig, is_fully_resolved
 
 # PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents.
 # These types are only given as the outputs of tuning agents.
@@ -68,6 +68,7 @@ class TuningAgent:
 class TuningAgentStepReader:
     def __init__(self, dbms_cfg_deltas_dpath: Path) -> None:
         self.dbms_cfg_deltas_dpath = dbms_cfg_deltas_dpath
+        assert is_fully_resolved(self.dbms_cfg_deltas_dpath)
         num_steps = 0
         while get_step_delta_fpath(self.dbms_cfg_deltas_dpath, num_steps).exists():
             num_steps += 1
