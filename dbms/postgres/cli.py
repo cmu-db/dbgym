@@ -108,7 +108,7 @@ def postgres_dbdata(
             dbgym_cfg.dbgym_workspace_path
         )
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
     dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
 

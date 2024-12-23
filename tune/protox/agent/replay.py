@@ -151,7 +151,7 @@ def replay(
             boot_enabled_during_tune,
         )
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     tuning_steps_dpath = fully_resolve_inputpath(dbgym_cfg, tuning_steps_dpath)
 
     # Group args together to reduce the # of parameters we pass into functions

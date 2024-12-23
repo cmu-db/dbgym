@@ -211,7 +211,7 @@ def train(
     if seed is None:
         seed = random.randint(0, int(1e8))
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
     traindata_path = fully_resolve_inputpath(dbgym_cfg, traindata_path)
     hpo_space_path = fully_resolve_inputpath(dbgym_cfg, hpo_space_path)

@@ -86,7 +86,7 @@ def tune(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     hpoed_agent_params_path = fully_resolve_inputpath(
         dbgym_cfg, hpoed_agent_params_path
     )

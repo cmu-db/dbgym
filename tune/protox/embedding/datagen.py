@@ -226,7 +226,7 @@ def datagen(
     if seed is None:
         seed = random.randint(0, int(1e8))
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     workload_path = fully_resolve_inputpath(dbgym_cfg, workload_path)
     benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
     pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)

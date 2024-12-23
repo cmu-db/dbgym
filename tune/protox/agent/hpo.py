@@ -294,7 +294,7 @@ def hpo(
     if seed is None:
         seed = random.randint(0, int(1e8))
 
-    # Convert all input paths to absolute paths
+    # Fully resolve all input paths.
     embedder_path = fully_resolve_inputpath(dbgym_cfg, embedder_path)
     benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
     benchbase_config_path = fully_resolve_inputpath(dbgym_cfg, benchbase_config_path)
