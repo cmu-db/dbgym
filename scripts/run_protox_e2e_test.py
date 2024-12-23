@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.pg import get_is_postgres_running
 from util.workspace import (
     default_embedder_path,
@@ -72,7 +73,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
     if benchmark_name == "tpch":
         scale_factor = 0.01
         query_subset = "all"
-        workload_name_suffix = f"15721_15721_{query_subset}"
+        workload_name_suffix = f"{DEFAULT_TPCH_SEED}_{DEFAULT_TPCH_SEED}_{query_subset}"
         embedding_datagen_args = "--override-sample-limits lineitem,32768"
         embedding_train_args = "--iterations-per-epoch 1 --num-points-to-sample 1 --num-batches 1 --batch-size 64 --start-epoch 15 --num-samples 4 --train-max-concurrent 4 --num-curate 2"
         tune_hpo_args = "--num-samples 2 --max-concurrent 2 --workload-timeout 15 --query-timeout 1 --tune-duration-during-hpo 0.01"
