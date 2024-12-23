@@ -1,8 +1,13 @@
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import NewType
 
 from util.workspace import DBGymConfig
+
+IndexesDelta = NewType("IndexesDelta", list[str])
+SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
+QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
 
 
 @dataclass
@@ -21,9 +26,9 @@ class DBMSConfigDelta:
     because knobs can be settings ("SET (enable_sort on)") or flags ("IndexOnlyScan(it)").
     """
 
-    indexes: list[str]
-    sysknobs: dict[str, str]
-    qknobs: dict[str, list[str]]
+    indexes: IndexesDelta
+    sysknobs: SysKnobsDelta
+    qknobs: QueryKnobsDelta
 
 
 class TuningAgent:

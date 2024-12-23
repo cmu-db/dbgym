@@ -2,7 +2,13 @@ import unittest
 from typing import Any, Optional
 
 from env.integtest_util import IntegtestWorkspace
-from env.tuning_agent import DBMSConfigDelta, TuningAgent
+from env.tuning_agent import (
+    DBMSConfigDelta,
+    IndexesDelta,
+    QueryKnobsDelta,
+    SysKnobsDelta,
+    TuningAgent,
+)
 
 
 class MockTuningAgent(TuningAgent):
@@ -25,7 +31,11 @@ class PostgresConnTests(unittest.TestCase):
 
     @staticmethod
     def make_config(letter: str) -> DBMSConfigDelta:
-        return DBMSConfigDelta([letter], {letter: letter}, {letter: [letter]})
+        return DBMSConfigDelta(
+            IndexesDelta([letter]),
+            SysKnobsDelta({letter: letter}),
+            QueryKnobsDelta({letter: [letter]}),
+        )
 
     def test_get_step_delta(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
