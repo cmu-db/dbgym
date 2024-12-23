@@ -3,7 +3,11 @@ import unittest
 
 import psycopg
 
-from env.integtest_util import IntegtestWorkspace
+from env.integtest_util import (
+    INTEGTEST_BENCHMARK,
+    INTEGTEST_SCALE_FACTOR,
+    IntegtestWorkspace,
+)
 from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
@@ -12,19 +16,13 @@ from util.pg import (
 )
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
-    DBGymConfig,
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
 )
 
-BENCHMARK = "tpch"
-SCALE_FACTOR = 0.01
-
 
 class PostgresConnTests(unittest.TestCase):
-    dbgym_cfg: DBGymConfig
-
     @staticmethod
     def setUpClass() -> None:
         IntegtestWorkspace.set_up_workspace()
@@ -36,16 +34,14 @@ class PostgresConnTests(unittest.TestCase):
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
         self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
-            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path,
-            BENCHMARK,
-            SCALE_FACTOR,
+            IntegtestWorkspace.get_workspace_path(),
+            INTEGTEST_BENCHMARK,
+            INTEGTEST_SCALE_FACTOR,
         )
         self.dbdata_parent_dpath = default_dbdata_parent_dpath(
-            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path
+            IntegtestWorkspace.get_workspace_path()
         )
-        self.pgbin_dpath = default_pgbin_path(
-            IntegtestWorkspace.get_dbgym_cfg().dbgym_workspace_path
-        )
+        self.pgbin_dpath = default_pgbin_path(IntegtestWorkspace.get_workspace_path())
 
         # The reason we restart Postgres every time is to ensure a "clean" starting point
         # so that all tests are independent of each other.

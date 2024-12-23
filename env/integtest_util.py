@@ -6,6 +6,11 @@ import yaml
 
 from util.workspace import DBGymConfig
 
+# These are the values used by set_up_env_integtests.sh.
+# TODO: make set_up_env_integtests.sh take in these values directly as envvars.
+INTEGTEST_BENCHMARK = "tpch"
+INTEGTEST_SCALE_FACTOR = 0.01
+
 
 class IntegtestWorkspace:
     """
@@ -40,4 +45,3 @@ class IntegtestWorkspace:
     def get_workspace_path() -> Path:
         with open(IntegtestWorkspace.ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
-        assert False

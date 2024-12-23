@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
@@ -14,8 +15,6 @@ from util.workspace import (
     is_fully_resolved,
     link_result,
 )
-
-NUM_TPCH_QUERIES = 22
 
 
 @click.group(name="tpch")
@@ -38,13 +37,13 @@ def tpch_data(dbgym_cfg: DBGymConfig, scale_factor: float) -> None:
 @click.option(
     "--seed-start",
     type=int,
-    default=15721,
+    default=DEFAULT_TPCH_SEED,
     help="A workload consists of queries from multiple seeds. This is the starting seed (inclusive).",
 )
 @click.option(
     "--seed-end",
     type=int,
-    default=15721,
+    default=DEFAULT_TPCH_SEED,
     help="A workload consists of queries from multiple seeds. This is the ending seed (inclusive).",
 )
 @click.option(

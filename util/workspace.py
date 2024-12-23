@@ -15,6 +15,7 @@ from typing import IO, Any, Callable, Optional
 import redis
 import yaml
 
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 
@@ -96,7 +97,7 @@ def get_workload_name(scale_factor: float | str, suffix: str) -> str:
 
 def get_default_workload_name_suffix(benchmark_name: str) -> str:
     if benchmark_name == "tpch":
-        return "15721_15721_all"
+        return f"{DEFAULT_TPCH_SEED}_{DEFAULT_TPCH_SEED}_all"
     if benchmark_name == "job":
         return "all"
     else:
