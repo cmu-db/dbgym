@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import click
 
@@ -12,8 +13,8 @@ from util.workspace import (
     link_result,
 )
 
-# JOB_TABLES_URL = "https://homepages.cwi.nl/~boncz/job/imdb.tgz" # This link stopped working for me
-JOB_TABLES_URL = "https://drive.google.com/uc?id=19m0zDpphAw0Bu9Irr_ta9EGr5k85hiN1"
+JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
+JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"
 JOB_QUERY_NAMES = [
     "1a",
     "1b",
@@ -129,6 +130,7 @@ JOB_QUERY_NAMES = [
     "33b",
     "33c",
 ]
+JOB_QUERIES_DNAME = "job-queries"
 
 
 @click.group(name="job")
@@ -160,14 +162,44 @@ def job_workload(
     dbgym_cfg: DBGymConfig, query_subset: str, scale_factor: float
 ) -> None:
     assert scale_factor == DEFAULT_SCALE_FACTOR
-    _clone_job_queries(dbgym_cfg)
+    _download_job_queries(dbgym_cfg)
     _generate_job_workload(dbgym_cfg, query_subset)
 
 
 def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
+    _download_and_untar_dir(
+        dbgym_cfg,
+        JOB_TABLES_URL,
+        "imdb.tgz",
+        default_tables_dname(DEFAULT_SCALE_FACTOR),
+    )
+
+
+def _download_job_queries(dbgym_cfg: DBGymConfig) -> None:
+    _download_and_untar_dir(
+        dbgym_cfg,
+        JOB_QUERIES_URL,
+        "job.tgz",
+        JOB_QUERIES_DNAME,
+        untarred_original_dname="job",
+    )
+
+
+def _download_and_untar_dir(
+    dbgym_cfg: DBGymConfig,
+    download_url: str,
+    download_tarred_fname: str,
+    untarred_dname: str,
+    untarred_original_dname: Optional[str] = None,
+) -> None:
+    """
+    Some .tgz files are built from a directory while others are built from the contents of
+    the directory. If the .tgz file we're untarring is built from a directory, it will have
+    an "original" directory name. If this is the case, you should set
+    `untarred_original_dname` to ensure that it gets renamed to `untarred_dname`.
+    """
     expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_data_path(mkdir=True)
-        / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
+        dbgym_cfg.cur_symlinks_data_path(mkdir=True) / f"{untarred_dname}.link"
     )
     if expected_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -177,36 +209,25 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
-    # subprocess_run(f"curl -O {JOB_TABLES_URL}", cwd=real_data_path) # This is if we're using a non-Google-Drive link
-    subprocess_run(f"gdown {JOB_TABLES_URL}", cwd=real_data_path)
-    job_data_dpath = dbgym_cfg.cur_task_runs_data_path(
-        default_tables_dname(DEFAULT_SCALE_FACTOR), mkdir=True
-    )
-    subprocess_run("tar -zxvf ../imdb.tgz", cwd=job_data_dpath)
-    subprocess_run(f"rm imdb.tgz", cwd=real_data_path)
-    symlink_dpath = link_result(dbgym_cfg, job_data_dpath)
+    subprocess_run(f"curl -O {download_url}", cwd=real_data_path)
+    untarred_data_dpath = dbgym_cfg.cur_task_runs_data_path(untarred_dname)
+
+    if untarred_original_dname is not None:
+        assert not untarred_data_dpath.exists()
+        subprocess_run(f"tar -zxvf {download_tarred_fname}", cwd=real_data_path)
+        assert (real_data_path / untarred_original_dname).exists()
+        subprocess_run(
+            f"mv {untarred_original_dname} {untarred_dname}", cwd=real_data_path
+        )
+    else:
+        untarred_data_dpath.mkdir(parents=True, exist_ok=False)
+        subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_dpath)
+
+    assert untarred_data_dpath.exists()
+    subprocess_run(f"rm {download_tarred_fname}", cwd=real_data_path)
+    symlink_dpath = link_result(dbgym_cfg, untarred_data_dpath)
     assert expected_symlink_dpath.samefile(symlink_dpath)
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_dpath}")
-
-
-def _clone_job_queries(dbgym_cfg: DBGymConfig) -> None:
-    expected_symlink_dpath = (
-        dbgym_cfg.cur_symlinks_build_path(mkdir=True) / "job-queries.link"
-    )
-    if expected_symlink_dpath.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping clone: {expected_symlink_dpath}"
-        )
-        return
-
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
-    real_build_path = dbgym_cfg.cur_task_runs_build_path(mkdir=True)
-    subprocess_run(
-        f"./clone_job_queries.sh {real_build_path}", cwd=dbgym_cfg.cur_source_path()
-    )
-    symlink_dpath = link_result(dbgym_cfg, real_build_path / "job-queries")
-    assert expected_symlink_dpath.samefile(symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_dpath}")
 
 
 def _generate_job_workload(
@@ -236,7 +257,8 @@ def _generate_job_workload(
     with open(real_dpath / "order.txt", "w") as f:
         for qname in query_names:
             sql_fpath = (
-                dbgym_cfg.cur_symlinks_build_path(mkdir=True) / ("job-queries.link")
+                dbgym_cfg.cur_symlinks_data_path(mkdir=True)
+                / (f"{JOB_QUERIES_DNAME}.link")
             ).resolve() / f"{qname}.sql"
             assert (
                 sql_fpath.exists()

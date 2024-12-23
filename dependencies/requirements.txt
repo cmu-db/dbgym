@@ -135,4 +135,3 @@ Werkzeug==3.0.1
 wrapt==1.14.1
 zipp==3.17.0
 streamlit==1.39.0
-gdown==5.2.0
