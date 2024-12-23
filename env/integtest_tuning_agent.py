@@ -32,9 +32,9 @@ class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def make_config(letter: str) -> DBMSConfigDelta:
         return DBMSConfigDelta(
-            IndexesDelta([letter]),
-            SysKnobsDelta({letter: letter}),
-            QueryKnobsDelta({letter: [letter]}),
+            indexes=IndexesDelta([letter]),
+            sysknobs=SysKnobsDelta({letter: letter}),
+            qknobs=QueryKnobsDelta({letter: [letter]}),
         )
 
     def test_get_step_delta(self) -> None:

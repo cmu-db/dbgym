@@ -1,7 +1,6 @@
 import json
-from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import NewType
+from typing import NewType, TypedDict
 
 from util.workspace import DBGymConfig
 
@@ -10,8 +9,7 @@ SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
 QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
 
 
-@dataclass
-class DBMSConfigDelta:
+class DBMSConfigDelta(TypedDict):
     """
     This class represents a DBMS config delta. A "DBMS config" is the indexes, system knobs,
     and query knobs set by the tuning agent. A "delta" is the change from the prior config.
@@ -47,7 +45,7 @@ class TuningAgent:
         self.next_step_num += 1
         dbms_cfg_delta = self._step()
         with self.get_step_delta_fpath(curr_step_num).open("w") as f:
-            json.dump(asdict(dbms_cfg_delta), f)
+            json.dump(dbms_cfg_delta, f)
 
     def get_step_delta_fpath(self, step_num: int) -> Path:
         return self.dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
@@ -64,8 +62,12 @@ class TuningAgent:
     def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.next_step_num
         with self.get_step_delta_fpath(step_num).open("r") as f:
-            return DBMSConfigDelta(**json.load(f))
-        assert False
+            data = json.load(f)
+            return DBMSConfigDelta(
+                indexes=data["indexes"],
+                sysknobs=data["sysknobs"],
+                qknobs=data["qknobs"],
+            )
 
     def get_all_deltas(self) -> list[DBMSConfigDelta]:
         return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]
