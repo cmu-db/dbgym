@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import DBGymConfig, default_tables_dname
+from util.workspace import DBGymConfig, default_tables_dname, is_fully_resolved
 
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
 TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
@@ -48,10 +48,8 @@ class TpchLoadInfo(LoadInfoBaseClass):
             data_root_dpath / f"{default_tables_dname(scale_factor)}.link"
         )
         tables_dpath = tables_symlink_dpath.resolve()
-        assert (
-            tables_dpath.exists()
-            and tables_dpath.is_absolute()
-            and not tables_dpath.is_symlink()
+        assert is_fully_resolved(
+            tables_dpath
         ), f"tables_dpath ({tables_dpath}) should be an existent real absolute path. Make sure you have generated the TPC-H data"
         self._tables_and_fpaths = []
         for table in TpchLoadInfo.TABLES:

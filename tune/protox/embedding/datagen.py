@@ -38,13 +38,13 @@ from util.workspace import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
     default_workload_path,
+    fully_resolve_inputpath,
     get_default_workload_name_suffix,
     get_workload_name,
     is_ssd,
@@ -226,15 +226,13 @@ def datagen(
         seed = random.randint(0, int(1e8))
 
     # Convert all input paths to absolute paths
-    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    benchmark_config_path = conv_inputpath_to_realabspath(
-        dbgym_cfg, benchmark_config_path
-    )
-    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(
+    workload_path = fully_resolve_inputpath(dbgym_cfg, workload_path)
+    benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
+    pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
+    pristine_dbdata_snapshot_path = fully_resolve_inputpath(
         dbgym_cfg, pristine_dbdata_snapshot_path
     )
-    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
+    dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":

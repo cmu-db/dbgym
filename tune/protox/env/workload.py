@@ -41,7 +41,7 @@ from tune.protox.env.util.workload_analysis import (
     extract_sqltypes,
 )
 from util.log import DBGYM_LOGGER_NAME
-from util.workspace import DBGymConfig, open_and_save
+from util.workspace import DBGymConfig, is_fully_resolved, open_and_save
 
 
 class Workload(object):
@@ -66,8 +66,7 @@ class Workload(object):
         query_spec: QuerySpec,
     ) -> None:
         assert all(
-            sql[1].exists() and not sql[1].is_symlink() and sql[1].is_absolute()
-            for sql in sqls
+            is_fully_resolved(sql[1]) for sql in sqls
         ), f"sqls ({sqls}) should only contain existent real absolute paths."
         do_tbl_include_subsets_prune = query_spec["tbl_include_subsets_prune"]
         self.order = []

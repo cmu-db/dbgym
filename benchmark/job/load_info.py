@@ -3,7 +3,7 @@ from typing import Optional
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import DBGymConfig, default_tables_dname
+from util.workspace import DBGymConfig, default_tables_dname, is_fully_resolved
 
 JOB_SCHEMA_FNAME = "job_schema.sql"
 
@@ -55,10 +55,8 @@ class JobLoadInfo(LoadInfoBaseClass):
             data_root_dpath / f"{default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
         )
         tables_dpath = tables_symlink_dpath.resolve()
-        assert (
-            tables_dpath.exists()
-            and tables_dpath.is_absolute()
-            and not tables_dpath.is_symlink()
+        assert is_fully_resolved(
+            tables_dpath
         ), f"tables_dpath ({tables_dpath}) should be an existent real absolute path. Make sure you have generated the TPC-H data"
         self._tables_and_fpaths = []
         for table in JobLoadInfo.TABLES:

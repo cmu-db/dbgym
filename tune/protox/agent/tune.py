@@ -17,9 +17,9 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    conv_inputpath_to_realabspath,
     default_hpoed_agent_params_path,
     default_tuning_steps_dname,
+    fully_resolve_inputpath,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -87,10 +87,10 @@ def tune(
         )
 
     # Convert all input paths to absolute paths
-    hpoed_agent_params_path = conv_inputpath_to_realabspath(
+    hpoed_agent_params_path = fully_resolve_inputpath(
         dbgym_cfg, hpoed_agent_params_path
     )
-    boot_config_fpath_during_tune = conv_inputpath_to_realabspath(
+    boot_config_fpath_during_tune = fully_resolve_inputpath(
         dbgym_cfg, boot_config_fpath_during_tune
     )
 

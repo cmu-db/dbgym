@@ -35,7 +35,6 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    conv_inputpath_to_realabspath,
     default_benchbase_config_path,
     default_benchmark_config_path,
     default_dbdata_parent_dpath,
@@ -44,6 +43,7 @@ from util.workspace import (
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     default_workload_path,
+    fully_resolve_inputpath,
     get_default_workload_name_suffix,
     get_workload_name,
     is_ssd,
@@ -295,21 +295,17 @@ def hpo(
         seed = random.randint(0, int(1e8))
 
     # Convert all input paths to absolute paths
-    embedder_path = conv_inputpath_to_realabspath(dbgym_cfg, embedder_path)
-    benchmark_config_path = conv_inputpath_to_realabspath(
-        dbgym_cfg, benchmark_config_path
-    )
-    benchbase_config_path = conv_inputpath_to_realabspath(
-        dbgym_cfg, benchbase_config_path
-    )
-    sysknobs_path = conv_inputpath_to_realabspath(dbgym_cfg, sysknobs_path)
-    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(
+    embedder_path = fully_resolve_inputpath(dbgym_cfg, embedder_path)
+    benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
+    benchbase_config_path = fully_resolve_inputpath(dbgym_cfg, benchbase_config_path)
+    sysknobs_path = fully_resolve_inputpath(dbgym_cfg, sysknobs_path)
+    pristine_dbdata_snapshot_path = fully_resolve_inputpath(
         dbgym_cfg, pristine_dbdata_snapshot_path
     )
-    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
-    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    boot_config_fpath_during_hpo = conv_inputpath_to_realabspath(
+    dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
+    pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
+    workload_path = fully_resolve_inputpath(dbgym_cfg, workload_path)
+    boot_config_fpath_during_hpo = fully_resolve_inputpath(
         dbgym_cfg, boot_config_fpath_during_hpo
     )
 

@@ -35,9 +35,9 @@ from util.shell import subprocess_run
 from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    conv_inputpath_to_realabspath,
     default_dbdata_parent_dpath,
     default_pgbin_path,
+    fully_resolve_inputpath,
     get_dbdata_tgz_name,
     is_ssd,
     link_result,
@@ -108,8 +108,8 @@ def postgres_dbdata(
         )
 
     # Convert all input paths to absolute paths
-    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
+    pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
+    dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
