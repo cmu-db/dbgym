@@ -409,8 +409,31 @@ def is_base_git_dir(cwd: str) -> bool:
 
 
 def is_fully_resolved(path: Path) -> bool:
+    """
+    Checks if a path is fully resolved (exists, is absolute, and contains no symlinks in its entire ancestry).
+
+    Even if a path exists, is absolute, and is not itself a symlink, it could still contain
+    symlinks in its parent directories. For example:
+        /home/user/           # Real directory
+        /home/user/links/     # Symlink to /data/links
+        /home/user/links/file.txt  # Real file
+
+    In this case, "/home/user/links/file.txt" exists and isn't itself a symlink,
+    but it's not fully resolved because it contains a symlink in its ancestry.
+    The fully resolved path would be "/data/links/file.txt".
+    """
     assert isinstance(path, Path)
     resolved_path = path.resolve()
+
+    # Check if the path exists.
+    if not resolved_path.exists():
+        return False
+
+    # Check if the path contains no symlinks in its entire ancestry.
+    # This also checks if the path is absolute because resolved_path is absolute.
+    assert (
+        resolved_path.is_absolute()
+    ), "resolved_path should be absolute (see comment above)"
     # Converting them to strings is the most unambiguously strict way of checking equality.
     # Stuff like Path.__eq__() or Path.samefile() might be more lenient.
     return str(resolved_path) == str(path)
