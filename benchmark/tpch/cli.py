@@ -4,7 +4,7 @@ from pathlib import Path
 import click
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
-from benchmark.tpch.constants import DEFAULT_TPCH_SEED
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
@@ -15,8 +15,6 @@ from util.workspace import (
     is_fully_resolved,
     link_result,
 )
-
-NUM_TPCH_QUERIES = 22
 
 
 @click.group(name="tpch")
