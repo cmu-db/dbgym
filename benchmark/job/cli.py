@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import click
 
@@ -175,7 +176,13 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
 
 
 def _download_job_queries(dbgym_cfg: DBGymConfig) -> None:
-    _download_and_untar_dir(dbgym_cfg, JOB_QUERIES_URL, "job.tgz", JOB_QUERIES_DNAME)
+    _download_and_untar_dir(
+        dbgym_cfg,
+        JOB_QUERIES_URL,
+        "job.tgz",
+        JOB_QUERIES_DNAME,
+        untarred_original_dname="job",
+    )
 
 
 def _download_and_untar_dir(
@@ -183,7 +190,14 @@ def _download_and_untar_dir(
     download_url: str,
     download_tarred_fname: str,
     untarred_dname: str,
+    untarred_original_dname: Optional[str] = None,
 ) -> None:
+    """
+    Some .tgz files are built from a directory while others are built from the contents of
+    the directory. If the .tgz file we're untarring is built from a directory, it will have
+    an "original" directory name. If this is the case, you should set
+    `untarred_original_dname` to ensure that it gets renamed to `untarred_dname`.
+    """
     expected_symlink_dpath = (
         dbgym_cfg.cur_symlinks_data_path(mkdir=True) / f"{untarred_dname}.link"
     )
@@ -196,8 +210,20 @@ def _download_and_untar_dir(
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
     real_data_path = dbgym_cfg.cur_task_runs_data_path(mkdir=True)
     subprocess_run(f"curl -O {download_url}", cwd=real_data_path)
-    untarred_data_dpath = dbgym_cfg.cur_task_runs_data_path(untarred_dname, mkdir=True)
-    subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_dpath)
+    untarred_data_dpath = dbgym_cfg.cur_task_runs_data_path(untarred_dname)
+
+    if untarred_original_dname is not None:
+        assert not untarred_data_dpath.exists()
+        subprocess_run(f"tar -zxvf {download_tarred_fname}", cwd=real_data_path)
+        assert (real_data_path / untarred_original_dname).exists()
+        subprocess_run(
+            f"mv {untarred_original_dname} {untarred_dname}", cwd=real_data_path
+        )
+    else:
+        untarred_data_dpath.mkdir(parents=True, exist_ok=False)
+        subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_dpath)
+
+    assert untarred_data_dpath.exists()
     subprocess_run(f"rm {download_tarred_fname}", cwd=real_data_path)
     symlink_dpath = link_result(dbgym_cfg, untarred_data_dpath)
     assert expected_symlink_dpath.samefile(symlink_dpath)
