@@ -37,7 +37,7 @@ from util.workspace import (
     DBGymConfig,
     default_dbdata_parent_dpath,
     default_pgbin_path,
-    fully_resolve_inputpath,
+    fully_resolve_path,
     get_dbdata_tgz_name,
     is_fully_resolved,
     is_ssd,
@@ -109,8 +109,8 @@ def postgres_dbdata(
         )
 
     # Fully resolve all input paths.
-    pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
-    dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
+    pgbin_path = fully_resolve_path(dbgym_cfg, pgbin_path)
+    dbdata_parent_dpath = fully_resolve_path(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":

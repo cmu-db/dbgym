@@ -44,7 +44,7 @@ from util.workspace import (
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
     default_workload_path,
-    fully_resolve_inputpath,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
     is_fully_resolved,
@@ -227,13 +227,13 @@ def datagen(
         seed = random.randint(0, int(1e8))
 
     # Fully resolve all input paths.
-    workload_path = fully_resolve_inputpath(dbgym_cfg, workload_path)
-    benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
-    pgbin_path = fully_resolve_inputpath(dbgym_cfg, pgbin_path)
-    pristine_dbdata_snapshot_path = fully_resolve_inputpath(
+    workload_path = fully_resolve_path(dbgym_cfg, workload_path)
+    benchmark_config_path = fully_resolve_path(dbgym_cfg, benchmark_config_path)
+    pgbin_path = fully_resolve_path(dbgym_cfg, pgbin_path)
+    pristine_dbdata_snapshot_path = fully_resolve_path(
         dbgym_cfg, pristine_dbdata_snapshot_path
     )
-    dbdata_parent_dpath = fully_resolve_inputpath(dbgym_cfg, dbdata_parent_dpath)
+    dbdata_parent_dpath = fully_resolve_path(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
@@ -293,7 +293,9 @@ def datagen(
         generic_args.pristine_dbdata_snapshot_path,
         generic_args.dbdata_parent_dpath,
     )
-    pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    pgbin_path = fully_resolve_path(
+        dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    )
     start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
     _gen_traindata_dpath(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dpath_into_parquet(dbgym_cfg, generic_args, file_gen_args)

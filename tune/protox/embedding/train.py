@@ -32,7 +32,7 @@ from util.workspace import (
     default_benchmark_config_path,
     default_traindata_path,
     default_workload_path,
-    fully_resolve_inputpath,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
 )
@@ -212,16 +212,16 @@ def train(
         seed = random.randint(0, int(1e8))
 
     # Fully resolve all input paths.
-    benchmark_config_path = fully_resolve_inputpath(dbgym_cfg, benchmark_config_path)
-    traindata_path = fully_resolve_inputpath(dbgym_cfg, traindata_path)
-    hpo_space_path = fully_resolve_inputpath(dbgym_cfg, hpo_space_path)
+    benchmark_config_path = fully_resolve_path(dbgym_cfg, benchmark_config_path)
+    traindata_path = fully_resolve_path(dbgym_cfg, traindata_path)
+    hpo_space_path = fully_resolve_path(dbgym_cfg, hpo_space_path)
 
     # setup
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    workload_path = fully_resolve_inputpath(
+    workload_path = fully_resolve_path(
         dbgym_cfg,
         default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

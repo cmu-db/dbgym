@@ -362,15 +362,18 @@ def make_standard_dbgym_cfg() -> DBGymConfig:
     return dbgym_cfg
 
 
-def fully_resolve_inputpath(
-    dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]
-) -> Path:
+def fully_resolve_path(dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]) -> Path:
     """
-    Convert any user inputted path to a real, absolute path.
-    For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
+    Fully resolve any path to a real, absolute path.
+
+    For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object.
+
     Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~.
+
     Relative paths are relative to the base dbgym repo dir.
+
     It *does not* check whether the path exists, since the user might be wanting to create a new file/dir.
+
     Raises RuntimeError for errors.
     """
     # For simplicity, we only process Path objects.
@@ -498,7 +501,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> 
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
     This file does not work if open_fpath is a symlink, to make its interface identical to that of open().
-        Make sure to resolve all symlinks with fully_resolve_inputpath().
+        Make sure to resolve all symlinks with fully_resolve_path().
     To avoid confusion, I'm enforcing this function to only work with absolute paths.
     See the comment of save_file() for what "saving" means
     If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
@@ -647,7 +650,7 @@ def link_result(
     assert is_fully_resolved(
         result_fordpath
     ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-    result_fordpath = fully_resolve_inputpath(dbgym_cfg, result_fordpath)
+    result_fordpath = fully_resolve_path(dbgym_cfg, result_fordpath)
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 

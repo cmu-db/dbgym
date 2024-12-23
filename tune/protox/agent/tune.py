@@ -19,7 +19,7 @@ from util.workspace import (
     TuningMode,
     default_hpoed_agent_params_path,
     default_tuning_steps_dname,
-    fully_resolve_inputpath,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -87,10 +87,8 @@ def tune(
         )
 
     # Fully resolve all input paths.
-    hpoed_agent_params_path = fully_resolve_inputpath(
-        dbgym_cfg, hpoed_agent_params_path
-    )
-    boot_config_fpath_during_tune = fully_resolve_inputpath(
+    hpoed_agent_params_path = fully_resolve_path(dbgym_cfg, hpoed_agent_params_path)
+    boot_config_fpath_during_tune = fully_resolve_path(
         dbgym_cfg, boot_config_fpath_during_tune
     )
 

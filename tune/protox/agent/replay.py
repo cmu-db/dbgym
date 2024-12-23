@@ -33,7 +33,7 @@ from util.workspace import (
     TuningMode,
     default_replay_data_fname,
     default_tuning_steps_dpath,
-    fully_resolve_inputpath,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -152,7 +152,7 @@ def replay(
         )
 
     # Fully resolve all input paths.
-    tuning_steps_dpath = fully_resolve_inputpath(dbgym_cfg, tuning_steps_dpath)
+    tuning_steps_dpath = fully_resolve_path(dbgym_cfg, tuning_steps_dpath)
 
     # Group args together to reduce the # of parameters we pass into functions
     replay_args = ReplayArgs(
