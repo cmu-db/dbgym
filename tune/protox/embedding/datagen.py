@@ -38,15 +38,16 @@ from util.workspace import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    conv_inputpath_to_realabspath,
     default_benchmark_config_path,
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
     default_workload_path,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
+    is_fully_resolved,
     is_ssd,
     link_result,
     open_and_save,
@@ -225,16 +226,14 @@ def datagen(
     if seed is None:
         seed = random.randint(0, int(1e8))
 
-    # Convert all input paths to absolute paths
-    workload_path = conv_inputpath_to_realabspath(dbgym_cfg, workload_path)
-    benchmark_config_path = conv_inputpath_to_realabspath(
-        dbgym_cfg, benchmark_config_path
-    )
-    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    pristine_dbdata_snapshot_path = conv_inputpath_to_realabspath(
+    # Fully resolve all input paths.
+    workload_path = fully_resolve_path(dbgym_cfg, workload_path)
+    benchmark_config_path = fully_resolve_path(dbgym_cfg, benchmark_config_path)
+    pgbin_path = fully_resolve_path(dbgym_cfg, pgbin_path)
+    pristine_dbdata_snapshot_path = fully_resolve_path(
         dbgym_cfg, pristine_dbdata_snapshot_path
     )
-    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
+    dbdata_parent_dpath = fully_resolve_path(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
@@ -294,7 +293,9 @@ def datagen(
         generic_args.pristine_dbdata_snapshot_path,
         generic_args.dbdata_parent_dpath,
     )
-    pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    pgbin_path = fully_resolve_path(
+        dbgym_cfg, default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+    )
     start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
     _gen_traindata_dpath(dbgym_cfg, generic_args, dir_gen_args)
     _combine_traindata_dpath_into_parquet(dbgym_cfg, generic_args, file_gen_args)
@@ -308,19 +309,17 @@ def untar_snapshot(
     dbgym_cfg: DBGymConfig, dbdata_snapshot_fpath: Path, dbdata_parent_dpath: Path
 ) -> Path:
     # It should be an absolute path and it should exist
-    assert (
-        dbdata_snapshot_fpath.is_absolute() and dbdata_snapshot_fpath.exists()
+    assert is_fully_resolved(
+        dbdata_snapshot_fpath
     ), f"untar_snapshot(): dbdata_snapshot_fpath ({dbdata_snapshot_fpath}) either doesn't exist or is not absolute"
-    # It may be a symlink so we need to resolve them first
-    dbdata_snapshot_real_fpath = dbdata_snapshot_fpath.resolve()
-    save_file(dbgym_cfg, dbdata_snapshot_real_fpath)
+    save_file(dbgym_cfg, dbdata_snapshot_fpath)
     dbdata_dpath = dbdata_parent_dpath / "dbdata"
     # Make the parent dir and the dbdata dir. Note how we require that dbdata_dpath does not exist while it's ok if the parent does.
     dbdata_parent_dpath.mkdir(parents=True, exist_ok=True)
     if dbdata_dpath.exists():
         shutil.rmtree(dbdata_dpath)
     dbdata_dpath.mkdir(parents=False, exist_ok=False)
-    subprocess_run(f"tar -xzf {dbdata_snapshot_real_fpath} -C {dbdata_dpath}")
+    subprocess_run(f"tar -xzf {dbdata_snapshot_fpath} -C {dbdata_dpath}")
     return dbdata_dpath
 
 

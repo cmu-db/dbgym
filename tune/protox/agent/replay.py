@@ -31,9 +31,9 @@ from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymConfig,
     TuningMode,
-    conv_inputpath_to_realabspath,
     default_replay_data_fname,
     default_tuning_steps_dpath,
+    fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -151,8 +151,8 @@ def replay(
             boot_enabled_during_tune,
         )
 
-    # Convert all input paths to absolute paths
-    tuning_steps_dpath = conv_inputpath_to_realabspath(dbgym_cfg, tuning_steps_dpath)
+    # Fully resolve all input paths.
+    tuning_steps_dpath = fully_resolve_path(dbgym_cfg, tuning_steps_dpath)
 
     # Group args together to reduce the # of parameters we pass into functions
     replay_args = ReplayArgs(

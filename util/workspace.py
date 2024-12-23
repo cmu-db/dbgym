@@ -362,16 +362,19 @@ def make_standard_dbgym_cfg() -> DBGymConfig:
     return dbgym_cfg
 
 
-def conv_inputpath_to_realabspath(
-    dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]
-) -> Path:
+def fully_resolve_path(dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]) -> Path:
     """
-    Convert any user inputted path to a real, absolute path
-    For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object
-    Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~
-    Relative paths are relative to the base dbgym repo dir
-    It *does not* check whether the path exists, since the user might be wanting to create a new file/dir
-    Raises RuntimeError for errors
+    Fully resolve any path to a real, absolute path.
+
+    For flexibility, we take in any os.PathLike. However, for consistency, we always output a Path object.
+
+    Whenever a path is required, the user is allowed to enter relative paths, absolute paths, or paths starting with ~.
+
+    Relative paths are relative to the base dbgym repo dir.
+
+    It *does not* check whether the path exists, since the user might be wanting to create a new file/dir.
+
+    Raises RuntimeError for errors.
     """
     # For simplicity, we only process Path objects.
     realabspath = Path(inputpath)
@@ -385,12 +388,9 @@ def conv_inputpath_to_realabspath(
     # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
     #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
     realabspath = realabspath.resolve()
-    assert (
-        realabspath.is_absolute()
-    ), f"after being processed, realabspath ({realabspath}) is still not absolute"
-    assert (
-        realabspath.exists()
-    ), f"after being processed, realabspath ({realabspath}) is still a non-existent path"
+    assert is_fully_resolved(
+        realabspath
+    ), f"realabspath ({realabspath}) is not fully resolved"
     return realabspath
 
 
@@ -409,8 +409,31 @@ def is_base_git_dir(cwd: str) -> bool:
 
 
 def is_fully_resolved(path: Path) -> bool:
+    """
+    Checks if a path is fully resolved (exists, is absolute, and contains no symlinks in its entire ancestry).
+
+    Even if a path exists, is absolute, and is not itself a symlink, it could still contain
+    symlinks in its parent directories. For example:
+        /home/user/           # Real directory
+        /home/user/links/     # Symlink to /data/links
+        /home/user/links/file.txt  # Real file
+
+    In this case, "/home/user/links/file.txt" exists and isn't itself a symlink,
+    but it's not fully resolved because it contains a symlink in its ancestry.
+    The fully resolved path would be "/data/links/file.txt".
+    """
     assert isinstance(path, Path)
     resolved_path = path.resolve()
+
+    # Check if the path exists.
+    if not resolved_path.exists():
+        return False
+
+    # Check if the path contains no symlinks in its entire ancestry.
+    # This also checks if the path is absolute because resolved_path is absolute.
+    assert (
+        resolved_path.is_absolute()
+    ), "resolved_path should be absolute (see comment above)"
     # Converting them to strings is the most unambiguously strict way of checking equality.
     # Stuff like Path.__eq__() or Path.samefile() might be more lenient.
     return str(resolved_path) == str(path)
@@ -478,7 +501,7 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> 
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
     This file does not work if open_fpath is a symlink, to make its interface identical to that of open().
-        Make sure to resolve all symlinks with conv_inputpath_to_realabspath().
+        Make sure to resolve all symlinks with fully_resolve_path().
     To avoid confusion, I'm enforcing this function to only work with absolute paths.
     See the comment of save_file() for what "saving" means
     If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
@@ -627,7 +650,7 @@ def link_result(
     assert is_fully_resolved(
         result_fordpath
     ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-    result_fordpath = conv_inputpath_to_realabspath(dbgym_cfg, result_fordpath)
+    result_fordpath = fully_resolve_path(dbgym_cfg, result_fordpath)
     assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 

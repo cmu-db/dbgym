@@ -35,10 +35,11 @@ from util.shell import subprocess_run
 from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    conv_inputpath_to_realabspath,
     default_dbdata_parent_dpath,
     default_pgbin_path,
+    fully_resolve_path,
     get_dbdata_tgz_name,
+    is_fully_resolved,
     is_ssd,
     link_result,
     open_and_save,
@@ -107,9 +108,9 @@ def postgres_dbdata(
             dbgym_cfg.dbgym_workspace_path
         )
 
-    # Convert all input paths to absolute paths
-    pgbin_path = conv_inputpath_to_realabspath(dbgym_cfg, pgbin_path)
-    dbdata_parent_dpath = conv_inputpath_to_realabspath(dbgym_cfg, dbdata_parent_dpath)
+    # Fully resolve all input paths.
+    pgbin_path = fully_resolve_path(dbgym_cfg, pgbin_path)
+    dbdata_parent_dpath = fully_resolve_path(dbgym_cfg, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
@@ -316,13 +317,10 @@ def _start_or_stop_postgres(
     dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path, is_start: bool
 ) -> None:
     # They should be absolute paths and should exist
-    assert pgbin_path.is_absolute() and pgbin_path.exists()
-    assert dbdata_dpath.is_absolute() and dbdata_dpath.exists()
-    # The inputs may be symlinks so we need to resolve them first
-    pgbin_real_dpath = pgbin_path.resolve()
-    dbdata_dpath = dbdata_dpath.resolve()
+    assert is_fully_resolved(pgbin_path)
+    assert is_fully_resolved(dbdata_dpath)
     pgport = DEFAULT_POSTGRES_PORT
-    save_file(dbgym_cfg, pgbin_real_dpath / "pg_ctl")
+    save_file(dbgym_cfg, pgbin_path / "pg_ctl")
 
     if is_start:
         # We use subprocess.run() because subprocess_run() never returns when running "pg_ctl start".
@@ -330,12 +328,12 @@ def _start_or_stop_postgres(
         # On the other hand, subprocess.run() does return normally, like calling `./pg_ctl` on the command line would do.
         result = subprocess.run(
             f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' start",
-            cwd=pgbin_real_dpath,
+            cwd=pgbin_path,
             shell=True,
         )
         result.check_returncode()
     else:
         subprocess_run(
             f"./pg_ctl -D \"{dbdata_dpath}\" -o '-p {pgport}' stop",
-            cwd=pgbin_real_dpath,
+            cwd=pgbin_path,
         )

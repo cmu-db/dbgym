@@ -11,6 +11,7 @@ from util.workspace import (
     default_tables_dname,
     get_scale_factor_string,
     get_workload_name,
+    is_fully_resolved,
     link_result,
 )
 
@@ -94,11 +95,7 @@ def _clone_tpch_kit(dbgym_cfg: DBGymConfig) -> None:
 
 def _get_tpch_kit_dpath(dbgym_cfg: DBGymConfig) -> Path:
     tpch_kit_dpath = (dbgym_cfg.cur_symlinks_build_path() / "tpch-kit.link").resolve()
-    assert (
-        tpch_kit_dpath.exists()
-        and tpch_kit_dpath.is_absolute()
-        and not tpch_kit_dpath.is_symlink()
-    )
+    assert is_fully_resolved(tpch_kit_dpath)
     return tpch_kit_dpath
 
 
@@ -197,10 +194,8 @@ def _generate_tpch_workload(
                     symlink_data_dpath
                     / (_get_queries_dname(seed, scale_factor) + ".link")
                 ).resolve() / f"{qname}.sql"
-                assert (
-                    sql_fpath.exists()
-                    and not sql_fpath.is_symlink()
-                    and sql_fpath.is_absolute()
+                assert is_fully_resolved(
+                    sql_fpath
                 ), "We should only write existent real absolute paths to a file"
                 f.write(f"S{seed}-Q{qname},{sql_fpath}\n")
                 # TODO(WAN): add option to deep-copy the workload.

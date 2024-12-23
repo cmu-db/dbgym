@@ -10,6 +10,7 @@ from util.workspace import (
     DBGymConfig,
     default_tables_dname,
     get_workload_name,
+    is_fully_resolved,
     link_result,
 )
 
@@ -260,10 +261,8 @@ def _generate_job_workload(
                 dbgym_cfg.cur_symlinks_data_path(mkdir=True)
                 / (f"{JOB_QUERIES_DNAME}.link")
             ).resolve() / f"{qname}.sql"
-            assert (
-                sql_fpath.exists()
-                and not sql_fpath.is_symlink()
-                and sql_fpath.is_absolute()
+            assert is_fully_resolved(
+                sql_fpath
             ), "We should only write existent real absolute paths to a file"
             f.write(f"Q{qname},{sql_fpath}\n")
 

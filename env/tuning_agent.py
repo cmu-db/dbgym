@@ -1,12 +1,17 @@
 import json
-from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import NewType, TypedDict
 
-from util.workspace import DBGymConfig
+from util.workspace import DBGymConfig, is_fully_resolved
+
+# PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents.
+# These types are only given as the outputs of tuning agents.
+IndexesDelta = NewType("IndexesDelta", list[str])
+SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
+QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
 
 
-@dataclass
-class DBMSConfigDelta:
+class DBMSConfigDelta(TypedDict):
     """
     This class represents a DBMS config delta. A "DBMS config" is the indexes, system knobs,
     and query knobs set by the tuning agent. A "delta" is the change from the prior config.
@@ -21,9 +26,13 @@ class DBMSConfigDelta:
     because knobs can be settings ("SET (enable_sort on)") or flags ("IndexOnlyScan(it)").
     """
 
-    indexes: list[str]
-    sysknobs: dict[str, str]
-    qknobs: dict[str, list[str]]
+    indexes: IndexesDelta
+    sysknobs: SysKnobsDelta
+    qknobs: QueryKnobsDelta
+
+
+def get_step_delta_fpath(dbms_cfg_deltas_dpath: Path, step_num: int) -> Path:
+    return dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
 
 
 class TuningAgent:
@@ -41,11 +50,10 @@ class TuningAgent:
         curr_step_num = self.next_step_num
         self.next_step_num += 1
         dbms_cfg_delta = self._step()
-        with self.get_step_delta_fpath(curr_step_num).open("w") as f:
-            json.dump(asdict(dbms_cfg_delta), f)
-
-    def get_step_delta_fpath(self, step_num: int) -> Path:
-        return self.dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
+        with get_step_delta_fpath(self.dbms_cfg_deltas_dpath, curr_step_num).open(
+            "w"
+        ) as f:
+            json.dump(dbms_cfg_delta, f)
 
     # Subclasses should override this function.
     def _step(self) -> DBMSConfigDelta:
@@ -56,11 +64,25 @@ class TuningAgent:
         """
         raise NotImplementedError
 
+
+class TuningAgentStepReader:
+    def __init__(self, dbms_cfg_deltas_dpath: Path) -> None:
+        self.dbms_cfg_deltas_dpath = dbms_cfg_deltas_dpath
+        assert is_fully_resolved(self.dbms_cfg_deltas_dpath)
+        num_steps = 0
+        while get_step_delta_fpath(self.dbms_cfg_deltas_dpath, num_steps).exists():
+            num_steps += 1
+        self.num_steps = num_steps
+
     def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
-        assert step_num >= 0 and step_num < self.next_step_num
-        with self.get_step_delta_fpath(step_num).open("r") as f:
-            return DBMSConfigDelta(**json.load(f))
-        assert False
+        assert step_num >= 0 and step_num < self.num_steps
+        with get_step_delta_fpath(self.dbms_cfg_deltas_dpath, step_num).open("r") as f:
+            data = json.load(f)
+            return DBMSConfigDelta(
+                indexes=data["indexes"],
+                sysknobs=data["sysknobs"],
+                qknobs=data["qknobs"],
+            )
 
     def get_all_deltas(self) -> list[DBMSConfigDelta]:
-        return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]
+        return [self.get_step_delta(step_num) for step_num in range(self.num_steps)]
