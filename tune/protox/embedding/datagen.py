@@ -47,6 +47,7 @@ from util.workspace import (
     fully_resolve_inputpath,
     get_default_workload_name_suffix,
     get_workload_name,
+    is_fully_resolved,
     is_ssd,
     link_result,
     open_and_save,
@@ -306,19 +307,17 @@ def untar_snapshot(
     dbgym_cfg: DBGymConfig, dbdata_snapshot_fpath: Path, dbdata_parent_dpath: Path
 ) -> Path:
     # It should be an absolute path and it should exist
-    assert (
-        dbdata_snapshot_fpath.is_absolute() and dbdata_snapshot_fpath.exists()
+    assert is_fully_resolved(
+        dbdata_snapshot_fpath
     ), f"untar_snapshot(): dbdata_snapshot_fpath ({dbdata_snapshot_fpath}) either doesn't exist or is not absolute"
-    # It may be a symlink so we need to resolve them first
-    dbdata_snapshot_real_fpath = dbdata_snapshot_fpath.resolve()
-    save_file(dbgym_cfg, dbdata_snapshot_real_fpath)
+    save_file(dbgym_cfg, dbdata_snapshot_fpath)
     dbdata_dpath = dbdata_parent_dpath / "dbdata"
     # Make the parent dir and the dbdata dir. Note how we require that dbdata_dpath does not exist while it's ok if the parent does.
     dbdata_parent_dpath.mkdir(parents=True, exist_ok=True)
     if dbdata_dpath.exists():
         shutil.rmtree(dbdata_dpath)
     dbdata_dpath.mkdir(parents=False, exist_ok=False)
-    subprocess_run(f"tar -xzf {dbdata_snapshot_real_fpath} -C {dbdata_dpath}")
+    subprocess_run(f"tar -xzf {dbdata_snapshot_fpath} -C {dbdata_dpath}")
     return dbdata_dpath
 
 
