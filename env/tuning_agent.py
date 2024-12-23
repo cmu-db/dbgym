@@ -4,6 +4,8 @@ from typing import NewType, TypedDict
 
 from util.workspace import DBGymConfig
 
+# PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents.
+# These types are only given as the outputs of tuning agents.
 IndexesDelta = NewType("IndexesDelta", list[str])
 SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
 QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
@@ -29,6 +31,10 @@ class DBMSConfigDelta(TypedDict):
     qknobs: QueryKnobsDelta
 
 
+def get_step_delta_fpath(dbms_cfg_deltas_dpath: Path, step_num: int) -> Path:
+    return dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
+
+
 class TuningAgent:
     def __init__(self, dbgym_cfg: DBGymConfig) -> None:
         self.dbgym_cfg = dbgym_cfg
@@ -44,11 +50,10 @@ class TuningAgent:
         curr_step_num = self.next_step_num
         self.next_step_num += 1
         dbms_cfg_delta = self._step()
-        with self.get_step_delta_fpath(curr_step_num).open("w") as f:
+        with get_step_delta_fpath(self.dbms_cfg_deltas_dpath, curr_step_num).open(
+            "w"
+        ) as f:
             json.dump(dbms_cfg_delta, f)
-
-    def get_step_delta_fpath(self, step_num: int) -> Path:
-        return self.dbms_cfg_deltas_dpath / f"step{step_num}_delta.json"
 
     # Subclasses should override this function.
     def _step(self) -> DBMSConfigDelta:
@@ -59,9 +64,18 @@ class TuningAgent:
         """
         raise NotImplementedError
 
+
+class TuningAgentStepReader:
+    def __init__(self, dbms_cfg_deltas_dpath: Path) -> None:
+        self.dbms_cfg_deltas_dpath = dbms_cfg_deltas_dpath
+        num_steps = 0
+        while get_step_delta_fpath(self.dbms_cfg_deltas_dpath, num_steps).exists():
+            num_steps += 1
+        self.num_steps = num_steps
+
     def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
-        assert step_num >= 0 and step_num < self.next_step_num
-        with self.get_step_delta_fpath(step_num).open("r") as f:
+        assert step_num >= 0 and step_num < self.num_steps
+        with get_step_delta_fpath(self.dbms_cfg_deltas_dpath, step_num).open("r") as f:
             data = json.load(f)
             return DBMSConfigDelta(
                 indexes=data["indexes"],
@@ -70,4 +84,4 @@ class TuningAgent:
             )
 
     def get_all_deltas(self) -> list[DBMSConfigDelta]:
-        return [self.get_step_delta(step_num) for step_num in range(self.next_step_num)]
+        return [self.get_step_delta(step_num) for step_num in range(self.num_steps)]
