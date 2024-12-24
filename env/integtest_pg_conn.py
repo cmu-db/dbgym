@@ -23,7 +23,7 @@ class PostgresConnTests(unittest.TestCase):
             "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
-        self.metadata = MockTuningAgent.get_default_metadata()
+        self.metadata = IntegtestWorkspace.get_default_metadata()
 
         # The reason we restart Postgres every time is to ensure a "clean" starting point
         # so that all tests are independent of each other.

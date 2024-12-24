@@ -56,12 +56,6 @@ class IntegtestWorkspace:
         with open(IntegtestWorkspace.ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
 
-
-class MockTuningAgent(TuningAgent):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfigDelta] = None
-
     @staticmethod
     def get_default_metadata() -> TuningAgentMetadata:
         dbgym_cfg = IntegtestWorkspace.get_dbgym_cfg()
@@ -94,8 +88,14 @@ class MockTuningAgent(TuningAgent):
             ),
         )
 
+
+class MockTuningAgent(TuningAgent):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.config_to_return: Optional[DBMSConfigDelta] = None
+
     def _get_metadata(self) -> TuningAgentMetadata:
-        return MockTuningAgent.get_default_metadata()
+        return IntegtestWorkspace.get_default_metadata()
 
     def _step(self) -> DBMSConfigDelta:
         assert self.config_to_return is not None

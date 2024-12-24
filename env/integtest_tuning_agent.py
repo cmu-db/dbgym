@@ -65,7 +65,7 @@ class PostgresConnTests(unittest.TestCase):
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
         reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
         metadata = reader.get_metadata()
-        expected_metadata = MockTuningAgent.get_default_metadata()
+        expected_metadata = IntegtestWorkspace.get_default_metadata()
         self.assertEqual(metadata, expected_metadata)
 
 
