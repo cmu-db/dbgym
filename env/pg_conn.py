@@ -26,7 +26,7 @@ from util.log import DBGYM_LOGGER_NAME
 from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
 from util.workspace import DBGymConfig, open_and_save, parent_dpath_of_path
 
-DEFAULT_CONNECT_TIMEOUT = 300
+CONNECT_TIMEOUT = 300
 
 
 class PostgresConn:
@@ -41,13 +41,11 @@ class PostgresConn:
         pgbin_path: Union[str, Path],
         enable_boot: bool,
         boot_config_fpath: Path,
-        connect_timeout: int = DEFAULT_CONNECT_TIMEOUT,
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
         self.pgbin_path = pgbin_path
-        self.connect_timeout = connect_timeout
         self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
@@ -322,7 +320,7 @@ class PostgresConn:
         # Wait until postgres is ready to accept connections.
         num_cycles = 0
         while True:
-            if self.connect_timeout is not None and num_cycles >= self.connect_timeout:
+            if num_cycles >= CONNECT_TIMEOUT:
                 # In this case, we've failed to start postgres.
                 logging.getLogger(DBGYM_LOGGER_NAME).error(
                     "Failed to start postgres before timeout..."

@@ -42,22 +42,23 @@ def replay(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
 
-    pg_conn = PostgresConn(dbgym_cfg, DEFAULT_POSTGRES_PORT)
-    workload = Workload(
-        dbgym_cfg,
-        default_workload_path(
-            dbgym_cfg.dbgym_workspace_path,
-            benchmark_name,
-            workload_name,
-        ),
-    )
-    total_runtime, num_timed_out_queries = time_workload(pg_conn, workload)
-    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
-        f"Total runtime: {total_runtime} seconds"
-    )
-    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
-        f"Number of timed out queries: {num_timed_out_queries}"
-    )
+    # TODO(phw2): Uncomment this.
+    # pg_conn = PostgresConn(dbgym_cfg, DEFAULT_POSTGRES_PORT)
+    # workload = Workload(
+    #     dbgym_cfg,
+    #     default_workload_path(
+    #         dbgym_cfg.dbgym_workspace_path,
+    #         benchmark_name,
+    #         workload_name,
+    #     ),
+    # )
+    # total_runtime, num_timed_out_queries = time_workload(pg_conn, workload)
+    # logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
+    #     f"Total runtime: {total_runtime} seconds"
+    # )
+    # logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
+    #     f"Number of timed out queries: {num_timed_out_queries}"
+    # )
 
 
 def time_workload(pg_conn: PostgresConn, workload: Workload) -> tuple[float, int]:
