@@ -67,7 +67,7 @@ class DBMSConfigDelta:
     qknobs: QueryKnobsDelta
 
 
-def get_step_delta_fpath(tuning_agent_artifacts_dpath: Path, step_num: int) -> Path:
+def get_delta_at_step_fpath(tuning_agent_artifacts_dpath: Path, step_num: int) -> Path:
     return tuning_agent_artifacts_dpath / f"step{step_num}_delta.json"
 
 
@@ -96,7 +96,7 @@ class TuningAgent:
         curr_step_num = self.next_step_num
         self.next_step_num += 1
         dbms_cfg_delta = self._step()
-        with get_step_delta_fpath(
+        with get_delta_at_step_fpath(
             self.tuning_agent_artifacts_dpath, curr_step_num
         ).open("w") as f:
             json.dump(asdict(dbms_cfg_delta), f)
@@ -123,7 +123,7 @@ class TuningAgentArtifactsReader:
         self.tuning_agent_artifacts_dpath = tuning_agent_artifacts_dpath
         assert is_fully_resolved(self.tuning_agent_artifacts_dpath)
         num_steps = 0
-        while get_step_delta_fpath(
+        while get_delta_at_step_fpath(
             self.tuning_agent_artifacts_dpath, num_steps
         ).exists():
             num_steps += 1
@@ -141,9 +141,9 @@ class TuningAgentArtifactsReader:
                 pgbin_path=Path(data["pgbin_path"]),
             )
 
-    def get_step_delta(self, step_num: int) -> DBMSConfigDelta:
+    def get_delta_at_step(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.num_steps
-        with get_step_delta_fpath(self.tuning_agent_artifacts_dpath, step_num).open(
+        with get_delta_at_step_fpath(self.tuning_agent_artifacts_dpath, step_num).open(
             "r"
         ) as f:
             data = json.load(f)
@@ -153,5 +153,5 @@ class TuningAgentArtifactsReader:
                 qknobs=data["qknobs"],
             )
 
-    def get_all_deltas(self) -> list[DBMSConfigDelta]:
-        return [self.get_step_delta(step_num) for step_num in range(self.num_steps)]
+    def get_all_deltas_in_order(self) -> list[DBMSConfigDelta]:
+        return [self.get_delta_at_step(step_num) for step_num in range(self.num_steps)]

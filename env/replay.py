@@ -12,7 +12,6 @@ from util.workspace import DBGymConfig
 # TODO: make it return the full replay data.
 def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
     reader = TuningAgentArtifactsReader(tuning_agent_artifacts_dpath)
-
     pg_conn = PostgresConn(
         dbgym_cfg,
         DEFAULT_POSTGRES_PORT,
@@ -28,9 +27,12 @@ def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
 
     pg_conn.restore_pristine_snapshot()
     pg_conn.restart_postgres()
+
+    reader.get_all_deltas_in_order()
     total_runtime, num_timed_out_queries = time_workload(pg_conn, workload)
     print(f"Total runtime: {total_runtime / 1e6} seconds")
     print(f"Number of timed out queries: {num_timed_out_queries}")
+
     pg_conn.shutdown_postgres()
 
 

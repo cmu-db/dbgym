@@ -23,24 +23,7 @@ class PostgresConnTests(unittest.TestCase):
             qknobs=QueryKnobsDelta({letter: [letter]}),
         )
 
-    def test_get_step_delta(self) -> None:
-        agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
-
-        agent.config_to_return = PostgresConnTests.make_config("a")
-        agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("b")
-        agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("c")
-        agent.step()
-
-        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
-
-        self.assertEqual(reader.get_step_delta(1), PostgresConnTests.make_config("b"))
-        self.assertEqual(reader.get_step_delta(0), PostgresConnTests.make_config("a"))
-        self.assertEqual(reader.get_step_delta(1), PostgresConnTests.make_config("b"))
-        self.assertEqual(reader.get_step_delta(2), PostgresConnTests.make_config("c"))
-
-    def test_get_all_deltas(self) -> None:
+    def test_get_delta_at_step(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
 
         agent.config_to_return = PostgresConnTests.make_config("a")
@@ -53,7 +36,32 @@ class PostgresConnTests(unittest.TestCase):
         reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
 
         self.assertEqual(
-            reader.get_all_deltas(),
+            reader.get_delta_at_step(1), PostgresConnTests.make_config("b")
+        )
+        self.assertEqual(
+            reader.get_delta_at_step(0), PostgresConnTests.make_config("a")
+        )
+        self.assertEqual(
+            reader.get_delta_at_step(1), PostgresConnTests.make_config("b")
+        )
+        self.assertEqual(
+            reader.get_delta_at_step(2), PostgresConnTests.make_config("c")
+        )
+
+    def test_get_all_deltas_in_order(self) -> None:
+        agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
+
+        agent.config_to_return = PostgresConnTests.make_config("a")
+        agent.step()
+        agent.config_to_return = PostgresConnTests.make_config("b")
+        agent.step()
+        agent.config_to_return = PostgresConnTests.make_config("c")
+        agent.step()
+
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
+
+        self.assertEqual(
+            reader.get_all_deltas_in_order(),
             [
                 PostgresConnTests.make_config("a"),
                 PostgresConnTests.make_config("b"),
