@@ -5,7 +5,16 @@ from typing import Any, Optional
 import yaml
 
 from env.tuning_agent import DBMSConfigDelta, TuningAgent, TuningAgentMetadata
-from util.workspace import DBGymConfig, fully_resolve_path
+from util.workspace import (
+    DBGymConfig,
+    fully_resolve_path,
+    get_default_dbdata_parent_dpath,
+    get_default_pgbin_path,
+    get_default_pristine_dbdata_snapshot_path,
+    get_default_workload_name_suffix,
+    get_default_workload_path,
+    get_workload_name,
+)
 
 # These are the values used by set_up_env_integtests.sh.
 # TODO: make set_up_env_integtests.sh take in these values directly as envvars.
@@ -30,10 +39,19 @@ class MockTuningAgent(TuningAgent):
             IntegtestWorkspace.get_dbgym_cfg(), IntegtestWorkspace.get_workspace_path()
         )
         return TuningAgentMetadata(
-            workload_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            pristine_dbdata_snapshot_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            dbdata_parent_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            pgbin_path=MockTuningAgent.get_mock_fully_resolved_path(),
+            workload_path=get_default_workload_path(
+                workspace_path,
+                INTEGTEST_BENCHMARK,
+                get_workload_name(
+                    INTEGTEST_SCALE_FACTOR,
+                    get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
+                ),
+            ),
+            pristine_dbdata_snapshot_path=get_default_pristine_dbdata_snapshot_path(
+                workspace_path, INTEGTEST_BENCHMARK, INTEGTEST_SCALE_FACTOR
+            ),
+            dbdata_parent_path=get_default_dbdata_parent_dpath(workspace_path),
+            pgbin_path=get_default_pgbin_path(workspace_path),
         )
 
     def _step(self) -> DBMSConfigDelta:
