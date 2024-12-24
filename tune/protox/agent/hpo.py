@@ -36,12 +36,12 @@ from util.workspace import (
     DBGymConfig,
     TuningMode,
     default_dbdata_parent_dpath,
-    default_embedder_path,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     fully_resolve_path,
     get_default_benchbase_config_path,
     get_default_benchmark_config_path,
+    get_default_embedder_path,
     get_default_hpoed_agent_params_fname,
     get_default_workload_name_suffix,
     get_default_workload_path,
@@ -120,7 +120,7 @@ class AgentHPOArgs:
     "--embedder-path",
     type=Path,
     default=None,
-    help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
+    help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {get_default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
@@ -270,7 +270,7 @@ def hpo(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if embedder_path is None:
-        embedder_path = default_embedder_path(
+        embedder_path = get_default_embedder_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path is None:

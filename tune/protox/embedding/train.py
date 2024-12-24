@@ -29,9 +29,9 @@ from util.workspace import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    default_traindata_path,
     fully_resolve_path,
     get_default_benchmark_config_path,
+    get_default_traindata_path,
     get_default_workload_name_suffix,
     get_default_workload_path,
     get_workload_name,
@@ -66,7 +66,7 @@ from util.workspace import (
     "--traindata-path",
     type=Path,
     default=None,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {get_default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -201,7 +201,7 @@ def train(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if traindata_path is None:
-        traindata_path = default_traindata_path(
+        traindata_path = get_default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     # TODO(phw2): figure out whether different scale factors use the same config

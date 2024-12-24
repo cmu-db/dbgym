@@ -18,8 +18,8 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    default_hpoed_agent_params_path,
     fully_resolve_path,
+    get_default_hpoed_agent_params_path,
     get_default_tuning_steps_dname,
     get_default_workload_name_suffix,
     get_workload_name,
@@ -48,7 +48,7 @@ from util.workspace import (
     "--hpoed-agent-params-path",
     default=None,
     type=Path,
-    help=f"The path to best params found by the agent HPO process. The default is {default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
+    help=f"The path to best params found by the agent HPO process. The default is {get_default_hpoed_agent_params_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
 @click.option(
     "--enable-boot-during-tune",
@@ -83,7 +83,7 @@ def tune(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if hpoed_agent_params_path is None:
-        hpoed_agent_params_path = default_hpoed_agent_params_path(
+        hpoed_agent_params_path = get_default_hpoed_agent_params_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
 

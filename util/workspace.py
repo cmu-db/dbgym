@@ -149,38 +149,51 @@ def get_default_replay_data_fname(
 #    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
 #    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
 #    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
-default_traindata_path: Callable[[Path, str, str], Path] = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
-        workspace_path
+def get_default_traindata_path(
+    workspace_path: Path, benchmark_name: str, workload_name: str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_tune_protox_embedding"
+        / "data"
+        / (get_default_traindata_fname(benchmark_name, workload_name) + ".link")
     )
-    / "dbgym_tune_protox_embedding"
-    / "data"
-    / (get_default_traindata_fname(benchmark_name, workload_name) + ".link")
-)
-default_embedder_path: Callable[[Path, str, str], Path] = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
-        workspace_path
+
+
+def get_default_embedder_path(
+    workspace_path: Path, benchmark_name: str, workload_name: str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_tune_protox_embedding"
+        / "data"
+        / (get_default_embedder_dname(benchmark_name, workload_name) + ".link")
     )
-    / "dbgym_tune_protox_embedding"
-    / "data"
-    / (get_default_embedder_dname(benchmark_name, workload_name) + ".link")
-)
-default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
-        workspace_path
+
+
+def get_default_hpoed_agent_params_path(
+    workspace_path: Path, benchmark_name: str, workload_name: str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_tune_protox_agent"
+        / "data"
+        / (
+            get_default_hpoed_agent_params_fname(benchmark_name, workload_name)
+            + ".link"
+        )
     )
-    / "dbgym_tune_protox_agent"
-    / "data"
-    / (get_default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
-)
-default_tables_path: Callable[[Path, str, float | str], Path] = (
-    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
-        workspace_path
+
+
+def get_default_tables_path(
+    workspace_path: Path, benchmark_name: str, scale_factor: float | str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / f"dbgym_benchmark_{benchmark_name}"
+        / "data"
+        / (get_default_tables_dname(scale_factor) + ".link")
     )
-    / f"dbgym_benchmark_{benchmark_name}"
-    / "data"
-    / (get_default_tables_dname(scale_factor) + ".link")
-)
 
 
 def get_default_workload_path(
