@@ -1,6 +1,7 @@
 import unittest
 
-from env.integtest_util import IntegtestWorkspace
+from env.integtest_util import IntegtestWorkspace, MockTuningAgent
+from env.replay import replay
 
 
 class ReplayTests(unittest.TestCase):
@@ -9,7 +10,8 @@ class ReplayTests(unittest.TestCase):
         IntegtestWorkspace.set_up_workspace()
 
     def test_replay(self) -> None:
-        pass
+        agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
+        replay(IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_agent_artifacts_dpath)
 
 
 if __name__ == "__main__":

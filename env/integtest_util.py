@@ -22,46 +22,6 @@ INTEGTEST_BENCHMARK = "tpch"
 INTEGTEST_SCALE_FACTOR = 0.01
 
 
-class MockTuningAgent(TuningAgent):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfigDelta] = None
-
-    @staticmethod
-    def get_mock_fully_resolved_path() -> Path:
-        return fully_resolve_path(
-            IntegtestWorkspace.get_dbgym_cfg(), IntegtestWorkspace.get_workspace_path()
-        )
-
-    def _get_metadata(self) -> TuningAgentMetadata:
-        # We just need these to be some fully resolved path, so I just picked the workspace path.
-        workspace_path = fully_resolve_path(
-            IntegtestWorkspace.get_dbgym_cfg(), IntegtestWorkspace.get_workspace_path()
-        )
-        return TuningAgentMetadata(
-            workload_path=get_default_workload_path(
-                workspace_path,
-                INTEGTEST_BENCHMARK,
-                get_workload_name(
-                    INTEGTEST_SCALE_FACTOR,
-                    get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
-                ),
-            ),
-            pristine_dbdata_snapshot_path=get_default_pristine_dbdata_snapshot_path(
-                workspace_path, INTEGTEST_BENCHMARK, INTEGTEST_SCALE_FACTOR
-            ),
-            dbdata_parent_path=get_default_dbdata_parent_dpath(workspace_path),
-            pgbin_path=get_default_pgbin_path(workspace_path),
-        )
-
-    def _step(self) -> DBMSConfigDelta:
-        assert self.config_to_return is not None
-        ret = self.config_to_return
-        # Setting this ensures you must set self.config_to_return every time.
-        self.config_to_return = None
-        return ret
-
-
 class IntegtestWorkspace:
     """
     This is essentially a singleton class. This avoids multiple integtest_*.py files creating
@@ -95,3 +55,51 @@ class IntegtestWorkspace:
     def get_workspace_path() -> Path:
         with open(IntegtestWorkspace.ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
+
+
+class MockTuningAgent(TuningAgent):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.config_to_return: Optional[DBMSConfigDelta] = None
+
+    @staticmethod
+    def get_default_metadata() -> TuningAgentMetadata:
+        dbgym_cfg = IntegtestWorkspace.get_dbgym_cfg()
+        workspace_path = fully_resolve_path(
+            dbgym_cfg, IntegtestWorkspace.get_workspace_path()
+        )
+        return TuningAgentMetadata(
+            workload_path=fully_resolve_path(
+                dbgym_cfg,
+                get_default_workload_path(
+                    workspace_path,
+                    INTEGTEST_BENCHMARK,
+                    get_workload_name(
+                        INTEGTEST_SCALE_FACTOR,
+                        get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
+                    ),
+                ),
+            ),
+            pristine_dbdata_snapshot_path=fully_resolve_path(
+                dbgym_cfg,
+                get_default_pristine_dbdata_snapshot_path(
+                    workspace_path, INTEGTEST_BENCHMARK, INTEGTEST_SCALE_FACTOR
+                ),
+            ),
+            dbdata_parent_path=fully_resolve_path(
+                dbgym_cfg, get_default_dbdata_parent_dpath(workspace_path)
+            ),
+            pgbin_path=fully_resolve_path(
+                dbgym_cfg, get_default_pgbin_path(workspace_path)
+            ),
+        )
+
+    def _get_metadata(self) -> TuningAgentMetadata:
+        return MockTuningAgent.get_default_metadata()
+
+    def _step(self) -> DBMSConfigDelta:
+        assert self.config_to_return is not None
+        ret = self.config_to_return
+        # Setting this ensures you must set self.config_to_return every time.
+        self.config_to_return = None
+        return ret

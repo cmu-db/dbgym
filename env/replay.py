@@ -26,6 +26,8 @@ def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
         dbgym_cfg,
         reader.get_metadata().workload_path,
     )
+    pg_conn.restore_pristine_snapshot()
+    pg_conn.restart_postgres()
     total_runtime, num_timed_out_queries = time_workload(pg_conn, workload)
     logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
         f"Total runtime: {total_runtime} seconds"
