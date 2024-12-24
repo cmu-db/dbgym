@@ -13,7 +13,6 @@ from util.workspace import DBGymConfig
 def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
     reader = TuningAgentArtifactsReader(tuning_agent_artifacts_dpath)
 
-    # TODO: figure out port
     pg_conn = PostgresConn(
         dbgym_cfg,
         DEFAULT_POSTGRES_PORT,
