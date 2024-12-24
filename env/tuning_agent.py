@@ -118,7 +118,7 @@ class TuningAgent:
         raise NotImplementedError
 
 
-class TuningAgentStepReader:
+class TuningAgentArtifactsReader:
     def __init__(self, tuning_agent_artifacts_dpath: Path) -> None:
         self.tuning_agent_artifacts_dpath = tuning_agent_artifacts_dpath
         assert is_fully_resolved(self.tuning_agent_artifacts_dpath)

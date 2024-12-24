@@ -40,6 +40,7 @@ class PostgresConn:
         dbdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
         enable_boot: bool,
+        # TODO: make optional
         boot_config_fpath: Path,
     ) -> None:
 

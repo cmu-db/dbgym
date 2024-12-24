@@ -9,8 +9,8 @@ from env.tuning_agent import (
     QueryKnobsDelta,
     SysKnobsDelta,
     TuningAgent,
+    TuningAgentArtifactsReader,
     TuningAgentMetadata,
-    TuningAgentStepReader,
 )
 from util.workspace import fully_resolve_path
 
@@ -66,7 +66,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.config_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentStepReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
 
         self.assertEqual(reader.get_step_delta(1), PostgresConnTests.make_config("b"))
         self.assertEqual(reader.get_step_delta(0), PostgresConnTests.make_config("a"))
@@ -83,7 +83,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.config_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentStepReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
 
         self.assertEqual(
             reader.get_all_deltas(),
@@ -96,7 +96,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_metadata(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
-        reader = TuningAgentStepReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
         metadata = reader.get_metadata()
         self.assertEqual(
             metadata.workload_path, MockTuningAgent.get_mock_fully_resolved_path()
