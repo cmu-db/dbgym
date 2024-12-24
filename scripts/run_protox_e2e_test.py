@@ -19,7 +19,7 @@ from util.workspace import (
     default_tables_path,
     default_traindata_path,
     default_tuning_steps_dpath,
-    default_workload_path,
+    get_default_workload_path,
     get_workload_name,
 )
 
@@ -106,7 +106,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         assert tables_dpath.exists()
 
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
-    workload_dpath = default_workload_path(
+    workload_dpath = get_default_workload_path(
         workspace_dpath, benchmark_name, workload_name
     )
     if Stage.Workload in STAGES_TO_RUN:

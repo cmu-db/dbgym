@@ -26,6 +26,9 @@ class MockTuningAgent(TuningAgent):
 
     def _get_metadata(self) -> TuningAgentMetadata:
         # We just need these to be some fully resolved path, so I just picked the workspace path.
+        workspace_path = fully_resolve_path(
+            IntegtestWorkspace.get_dbgym_cfg(), IntegtestWorkspace.get_workspace_path()
+        )
         return TuningAgentMetadata(
             workload_path=MockTuningAgent.get_mock_fully_resolved_path(),
             pristine_dbdata_snapshot_path=MockTuningAgent.get_mock_fully_resolved_path(),

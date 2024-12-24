@@ -31,7 +31,7 @@ from util.workspace import (
     DBGymConfig,
     default_benchmark_config_path,
     default_traindata_path,
-    default_workload_path,
+    get_default_workload_path,
     fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
@@ -223,7 +223,7 @@ def train(
 
     workload_path = fully_resolve_path(
         dbgym_cfg,
-        default_workload_path(
+        get_default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         ),
     )

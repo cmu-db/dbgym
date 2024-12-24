@@ -43,7 +43,7 @@ from util.workspace import (
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
-    default_workload_path,
+    get_default_workload_path,
     fully_resolve_path,
     get_default_workload_name_suffix,
     get_workload_name,
@@ -120,7 +120,7 @@ QueryBatches = NewType(
     "--workload-path",
     type=Path,
     default=None,
-    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {get_default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -205,7 +205,7 @@ def datagen(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if workload_path is None:
-        workload_path = default_workload_path(
+        workload_path = get_default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path is None:

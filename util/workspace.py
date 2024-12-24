@@ -170,14 +170,19 @@ default_tables_path: Callable[[Path, str, float | str], Path] = (
     / "data"
     / (default_tables_dname(scale_factor) + ".link")
 )
-default_workload_path: Callable[[Path, str, str], Path] = (
-    lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
-        workspace_path
+
+
+def get_default_workload_path(
+    workspace_path: Path, benchmark_name: str, workload_name: str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / f"dbgym_benchmark_{benchmark_name}"
+        / "data"
+        / (workload_name + ".link")
     )
-    / f"dbgym_benchmark_{benchmark_name}"
-    / "data"
-    / (workload_name + ".link")
-)
+
+
 default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
         workspace_path
