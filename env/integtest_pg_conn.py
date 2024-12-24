@@ -61,8 +61,7 @@ class PostgresConnTests(unittest.TestCase):
             self.pristine_dbdata_snapshot_path,
             self.dbdata_parent_dpath,
             self.pgbin_dpath,
-            False,
-            DEFAULT_BOOT_CONFIG_FPATH,
+            None,
         )
 
     def test_start_on_multiple_ports(self) -> None:

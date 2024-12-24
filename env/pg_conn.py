@@ -30,8 +30,9 @@ CONNECT_TIMEOUT = 300
 
 
 class PostgresConn:
-    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) is so that
-    # it's fully decoupled from how the files are organized in the workspace.
+    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) instead of inferring them
+    # automatically from the default workspace paths is so that it's fully decoupled from how the files
+    # are organized in the workspace.
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
@@ -39,15 +40,13 @@ class PostgresConn:
         pristine_dbdata_snapshot_fpath: Path,
         dbdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
-        enable_boot: bool,
-        # TODO: make optional
-        boot_config_fpath: Path,
+        # Whether this is None determines whether Boot is enabled.
+        boot_config_fpath: Optional[Path],
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
         self.pgbin_path = pgbin_path
-        self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
 
@@ -346,9 +345,7 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
-        if self.enable_boot:
-            # I'm choosing to only load the file if enable_boot is on, so we
-            # don't crash if enable_boot is off and the file doesn't exist.
+        if self.boot_config_fpath is not None:
             with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
 

@@ -28,8 +28,7 @@ def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
         reader.get_metadata().pristine_dbdata_snapshot_path,
         reader.get_metadata().dbdata_parent_path,
         reader.get_metadata().pgbin_path,
-        enable_boot=False,
-        boot_config_fpath=Path(),  # TODO: make None
+        None,
     )
     workload = Workload(
         dbgym_cfg,

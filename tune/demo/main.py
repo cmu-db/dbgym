@@ -56,8 +56,7 @@ class Demo:
             self.pristine_dbdata_snapshot_path,
             self.dbdata_parent_dpath,
             self.pgbin_dpath,
-            False,
-            DEFAULT_BOOT_CONFIG_FPATH,
+            None,
         )
 
     def _get_categorized_system_knobs(self) -> tuple[dict[str, str], dict[str, str]]:
