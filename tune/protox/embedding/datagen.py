@@ -38,14 +38,14 @@ from util.workspace import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    default_benchmark_config_path,
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     default_traindata_fname,
-    get_default_workload_path,
     fully_resolve_path,
+    get_default_benchmark_config_path,
     get_default_workload_name_suffix,
+    get_default_workload_path,
     get_workload_name,
     is_fully_resolved,
     is_ssd,
@@ -114,7 +114,7 @@ QueryBatches = NewType(
     "--benchmark-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {get_default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
@@ -209,7 +209,7 @@ def datagen(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path is None:
-        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+        benchmark_config_path = get_default_benchmark_config_path(benchmark_name)
     if pgbin_path is None:
         pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if pristine_dbdata_snapshot_path is None:

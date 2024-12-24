@@ -35,16 +35,16 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    default_benchbase_config_path,
-    default_benchmark_config_path,
     default_dbdata_parent_dpath,
     default_embedder_path,
     default_hpoed_agent_params_fname,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
-    get_default_workload_path,
     fully_resolve_path,
+    get_default_benchbase_config_path,
+    get_default_benchmark_config_path,
     get_default_workload_name_suffix,
+    get_default_workload_path,
     get_workload_name,
     is_ssd,
     link_result,
@@ -126,13 +126,13 @@ class AgentHPOArgs:
     "--benchmark-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {get_default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchbase-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {get_default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--sysknobs-path",
@@ -274,9 +274,9 @@ def hpo(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path is None:
-        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+        benchmark_config_path = get_default_benchmark_config_path(benchmark_name)
     if benchbase_config_path is None:
-        benchbase_config_path = default_benchbase_config_path(benchmark_name)
+        benchbase_config_path = get_default_benchbase_config_path(benchmark_name)
     if pristine_dbdata_snapshot_path is None:
         pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor

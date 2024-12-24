@@ -80,14 +80,14 @@ SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
 DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
-default_benchmark_config_path: Callable[[str], Path] = (
-    lambda benchmark_name: PROTOX_PATH
-    / f"default_{benchmark_name}_benchmark_config.yaml"
-)
-default_benchbase_config_path: Callable[[str], Path] = (
-    lambda benchmark_name: PROTOX_PATH
-    / f"default_{benchmark_name}_benchbase_config.xml"
-)
+
+
+def get_default_benchmark_config_path(benchmark_name: str) -> Path:
+    return PROTOX_PATH / f"default_{benchmark_name}_benchmark_config.yaml"
+
+
+def get_default_benchbase_config_path(benchmark_name: str) -> Path:
+    return PROTOX_PATH / f"default_{benchmark_name}_benchbase_config.xml"
 
 
 # Generally useful functions
