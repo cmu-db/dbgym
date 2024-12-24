@@ -3,7 +3,7 @@ import unittest
 
 import psycopg
 
-from env.integtest_util import IntegtestWorkspace, MockTuningAgent
+from env.integtest_util import IntegtestWorkspace
 from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,

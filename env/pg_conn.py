@@ -132,7 +132,7 @@ class PostgresConn:
         timeout: float = 0,
     ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
-        It returns the runtime, whether the query timed out, and the explain data if add_explain is True.
+        It returns the runtime in milliseconds, whether the query timed out, and the explain data if add_explain is True.
 
         If the query timed out, it won't have any explain data and thus explain_data will be None. Its runtime will be
         the timeout value.
