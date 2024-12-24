@@ -1,23 +1,15 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
-import click
-
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from env.pg_conn import PostgresConn
 from env.tuning_agent import TuningAgentArtifactsReader
 from env.workload import Workload
 from util.log import DBGYM_OUTPUT_LOGGER_NAME
 from util.pg import DEFAULT_POSTGRES_PORT
-from util.workspace import (
-    DBGymConfig,
-    default_workload_path,
-    get_default_workload_name_suffix,
-    get_workload_name,
-)
+from util.workspace import DBGymConfig
 
 
+# TODO: make it return the full replay data.
 def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
     reader = TuningAgentArtifactsReader(tuning_agent_artifacts_dpath)
 

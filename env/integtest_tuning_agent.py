@@ -1,46 +1,13 @@
 import unittest
-from pathlib import Path
-from typing import Any, Optional
 
-from env.integtest_util import IntegtestWorkspace
+from env.integtest_util import IntegtestWorkspace, MockTuningAgent
 from env.tuning_agent import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
     SysKnobsDelta,
-    TuningAgent,
     TuningAgentArtifactsReader,
-    TuningAgentMetadata,
 )
-from util.workspace import fully_resolve_path
-
-
-class MockTuningAgent(TuningAgent):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfigDelta] = None
-
-    @staticmethod
-    def get_mock_fully_resolved_path() -> Path:
-        return fully_resolve_path(
-            IntegtestWorkspace.get_dbgym_cfg(), IntegtestWorkspace.get_workspace_path()
-        )
-
-    def _get_metadata(self) -> TuningAgentMetadata:
-        # We just need these to be some fully resolved path, so I just picked the workspace path.
-        return TuningAgentMetadata(
-            workload_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            pristine_dbdata_snapshot_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            dbdata_parent_path=MockTuningAgent.get_mock_fully_resolved_path(),
-            pgbin_path=MockTuningAgent.get_mock_fully_resolved_path(),
-        )
-
-    def _step(self) -> DBMSConfigDelta:
-        assert self.config_to_return is not None
-        ret = self.config_to_return
-        # Setting this ensures you must set self.config_to_return every time.
-        self.config_to_return = None
-        return ret
 
 
 class PostgresConnTests(unittest.TestCase):
