@@ -22,6 +22,10 @@ class TuningAgentMetadata:
     pgbin_path: Path
 
     def __post_init__(self) -> None:
+        """
+        Since the metadata needs to persist over time, we need to make sure that the paths are
+        fully resolved.
+        """
         assert is_fully_resolved(
             self.workload_path
         ), f"workload_path={self.workload_path}"
