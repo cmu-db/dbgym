@@ -65,19 +65,8 @@ class PostgresConnTests(unittest.TestCase):
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
         reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
         metadata = reader.get_metadata()
-        self.assertEqual(
-            metadata.workload_path, MockTuningAgent.get_mock_fully_resolved_path()
-        )
-        self.assertEqual(
-            metadata.pristine_dbdata_snapshot_path,
-            MockTuningAgent.get_mock_fully_resolved_path(),
-        )
-        self.assertEqual(
-            metadata.dbdata_parent_path, MockTuningAgent.get_mock_fully_resolved_path()
-        )
-        self.assertEqual(
-            metadata.pgbin_path, MockTuningAgent.get_mock_fully_resolved_path()
-        )
+        expected_metadata = MockTuningAgent.get_default_metadata()
+        self.assertEqual(metadata, expected_metadata)
 
 
 if __name__ == "__main__":

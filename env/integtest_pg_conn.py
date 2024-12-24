@@ -33,6 +33,7 @@ class PostgresConnTests(unittest.TestCase):
             "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
+        # TODO: refactor this using metadata
         self.pristine_dbdata_snapshot_path = get_default_pristine_dbdata_snapshot_path(
             IntegtestWorkspace.get_workspace_path(),
             INTEGTEST_BENCHMARK,
