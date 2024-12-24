@@ -11,7 +11,7 @@ import logging
 import pickle
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Set, cast
+from typing import Optional, cast
 
 import click
 import pandas as pd
@@ -25,20 +25,19 @@ from tune.protox.env.pg_env import PostgresEnv
 from tune.protox.env.space.holon_space import HolonSpace
 from tune.protox.env.space.primitive.index import IndexAction
 from tune.protox.env.space.utils import fetch_server_indexes, fetch_server_knobs
-from tune.protox.env.types import ActionsInfo, HolonAction
+from tune.protox.env.types import ActionsInfo
 from tune.protox.env.workload import Workload
 from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymConfig,
     TuningMode,
-    default_replay_data_fname,
-    default_tuning_steps_dpath,
     fully_resolve_path,
+    get_default_replay_data_fname,
+    get_default_tuning_steps_dpath,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
     open_and_save,
-    parent_dpath_of_path,
     save_file,
 )
 
@@ -128,7 +127,7 @@ class ReplayArgs:
 def replay(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     boot_enabled_during_tune: bool,
     tuning_steps_dpath: Optional[Path],
@@ -144,7 +143,7 @@ def replay(
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
 
     if tuning_steps_dpath is None:
-        tuning_steps_dpath = default_tuning_steps_dpath(
+        tuning_steps_dpath = get_default_tuning_steps_dpath(
             dbgym_cfg.dbgym_workspace_path,
             benchmark_name,
             workload_name,
@@ -503,7 +502,7 @@ def replay_tuning_run(
     link_result(
         dbgym_cfg,
         replay_data_fpath,
-        custom_result_name=default_replay_data_fname(
+        custom_result_name=get_default_replay_data_fname(
             replay_args.benchmark_name,
             replay_args.workload_name,
             replay_args.boot_enabled_during_tune,

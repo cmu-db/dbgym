@@ -14,7 +14,7 @@ from tune.protox.embedding.train_args import (
     EmbeddingSelectArgs,
     EmbeddingTrainGenericArgs,
 )
-from util.workspace import DBGymConfig, default_embedder_dname, link_result
+from util.workspace import DBGymConfig, get_default_embedder_dname, link_result
 
 
 def select_best_embeddings(
@@ -83,7 +83,7 @@ def select_best_embeddings(
                 link_result(
                     dbgym_cfg,
                     model_dpath,
-                    custom_result_name=default_embedder_dname(
+                    custom_result_name=get_default_embedder_dname(
                         generic_args.benchmark_name, generic_args.workload_name
                     )
                     + ".link",

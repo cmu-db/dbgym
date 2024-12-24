@@ -35,16 +35,16 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    default_benchbase_config_path,
-    default_benchmark_config_path,
-    default_dbdata_parent_dpath,
-    default_embedder_path,
-    default_hpoed_agent_params_fname,
-    default_pgbin_path,
-    default_pristine_dbdata_snapshot_path,
-    default_workload_path,
     fully_resolve_path,
+    get_default_benchbase_config_path,
+    get_default_benchmark_config_path,
+    get_default_dbdata_parent_dpath,
+    get_default_embedder_path,
+    get_default_hpoed_agent_params_fname,
+    get_default_pgbin_path,
+    get_default_pristine_dbdata_snapshot_path,
     get_default_workload_name_suffix,
+    get_default_workload_path,
     get_workload_name,
     is_ssd,
     link_result,
@@ -120,19 +120,19 @@ class AgentHPOArgs:
     "--embedder-path",
     type=Path,
     default=None,
-    help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
+    help=f"The path to the directory that contains an `embedder.pth` file with a trained encoder and decoder as well as a `config` file. The default is {get_default_embedder_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}",
 )
 @click.option(
     "--benchmark-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {get_default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--benchbase-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .xml config file for BenchBase, used to run OLTP workloads. The default is {get_default_benchbase_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--sysknobs-path",
@@ -144,7 +144,7 @@ class AgentHPOArgs:
     "--pristine-dbdata-snapshot-path",
     type=Path,
     default=None,
-    help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {get_default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--intended-dbdata-hardware",
@@ -156,19 +156,19 @@ class AgentHPOArgs:
     "--dbdata-parent-dpath",
     type=Path,
     default=None,
-    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
     type=Path,
     default=None,
-    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the bin containing Postgres executables. The default is {get_default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
     type=Path,
     default=None,
-    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the directory that specifies the workload (such as its queries and order of execution). The default is {get_default_workload_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -243,7 +243,7 @@ class AgentHPOArgs:
 def hpo(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     embedder_path: Optional[Path],
     benchmark_config_path: Optional[Path],
@@ -270,25 +270,25 @@ def hpo(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if embedder_path is None:
-        embedder_path = default_embedder_path(
+        embedder_path = get_default_embedder_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if benchmark_config_path is None:
-        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+        benchmark_config_path = get_default_benchmark_config_path(benchmark_name)
     if benchbase_config_path is None:
-        benchbase_config_path = default_benchbase_config_path(benchmark_name)
+        benchbase_config_path = get_default_benchbase_config_path(benchmark_name)
     if pristine_dbdata_snapshot_path is None:
-        pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
+        pristine_dbdata_snapshot_path = get_default_pristine_dbdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
     if dbdata_parent_dpath is None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(
+        dbdata_parent_dpath = get_default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
     if pgbin_path is None:
-        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+        pgbin_path = get_default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path is None:
-        workload_path = default_workload_path(
+        workload_path = get_default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     if seed is None:
@@ -795,7 +795,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     link_result(
         dbgym_cfg,
         best_params_copy_fpath,
-        custom_result_name=default_hpoed_agent_params_fname(
+        custom_result_name=get_default_hpoed_agent_params_fname(
             hpo_args.benchmark_name, hpo_args.workload_name
         )
         + ".link",

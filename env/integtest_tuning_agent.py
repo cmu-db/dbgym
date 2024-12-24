@@ -1,28 +1,13 @@
 import unittest
-from typing import Any, Optional
 
-from env.integtest_util import IntegtestWorkspace
+from env.integtest_util import IntegtestWorkspace, MockTuningAgent
 from env.tuning_agent import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
     SysKnobsDelta,
-    TuningAgent,
-    TuningAgentStepReader,
+    TuningAgentArtifactsReader,
 )
-
-
-class MockTuningAgent(TuningAgent):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfigDelta] = None
-
-    def _step(self) -> DBMSConfigDelta:
-        assert self.config_to_return is not None
-        ret = self.config_to_return
-        # Setting this ensures you must set self.config_to_return every time.
-        self.config_to_return = None
-        return ret
 
 
 class PostgresConnTests(unittest.TestCase):
@@ -48,7 +33,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.config_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentStepReader(agent.dbms_cfg_deltas_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
 
         self.assertEqual(reader.get_step_delta(1), PostgresConnTests.make_config("b"))
         self.assertEqual(reader.get_step_delta(0), PostgresConnTests.make_config("a"))
@@ -65,7 +50,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.config_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentStepReader(agent.dbms_cfg_deltas_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
 
         self.assertEqual(
             reader.get_all_deltas(),
@@ -75,6 +60,13 @@ class PostgresConnTests(unittest.TestCase):
                 PostgresConnTests.make_config("c"),
             ],
         )
+
+    def test_get_metadata(self) -> None:
+        agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
+        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
+        metadata = reader.get_metadata()
+        expected_metadata = IntegtestWorkspace.get_default_metadata()
+        self.assertEqual(metadata, expected_metadata)
 
 
 if __name__ == "__main__":

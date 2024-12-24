@@ -11,15 +11,15 @@ from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.pg import get_is_postgres_running
 from util.workspace import (
-    default_embedder_path,
-    default_hpoed_agent_params_path,
-    default_pristine_dbdata_snapshot_path,
-    default_replay_data_fpath,
-    default_repo_path,
-    default_tables_path,
-    default_traindata_path,
-    default_tuning_steps_dpath,
-    default_workload_path,
+    get_default_embedder_path,
+    get_default_hpoed_agent_params_path,
+    get_default_pristine_dbdata_snapshot_path,
+    get_default_replay_data_fpath,
+    get_default_repo_path,
+    get_default_tables_path,
+    get_default_traindata_path,
+    get_default_tuning_steps_dpath,
+    get_default_workload_path,
     get_workload_name,
 )
 
@@ -96,7 +96,9 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
 
     # Run the full Proto-X training pipeline, asserting things along the way
     # Setup (workload and database)
-    tables_dpath = default_tables_path(workspace_dpath, benchmark_name, scale_factor)
+    tables_dpath = get_default_tables_path(
+        workspace_dpath, benchmark_name, scale_factor
+    )
     if Stage.Tables in STAGES_TO_RUN:
         assert not tables_dpath.exists()
         subprocess.run(
@@ -106,7 +108,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         assert tables_dpath.exists()
 
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
-    workload_dpath = default_workload_path(
+    workload_dpath = get_default_workload_path(
         workspace_dpath, benchmark_name, workload_name
     )
     if Stage.Workload in STAGES_TO_RUN:
@@ -117,13 +119,13 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert workload_dpath.exists()
 
-    repo_dpath = default_repo_path(workspace_dpath)
+    repo_dpath = get_default_repo_path(workspace_dpath)
     if Stage.DBRepo in STAGES_TO_RUN:
         assert not repo_dpath.exists()
         subprocess.run(f"python task.py dbms {DBMS} build".split(), check=True)
         assert repo_dpath.exists()
 
-    pristine_dbdata_snapshot_fpath = default_pristine_dbdata_snapshot_path(
+    pristine_dbdata_snapshot_fpath = get_default_pristine_dbdata_snapshot_path(
         workspace_dpath, benchmark_name, scale_factor
     )
     if Stage.DBData in STAGES_TO_RUN:
@@ -135,7 +137,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         assert pristine_dbdata_snapshot_fpath.exists()
 
     # Tuning (embedding, HPO, and actual tuning)
-    traindata_dpath = default_traindata_path(
+    traindata_dpath = get_default_traindata_path(
         workspace_dpath, benchmark_name, workload_name
     )
     if Stage.EmbeddingData in STAGES_TO_RUN:
@@ -146,7 +148,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert traindata_dpath.exists()
 
-    embedder_dpath = default_embedder_path(
+    embedder_dpath = get_default_embedder_path(
         workspace_dpath, benchmark_name, workload_name
     )
     if Stage.EmbeddingModel in STAGES_TO_RUN:
@@ -157,7 +159,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert embedder_dpath.exists()
 
-    hpoed_agent_params_fpath = default_hpoed_agent_params_path(
+    hpoed_agent_params_fpath = get_default_hpoed_agent_params_path(
         workspace_dpath, benchmark_name, workload_name
     )
     if Stage.TuneHPO in STAGES_TO_RUN:
@@ -168,7 +170,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert hpoed_agent_params_fpath.exists()
 
-    tuning_steps_dpath = default_tuning_steps_dpath(
+    tuning_steps_dpath = get_default_tuning_steps_dpath(
         workspace_dpath, benchmark_name, workload_name, False
     )
     if Stage.TuneTune in STAGES_TO_RUN:
@@ -180,7 +182,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         assert tuning_steps_dpath.exists()
 
     # Post-training (replay)
-    replay_data_fpath = default_replay_data_fpath(
+    replay_data_fpath = get_default_replay_data_fpath(
         workspace_dpath, benchmark_name, workload_name, False
     )
     if Stage.Replay in STAGES_TO_RUN:

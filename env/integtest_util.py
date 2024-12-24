@@ -1,10 +1,20 @@
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import yaml
 
-from util.workspace import DBGymConfig
+from env.tuning_agent import DBMSConfigDelta, TuningAgent, TuningAgentMetadata
+from util.workspace import (
+    DBGymConfig,
+    fully_resolve_path,
+    get_default_dbdata_parent_dpath,
+    get_default_pgbin_path,
+    get_default_pristine_dbdata_snapshot_path,
+    get_default_workload_name_suffix,
+    get_default_workload_path,
+    get_workload_name,
+)
 
 # These are the values used by set_up_env_integtests.sh.
 # TODO: make set_up_env_integtests.sh take in these values directly as envvars.
@@ -45,3 +55,51 @@ class IntegtestWorkspace:
     def get_workspace_path() -> Path:
         with open(IntegtestWorkspace.ENV_INTEGTESTS_DBGYM_CONFIG_FPATH) as f:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
+
+    @staticmethod
+    def get_default_metadata() -> TuningAgentMetadata:
+        dbgym_cfg = IntegtestWorkspace.get_dbgym_cfg()
+        workspace_path = fully_resolve_path(
+            dbgym_cfg, IntegtestWorkspace.get_workspace_path()
+        )
+        return TuningAgentMetadata(
+            workload_path=fully_resolve_path(
+                dbgym_cfg,
+                get_default_workload_path(
+                    workspace_path,
+                    INTEGTEST_BENCHMARK,
+                    get_workload_name(
+                        INTEGTEST_SCALE_FACTOR,
+                        get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
+                    ),
+                ),
+            ),
+            pristine_dbdata_snapshot_path=fully_resolve_path(
+                dbgym_cfg,
+                get_default_pristine_dbdata_snapshot_path(
+                    workspace_path, INTEGTEST_BENCHMARK, INTEGTEST_SCALE_FACTOR
+                ),
+            ),
+            dbdata_parent_path=fully_resolve_path(
+                dbgym_cfg, get_default_dbdata_parent_dpath(workspace_path)
+            ),
+            pgbin_path=fully_resolve_path(
+                dbgym_cfg, get_default_pgbin_path(workspace_path)
+            ),
+        )
+
+
+class MockTuningAgent(TuningAgent):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.config_to_return: Optional[DBMSConfigDelta] = None
+
+    def _get_metadata(self) -> TuningAgentMetadata:
+        return IntegtestWorkspace.get_default_metadata()
+
+    def _step(self) -> DBMSConfigDelta:
+        assert self.config_to_return is not None
+        ret = self.config_to_return
+        # Setting this ensures you must set self.config_to_return every time.
+        self.config_to_return = None
+        return ret

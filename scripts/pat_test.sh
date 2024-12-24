@@ -5,7 +5,7 @@ set -euxo pipefail
 . ./experiments/load_per_machine_envvars.sh
 
 # space for testing. uncomment this to run individual commands from the script (copy pasting is harder because there are envvars)
-python3 task.py tune protox agent tune job --workload-name-suffix demo
+python3 task.py tune protox agent replay tpch --scale-factor 0.01
 exit 0
 
 # benchmark

@@ -29,11 +29,11 @@ from util.workspace import (
     WORKLOAD_NAME_PLACEHOLDER,
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    default_benchmark_config_path,
-    default_traindata_path,
-    default_workload_path,
     fully_resolve_path,
+    get_default_benchmark_config_path,
+    get_default_traindata_path,
     get_default_workload_name_suffix,
+    get_default_workload_path,
     get_workload_name,
 )
 
@@ -60,13 +60,13 @@ from util.workspace import (
     "--benchmark-config-path",
     type=Path,
     default=None,
-    help=f"The path to the .yaml config file for the benchmark. The default is {default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .yaml config file for the benchmark. The default is {get_default_benchmark_config_path(BENCHMARK_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--traindata-path",
     type=Path,
     default=None,
-    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
+    help=f"The path to the .parquet file containing the training data to use to train the embedding models. The default is {get_default_traindata_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, WORKLOAD_NAME_PLACEHOLDER)}.",
 )
 @click.option(
     "--seed",
@@ -167,7 +167,7 @@ from util.workspace import (
 def train(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     benchmark_config_path: Optional[Path],
     traindata_path: Optional[Path],
@@ -201,13 +201,13 @@ def train(
         workload_name_suffix = get_default_workload_name_suffix(benchmark_name)
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
     if traindata_path is None:
-        traindata_path = default_traindata_path(
+        traindata_path = get_default_traindata_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         )
     # TODO(phw2): figure out whether different scale factors use the same config
     # TODO(phw2): figure out what parts of the config should be taken out (like stuff about tables)
     if benchmark_config_path is None:
-        benchmark_config_path = default_benchmark_config_path(benchmark_name)
+        benchmark_config_path = get_default_benchmark_config_path(benchmark_name)
     if seed is None:
         seed = random.randint(0, int(1e8))
 
@@ -223,7 +223,7 @@ def train(
 
     workload_path = fully_resolve_path(
         dbgym_cfg,
-        default_workload_path(
+        get_default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name
         ),
     )

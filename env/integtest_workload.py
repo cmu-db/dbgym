@@ -8,9 +8,9 @@ from env.integtest_util import (
 )
 from env.workload import Workload
 from util.workspace import (
-    default_workload_path,
     fully_resolve_path,
     get_default_workload_name_suffix,
+    get_default_workload_path,
     get_workload_name,
 )
 
@@ -23,7 +23,7 @@ class WorkloadTests(unittest.TestCase):
     def test_workload(self) -> None:
         workload_dpath = fully_resolve_path(
             IntegtestWorkspace.get_dbgym_cfg(),
-            default_workload_path(
+            get_default_workload_path(
                 IntegtestWorkspace.get_workspace_path(),
                 INTEGTEST_BENCHMARK,
                 get_workload_name(

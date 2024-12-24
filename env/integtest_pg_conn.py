@@ -3,22 +3,12 @@ import unittest
 
 import psycopg
 
-from env.integtest_util import (
-    INTEGTEST_BENCHMARK,
-    INTEGTEST_SCALE_FACTOR,
-    IntegtestWorkspace,
-)
+from env.integtest_util import IntegtestWorkspace
 from env.pg_conn import PostgresConn
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,
     get_running_postgres_ports,
-)
-from util.workspace import (
-    DEFAULT_BOOT_CONFIG_FPATH,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
-    default_pristine_dbdata_snapshot_path,
 )
 
 
@@ -33,15 +23,7 @@ class PostgresConnTests(unittest.TestCase):
             "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
-        self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
-            IntegtestWorkspace.get_workspace_path(),
-            INTEGTEST_BENCHMARK,
-            INTEGTEST_SCALE_FACTOR,
-        )
-        self.dbdata_parent_dpath = default_dbdata_parent_dpath(
-            IntegtestWorkspace.get_workspace_path()
-        )
-        self.pgbin_dpath = default_pgbin_path(IntegtestWorkspace.get_workspace_path())
+        self.metadata = IntegtestWorkspace.get_default_metadata()
 
         # The reason we restart Postgres every time is to ensure a "clean" starting point
         # so that all tests are independent of each other.
@@ -58,11 +40,10 @@ class PostgresConnTests(unittest.TestCase):
         return PostgresConn(
             IntegtestWorkspace.get_dbgym_cfg(),
             pgport,
-            self.pristine_dbdata_snapshot_path,
-            self.dbdata_parent_dpath,
-            self.pgbin_dpath,
-            False,
-            DEFAULT_BOOT_CONFIG_FPATH,
+            self.metadata.pristine_dbdata_snapshot_path,
+            self.metadata.dbdata_parent_path,
+            self.metadata.pgbin_path,
+            None,
         )
 
     def test_start_on_multiple_ports(self) -> None:

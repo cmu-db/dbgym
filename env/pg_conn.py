@@ -26,12 +26,13 @@ from util.log import DBGYM_LOGGER_NAME
 from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
 from util.workspace import DBGymConfig, open_and_save, parent_dpath_of_path
 
-DEFAULT_CONNECT_TIMEOUT = 300
+CONNECT_TIMEOUT = 300
 
 
 class PostgresConn:
-    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) is so that
-    # it's fully decoupled from how the files are organized in the workspace.
+    # The reason that PostgresConn takes in all these paths (e.g. `pgbin_path`) instead of inferring them
+    # automatically from the default workspace paths is so that it's fully decoupled from how the files
+    # are organized in the workspace.
     def __init__(
         self,
         dbgym_cfg: DBGymConfig,
@@ -39,16 +40,13 @@ class PostgresConn:
         pristine_dbdata_snapshot_fpath: Path,
         dbdata_parent_dpath: Path,
         pgbin_path: Union[str, Path],
-        enable_boot: bool,
-        boot_config_fpath: Path,
-        connect_timeout: int = DEFAULT_CONNECT_TIMEOUT,
+        # Whether this is None determines whether Boot is enabled.
+        boot_config_fpath: Optional[Path],
     ) -> None:
 
         self.dbgym_cfg = dbgym_cfg
         self.pgport = pgport
         self.pgbin_path = pgbin_path
-        self.connect_timeout = connect_timeout
-        self.enable_boot = enable_boot
         self.boot_config_fpath = boot_config_fpath
         self.log_step = 0
 
@@ -64,6 +62,7 @@ class PostgresConn:
             dbgym_cfg.dbgym_tmp_path / "checkpoint_dbdata.tgz"
         )
         # dbdata_parent_dpath is the parent directory of the dbdata that is *actively being tuned*.
+        # It is *not* the parent directory of pristine_dbdata_snapshot_fpath.
         #   Setting this lets us control the hardware device dbdata is built on (e.g. HDD vs. SSD).
         self.dbdata_parent_dpath = dbdata_parent_dpath
         # dbdata_dpath is the dbdata that is *actively being tuned*
@@ -133,12 +132,14 @@ class PostgresConn:
         timeout: float = 0,
     ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
+        It returns the runtime in milliseconds, whether the query timed out, and the explain data if add_explain is True.
+
+        If the query timed out, it won't have any explain data and thus explain_data will be None. Its runtime will be
+        the timeout value.
+
         Run a query with a timeout (in seconds). Following Postgres's convention, timeout=0 indicates "disable timeout".
 
         Use query_knobs to pass query knobs. An example input is query_knobs=["SET (enable_sort on)", "IndexOnlyScan(it)"].
-
-        It returns the runtime, whether the query timed out, and the explain data if add_explain is True. Note that if
-        the query timed out, it won't have any explain data and thus explain_data will be None.
 
         If you write explain in the query manually instead of setting add_explain, it won't return explain_data. This
         is because it won't know the format of the explain data.
@@ -319,7 +320,7 @@ class PostgresConn:
         # Wait until postgres is ready to accept connections.
         num_cycles = 0
         while True:
-            if self.connect_timeout is not None and num_cycles >= self.connect_timeout:
+            if num_cycles >= CONNECT_TIMEOUT:
                 # In this case, we've failed to start postgres.
                 logging.getLogger(DBGYM_LOGGER_NAME).error(
                     "Failed to start postgres before timeout..."
@@ -344,9 +345,7 @@ class PostgresConn:
             )
 
         # Set up Boot if we're told to do so
-        if self.enable_boot:
-            # I'm choosing to only load the file if enable_boot is on, so we
-            # don't crash if enable_boot is off and the file doesn't exist.
+        if self.boot_config_fpath is not None:
             with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
 

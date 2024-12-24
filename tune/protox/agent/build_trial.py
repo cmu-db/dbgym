@@ -177,8 +177,9 @@ def _build_utilities(
         ),
         dbdata_parent_dpath=Path(hpo_params["pgconn_info"]["dbdata_parent_dpath"]),
         pgbin_path=Path(hpo_params["pgconn_info"]["pgbin_path"]),
-        enable_boot=enable_boot,
-        boot_config_fpath=hpo_params["boot_config_fpath"][str(tuning_mode)],
+        boot_config_fpath=(
+            hpo_params["boot_config_fpath"][str(tuning_mode)] if enable_boot else None
+        ),
     )
     # TODO(phw2): I removed artifact_manager here. Fix this later.
 
