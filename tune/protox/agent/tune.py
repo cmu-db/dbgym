@@ -19,8 +19,8 @@ from util.workspace import (
     DBGymConfig,
     TuningMode,
     default_hpoed_agent_params_path,
-    default_tuning_steps_dname,
     fully_resolve_path,
+    get_default_tuning_steps_dname,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -155,7 +155,7 @@ def tune(
     # We copy instead of just symlinking so that tuning_steps/ is a fully self-contained directory.
     hpoed_agent_params_copy_fpath = tuning_steps_dpath / "params.json"
     shutil.copy(hpoed_agent_params_path, hpoed_agent_params_copy_fpath)
-    tuning_steps_link_dname = default_tuning_steps_dname(
+    tuning_steps_link_dname = get_default_tuning_steps_dname(
         benchmark_name, workload_name, enable_boot_during_tune
     )
     link_result(

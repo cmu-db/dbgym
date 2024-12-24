@@ -41,9 +41,9 @@ from util.workspace import (
     default_dbdata_parent_dpath,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
-    default_traindata_fname,
     fully_resolve_path,
     get_default_benchmark_config_path,
+    get_default_traindata_fname,
     get_default_workload_name_suffix,
     get_default_workload_path,
     get_workload_name,
@@ -563,7 +563,9 @@ def _combine_traindata_dpath_into_parquet(
 
     traindata_path = dbgym_cfg.cur_task_runs_data_path(
         mkdir=True
-    ) / default_traindata_fname(generic_args.benchmark_name, generic_args.workload_name)
+    ) / get_default_traindata_fname(
+        generic_args.benchmark_name, generic_args.workload_name
+    )
     df.to_parquet(traindata_path)
     link_result(dbgym_cfg, traindata_path)
 

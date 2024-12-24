@@ -106,24 +106,35 @@ def get_default_workload_name_suffix(benchmark_name: str) -> str:
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.
-default_tables_dname: Callable[[float | str], str] = (
-    lambda scale_factor: f"tables_sf{get_scale_factor_string(scale_factor)}"
-)
-default_traindata_fname: Callable[[str, str], str] = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
-)
-default_embedder_dname: Callable[[str, str], str] = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_embedder"
-)
-default_hpoed_agent_params_fname: Callable[[str, str], str] = (
-    lambda benchmark_name, workload_name: f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
-)
-default_tuning_steps_dname: Callable[[str, str, bool], str] = (
-    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
-)
-default_replay_data_fname: Callable[[str, str, bool], str] = (
-    lambda benchmark_name, workload_name, boot_enabled_during_tune: f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
-)
+def get_default_tables_dname(scale_factor: float | str) -> str:
+    return f"tables_sf{get_scale_factor_string(scale_factor)}"
+
+
+def get_default_traindata_fname(benchmark_name: str, workload_name: str) -> str:
+    return f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
+
+
+def get_default_embedder_dname(benchmark_name: str, workload_name: str) -> str:
+    return f"{benchmark_name}_{workload_name}_embedder"
+
+
+def get_default_hpoed_agent_params_fname(
+    benchmark_name: str, workload_name: str
+) -> str:
+    return f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
+
+
+def get_default_tuning_steps_dname(
+    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
+) -> str:
+    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
+
+
+def get_default_replay_data_fname(
+    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
+) -> str:
+    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
+
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
@@ -144,7 +155,7 @@ default_traindata_path: Callable[[Path, str, str], Path] = (
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / (default_traindata_fname(benchmark_name, workload_name) + ".link")
+    / (get_default_traindata_fname(benchmark_name, workload_name) + ".link")
 )
 default_embedder_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -152,7 +163,7 @@ default_embedder_path: Callable[[Path, str, str], Path] = (
     )
     / "dbgym_tune_protox_embedding"
     / "data"
-    / (default_embedder_dname(benchmark_name, workload_name) + ".link")
+    / (get_default_embedder_dname(benchmark_name, workload_name) + ".link")
 )
 default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     lambda workspace_path, benchmark_name, workload_name: get_symlinks_path_from_workspace_path(
@@ -160,7 +171,7 @@ default_hpoed_agent_params_path: Callable[[Path, str, str], Path] = (
     )
     / "dbgym_tune_protox_agent"
     / "data"
-    / (default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
+    / (get_default_hpoed_agent_params_fname(benchmark_name, workload_name) + ".link")
 )
 default_tables_path: Callable[[Path, str, float | str], Path] = (
     lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
@@ -168,7 +179,7 @@ default_tables_path: Callable[[Path, str, float | str], Path] = (
     )
     / f"dbgym_benchmark_{benchmark_name}"
     / "data"
-    / (default_tables_dname(scale_factor) + ".link")
+    / (get_default_tables_dname(scale_factor) + ".link")
 )
 
 
@@ -214,7 +225,7 @@ default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
     / "dbgym_tune_protox_agent"
     / "artifacts"
     / (
-        default_tuning_steps_dname(
+        get_default_tuning_steps_dname(
             benchmark_name, workload_name, boot_enabled_during_tune
         )
         + ".link"
@@ -227,7 +238,7 @@ default_replay_data_fpath: Callable[[Path, str, str, bool], Path] = (
     / "dbgym_tune_protox_agent"
     / "data"
     / (
-        default_replay_data_fname(
+        get_default_replay_data_fname(
             benchmark_name, workload_name, boot_enabled_during_tune
         )
         + ".link"

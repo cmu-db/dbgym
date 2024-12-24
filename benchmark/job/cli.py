@@ -8,7 +8,7 @@ from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
     DBGymConfig,
-    default_tables_dname,
+    get_default_tables_dname,
     get_workload_name,
     is_fully_resolved,
     link_result,
@@ -172,7 +172,7 @@ def _download_job_data(dbgym_cfg: DBGymConfig) -> None:
         dbgym_cfg,
         JOB_TABLES_URL,
         "imdb.tgz",
-        default_tables_dname(DEFAULT_SCALE_FACTOR),
+        get_default_tables_dname(DEFAULT_SCALE_FACTOR),
     )
 
 

@@ -37,12 +37,12 @@ from util.workspace import (
     TuningMode,
     default_dbdata_parent_dpath,
     default_embedder_path,
-    default_hpoed_agent_params_fname,
     default_pgbin_path,
     default_pristine_dbdata_snapshot_path,
     fully_resolve_path,
     get_default_benchbase_config_path,
     get_default_benchmark_config_path,
+    get_default_hpoed_agent_params_fname,
     get_default_workload_name_suffix,
     get_default_workload_path,
     get_workload_name,
@@ -795,7 +795,7 @@ def _tune_hpo(dbgym_cfg: DBGymConfig, hpo_args: AgentHPOArgs) -> None:
     link_result(
         dbgym_cfg,
         best_params_copy_fpath,
-        custom_result_name=default_hpoed_agent_params_fname(
+        custom_result_name=get_default_hpoed_agent_params_fname(
             hpo_args.benchmark_name, hpo_args.workload_name
         )
         + ".link",
