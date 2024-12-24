@@ -35,14 +35,14 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
     TuningMode,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
-    default_pristine_dbdata_snapshot_path,
     fully_resolve_path,
     get_default_benchbase_config_path,
     get_default_benchmark_config_path,
+    get_default_dbdata_parent_dpath,
     get_default_embedder_path,
     get_default_hpoed_agent_params_fname,
+    get_default_pgbin_path,
+    get_default_pristine_dbdata_snapshot_path,
     get_default_workload_name_suffix,
     get_default_workload_path,
     get_workload_name,
@@ -144,7 +144,7 @@ class AgentHPOArgs:
     "--pristine-dbdata-snapshot-path",
     type=Path,
     default=None,
-    help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
+    help=f"The path to the .tgz snapshot of the dbdata directory to use as a starting point for tuning. The default is {get_default_pristine_dbdata_snapshot_path(WORKSPACE_PATH_PLACEHOLDER, BENCHMARK_NAME_PLACEHOLDER, SCALE_FACTOR_PLACEHOLDER)}.",
 )
 @click.option(
     "--intended-dbdata-hardware",
@@ -156,13 +156,13 @@ class AgentHPOArgs:
     "--dbdata-parent-dpath",
     type=Path,
     default=None,
-    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--pgbin-path",
     type=Path,
     default=None,
-    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the bin containing Postgres executables. The default is {get_default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--workload-path",
@@ -278,15 +278,15 @@ def hpo(
     if benchbase_config_path is None:
         benchbase_config_path = get_default_benchbase_config_path(benchmark_name)
     if pristine_dbdata_snapshot_path is None:
-        pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
+        pristine_dbdata_snapshot_path = get_default_pristine_dbdata_snapshot_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, scale_factor
         )
     if dbdata_parent_dpath is None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(
+        dbdata_parent_dpath = get_default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
     if pgbin_path is None:
-        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+        pgbin_path = get_default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if workload_path is None:
         workload_path = get_default_workload_path(
             dbgym_cfg.dbgym_workspace_path, benchmark_name, workload_name

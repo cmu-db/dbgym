@@ -31,9 +31,9 @@ from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymConfig,
     TuningMode,
-    default_tuning_steps_dpath,
     fully_resolve_path,
     get_default_replay_data_fname,
+    get_default_tuning_steps_dpath,
     get_default_workload_name_suffix,
     get_workload_name,
     link_result,
@@ -143,7 +143,7 @@ def replay(
     workload_name = get_workload_name(scale_factor, workload_name_suffix)
 
     if tuning_steps_dpath is None:
-        tuning_steps_dpath = default_tuning_steps_dpath(
+        tuning_steps_dpath = get_default_tuning_steps_dpath(
             dbgym_cfg.dbgym_workspace_path,
             benchmark_name,
             workload_name,

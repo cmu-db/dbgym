@@ -5,9 +5,9 @@ from util.pg import DEFAULT_POSTGRES_PORT, get_is_postgres_running
 from util.workspace import (
     DEFAULT_BOOT_CONFIG_FPATH,
     DBGymConfig,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
-    default_pristine_dbdata_snapshot_path,
+    get_default_dbdata_parent_dpath,
+    get_default_pgbin_path,
+    get_default_pristine_dbdata_snapshot_path,
     make_standard_dbgym_cfg,
 )
 
@@ -43,13 +43,13 @@ class Demo:
 
     def __init__(self) -> None:
         self.dbgym_cfg = make_dbgym_cfg_cached()
-        self.pristine_dbdata_snapshot_path = default_pristine_dbdata_snapshot_path(
+        self.pristine_dbdata_snapshot_path = get_default_pristine_dbdata_snapshot_path(
             self.dbgym_cfg.dbgym_workspace_path, Demo.BENCHMARK, Demo.SCALE_FACTOR
         )
-        self.dbdata_parent_dpath = default_dbdata_parent_dpath(
+        self.dbdata_parent_dpath = get_default_dbdata_parent_dpath(
             self.dbgym_cfg.dbgym_workspace_path
         )
-        self.pgbin_dpath = default_pgbin_path(self.dbgym_cfg.dbgym_workspace_path)
+        self.pgbin_dpath = get_default_pgbin_path(self.dbgym_cfg.dbgym_workspace_path)
         self.pg_conn = PostgresConn(
             self.dbgym_cfg,
             DEFAULT_POSTGRES_PORT,

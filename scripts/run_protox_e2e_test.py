@@ -11,14 +11,14 @@ from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.pg import get_is_postgres_running
 from util.workspace import (
-    default_pristine_dbdata_snapshot_path,
-    default_replay_data_fpath,
-    default_repo_path,
-    default_tuning_steps_dpath,
     get_default_embedder_path,
     get_default_hpoed_agent_params_path,
+    get_default_pristine_dbdata_snapshot_path,
+    get_default_replay_data_fpath,
+    get_default_repo_path,
     get_default_tables_path,
     get_default_traindata_path,
+    get_default_tuning_steps_dpath,
     get_default_workload_path,
     get_workload_name,
 )
@@ -119,13 +119,13 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert workload_dpath.exists()
 
-    repo_dpath = default_repo_path(workspace_dpath)
+    repo_dpath = get_default_repo_path(workspace_dpath)
     if Stage.DBRepo in STAGES_TO_RUN:
         assert not repo_dpath.exists()
         subprocess.run(f"python task.py dbms {DBMS} build".split(), check=True)
         assert repo_dpath.exists()
 
-    pristine_dbdata_snapshot_fpath = default_pristine_dbdata_snapshot_path(
+    pristine_dbdata_snapshot_fpath = get_default_pristine_dbdata_snapshot_path(
         workspace_dpath, benchmark_name, scale_factor
     )
     if Stage.DBData in STAGES_TO_RUN:
@@ -170,7 +170,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         )
         assert hpoed_agent_params_fpath.exists()
 
-    tuning_steps_dpath = default_tuning_steps_dpath(
+    tuning_steps_dpath = get_default_tuning_steps_dpath(
         workspace_dpath, benchmark_name, workload_name, False
     )
     if Stage.TuneTune in STAGES_TO_RUN:
@@ -182,7 +182,7 @@ def run_e2e_for_benchmark(benchmark_name: str, intended_dbdata_hardware: str) ->
         assert tuning_steps_dpath.exists()
 
     # Post-training (replay)
-    replay_data_fpath = default_replay_data_fpath(
+    replay_data_fpath = get_default_replay_data_fpath(
         workspace_dpath, benchmark_name, workload_name, False
     )
     if Stage.Replay in STAGES_TO_RUN:

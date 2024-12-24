@@ -35,10 +35,10 @@ from util.shell import subprocess_run
 from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymConfig,
-    default_dbdata_parent_dpath,
-    default_pgbin_path,
     fully_resolve_path,
     get_dbdata_tgz_name,
+    get_default_dbdata_parent_dpath,
+    get_default_pgbin_path,
     is_fully_resolved,
     is_ssd,
     link_result,
@@ -78,7 +78,7 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     "--pgbin-path",
     type=Path,
     default=None,
-    help=f"The path to the bin containing Postgres executables. The default is {default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the bin containing Postgres executables. The default is {get_default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--intended-dbdata-hardware",
@@ -90,7 +90,7 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     "--dbdata-parent-dpath",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 def postgres_dbdata(
     dbgym_cfg: DBGymConfig,
@@ -102,9 +102,9 @@ def postgres_dbdata(
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path is None:
-        pgbin_path = default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+        pgbin_path = get_default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
     if dbdata_parent_dpath is None:
-        dbdata_parent_dpath = default_dbdata_parent_dpath(
+        dbdata_parent_dpath = get_default_dbdata_parent_dpath(
             dbgym_cfg.dbgym_workspace_path
         )
 

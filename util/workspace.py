@@ -207,56 +207,70 @@ def get_default_workload_path(
     )
 
 
-default_pristine_dbdata_snapshot_path: Callable[[Path, str, float | str], Path] = (
-    lambda workspace_path, benchmark_name, scale_factor: get_symlinks_path_from_workspace_path(
-        workspace_path
+def get_default_pristine_dbdata_snapshot_path(
+    workspace_path: Path, benchmark_name: str, scale_factor: float | str
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_dbms_postgres"
+        / "data"
+        / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
     )
-    / "dbgym_dbms_postgres"
-    / "data"
-    / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
-)
-default_dbdata_parent_dpath: Callable[[Path], Path] = (
-    lambda workspace_path: get_tmp_path_from_workspace_path(workspace_path)
-)
-default_repo_path: Callable[[Path], Path] = (
-    lambda workspace_path: get_symlinks_path_from_workspace_path(workspace_path)
-    / "dbgym_dbms_postgres"
-    / "build"
-    / "repo.link"
-)
-default_pgbin_path: Callable[[Path], Path] = (
-    lambda workspace_path: default_repo_path(workspace_path)
-    / "boot"
-    / "build"
-    / "postgres"
-    / "bin"
-)
-default_tuning_steps_dpath: Callable[[Path, str, str, bool], Path] = (
-    lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
-        workspace_path
+
+
+def get_default_dbdata_parent_dpath(workspace_path: Path) -> Path:
+    return get_tmp_path_from_workspace_path(workspace_path)
+
+
+def get_default_repo_path(workspace_path: Path) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_dbms_postgres"
+        / "build"
+        / "repo.link"
     )
-    / "dbgym_tune_protox_agent"
-    / "artifacts"
-    / (
-        get_default_tuning_steps_dname(
-            benchmark_name, workload_name, boot_enabled_during_tune
+
+
+def get_default_pgbin_path(workspace_path: Path) -> Path:
+    return get_default_repo_path(workspace_path) / "boot" / "build" / "postgres" / "bin"
+
+
+def get_default_tuning_steps_dpath(
+    workspace_path: Path,
+    benchmark_name: str,
+    workload_name: str,
+    boot_enabled_during_tune: bool,
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_tune_protox_agent"
+        / "artifacts"
+        / (
+            get_default_tuning_steps_dname(
+                benchmark_name, workload_name, boot_enabled_during_tune
+            )
+            + ".link"
         )
-        + ".link"
     )
-)
-default_replay_data_fpath: Callable[[Path, str, str, bool], Path] = (
-    lambda workspace_path, benchmark_name, workload_name, boot_enabled_during_tune: get_symlinks_path_from_workspace_path(
-        workspace_path
-    )
-    / "dbgym_tune_protox_agent"
-    / "data"
-    / (
-        get_default_replay_data_fname(
-            benchmark_name, workload_name, boot_enabled_during_tune
+
+
+def get_default_replay_data_fpath(
+    workspace_path: Path,
+    benchmark_name: str,
+    workload_name: str,
+    boot_enabled_during_tune: bool,
+) -> Path:
+    return (
+        get_symlinks_path_from_workspace_path(workspace_path)
+        / "dbgym_tune_protox_agent"
+        / "data"
+        / (
+            get_default_replay_data_fname(
+                benchmark_name, workload_name, boot_enabled_during_tune
+            )
+            + ".link"
         )
-        + ".link"
     )
-)
 
 
 class DBGymConfig:
