@@ -243,7 +243,7 @@ class AgentHPOArgs:
 def hpo(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     embedder_path: Optional[Path],
     benchmark_config_path: Optional[Path],

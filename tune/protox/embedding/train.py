@@ -167,7 +167,7 @@ from util.workspace import (
 def train(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     benchmark_config_path: Optional[Path],
     traindata_path: Optional[Path],

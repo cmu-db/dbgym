@@ -173,7 +173,7 @@ QueryBatches = NewType(
 def datagen(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     pgbin_path: Optional[Path],
     pristine_dbdata_snapshot_path: Optional[Path],

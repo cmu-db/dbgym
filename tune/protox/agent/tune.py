@@ -3,6 +3,7 @@ import os
 import shutil
 import time
 from pathlib import Path
+from typing import Optional
 
 import click
 import pandas as pd
@@ -69,7 +70,7 @@ from util.workspace import (
 def tune(
     dbgym_cfg: DBGymConfig,
     benchmark_name: str,
-    workload_name_suffix: str,
+    workload_name_suffix: Optional[str],
     scale_factor: float,
     hpoed_agent_params_path: Path,
     enable_boot_during_tune: bool,

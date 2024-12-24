@@ -64,6 +64,7 @@ class PostgresConn:
             dbgym_cfg.dbgym_tmp_path / "checkpoint_dbdata.tgz"
         )
         # dbdata_parent_dpath is the parent directory of the dbdata that is *actively being tuned*.
+        # It is *not* the parent directory of pristine_dbdata_snapshot_fpath.
         #   Setting this lets us control the hardware device dbdata is built on (e.g. HDD vs. SSD).
         self.dbdata_parent_dpath = dbdata_parent_dpath
         # dbdata_dpath is the dbdata that is *actively being tuned*
@@ -133,12 +134,14 @@ class PostgresConn:
         timeout: float = 0,
     ) -> tuple[float, bool, Optional[dict[str, Any]]]:
         """
+        It returns the runtime, whether the query timed out, and the explain data if add_explain is True.
+
+        If the query timed out, it won't have any explain data and thus explain_data will be None. Its runtime will be
+        the timeout value.
+
         Run a query with a timeout (in seconds). Following Postgres's convention, timeout=0 indicates "disable timeout".
 
         Use query_knobs to pass query knobs. An example input is query_knobs=["SET (enable_sort on)", "IndexOnlyScan(it)"].
-
-        It returns the runtime, whether the query timed out, and the explain data if add_explain is True. Note that if
-        the query timed out, it won't have any explain data and thus explain_data will be None.
 
         If you write explain in the query manually instead of setting add_explain, it won't return explain_data. This
         is because it won't know the format of the explain data.
