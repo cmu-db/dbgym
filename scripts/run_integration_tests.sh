@@ -1,2 +1,2 @@
 #!/bin/bash
-python -m scripts.run_tests "integtest_*.py"
+python -m scripts._run_tests "integtest_*.py"
