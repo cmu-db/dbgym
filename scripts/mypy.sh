@@ -1,2 +1,2 @@
 #!/bin/bash
-mypy --config-file scripts/mypy.ini .
+mypy --config-file scripts/configs/mypy.ini .

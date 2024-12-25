@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-./scripts/_build_conda_env.sh "dbgym" "scripts/.python_version" "scripts/requirements.txt"
+./scripts/_build_conda_env.sh "dbgym" "scripts/configs/.python_version" "scripts/configs/requirements.txt"
