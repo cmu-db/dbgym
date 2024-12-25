@@ -30,7 +30,8 @@ jobs:
     # We need to do `. "$HOME/.cargo/env"` in each step for it to work.
     - name: Install dependencies
       run: |
-        ./dependencies/install_dependencies.sh
+        pip install -r ./scripts/configs/requirements.txt
+        ./scripts/install_sysdeps.sh
 
     - name: Check formatting
       run: |
