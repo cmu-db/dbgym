@@ -1,9 +1,14 @@
 #!/bin/bash
 # This script creates a conda environment for a specific agent.
+# Run it from the dbgym root folder (e.g. `./agents/create_conda.sh <agent_name>`).
+#
+# The environment setup:
+# - Name matches the agent name.
+# - Python version from .python_version file (if exists).
+# - Dependencies from requirements.txt file (if exists).
 #
 # Before running this script, the user must update the folder of the agent
 # they want to create a conda environment for (e.g. by calling submodule update).
-#
 # There are other things the user must do as well but these are all checked
 # automaticallyby this script.
 
@@ -38,7 +43,6 @@ if [ ! -z "$CONDA_DEFAULT_ENV" ]; then
     exit 1
 fi
 
-
 # Note: I am intentionally not using environment.yml. I am instead using
 # requirements.txt and .python_version. This is for two reasons:
 #   1. environment.yml sets the conda env name. However, I want to enforce
@@ -55,5 +59,23 @@ else
     python_version="3.10"
 fi
 
-echo "hello world!"
-echo "python_version: $python_version"
+# Create conda environment with specified Python version
+echo "Creating conda environment '$agent_name' with Python $python_version..."
+eval "$(conda shell.bash hook)"
+conda create -y -n "$agent_name" python="$python_version"
+
+# Install the packages.
+conda activate "$agent_name"
+
+if [ -f "agents/$agent_name/requirements.txt" ]; then
+    echo "Installing pip requirements from agents/$agent_name/requirements.txt..."
+    pip install -r "agents/$agent_name/requirements.txt"
+else
+    echo "Warning: requirements.txt not found in agents/$agent_name/."
+fi
+
+conda deactivate
+
+# Success message.
+echo "Conda environment '$agent_name' created successfully."
+echo "It is not currently activated. To activate it, run 'conda activate $agent_name'."
