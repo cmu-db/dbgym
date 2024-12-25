@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import yaml
 
-from env.tuning_agent_artifacts import DBMSConfigDelta, TuningAgent, TuningAgentMetadata
+from env.tuning_artifacts import DBMSConfigDelta, TuningAgent, TuningMetadata
 from util.workspace import (
     DBGymConfig,
     fully_resolve_path,
@@ -57,12 +57,12 @@ class IntegtestWorkspace:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
 
     @staticmethod
-    def get_default_metadata() -> TuningAgentMetadata:
+    def get_default_metadata() -> TuningMetadata:
         dbgym_cfg = IntegtestWorkspace.get_dbgym_cfg()
         workspace_path = fully_resolve_path(
             dbgym_cfg, IntegtestWorkspace.get_workspace_path()
         )
-        return TuningAgentMetadata(
+        return TuningMetadata(
             workload_path=fully_resolve_path(
                 dbgym_cfg,
                 get_default_workload_path(
@@ -94,7 +94,7 @@ class MockTuningAgent(TuningAgent):
         super().__init__(*args, **kwargs)
         self.delta_to_return: Optional[DBMSConfigDelta] = None
 
-    def _get_metadata(self) -> TuningAgentMetadata:
+    def _get_metadata(self) -> TuningMetadata:
         return IntegtestWorkspace.get_default_metadata()
 
     def _step(self) -> DBMSConfigDelta:

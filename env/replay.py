@@ -2,14 +2,14 @@ from collections import defaultdict
 from pathlib import Path
 
 from env.pg_conn import PostgresConn
-from env.tuning_agent import TuningAgentArtifactsReader
+from env.tuning_artifacts import TuningAgentArtifactsReader
 from env.workload import Workload
 from util.pg import DEFAULT_POSTGRES_PORT
 from util.workspace import DBGymConfig
 
 
 def replay(
-    dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path
+    dbgym_cfg: DBGymConfig, tuning_artifacts_dpath: Path
 ) -> list[tuple[float, int]]:
     """
     Returns the total runtime and the number of timed out queries for each step.
@@ -18,7 +18,7 @@ def replay(
     """
     replay_data: list[tuple[float, int]] = []
 
-    reader = TuningAgentArtifactsReader(tuning_agent_artifacts_dpath)
+    reader = TuningAgentArtifactsReader(tuning_artifacts_dpath)
     pg_conn = PostgresConn(
         dbgym_cfg,
         DEFAULT_POSTGRES_PORT,
