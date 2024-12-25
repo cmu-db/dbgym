@@ -1,12 +1,14 @@
 #!/bin/bash
 # This script creates a conda environment for a specific agent.
-# Run it from the dbgym root folder (e.g. `./agents/create_conda.sh <agent_name>`).
-#
-# The environment setup:
 # - Name matches the agent name.
 # - Python version from .python_version file (if exists).
 # - Dependencies from requirements.txt file (if exists).
 # - gymlib is installed.
+#
+# Using this script is *optional*. If you have a more complex environment setup
+# for your agent, just do that manually.
+#
+# Run it from the dbgym root folder (e.g. `./agents/create_conda.sh <agent_name>`).
 #
 # Before running this script, the user must update the folder of the agent
 # they want to create a conda environment for (e.g. by calling submodule update).
