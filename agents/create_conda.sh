@@ -13,7 +13,7 @@
 # Before running this script, the user must update the folder of the agent
 # they want to create a conda environment for (e.g. by calling submodule update).
 # There are other things the user must do as well but these are all checked
-# automaticallyby this script.
+# automatically by this script.
 
 set -euo pipefail
 
