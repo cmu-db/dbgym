@@ -26,7 +26,7 @@ from util.workspace import (
 # Be careful when changing these constants. In some places, the E2E test is hardcoded to work for these specific constants.
 DBMS = "postgres"
 AGENT = "protox"
-E2ETEST_DBGYM_CONFIG_FPATH = Path("scripts/e2e_test_dbgym_config.yaml")
+E2ETEST_DBGYM_CONFIG_FPATH = Path("scripts/configs/e2e_test_dbgym_config.yaml")
 
 
 def get_workspace_dpath(config_fpath: Path) -> Path:
