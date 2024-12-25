@@ -26,11 +26,11 @@ class PostgresConnTests(unittest.TestCase):
     def test_get_delta_at_step(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
 
-        agent.config_to_return = PostgresConnTests.make_config("a")
+        agent.delta_to_return = PostgresConnTests.make_config("a")
         agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("b")
+        agent.delta_to_return = PostgresConnTests.make_config("b")
         agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("c")
+        agent.delta_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
         reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
@@ -51,11 +51,11 @@ class PostgresConnTests(unittest.TestCase):
     def test_get_all_deltas_in_order(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
 
-        agent.config_to_return = PostgresConnTests.make_config("a")
+        agent.delta_to_return = PostgresConnTests.make_config("a")
         agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("b")
+        agent.delta_to_return = PostgresConnTests.make_config("b")
         agent.step()
-        agent.config_to_return = PostgresConnTests.make_config("c")
+        agent.delta_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
         reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
