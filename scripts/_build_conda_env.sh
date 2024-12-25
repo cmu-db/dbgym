@@ -1,6 +1,6 @@
 #!/bin/bash
 # This helper script creates a conda environment.
-# You should not call this script directory. Instead, use build_agent_conda_env.sh or build_gym_conda_env.sh.
+# You should not run this directly. Instead, use build_agent_conda_env.sh or build_gym_conda_env.sh.
 
 set -euo pipefail
 
