@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
 
-black . --check
-isort . --profile black -c
+# Ignore agents/ because those are all submodules.
+black . --check --exclude agents
+isort . --profile black -c --skip agents
