@@ -21,15 +21,9 @@ env_name=$1
 python_version_path=$2
 requirements_path=$3
 
-# 1.3. Checks relating to conda environments.
+# 1.3. Check that the environment doesn't already exist.
 if conda info --envs | grep -q "^$env_name "; then
     echo "Error: Conda environment '$env_name' already exists"
-    exit 1
-fi
-
-# 1.4. Check that we're not in any conda environment
-if [ -n "${CONDA_DEFAULT_ENV:-}" ]; then
-    echo "Error: Must run from outside any conda environment (try 'conda deactivate')"
     exit 1
 fi
 
