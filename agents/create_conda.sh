@@ -1,13 +1,19 @@
 #!/bin/bash
 # This script creates a conda environment for a specific agent.
-# Preconditions:
-#   - conda is installed and the user has access to the conda command.
-#   - The user has already updated the folder of the agent they want to
-#     create a conda environment for (e.g. by calling submodule update).
-#   - There does not already exist a conda environment with the same name
-#     as the agent.
+#
+# Before running this script, the user must update the folder of the agent
+# they want to create a conda environment for (e.g. by calling submodule update).
+#
+# There are other things the user must do as well but these are all checked
+# automaticallyby this script.
 
-# Check if agent name is provided.
+# Check that conda is installed.
+if ! command -v conda &> /dev/null; then
+    echo "Error: Conda is not installed"
+    exit 1
+fi
+
+# Input validation.
 if [ -z "$1" ]; then
     echo "Usage: ./create_conda.sh <agent_name>"
     exit 1
@@ -15,11 +21,23 @@ fi
 
 agent_name=$1
 
-# Check if agent folder exists
 if [ ! -d "agents/$agent_name" ]; then
     echo "Error: Agent folder '$agent_name' does not exist"
     exit 1
 fi
+
+# Checks relating to conda environments.
+if conda info --envs | grep -q "^$agent_name "; then
+    echo "Error: Conda environment '$agent_name' already exists"
+    exit 1
+fi
+
+# Check that we're not in any conda environment
+if [ ! -z "$CONDA_DEFAULT_ENV" ]; then
+    echo "Error: Must run from outside any conda environment (try 'conda deactivate')"
+    exit 1
+fi
+
 
 # Note: I am intentionally not using environment.yml. I am instead using
 # requirements.txt and .python_version. This is for two reasons:
@@ -29,7 +47,7 @@ fi
 #      not any additional conda-specific syntax, making it more modular
 #      and flexible.
 
-# Read in .python_version if it exists.
+# Set python_version variable.
 if [ -f "agents/$agent_name/.python_version" ]; then
     python_version=$(cat "agents/$agent_name/.python_version")
 else
