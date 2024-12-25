@@ -92,14 +92,14 @@ class IntegtestWorkspace:
 class MockTuningAgent(TuningAgent):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.config_to_return: Optional[DBMSConfigDelta] = None
+        self.delta_to_return: Optional[DBMSConfigDelta] = None
 
     def _get_metadata(self) -> TuningAgentMetadata:
         return IntegtestWorkspace.get_default_metadata()
 
     def _step(self) -> DBMSConfigDelta:
-        assert self.config_to_return is not None
-        ret = self.config_to_return
-        # Setting this ensures you must set self.config_to_return every time.
-        self.config_to_return = None
+        assert self.delta_to_return is not None
+        ret = self.delta_to_return
+        # Setting this ensures you must set self.delta_to_return every time.
+        self.delta_to_return = None
         return ret
