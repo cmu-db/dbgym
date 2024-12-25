@@ -13,6 +13,8 @@
 # There are other things the user must do as well but these are all checked
 # automaticallyby this script.
 
+set -euo pipefail
+
 # 1. Checks.
 # 1.1. Check that conda is installed.
 if ! command -v conda &> /dev/null; then
@@ -40,7 +42,7 @@ if conda info --envs | grep -q "^$agent_name "; then
 fi
 
 # 1.4. Check that we're not in any conda environment
-if [ ! -z "$CONDA_DEFAULT_ENV" ]; then
+if [ -n "${CONDA_DEFAULT_ENV:-}" ]; then
     echo "Error: Must run from outside any conda environment (try 'conda deactivate')"
     exit 1
 fi
@@ -78,7 +80,13 @@ else
 fi
 
 # We always install gymlib so that the agent has access to it.
-pip install -e gymlib
+if [ -d "gymlib" ]; then
+    echo "Installing gymlib in editable mode..."
+    pip install -e ./gymlib
+else
+    echo "Error: gymlib directory not found in $(pwd). Please ensure you're running this script from the right folder."
+    exit 1
+fi
 
 conda deactivate
 
