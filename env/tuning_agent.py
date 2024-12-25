@@ -9,6 +9,7 @@ from util.workspace import DBGymConfig, is_fully_resolved
 # These types are only given as the outputs of tuning agents.
 IndexesDelta = NewType("IndexesDelta", list[str])
 SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
+# TODO: I'm not decided whether these should be deltas or full configs. I'm going to figure this out once I integrate Proto-X and UDO.
 QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
 
 

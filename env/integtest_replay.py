@@ -35,7 +35,9 @@ class ReplayTests(unittest.TestCase):
             ),
         )
         agent.step()
-        replay_data = replay(IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_agent_artifacts_dpath)
+        replay_data = replay(
+            IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_agent_artifacts_dpath
+        )
 
         # We do some very simple sanity checks here due to the inherent randomness of executing a workload.
         # We check that there is one data point for the initial config and one for the config change.

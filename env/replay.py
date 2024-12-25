@@ -1,6 +1,5 @@
 from collections import defaultdict
 from pathlib import Path
-from typing import NewType
 
 from env.pg_conn import PostgresConn
 from env.tuning_agent import TuningAgentArtifactsReader
@@ -9,8 +8,9 @@ from util.pg import DEFAULT_POSTGRES_PORT
 from util.workspace import DBGymConfig
 
 
-# TODO: make it return the full replay data.
-def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
+def replay(
+    dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path
+) -> list[tuple[float, int]]:
     """
     Returns the total runtime and the number of timed out queries for each step.
 
@@ -44,7 +44,7 @@ def replay(dbgym_cfg: DBGymConfig, tuning_agent_artifacts_dpath: Path) -> None:
             pg_conn.psql(index)
 
         for query, knobs in delta.qknobs.items():
-            # TODO: account for deleting a knob
+            # TODO: account for deleting a knob if we are representing knobs as deltas.
             qknobs[query].extend(knobs)
 
         replay_data.append(time_workload(pg_conn, workload, qknobs))
