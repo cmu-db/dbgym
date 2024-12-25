@@ -8,7 +8,7 @@
 # Using this script is *optional*. If you have a more complex environment setup
 # for your agent, just do that manually.
 #
-# Run it from the dbgym root folder (e.g. `./agents/create_conda.sh <agent_name>`).
+# Run it from the dbgym root folder (e.g. `./scripts/build_agent_conda_env.sh <agent_name>`).
 #
 # Before running this script, the user must update the folder of the agent
 # they want to create a conda environment for (e.g. by calling submodule update).
@@ -26,7 +26,7 @@ fi
 
 # 1.2. Input validation.
 if [ -z "$1" ]; then
-    echo "Usage: ./create_conda.sh <agent_name>"
+    echo "Usage: ./build_agent_conda_env.sh <agent_name>"
     exit 1
 fi
 
