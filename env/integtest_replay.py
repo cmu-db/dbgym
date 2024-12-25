@@ -3,7 +3,7 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from env.integtest_util import IntegtestWorkspace, MockTuningAgent
 from env.replay import replay
-from env.tuning_agent import (
+from env.tuning_agent_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,

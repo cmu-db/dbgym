@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import yaml
 
-from env.tuning_agent import DBMSConfigDelta, TuningAgent, TuningAgentMetadata
+from env.tuning_agent_artifacts import DBMSConfigDelta, TuningAgent, TuningAgentMetadata
 from util.workspace import (
     DBGymConfig,
     fully_resolve_path,

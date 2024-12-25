@@ -1,7 +1,7 @@
 import unittest
 
 from env.integtest_util import IntegtestWorkspace, MockTuningAgent
-from env.tuning_agent import (
+from env.tuning_agent_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
