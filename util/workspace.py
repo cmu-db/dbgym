@@ -293,6 +293,7 @@ def make_standard_dbgym_workspace() -> DBGymWorkspace:
     default path of dbgym_config.yaml.
     """
     dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
+    assert dbgym_config_path == Path("env/tests/gymlib_integtest_dbgym_config.yaml")
     dbgym_workspace_path = get_workspace_path_from_config(dbgym_config_path)
     dbgym_workspace = DBGymWorkspace(dbgym_workspace_path)
     return dbgym_workspace

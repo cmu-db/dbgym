@@ -52,7 +52,7 @@ jobs:
       # Integration tests do require external systems to be running (most commonly a database instance).
       # Unlike end-to-end tests though, they test a specific module in a detailed manner, much like a unit test does.
       env:
-        # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `set_up_gymlib_integtest_workspace.sh`.
+        # We set `INTENDED_DBDATA_HARDWARE` so that it's seen when `integtest_pg_conn.py` executes `_set_up_gymlib_integtest_workspace.sh`.
         INTENDED_DBDATA_HARDWARE: ssd
       run: |
         . "$HOME/.cargo/env"
