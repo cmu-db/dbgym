@@ -1,12 +1,12 @@
 """
 This file contains everything needed to manage the workspace (the dbgym_workspace/ folder).
-TODO: it has some things specific to Proto-X which should be moved somewhere else in the future.
 """
 
 import logging
 import os
 import shutil
 import subprocess
+import time
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -29,10 +29,6 @@ DEFAULT_WORKLOAD_TIMEOUT = 600
 DBMS_PATH = Path("dbms")
 POSTGRES_PATH = DBMS_PATH / "postgres"
 TUNE_PATH = Path("tune")
-PROTOX_PATH = TUNE_PATH / "protox"
-PROTOX_EMBEDDING_PATH = PROTOX_PATH / "embedding"
-PROTOX_AGENT_PATH = PROTOX_PATH / "agent"
-PROTOX_WOLP_PATH = PROTOX_AGENT_PATH / "wolp"
 
 # Paths of different parts of the workspace
 # I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
@@ -77,17 +73,7 @@ SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
-DEFAULT_HPO_SPACE_PATH = PROTOX_EMBEDDING_PATH / "default_hpo_space.json"
-DEFAULT_SYSKNOBS_PATH = PROTOX_AGENT_PATH / "default_sysknobs.yaml"
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
-
-
-def get_default_benchmark_config_path(benchmark_name: str) -> Path:
-    return PROTOX_PATH / f"default_{benchmark_name}_benchmark_config.yaml"
-
-
-def get_default_benchbase_config_path(benchmark_name: str) -> Path:
-    return PROTOX_PATH / f"default_{benchmark_name}_benchbase_config.xml"
 
 
 # Generally useful functions
@@ -110,32 +96,6 @@ def get_default_tables_dname(scale_factor: float | str) -> str:
     return f"tables_sf{get_scale_factor_string(scale_factor)}"
 
 
-def get_default_traindata_fname(benchmark_name: str, workload_name: str) -> str:
-    return f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
-
-
-def get_default_embedder_dname(benchmark_name: str, workload_name: str) -> str:
-    return f"{benchmark_name}_{workload_name}_embedder"
-
-
-def get_default_hpoed_agent_params_fname(
-    benchmark_name: str, workload_name: str
-) -> str:
-    return f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
-
-
-def get_default_tuning_steps_dname(
-    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
-) -> str:
-    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
-
-
-def get_default_replay_data_fname(
-    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
-) -> str:
-    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
-
-
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 # Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
@@ -146,45 +106,9 @@ def get_default_replay_data_fname(
 #  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
 #  - By convention, symlinks should end with ".link". The bug that motivated this decision involved replaying a tuning run. When
 #    replaying a tuning run, you read the tuning_steps/ folder of the tuning run. Earlier, I created a symlink to that tuning_steps/
-#    folder called run_*/dbgym_agent_protox_tune/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
-#    run_*/dbgym_agent_protox_tune/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
+#    folder called run_*/*/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
+#    run_*/*/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
 #    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
-def get_default_traindata_path(
-    workspace_path: Path, benchmark_name: str, workload_name: str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_tune_protox_embedding"
-        / "data"
-        / (get_default_traindata_fname(benchmark_name, workload_name) + ".link")
-    )
-
-
-def get_default_embedder_path(
-    workspace_path: Path, benchmark_name: str, workload_name: str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_tune_protox_embedding"
-        / "data"
-        / (get_default_embedder_dname(benchmark_name, workload_name) + ".link")
-    )
-
-
-def get_default_hpoed_agent_params_path(
-    workspace_path: Path, benchmark_name: str, workload_name: str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_tune_protox_agent"
-        / "data"
-        / (
-            get_default_hpoed_agent_params_fname(benchmark_name, workload_name)
-            + ".link"
-        )
-    )
-
-
 def get_default_tables_path(
     workspace_path: Path, benchmark_name: str, scale_factor: float | str
 ) -> Path:
@@ -233,44 +157,6 @@ def get_default_repo_path(workspace_path: Path) -> Path:
 
 def get_default_pgbin_path(workspace_path: Path) -> Path:
     return get_default_repo_path(workspace_path) / "boot" / "build" / "postgres" / "bin"
-
-
-def get_default_tuning_steps_dpath(
-    workspace_path: Path,
-    benchmark_name: str,
-    workload_name: str,
-    boot_enabled_during_tune: bool,
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_tune_protox_agent"
-        / "artifacts"
-        / (
-            get_default_tuning_steps_dname(
-                benchmark_name, workload_name, boot_enabled_during_tune
-            )
-            + ".link"
-        )
-    )
-
-
-def get_default_replay_data_fpath(
-    workspace_path: Path,
-    benchmark_name: str,
-    workload_name: str,
-    boot_enabled_during_tune: bool,
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_tune_protox_agent"
-        / "data"
-        / (
-            get_default_replay_data_fname(
-                benchmark_name, workload_name, boot_enabled_during_tune
-            )
-            + ".link"
-        )
-    )
 
 
 class DBGymConfig:
@@ -333,11 +219,21 @@ class DBGymConfig:
         self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.
-        self.dbgym_this_run_path = (
-            self.dbgym_runs_path / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        )
-        # `exist_ok` is False because we don't want to override a previous task run's data.
-        self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+        for _ in range(2):
+            try:
+                self.dbgym_this_run_path = (
+                    self.dbgym_runs_path
+                    / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+                )
+                # `exist_ok` is False because we don't want to override a previous task run's data.
+                self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+            except FileExistsError:
+                # In case we call task.py twice in one second, sleeping here will fix it.
+                # Waiting one second is enough since we assume there's only one task.py running at a time.
+                time.sleep(1)
+            except Exception as e:
+                raise e
+
         self.dbgym_latest_run_path = get_latest_run_path_from_workspace_path(
             self.dbgym_workspace_path
         )

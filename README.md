@@ -47,7 +47,6 @@ The tasks are grouped into categories that correspond to the top-level directori
 
 - `benchmark` - tasks to generate data and queries for different benchmarks (e.g., TPC-H, JOB)
 - `dbms` - tasks to build and start DBMSs (e.g., PostgreSQL)
-- `tune` - tasks to train autonomous database tuning agents
 
 ## Credits
 

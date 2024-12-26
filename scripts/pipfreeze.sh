@@ -1,2 +1,2 @@
 #!/bin/bash
-pip freeze >dependencies/requirements.txt
+pip freeze >scripts/configs/requirements.txt

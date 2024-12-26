@@ -74,5 +74,5 @@ class JobLoadInfo(LoadInfoBaseClass):
 
     def get_constraints_fpath(self) -> Optional[Path]:
         # JOB does not have any constraints. It does have indexes, but we don't want to create
-        # those indexes so that Proto-X can start from a clean slate.
+        # those indexes so that the tuning agent can start from a clean slate.
         return None
