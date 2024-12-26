@@ -58,13 +58,3 @@ jobs:
         . "$HOME/.cargo/env"
         export 
         ./scripts/run_integration_tests.sh
-
-    # - name: Run end-to-end tests
-    #   # End-to-end tests are like integration tests in that they require external systems to be running.
-    #   # Unlike integration tests though, they don't perform detailed checks for any individual module.
-    #   #
-    #   # Note that we need to run with a non-root user in order to start Postgres. This is configured in the .yaml
-    #   # file for our self-hosted GHA runners.
-    #   run: |
-    #     . "$HOME/.cargo/env"
-    #     python -m scripts.run_protox_e2e_test ssd

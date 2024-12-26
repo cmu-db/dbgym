@@ -1,8 +1,5 @@
 """
 At a high level, this file's goal is to (1) build postgres and (2) create dbdata (aka pgdata).
-On the other hand, the goal of tune.protox.env.util.postgres is to provide helpers to manage
-    a Postgres instance during agent tuning.
-util.pg provides helpers used by *both* of the above files (as well as other files).
 """
 
 import logging
