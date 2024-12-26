@@ -1,7 +1,7 @@
 import unittest
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.integtest_util import GymlibIntegtestWorkspaceManager
+from env.integtest_util import GymlibIntegtestManager
 from env.replay import replay
 from env.tuning_artifacts import (
     DBMSConfigDelta,
@@ -15,12 +15,12 @@ from env.tuning_artifacts import (
 class ReplayTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
-        GymlibIntegtestWorkspaceManager.set_up_workspace()
+        GymlibIntegtestManager.set_up_workspace()
 
     def test_replay(self) -> None:
         writer = TuningArtifactsWriter(
-            GymlibIntegtestWorkspaceManager.get_dbgym_workspace(),
-            GymlibIntegtestWorkspaceManager.get_default_metadata(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
+            GymlibIntegtestManager.get_default_metadata(),
         )
         writer.write_step(
             DBMSConfigDelta(
@@ -41,7 +41,7 @@ class ReplayTests(unittest.TestCase):
             )
         )
         replay_data = replay(
-            GymlibIntegtestWorkspaceManager.get_dbgym_workspace(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
             writer.tuning_artifacts_dpath,
         )
 

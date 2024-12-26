@@ -22,10 +22,10 @@ INTEGTEST_BENCHMARK = "tpch"
 INTEGTEST_SCALE_FACTOR = 0.01
 
 
-class GymlibIntegtestWorkspaceManager:
+class GymlibIntegtestManager:
     """
     This is essentially a singleton class. This avoids multiple integtest_*.py files creating
-    the workspace and/or the DBGymWorkspace redundantly.
+    the workspace and/or the DBGymWorkspace object redundantly.
 
     The reason I put all these static methods in a class instead of directly in the module is
     that the functions have very generic names (e.g. set_up_workspace()) but having them
@@ -38,35 +38,33 @@ class GymlibIntegtestWorkspaceManager:
     @staticmethod
     def set_up_workspace() -> None:
         # This if statement prevents us from setting up the workspace twice, which saves time.
-        if not GymlibIntegtestWorkspaceManager.get_workspace_path().exists():
+        if not GymlibIntegtestManager.get_workspace_path().exists():
             subprocess.run(["./env/set_up_gymlib_integtest_workspace.sh"], check=True)
 
         # Once we get here, we have an invariant that the workspace exists. We need this
         # invariant to be true in order to create the DBGymWorkspace.
         #
         # However, it also can't be created more than once so we need to check `is None`.
-        if GymlibIntegtestWorkspaceManager.DBGYM_WORKSPACE is None:
-            GymlibIntegtestWorkspaceManager.DBGYM_WORKSPACE = DBGymWorkspace(
-                GymlibIntegtestWorkspaceManager.DBGYM_CONFIG_FPATH
+        if GymlibIntegtestManager.DBGYM_WORKSPACE is None:
+            GymlibIntegtestManager.DBGYM_WORKSPACE = DBGymWorkspace(
+                GymlibIntegtestManager.DBGYM_CONFIG_FPATH
             )
 
     @staticmethod
     def get_dbgym_workspace() -> DBGymWorkspace:
-        assert GymlibIntegtestWorkspaceManager.DBGYM_WORKSPACE is not None
-        return GymlibIntegtestWorkspaceManager.DBGYM_WORKSPACE
+        assert GymlibIntegtestManager.DBGYM_WORKSPACE is not None
+        return GymlibIntegtestManager.DBGYM_WORKSPACE
 
     @staticmethod
     def get_workspace_path() -> Path:
-        with open(
-            GymlibIntegtestWorkspaceManager.DBGYM_CONFIG_FPATH
-        ) as f:
+        with open(GymlibIntegtestManager.DBGYM_CONFIG_FPATH) as f:
             return Path(yaml.safe_load(f)["dbgym_workspace_path"])
 
     @staticmethod
     def get_default_metadata() -> TuningMetadata:
-        dbgym_workspace = GymlibIntegtestWorkspaceManager.get_dbgym_workspace()
+        dbgym_workspace = GymlibIntegtestManager.get_dbgym_workspace()
         workspace_path = fully_resolve_path(
-            dbgym_workspace, GymlibIntegtestWorkspaceManager.get_workspace_path()
+            dbgym_workspace, GymlibIntegtestManager.get_workspace_path()
         )
         return TuningMetadata(
             workload_path=fully_resolve_path(
