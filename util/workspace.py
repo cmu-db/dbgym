@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -218,11 +219,21 @@ class DBGymConfig:
         self.dbgym_tmp_path.mkdir(parents=True, exist_ok=True)
 
         # Set the path for this task run's results.
-        self.dbgym_this_run_path = (
-            self.dbgym_runs_path / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        )
-        # `exist_ok` is False because we don't want to override a previous task run's data.
-        self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+        for _ in range(2):
+            try:
+                self.dbgym_this_run_path = (
+                    self.dbgym_runs_path
+                    / f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+                )
+                # `exist_ok` is False because we don't want to override a previous task run's data.
+                self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+            except FileExistsError:
+                # In case we call task.py twice in one second, sleeping here will fix it.
+                # Waiting one second is enough since we assume there's only one task.py running at a time.
+                time.sleep(1)
+            except Exception as e:
+                raise e
+
         self.dbgym_latest_run_path = get_latest_run_path_from_workspace_path(
             self.dbgym_workspace_path
         )
