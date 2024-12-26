@@ -61,7 +61,8 @@ fi
 
 # We always install gymlib so that the agent has access to it.
 if [ -d "gymlib_package" ]; then
-    echo "Installing gymlib in editable mode..."
+    echo "Installing gymlib..."
+    # Note that I don't use -e here. When I tried -e, the editor wouldn't be able to find gymlib.
     pip install ./gymlib_package
 else
     echo "Error: gymlib_package directory not found in $(pwd). Please ensure you're running this script from the right folder."
