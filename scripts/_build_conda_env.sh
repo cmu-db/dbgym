@@ -40,7 +40,7 @@ fi
 if [ -f "$python_version_path" ]; then
     python_version=$(cat "$python_version_path")
 else
-    echo "Warning: .python_version not found in $python_version_path. Using default Python 3.10."
+    echo "Info: .python_version not found in $python_version_path. Using default Python 3.10."
     python_version="3.10"
 fi
 
@@ -56,15 +56,15 @@ if [ -f "$requirements_path" ]; then
     echo "Installing pip requirements from $requirements_path..."
     pip install -r "$requirements_path"
 else
-    echo "Warning: $requirements_path not found. Skipping pip install."
+    echo "Info: $requirements_path not found. Skipping pip install."
 fi
 
 # We always install gymlib so that the agent has access to it.
-if [ -d "gymlib" ]; then
+if [ -d "gymlib_package" ]; then
     echo "Installing gymlib in editable mode..."
-    pip install -e ./gymlib
+    pip install ./gymlib_package
 else
-    echo "Error: gymlib directory not found in $(pwd). Please ensure you're running this script from the right folder."
+    echo "Error: gymlib_package directory not found in $(pwd). Please ensure you're running this script from the right folder."
     exit 1
 fi
 
