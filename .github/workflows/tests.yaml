@@ -31,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r ./scripts/configs/requirements.txt
-        pip install -e ./gymlib
+        pip install ./gymlib_package
         ./scripts/install_sysdeps.sh
 
     - name: Check formatting
