@@ -1,8 +1,8 @@
 import unittest
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.integtest_util import GymlibIntegtestManager
 from env.replay import replay
+from env.tests.integtest_util import GymlibIntegtestManager
 from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,

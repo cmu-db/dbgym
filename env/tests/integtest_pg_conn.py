@@ -3,8 +3,8 @@ import unittest
 
 import psycopg
 
-from env.integtest_util import GymlibIntegtestManager
 from env.pg_conn import PostgresConn
+from env.tests.integtest_util import GymlibIntegtestManager
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,

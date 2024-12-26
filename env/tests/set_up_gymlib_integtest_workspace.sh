@@ -10,7 +10,7 @@ set -euo pipefail
 
 # INTENDED_DBDATA_HARDWARE can be set elsewhere (e.g. by tests_ci.yaml) but we use hdd by default.
 INTENDED_DBDATA_HARDWARE="${INTENDED_DBDATA_HARDWARE:-hdd}"
-export DBGYM_CONFIG_PATH=env/gymlib_integtest_dbgym_config.yaml # Note that this envvar needs to be exported.
+export DBGYM_CONFIG_PATH=env/tests/gymlib_integtest_dbgym_config.yaml # Note that this envvar needs to be exported.
 WORKSPACE_PATH=$(grep 'dbgym_workspace_path:' $DBGYM_CONFIG_PATH | sed 's/dbgym_workspace_path: //')
 
 python3 task.py benchmark $BENCHMARK data $SCALE_FACTOR

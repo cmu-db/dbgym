@@ -27,11 +27,13 @@ class GymlibIntegtestManager:
     inside a class makes it clear that they are related to the gymlib integration tests.
     """
 
-    # These are the values used by set_up_gymlib_integtest_workspace.sh.
+    # These constants are also used by set_up_gymlib_integtest_workspace.sh.
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
+    # TODO: make DBGYM_CONFIG_FPATH an envvar.
+    DBGYM_CONFIG_FPATH = Path("env/tests/gymlib_integtest_dbgym_config.yaml")
 
-    DBGYM_CONFIG_FPATH = Path("env/gymlib_integtest_dbgym_config.yaml")
+    # This is set at most once by set_up_workspace().
     DBGYM_WORKSPACE: Optional[DBGymWorkspace] = None
 
     @staticmethod
@@ -43,7 +45,7 @@ class GymlibIntegtestManager:
         # This if statement prevents us from setting up the workspace twice, which saves time.
         if not workspace_path.exists():
             subprocess.run(
-                ["./env/set_up_gymlib_integtest_workspace.sh"],
+                ["./env/tests/set_up_gymlib_integtest_workspace.sh"],
                 env={
                     "BENCHMARK": GymlibIntegtestManager.BENCHMARK,
                     "SCALE_FACTOR": str(GymlibIntegtestManager.SCALE_FACTOR),

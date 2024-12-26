@@ -1,7 +1,7 @@
 import unittest
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
-from env.integtest_util import GymlibIntegtestManager
+from env.tests.integtest_util import GymlibIntegtestManager
 from env.workload import Workload
 from util.workspace import (
     fully_resolve_path,
