@@ -76,8 +76,8 @@ def get_metadata_fpath(tuning_artifacts_dpath: Path) -> Path:
     return tuning_artifacts_dpath / "metadata.json"
 
 
-class TuningAgent:
-    def __init__(self, dbgym_cfg: DBGymConfig) -> None:
+class TuningArtifactsWriter:
+    def __init__(self, dbgym_cfg: DBGymConfig, metadata: TuningMetadata) -> None:
         self.dbgym_cfg = dbgym_cfg
         self.tuning_artifacts_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path(
             "tuning_artifacts", mkdir=True
@@ -86,40 +86,22 @@ class TuningAgent:
         self.next_step_num = 0
 
         # Write metadata file
-        metadata = self._get_metadata()
         with get_metadata_fpath(self.tuning_artifacts_dpath).open("w") as f:
             json.dump(metadata.asdict(), f)
 
-    def step(self) -> None:
+    def write_step(self, dbms_cfg_delta: DBMSConfigDelta) -> None:
         """
         This wraps _step() and saves the cfg to a file so that it can be replayed.
         """
         curr_step_num = self.next_step_num
         self.next_step_num += 1
-        dbms_cfg_delta = self._step()
         with get_delta_at_step_fpath(self.tuning_artifacts_dpath, curr_step_num).open(
             "w"
         ) as f:
             json.dump(asdict(dbms_cfg_delta), f)
 
-    def _get_metadata(self) -> TuningMetadata:
-        """
-        This should be overridden by subclasses.
 
-        This should return the metadata of the tuning agent. This metadata is used for replay.
-        """
-        raise NotImplementedError
-
-    def _step(self) -> DBMSConfigDelta:
-        """
-        This should be overridden by subclasses.
-
-        This should return the delta in the config caused by this step.
-        """
-        raise NotImplementedError
-
-
-class TuningAgentArtifactsReader:
+class TuningArtifactsReader:
     def __init__(self, tuning_artifacts_dpath: Path) -> None:
         self.tuning_artifacts_dpath = tuning_artifacts_dpath
         assert is_fully_resolved(self.tuning_artifacts_dpath)

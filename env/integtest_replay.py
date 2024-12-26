@@ -1,13 +1,14 @@
 import unittest
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.integtest_util import IntegtestWorkspace, MockTuningAgent
+from env.integtest_util import IntegtestWorkspace
 from env.replay import replay
 from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
     SysKnobsDelta,
+    TuningArtifactsWriter,
 )
 
 
@@ -17,26 +18,30 @@ class ReplayTests(unittest.TestCase):
         IntegtestWorkspace.set_up_workspace()
 
     def test_replay(self) -> None:
-        agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
-        agent.delta_to_return = DBMSConfigDelta(
-            indexes=IndexesDelta(
-                ["CREATE INDEX idx_orders_custkey ON orders(o_custkey)"]
-            ),
-            sysknobs=SysKnobsDelta(
-                {"shared_buffers": "2GB"},
-            ),
-            qknobs=QueryKnobsDelta(
-                {
-                    f"S{DEFAULT_TPCH_SEED}-Q1": [
-                        "set enable_hashagg = off",
-                        "set enable_sort = on",
-                    ],
-                }
-            ),
+        writer = TuningArtifactsWriter(
+            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_default_metadata(),
         )
-        agent.step()
+        writer.write_step(
+            DBMSConfigDelta(
+                indexes=IndexesDelta(
+                    ["CREATE INDEX idx_orders_custkey ON orders(o_custkey)"]
+                ),
+                sysknobs=SysKnobsDelta(
+                    {"shared_buffers": "2GB"},
+                ),
+                qknobs=QueryKnobsDelta(
+                    {
+                        f"S{DEFAULT_TPCH_SEED}-Q1": [
+                            "set enable_hashagg = off",
+                            "set enable_sort = on",
+                        ],
+                    }
+                ),
+            )
+        )
         replay_data = replay(
-            IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_artifacts_dpath
+            IntegtestWorkspace.get_dbgym_cfg(), writer.tuning_artifacts_dpath
         )
 
         # We do some very simple sanity checks here due to the inherent randomness of executing a workload.
