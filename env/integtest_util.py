@@ -3,8 +3,6 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-import yaml
-
 from env.tuning_artifacts import TuningMetadata
 from util.workspace import (
     DBGymWorkspace,
@@ -15,6 +13,7 @@ from util.workspace import (
     get_default_workload_name_suffix,
     get_default_workload_path,
     get_workload_name,
+    get_workspace_path_from_config,
 )
 
 
@@ -37,8 +36,12 @@ class GymlibIntegtestManager:
 
     @staticmethod
     def set_up_workspace() -> None:
+        workspace_path = get_workspace_path_from_config(
+            GymlibIntegtestManager.DBGYM_CONFIG_FPATH
+        )
+
         # This if statement prevents us from setting up the workspace twice, which saves time.
-        if not GymlibIntegtestManager.get_workspace_path().exists():
+        if not workspace_path.exists():
             subprocess.run(
                 ["./env/set_up_gymlib_integtest_workspace.sh"],
                 env={
@@ -54,9 +57,7 @@ class GymlibIntegtestManager:
         #
         # However, it also can't be created more than once so we need to check `is None`.
         if GymlibIntegtestManager.DBGYM_WORKSPACE is None:
-            GymlibIntegtestManager.DBGYM_WORKSPACE = DBGymWorkspace(
-                GymlibIntegtestManager.DBGYM_CONFIG_FPATH
-            )
+            GymlibIntegtestManager.DBGYM_WORKSPACE = DBGymWorkspace(workspace_path)
 
     @staticmethod
     def get_dbgym_workspace() -> DBGymWorkspace:
@@ -64,21 +65,13 @@ class GymlibIntegtestManager:
         return GymlibIntegtestManager.DBGYM_WORKSPACE
 
     @staticmethod
-    def get_workspace_path() -> Path:
-        with open(GymlibIntegtestManager.DBGYM_CONFIG_FPATH) as f:
-            return Path(yaml.safe_load(f)["dbgym_workspace_path"])
-
-    @staticmethod
     def get_default_metadata() -> TuningMetadata:
         dbgym_workspace = GymlibIntegtestManager.get_dbgym_workspace()
-        workspace_path = fully_resolve_path(
-            dbgym_workspace, GymlibIntegtestManager.get_workspace_path()
-        )
         return TuningMetadata(
             workload_path=fully_resolve_path(
                 dbgym_workspace,
                 get_default_workload_path(
-                    workspace_path,
+                    dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
                     get_workload_name(
                         GymlibIntegtestManager.SCALE_FACTOR,
@@ -91,15 +84,17 @@ class GymlibIntegtestManager:
             pristine_dbdata_snapshot_path=fully_resolve_path(
                 dbgym_workspace,
                 get_default_pristine_dbdata_snapshot_path(
-                    workspace_path,
+                    dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
                     GymlibIntegtestManager.SCALE_FACTOR,
                 ),
             ),
             dbdata_parent_path=fully_resolve_path(
-                dbgym_workspace, get_default_dbdata_parent_dpath(workspace_path)
+                dbgym_workspace,
+                get_default_dbdata_parent_dpath(dbgym_workspace.dbgym_workspace_path),
             ),
             pgbin_path=fully_resolve_path(
-                dbgym_workspace, get_default_pgbin_path(workspace_path)
+                dbgym_workspace,
+                get_default_pgbin_path(dbgym_workspace.dbgym_workspace_path),
             ),
         )

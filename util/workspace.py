@@ -166,7 +166,9 @@ class DBGymWorkspace:
 
     num_times_created_this_run: int = 0
 
-    def __init__(self, dbgym_config_path: Path):
+    def __init__(self, dbgym_workspace_path: Path):
+        assert is_fully_resolved(dbgym_workspace_path)
+
         # The logic around dbgym_tmp_path assumes that DBGymWorkspace is only constructed once.
         DBGymWorkspace.num_times_created_this_run += 1
         assert (
@@ -177,20 +179,7 @@ class DBGymWorkspace:
             os.getcwd()
         ), "This script should be invoked from the root of the dbgym repo."
 
-        # Parse the YAML file.
-        contents: str = dbgym_config_path.read_text()
-        yaml_config: dict[str, Any] = yaml.safe_load(contents)
-
-        # Require dbgym_workspace_path to be absolute.
-        # All future paths should be constructed from dbgym_workspace_path.
-        dbgym_workspace_path = (
-            Path(yaml_config["dbgym_workspace_path"]).resolve().absolute()
-        )
-
-        self.path: Path = dbgym_config_path
         self.cur_path_list: list[str] = ["dbgym"]
-        self.root_yaml: dict[str, Any] = yaml_config
-        self.cur_yaml: dict[str, Any] = self.root_yaml
 
         # Set and create paths.
         self.dbgym_repo_path = Path(os.getcwd())
@@ -244,7 +233,6 @@ class DBGymWorkspace:
     #   explained further in the documentation.
     def append_group(self, name: str) -> None:
         self.cur_path_list.append(name)
-        self.cur_yaml = self.cur_yaml.get(name, {})
 
     def cur_source_path(self, *dirs: str) -> Path:
         cur_path = self.dbgym_repo_path
@@ -292,13 +280,23 @@ class DBGymWorkspace:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
+def get_workspace_path_from_config(dbgym_config_path: Path) -> Path:
+    """
+    Returns the workspace path (as a fully resolved path) from the config file.
+    """
+    with open(dbgym_config_path) as f:
+        # TODO: use fully_resolve_path()
+        return Path(yaml.safe_load(f)["dbgym_workspace_path"]).resolve().absolute()
+
+
 def make_standard_dbgym_workspace() -> DBGymWorkspace:
     """
     The "standard" way to make a DBGymWorkspace using the DBGYM_CONFIG_PATH envvar and the
     default path of dbgym_config.yaml.
     """
     dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
-    dbgym_workspace = DBGymWorkspace(dbgym_config_path)
+    dbgym_workspace_path = get_workspace_path_from_config(dbgym_config_path)
+    dbgym_workspace = DBGymWorkspace(dbgym_workspace_path)
     return dbgym_workspace
 
 
