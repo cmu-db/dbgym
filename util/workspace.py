@@ -281,8 +281,7 @@ def get_workspace_path_from_config(dbgym_config_path: Path) -> Path:
     Returns the workspace path (as a fully resolved path) from the config file.
     """
     with open(dbgym_config_path) as f:
-        # TODO: use fully_resolve_path()
-        return Path(yaml.safe_load(f)["dbgym_workspace_path"]).resolve().absolute()
+        return fully_resolve_path(Path(yaml.safe_load(f)["dbgym_workspace_path"]))
 
 
 def make_standard_dbgym_workspace() -> DBGymWorkspace:
@@ -296,9 +295,7 @@ def make_standard_dbgym_workspace() -> DBGymWorkspace:
     return dbgym_workspace
 
 
-def fully_resolve_path(
-    dbgym_workspace: DBGymWorkspace, inputpath: os.PathLike[str]
-) -> Path:
+def fully_resolve_path(inputpath: os.PathLike[str]) -> Path:
     """
     Fully resolve any path to a real, absolute path.
 
@@ -600,7 +597,7 @@ def link_result(
     assert is_fully_resolved(
         result_fordpath
     ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-    result_fordpath = fully_resolve_path(dbgym_workspace, result_fordpath)
+    result_fordpath = fully_resolve_path(result_fordpath)
     assert is_child_path(result_fordpath, dbgym_workspace.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 

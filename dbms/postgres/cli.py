@@ -106,8 +106,8 @@ def postgres_dbdata(
         )
 
     # Fully resolve all input paths.
-    pgbin_path = fully_resolve_path(dbgym_workspace, pgbin_path)
-    dbdata_parent_dpath = fully_resolve_path(dbgym_workspace, dbdata_parent_dpath)
+    pgbin_path = fully_resolve_path(pgbin_path)
+    dbdata_parent_dpath = fully_resolve_path(dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":

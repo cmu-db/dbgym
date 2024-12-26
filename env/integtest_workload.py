@@ -18,7 +18,6 @@ class WorkloadTests(unittest.TestCase):
 
     def test_workload(self) -> None:
         workload_dpath = fully_resolve_path(
-            GymlibIntegtestManager.get_dbgym_workspace(),
             get_default_workload_path(
                 GymlibIntegtestManager.get_dbgym_workspace().dbgym_workspace_path,
                 GymlibIntegtestManager.BENCHMARK,

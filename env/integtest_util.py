@@ -69,7 +69,6 @@ class GymlibIntegtestManager:
         dbgym_workspace = GymlibIntegtestManager.get_dbgym_workspace()
         return TuningMetadata(
             workload_path=fully_resolve_path(
-                dbgym_workspace,
                 get_default_workload_path(
                     dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
@@ -82,7 +81,6 @@ class GymlibIntegtestManager:
                 ),
             ),
             pristine_dbdata_snapshot_path=fully_resolve_path(
-                dbgym_workspace,
                 get_default_pristine_dbdata_snapshot_path(
                     dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
@@ -90,11 +88,9 @@ class GymlibIntegtestManager:
                 ),
             ),
             dbdata_parent_path=fully_resolve_path(
-                dbgym_workspace,
                 get_default_dbdata_parent_dpath(dbgym_workspace.dbgym_workspace_path),
             ),
             pgbin_path=fully_resolve_path(
-                dbgym_workspace,
                 get_default_pgbin_path(dbgym_workspace.dbgym_workspace_path),
             ),
         )
