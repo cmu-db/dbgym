@@ -1,6 +1,5 @@
 """
 This file contains everything needed to manage the workspace (the dbgym_workspace/ folder).
-TODO: it has some things specific to Proto-X which should be moved somewhere else in the future.
 """
 
 import logging
