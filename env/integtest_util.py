@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -28,7 +29,6 @@ class GymlibIntegtestManager:
     """
 
     # These are the values used by set_up_gymlib_integtest_workspace.sh.
-    # TODO: make set_up_gymlib_integtest_workspace.sh take in these values directly as envvars.
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
 
@@ -39,7 +39,15 @@ class GymlibIntegtestManager:
     def set_up_workspace() -> None:
         # This if statement prevents us from setting up the workspace twice, which saves time.
         if not GymlibIntegtestManager.get_workspace_path().exists():
-            subprocess.run(["./env/set_up_gymlib_integtest_workspace.sh"], check=True)
+            subprocess.run(
+                ["./env/set_up_gymlib_integtest_workspace.sh"],
+                env={
+                    "BENCHMARK": GymlibIntegtestManager.BENCHMARK,
+                    "SCALE_FACTOR": str(GymlibIntegtestManager.SCALE_FACTOR),
+                    **os.environ,
+                },
+                check=True,
+            )
 
         # Once we get here, we have an invariant that the workspace exists. We need this
         # invariant to be true in order to create the DBGymWorkspace.
