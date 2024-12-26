@@ -1,3 +1,4 @@
+async-timeout==5.0.1
 black==24.10.0
 cffi==1.17.1
 click==8.1.8
@@ -10,6 +11,8 @@ packaging==24.2
 pathspec==0.12.1
 platformdirs==4.3.6
 pycparser==2.22
+PyYAML==6.0.2
+redis==5.2.1
 tomli==2.2.1
 types-cffi==1.16.0.20241221
 types-pyOpenSSL==24.1.0.20240722
