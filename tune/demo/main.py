@@ -32,7 +32,7 @@ from util.workspace import (
 # objects when you restart the streamlit server.
 #
 # If you modify the code of DBGymConfig, you will need to fully restart the streamlit server for those changes to be propagated.
-@st.cache_resource
+@st.cache_resource  # type: ignore[misc]
 def make_dbgym_cfg_cached() -> DBGymConfig:
     return make_standard_dbgym_cfg()
 

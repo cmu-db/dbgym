@@ -10,16 +10,16 @@ class LoadInfoBaseClass:
     """
 
     def get_schema_fpath(self) -> Path:
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_tables_and_fpaths(self) -> list[tuple[str, Path]]:
-        raise NotImplemented
+        raise NotImplementedError
 
     # We assume the table file has a "csv-like" format where values are separated by a delimiter.
     def get_table_file_delimiter(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError
 
     # If the subclassing benchmark does not have constraints, you can return None here.
     # Constraints are also indexes.
     def get_constraints_fpath(self) -> Optional[Path]:
-        raise NotImplemented
+        raise NotImplementedError

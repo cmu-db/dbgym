@@ -36,19 +36,6 @@ def set_up_loggers(log_dpath: Path) -> None:
         console_level=logging.DEBUG,
     )
 
-    # Set up some of the third-party loggers.
-    # The reason I only set up a few select keys is to avoid cluttering the artifacts/ directory with too many *.log files.
-    for logger_name in ["tensorflow", "ray"]:
-        logger = logging.root.manager.loggerDict[logger_name]
-        assert isinstance(logger, Logger)
-        # Make sure to clear the handlers to remove the console handler that the loggers create by default.
-        logger.handlers.clear()
-        _set_up_logger(
-            logger,
-            log_format,
-            log_dpath / f"{logger_name}.log",
-        )
-
 
 def _set_up_logger(
     logger: Logger,

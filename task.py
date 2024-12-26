@@ -1,18 +1,8 @@
-import os
-from pathlib import Path
-
 import click
 
 from util.log import set_up_loggers, set_up_warnings
-
-# Do this to suppress the logs we'd usually get when importing tensorflow.
-# By importing tensorflow in task.py, we avoid it being imported in any other file since task.py is always entered first.
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-import tensorflow
-
-del os.environ["TF_CPP_MIN_LOG_LEVEL"]
-
 from analyze.cli import analyze_group
+
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
 from manage.cli import manage_group
