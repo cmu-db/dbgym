@@ -96,32 +96,6 @@ def get_default_tables_dname(scale_factor: float | str) -> str:
     return f"tables_sf{get_scale_factor_string(scale_factor)}"
 
 
-def get_default_traindata_fname(benchmark_name: str, workload_name: str) -> str:
-    return f"{benchmark_name}_{workload_name}_embedding_traindata.parquet"
-
-
-def get_default_embedder_dname(benchmark_name: str, workload_name: str) -> str:
-    return f"{benchmark_name}_{workload_name}_embedder"
-
-
-def get_default_hpoed_agent_params_fname(
-    benchmark_name: str, workload_name: str
-) -> str:
-    return f"{benchmark_name}_{workload_name}_hpoed_agent_params.json"
-
-
-def get_default_tuning_steps_dname(
-    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
-) -> str:
-    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_tuning_steps"
-
-
-def get_default_replay_data_fname(
-    benchmark_name: str, workload_name: str, boot_enabled_during_tune: bool
-) -> str:
-    return f"{benchmark_name}_{workload_name}{'_boot' if boot_enabled_during_tune else ''}_replay_data.csv"
-
-
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 # Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
