@@ -2,6 +2,7 @@ __pycache__/
 .mypy_cache/
 .conda/
 .idea/
+build/
 test_clean_scratchspace/
 workspace/
 default_*_benchbase_config_*.xml
