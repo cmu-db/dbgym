@@ -2,7 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from env.pg_conn import PostgresConn
-from env.tuning_artifacts import TuningAgentArtifactsReader
+from env.tuning_artifacts import TuningArtifactsReader
 from env.workload import Workload
 from util.pg import DEFAULT_POSTGRES_PORT
 from util.workspace import DBGymConfig
@@ -18,7 +18,7 @@ def replay(
     """
     replay_data: list[tuple[float, int]] = []
 
-    reader = TuningAgentArtifactsReader(tuning_artifacts_dpath)
+    reader = TuningArtifactsReader(tuning_artifacts_dpath)
     pg_conn = PostgresConn(
         dbgym_cfg,
         DEFAULT_POSTGRES_PORT,

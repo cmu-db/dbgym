@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import yaml
 
-from env.tuning_artifacts import DBMSConfigDelta, TuningAgent, TuningMetadata
+from env.tuning_artifacts import DBMSConfigDelta, TuningMetadata
 from util.workspace import (
     DBGymConfig,
     fully_resolve_path,
@@ -87,19 +87,3 @@ class IntegtestWorkspace:
                 dbgym_cfg, get_default_pgbin_path(workspace_path)
             ),
         )
-
-
-class MockTuningAgent(TuningAgent):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.delta_to_return: Optional[DBMSConfigDelta] = None
-
-    def _get_metadata(self) -> TuningMetadata:
-        return IntegtestWorkspace.get_default_metadata()
-
-    def _step(self) -> DBMSConfigDelta:
-        assert self.delta_to_return is not None
-        ret = self.delta_to_return
-        # Setting this ensures you must set self.delta_to_return every time.
-        self.delta_to_return = None
-        return ret
