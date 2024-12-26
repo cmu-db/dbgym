@@ -26,7 +26,7 @@ class TpchLoadInfo(LoadInfoBaseClass):
 
     def __init__(self, dbgym_workspace: DBGymWorkspace, scale_factor: float):
         # schema and constraints
-        schema_root_dpath = dbgym_workspace.dbgym_repo_path
+        schema_root_dpath = dbgym_workspace.base_dbgym_repo_dpath
         for component in TpchLoadInfo.CODEBASE_PATH_COMPONENTS[
             1:
         ]:  # [1:] to skip "dbgym"

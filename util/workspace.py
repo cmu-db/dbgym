@@ -175,14 +175,10 @@ class DBGymWorkspace:
             DBGymWorkspace.num_times_created_this_run == 1
         ), f"DBGymWorkspace has been created {DBGymWorkspace.num_times_created_this_run} times. It should only be created once per run."
 
-        assert is_base_git_dir(
-            os.getcwd()
-        ), "This script should be invoked from the root of the dbgym repo."
-
+        self.base_dbgym_repo_dpath = get_base_dbgym_repo_dpath()
         self.cur_path_list: list[str] = ["dbgym"]
 
         # Set and create paths.
-        self.dbgym_repo_path = Path(os.getcwd())
         self.dbgym_workspace_path = dbgym_workspace_path
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
         self.dbgym_runs_path = get_runs_path_from_workspace_path(
@@ -235,7 +231,7 @@ class DBGymWorkspace:
         self.cur_path_list.append(name)
 
     def cur_source_path(self, *dirs: str) -> Path:
-        cur_path = self.dbgym_repo_path
+        cur_path = self.base_dbgym_repo_dpath
         assert self.cur_path_list[0] == "dbgym"
         for folder in self.cur_path_list[1:]:
             cur_path = cur_path / folder
@@ -320,12 +316,12 @@ def fully_resolve_path(
     realabspath = Path(inputpath)
     # `expanduser()` is always "ok" to call first.
     realabspath = realabspath.expanduser()
-    # The reason we don't call Path.absolute() is because the path should be relative to dbgym_workspace.dbgym_repo_path,
+    # The reason we don't call Path.absolute() is because the path should be relative to get_base_dbgym_repo_dpath(),
     #   which is not necessary where cwd() points at the time of calling this function.
     if not realabspath.is_absolute():
-        realabspath = dbgym_workspace.dbgym_repo_path / realabspath
+        realabspath = get_base_dbgym_repo_dpath() / realabspath
     # `resolve()` has two uses: normalize the path (remove ..) and resolve symlinks.
-    # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
+    # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does these together this
     #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
     realabspath = realabspath.resolve()
     assert is_fully_resolved(
@@ -334,7 +330,15 @@ def fully_resolve_path(
     return realabspath
 
 
-def is_base_git_dir(cwd: str) -> bool:
+def get_base_dbgym_repo_dpath() -> Path:
+    path = Path(os.getcwd())
+    assert _is_base_dbgym_repo_dpath(
+        path
+    ), "This script should be invoked from the root of the dbgym repo."
+    return path
+
+
+def _is_base_dbgym_repo_dpath(path: Path) -> bool:
     """
     Returns whether we are in the base directory of some git repository
     """
@@ -342,10 +346,12 @@ def is_base_git_dir(cwd: str) -> bool:
         git_toplevel = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"], encoding="utf-8"
         ).strip()
-        return git_toplevel == cwd
-    except subprocess.CalledProcessError as e:
-        # this means we are not in _any_ git repo
+        return Path(git_toplevel) == path
+    except subprocess.CalledProcessError:
+        # This means we are not in _any_ git repo
         return False
+    except Exception as e:
+        raise e
 
 
 def is_fully_resolved(path: Path) -> bool:
