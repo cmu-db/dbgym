@@ -5,8 +5,8 @@ from typing import Any, NewType, TypedDict
 
 from util.workspace import DBGymConfig, is_fully_resolved
 
-# PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents.
-# These types are only given as the outputs of tuning agents.
+# PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents
+# while these types are only used in the interface between the orchestrator and the tuning agents.
 IndexesDelta = NewType("IndexesDelta", list[str])
 SysKnobsDelta = NewType("SysKnobsDelta", dict[str, str])
 # TODO: I'm not decided whether these should be deltas or full configs. I'm going to figure this out once I integrate Proto-X and UDO.
@@ -14,8 +14,8 @@ QueryKnobsDelta = NewType("QueryKnobsDelta", dict[str, list[str]])
 
 
 @dataclass
-class TuningAgentMetadata:
-    """Metadata for tuning agent"""
+class TuningMetadata:
+    """Metadata for the tuning process."""
 
     workload_path: Path
     pristine_dbdata_snapshot_path: Path
@@ -68,26 +68,26 @@ class DBMSConfigDelta:
     qknobs: QueryKnobsDelta
 
 
-def get_delta_at_step_fpath(tuning_agent_artifacts_dpath: Path, step_num: int) -> Path:
-    return tuning_agent_artifacts_dpath / f"step{step_num}_delta.json"
+def get_delta_at_step_fpath(tuning_artifacts_dpath: Path, step_num: int) -> Path:
+    return tuning_artifacts_dpath / f"step{step_num}_delta.json"
 
 
-def get_metadata_fpath(tuning_agent_artifacts_dpath: Path) -> Path:
-    return tuning_agent_artifacts_dpath / "metadata.json"
+def get_metadata_fpath(tuning_artifacts_dpath: Path) -> Path:
+    return tuning_artifacts_dpath / "metadata.json"
 
 
 class TuningAgent:
     def __init__(self, dbgym_cfg: DBGymConfig) -> None:
         self.dbgym_cfg = dbgym_cfg
-        self.tuning_agent_artifacts_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path(
-            "tuning_agent_artifacts", mkdir=True
+        self.tuning_artifacts_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path(
+            "tuning_artifacts", mkdir=True
         )
-        assert is_fully_resolved(self.tuning_agent_artifacts_dpath)
+        assert is_fully_resolved(self.tuning_artifacts_dpath)
         self.next_step_num = 0
 
         # Write metadata file
         metadata = self._get_metadata()
-        with get_metadata_fpath(self.tuning_agent_artifacts_dpath).open("w") as f:
+        with get_metadata_fpath(self.tuning_artifacts_dpath).open("w") as f:
             json.dump(metadata.asdict(), f)
 
     def step(self) -> None:
@@ -97,12 +97,12 @@ class TuningAgent:
         curr_step_num = self.next_step_num
         self.next_step_num += 1
         dbms_cfg_delta = self._step()
-        with get_delta_at_step_fpath(
-            self.tuning_agent_artifacts_dpath, curr_step_num
-        ).open("w") as f:
+        with get_delta_at_step_fpath(self.tuning_artifacts_dpath, curr_step_num).open(
+            "w"
+        ) as f:
             json.dump(asdict(dbms_cfg_delta), f)
 
-    def _get_metadata(self) -> TuningAgentMetadata:
+    def _get_metadata(self) -> TuningMetadata:
         """
         This should be overridden by subclasses.
 
@@ -120,20 +120,18 @@ class TuningAgent:
 
 
 class TuningAgentArtifactsReader:
-    def __init__(self, tuning_agent_artifacts_dpath: Path) -> None:
-        self.tuning_agent_artifacts_dpath = tuning_agent_artifacts_dpath
-        assert is_fully_resolved(self.tuning_agent_artifacts_dpath)
+    def __init__(self, tuning_artifacts_dpath: Path) -> None:
+        self.tuning_artifacts_dpath = tuning_artifacts_dpath
+        assert is_fully_resolved(self.tuning_artifacts_dpath)
         num_steps = 0
-        while get_delta_at_step_fpath(
-            self.tuning_agent_artifacts_dpath, num_steps
-        ).exists():
+        while get_delta_at_step_fpath(self.tuning_artifacts_dpath, num_steps).exists():
             num_steps += 1
         self.num_steps = num_steps
 
-    def get_metadata(self) -> TuningAgentMetadata:
-        with get_metadata_fpath(self.tuning_agent_artifacts_dpath).open("r") as f:
+    def get_metadata(self) -> TuningMetadata:
+        with get_metadata_fpath(self.tuning_artifacts_dpath).open("r") as f:
             data = json.load(f)
-            return TuningAgentMetadata(
+            return TuningMetadata(
                 workload_path=Path(data["workload_path"]),
                 pristine_dbdata_snapshot_path=Path(
                     data["pristine_dbdata_snapshot_path"]
@@ -144,7 +142,7 @@ class TuningAgentArtifactsReader:
 
     def get_delta_at_step(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.num_steps
-        with get_delta_at_step_fpath(self.tuning_agent_artifacts_dpath, step_num).open(
+        with get_delta_at_step_fpath(self.tuning_artifacts_dpath, step_num).open(
             "r"
         ) as f:
             data = json.load(f)

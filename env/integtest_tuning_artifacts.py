@@ -1,7 +1,7 @@
 import unittest
 
 from env.integtest_util import IntegtestWorkspace, MockTuningAgent
-from env.tuning_agent import (
+from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
@@ -33,7 +33,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.delta_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_artifacts_dpath)
 
         self.assertEqual(
             reader.get_delta_at_step(1), PostgresConnTests.make_config("b")
@@ -58,7 +58,7 @@ class PostgresConnTests(unittest.TestCase):
         agent.delta_to_return = PostgresConnTests.make_config("c")
         agent.step()
 
-        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_artifacts_dpath)
 
         self.assertEqual(
             reader.get_all_deltas_in_order(),
@@ -71,7 +71,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_metadata(self) -> None:
         agent = MockTuningAgent(IntegtestWorkspace.get_dbgym_cfg())
-        reader = TuningAgentArtifactsReader(agent.tuning_agent_artifacts_dpath)
+        reader = TuningAgentArtifactsReader(agent.tuning_artifacts_dpath)
         metadata = reader.get_metadata()
         expected_metadata = IntegtestWorkspace.get_default_metadata()
         self.assertEqual(metadata, expected_metadata)

@@ -3,7 +3,7 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from env.integtest_util import IntegtestWorkspace, MockTuningAgent
 from env.replay import replay
-from env.tuning_agent import (
+from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
@@ -36,7 +36,7 @@ class ReplayTests(unittest.TestCase):
         )
         agent.step()
         replay_data = replay(
-            IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_agent_artifacts_dpath
+            IntegtestWorkspace.get_dbgym_cfg(), agent.tuning_artifacts_dpath
         )
 
         # We do some very simple sanity checks here due to the inherent randomness of executing a workload.
