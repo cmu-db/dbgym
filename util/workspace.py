@@ -167,8 +167,6 @@ class DBGymWorkspace:
     num_times_created_this_run: int = 0
 
     def __init__(self, dbgym_workspace_path: Path):
-        assert is_fully_resolved(dbgym_workspace_path)
-
         # The logic around dbgym_tmp_path assumes that DBGymWorkspace is only constructed once.
         DBGymWorkspace.num_times_created_this_run += 1
         assert (
@@ -181,6 +179,10 @@ class DBGymWorkspace:
         # Set and create paths.
         self.dbgym_workspace_path = dbgym_workspace_path
         self.dbgym_workspace_path.mkdir(parents=True, exist_ok=True)
+
+        # Now that the workspace is guaranteed to be created, we can check if it's fully resolved.
+        assert is_fully_resolved(self.dbgym_workspace_path)
+
         self.dbgym_runs_path = get_runs_path_from_workspace_path(
             self.dbgym_workspace_path
         )
@@ -281,7 +283,8 @@ def get_workspace_path_from_config(dbgym_config_path: Path) -> Path:
     Returns the workspace path (as a fully resolved path) from the config file.
     """
     with open(dbgym_config_path) as f:
-        return fully_resolve_path(Path(yaml.safe_load(f)["dbgym_workspace_path"]))
+        # We do *not* call fully_resolve_path() here because the workspace may not exist yet.
+        return Path(yaml.safe_load(f)["dbgym_workspace_path"]).resolve().absolute()
 
 
 def make_standard_dbgym_workspace() -> DBGymWorkspace:
@@ -354,6 +357,9 @@ def _is_base_dbgym_repo_dpath(path: Path) -> bool:
 def is_fully_resolved(path: Path) -> bool:
     """
     Checks if a path is fully resolved (exists, is absolute, and contains no symlinks in its entire ancestry).
+
+    The reason we check for existence is because that's the only way we know that there are no symlinks in its entire ancestry.
+    If we didn't check for existence, we could later create a new symlink in the path's ancestry.
 
     Even if a path exists, is absolute, and is not itself a symlink, it could still contain
     symlinks in its parent directories. For example:
@@ -597,7 +603,6 @@ def link_result(
     assert is_fully_resolved(
         result_fordpath
     ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-    result_fordpath = fully_resolve_path(result_fordpath)
     assert is_child_path(result_fordpath, dbgym_workspace.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 
