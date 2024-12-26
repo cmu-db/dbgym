@@ -8,7 +8,6 @@ import shutil
 import subprocess
 import time
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import IO, Any, Optional
 
@@ -18,12 +17,6 @@ import yaml
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
-
-# Enums
-TuningMode = Enum("TuningMode", ["HPO", "TUNE", "REPLAY"])
-
-# Default values
-DEFAULT_WORKLOAD_TIMEOUT = 600
 
 # Relative paths of different folders in the codebase
 DBMS_PATH = Path("dbms")
