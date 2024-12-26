@@ -28,6 +28,7 @@ class CleanTests(unittest.TestCase):
         """
         Create files and directories according to the structure.
         """
+
         def create_structure_internal(
             root_path: Path, cur_path: Path, structure: FilesystemStructure
         ) -> None:
@@ -59,6 +60,7 @@ class CleanTests(unittest.TestCase):
         """
         Verify that the files and directories match the expected structure.
         """
+
         def verify_structure_internal(
             root_path: Path, cur_path: Path, structure: FilesystemStructure
         ) -> bool:
