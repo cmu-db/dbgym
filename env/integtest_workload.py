@@ -4,7 +4,7 @@ from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from env.integtest_util import (
     INTEGTEST_BENCHMARK,
     INTEGTEST_SCALE_FACTOR,
-    IntegtestWorkspace,
+    GymlibIntegtestWorkspaceManager,
 )
 from env.workload import Workload
 from util.workspace import (
@@ -18,13 +18,13 @@ from util.workspace import (
 class WorkloadTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
-        IntegtestWorkspace.set_up_workspace()
+        GymlibIntegtestWorkspaceManager.set_up_workspace()
 
     def test_workload(self) -> None:
         workload_dpath = fully_resolve_path(
-            IntegtestWorkspace.get_dbgym_workspace(),
+            GymlibIntegtestWorkspaceManager.get_dbgym_workspace(),
             get_default_workload_path(
-                IntegtestWorkspace.get_workspace_path(),
+                GymlibIntegtestWorkspaceManager.get_workspace_path(),
                 INTEGTEST_BENCHMARK,
                 get_workload_name(
                     INTEGTEST_SCALE_FACTOR,
@@ -33,7 +33,9 @@ class WorkloadTests(unittest.TestCase):
             ),
         )
 
-        workload = Workload(IntegtestWorkspace.get_dbgym_workspace(), workload_dpath)
+        workload = Workload(
+            GymlibIntegtestWorkspaceManager.get_dbgym_workspace(), workload_dpath
+        )
 
         # Check the order of query IDs.
         self.assertEqual(

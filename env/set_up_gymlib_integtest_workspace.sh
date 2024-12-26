@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Environment tests relies on Postgres being built and workloads/dbdata being generated. This script does this.
+# Gymlib integration tests relies on Postgres being built and workloads/dbdata being generated.
 # Generating these things is not considered a part of the test which is why it's in its own shell script.
 # The reason there's a shell script generating them instead of them just being in the repo is because (a)
 #   the Postgres repo is very large and (b) the built binary will be different for different machines.
