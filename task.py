@@ -1,6 +1,4 @@
 import click
-from analyze.cli import analyze_group
-from tune.cli import tune_group
 
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
@@ -28,7 +26,5 @@ def task(ctx: click.Context) -> None:
 if __name__ == "__main__":
     task.add_command(benchmark_group)
     task.add_command(manage_group)
-    task.add_command(analyze_group)
     task.add_command(dbms_group)
-    task.add_command(tune_group)
     task()
