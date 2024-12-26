@@ -1,12 +1,11 @@
 import click
-
-from util.log import set_up_loggers, set_up_warnings
 from analyze.cli import analyze_group
 
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
 from manage.cli import manage_group
 from tune.cli import tune_group
+from util.log import set_up_loggers, set_up_warnings
 from util.workspace import make_standard_dbgym_cfg
 
 # TODO(phw2): Save commit, git diff, and run command.
