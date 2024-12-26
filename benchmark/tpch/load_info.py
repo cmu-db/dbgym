@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import DBGymConfig, get_default_tables_dname, is_fully_resolved
+from util.workspace import DBGymWorkspace, get_default_tables_dname, is_fully_resolved
 
 TPCH_SCHEMA_FNAME = "tpch_schema.sql"
 TPCH_CONSTRAINTS_FNAME = "tpch_constraints.sql"
@@ -24,9 +24,9 @@ class TpchLoadInfo(LoadInfoBaseClass):
         "lineitem",
     ]
 
-    def __init__(self, dbgym_cfg: DBGymConfig, scale_factor: float):
+    def __init__(self, dbgym_workspace: DBGymWorkspace, scale_factor: float):
         # schema and constraints
-        schema_root_dpath = dbgym_cfg.dbgym_repo_path
+        schema_root_dpath = dbgym_workspace.dbgym_repo_path
         for component in TpchLoadInfo.CODEBASE_PATH_COMPONENTS[
             1:
         ]:  # [1:] to skip "dbgym"
@@ -42,7 +42,7 @@ class TpchLoadInfo(LoadInfoBaseClass):
 
         # tables
         data_root_dpath = (
-            dbgym_cfg.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
+            dbgym_workspace.dbgym_symlinks_path / TpchLoadInfo.CODEBASE_DNAME / "data"
         )
         tables_symlink_dpath = (
             data_root_dpath / f"{get_default_tables_dname(scale_factor)}.link"

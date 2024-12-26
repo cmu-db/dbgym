@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from typing import Any, NewType, cast
 
-from manage.cli import MockDBGymConfig, clean_workspace
+from manage.cli import MockDBGymWorkspace, clean_workspace
 from util.workspace import path_exists_dont_follow_symlinks
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
@@ -218,13 +218,13 @@ class CleanTests(unittest.TestCase):
         )
 
     def test_nonexistent_workspace(self) -> None:
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
 
     def test_no_symlinks_dir_and_no_task_runs_dir(self) -> None:
         starting_structure = FilesystemStructure({})
         ending_structure = FilesystemStructure({})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -235,7 +235,7 @@ class CleanTests(unittest.TestCase):
         )
         ending_structure = FilesystemStructure({"task_runs": {}})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -244,7 +244,7 @@ class CleanTests(unittest.TestCase):
         starting_structure = FilesystemStructure({"symlinks": {}})
         ending_structure = FilesystemStructure({"symlinks": {}})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -262,7 +262,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -280,7 +280,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -304,7 +304,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -333,7 +333,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -362,7 +362,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -393,7 +393,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path))
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -414,7 +414,7 @@ class CleanTests(unittest.TestCase):
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
         with self.assertRaises(AssertionError):
-            clean_workspace(MockDBGymConfig(self.scratchspace_path))
+            clean_workspace(MockDBGymWorkspace(self.scratchspace_path))
 
     def test_safe_mode_link_to_dir_with_link(self) -> None:
         starting_symlinks_structure = FilesystemStructure(
@@ -444,7 +444,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -483,7 +483,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -520,7 +520,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -552,7 +552,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="aggressive")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="aggressive")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -575,7 +575,7 @@ class CleanTests(unittest.TestCase):
 
         # We disallow links to links so it's an AssertionError
         with self.assertRaises(AssertionError):
-            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+            clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
 
     def test_multi_link_loop_gives_error(self) -> None:
         starting_symlinks_structure = FilesystemStructure(
@@ -594,7 +594,7 @@ class CleanTests(unittest.TestCase):
 
         # pathlib disallows multi-link loops so it's a RuntimeError
         with self.assertRaises(RuntimeError):
-            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+            clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
 
     def test_link_self_loop_gives_error(self) -> None:
         starting_symlinks_structure = FilesystemStructure(
@@ -609,7 +609,7 @@ class CleanTests(unittest.TestCase):
 
         # pathlib disallows link self-loops so it's a RuntimeError
         with self.assertRaises(RuntimeError):
-            clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+            clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
 
     def test_dont_loop_infinitely_if_there_are_cycles_between_different_dirs_in_runs(
         self,
@@ -652,7 +652,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -690,7 +690,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -726,7 +726,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -758,7 +758,7 @@ class CleanTests(unittest.TestCase):
         )
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -809,7 +809,7 @@ class CleanTests(unittest.TestCase):
         }
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )
@@ -829,7 +829,7 @@ class CleanTests(unittest.TestCase):
         ending_structure["external"] = FilesystemStructure({"file1.txt": ("file",)})
 
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
-        clean_workspace(MockDBGymConfig(self.scratchspace_path), mode="safe")
+        clean_workspace(MockDBGymWorkspace(self.scratchspace_path), mode="safe")
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
         )

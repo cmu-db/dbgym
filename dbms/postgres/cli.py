@@ -31,7 +31,7 @@ from util.pg import (
 from util.shell import subprocess_run
 from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
-    DBGymConfig,
+    DBGymWorkspace,
     fully_resolve_path,
     get_dbdata_tgz_name,
     get_default_dbdata_parent_dpath,
@@ -46,8 +46,8 @@ from util.workspace import (
 
 @click.group(name="postgres")
 @click.pass_obj
-def postgres_group(dbgym_cfg: DBGymConfig) -> None:
-    dbgym_cfg.append_group("postgres")
+def postgres_group(dbgym_workspace: DBGymWorkspace) -> None:
+    dbgym_workspace.append_group("postgres")
 
 
 @postgres_group.command(
@@ -60,8 +60,8 @@ def postgres_group(dbgym_cfg: DBGymConfig) -> None:
     is_flag=True,
     help="Include this flag to rebuild Postgres even if it already exists.",
 )
-def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
-    _build_repo(dbgym_cfg, rebuild)
+def postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
+    _build_repo(dbgym_workspace, rebuild)
 
 
 @postgres_group.command(
@@ -90,7 +90,7 @@ def postgres_build(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 def postgres_dbdata(
-    dbgym_cfg: DBGymConfig,
+    dbgym_workspace: DBGymWorkspace,
     benchmark_name: str,
     scale_factor: float,
     pgbin_path: Optional[Path],
@@ -99,15 +99,15 @@ def postgres_dbdata(
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path is None:
-        pgbin_path = get_default_pgbin_path(dbgym_cfg.dbgym_workspace_path)
+        pgbin_path = get_default_pgbin_path(dbgym_workspace.dbgym_workspace_path)
     if dbdata_parent_dpath is None:
         dbdata_parent_dpath = get_default_dbdata_parent_dpath(
-            dbgym_cfg.dbgym_workspace_path
+            dbgym_workspace.dbgym_workspace_path
         )
 
     # Fully resolve all input paths.
-    pgbin_path = fully_resolve_path(dbgym_cfg, pgbin_path)
-    dbdata_parent_dpath = fully_resolve_path(dbgym_cfg, dbdata_parent_dpath)
+    pgbin_path = fully_resolve_path(dbgym_workspace, pgbin_path)
+    dbdata_parent_dpath = fully_resolve_path(dbgym_workspace, dbdata_parent_dpath)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
@@ -123,22 +123,22 @@ def postgres_dbdata(
 
     # Create dbdata
     _create_dbdata(
-        dbgym_cfg, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath
+        dbgym_workspace, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath
     )
 
 
-def _get_pgbin_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path(
+def _get_pgbin_symlink_path(dbgym_workspace: DBGymWorkspace) -> Path:
+    return dbgym_workspace.cur_symlinks_build_path(
         "repo.link", "boot", "build", "postgres", "bin"
     )
 
 
-def _get_repo_symlink_path(dbgym_cfg: DBGymConfig) -> Path:
-    return dbgym_cfg.cur_symlinks_build_path("repo.link")
+def _get_repo_symlink_path(dbgym_workspace: DBGymWorkspace) -> Path:
+    return dbgym_workspace.cur_symlinks_build_path("repo.link")
 
 
-def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
-    expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_cfg)
+def _build_repo(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
+    expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_workspace)
     if not rebuild and expected_repo_symlink_dpath.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
             f"Skipping _build_repo: {expected_repo_symlink_dpath}"
@@ -148,13 +148,13 @@ def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Setting up repo in {expected_repo_symlink_dpath}"
     )
-    repo_real_dpath = dbgym_cfg.cur_task_runs_build_path("repo", mkdir=True)
+    repo_real_dpath = dbgym_workspace.cur_task_runs_build_path("repo", mkdir=True)
     subprocess_run(
-        f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_cfg.cur_source_path()
+        f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_workspace.cur_source_path()
     )
 
     # only link at the end so that the link only ever points to a complete repo
-    repo_symlink_dpath = link_result(dbgym_cfg, repo_real_dpath)
+    repo_symlink_dpath = link_result(dbgym_workspace, repo_real_dpath)
     assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Set up repo in {expected_repo_symlink_dpath}"
@@ -162,7 +162,7 @@ def _build_repo(dbgym_cfg: DBGymConfig, rebuild: bool) -> None:
 
 
 def _create_dbdata(
-    dbgym_cfg: DBGymConfig,
+    dbgym_workspace: DBGymWorkspace,
     benchmark_name: str,
     scale_factor: float,
     pgbin_path: Path,
@@ -184,23 +184,23 @@ def _create_dbdata(
 
     # Call initdb.
     # Save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run.
-    save_file(dbgym_cfg, pgbin_path / "initdb")
+    save_file(dbgym_workspace, pgbin_path / "initdb")
     subprocess_run(f'./initdb -D "{dbdata_dpath}"', cwd=pgbin_path)
 
     # Start Postgres (all other dbdata setup requires postgres to be started).
     # Note that subprocess_run() never returns when running "pg_ctl start", so I'm using subprocess.run() instead.
-    start_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
+    start_postgres(dbgym_workspace, pgbin_path, dbdata_dpath)
 
     # Set up Postgres.
-    _generic_dbdata_setup(dbgym_cfg)
-    _load_benchmark_into_dbdata(dbgym_cfg, benchmark_name, scale_factor)
+    _generic_dbdata_setup(dbgym_workspace)
+    _load_benchmark_into_dbdata(dbgym_workspace, benchmark_name, scale_factor)
 
     # Stop Postgres so that we don't "leak" processes.
-    stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath)
+    stop_postgres(dbgym_workspace, pgbin_path, dbdata_dpath)
 
     # Create .tgz file.
     # Note that you can't pass "[dbdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[dbdata].tgz" as a dir.
-    dbdata_tgz_real_fpath = dbgym_cfg.cur_task_runs_data_path(
+    dbdata_tgz_real_fpath = dbgym_workspace.cur_task_runs_data_path(
         mkdir=True
     ) / get_dbdata_tgz_name(benchmark_name, scale_factor)
     # We need to cd into dbdata_dpath so that the tar file does not contain folders for the whole path of dbdata_dpath.
@@ -208,22 +208,22 @@ def _create_dbdata(
 
     # Create symlink.
     # Only link at the end so that the link only ever points to a complete dbdata.
-    dbdata_tgz_symlink_path = link_result(dbgym_cfg, dbdata_tgz_real_fpath)
+    dbdata_tgz_symlink_path = link_result(dbgym_workspace, dbdata_tgz_real_fpath)
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Created dbdata in {dbdata_tgz_symlink_path}"
     )
 
 
-def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:
+def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:
     # get necessary vars
-    pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_cfg).resolve()
+    pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_workspace).resolve()
     assert pgbin_real_dpath.exists()
     dbgym_pguser = DBGYM_POSTGRES_USER
     dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
     # Create user
-    save_file(dbgym_cfg, pgbin_real_dpath / "psql")
+    save_file(dbgym_workspace, pgbin_real_dpath / "psql")
     subprocess_run(
         f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
         cwd=pgbin_real_dpath,
@@ -251,34 +251,34 @@ def _generic_dbdata_setup(dbgym_cfg: DBGymConfig) -> None:
 
 
 def _load_benchmark_into_dbdata(
-    dbgym_cfg: DBGymConfig, benchmark_name: str, scale_factor: float
+    dbgym_workspace: DBGymWorkspace, benchmark_name: str, scale_factor: float
 ) -> None:
     load_info: LoadInfoBaseClass
 
     with create_sqlalchemy_conn() as conn:
         if benchmark_name == "tpch":
-            load_info = TpchLoadInfo(dbgym_cfg, scale_factor)
+            load_info = TpchLoadInfo(dbgym_workspace, scale_factor)
         elif benchmark_name == "job":
-            load_info = JobLoadInfo(dbgym_cfg)
+            load_info = JobLoadInfo(dbgym_workspace)
         else:
             raise AssertionError(
                 f"_load_benchmark_into_dbdata(): the benchmark of name {benchmark_name} is not implemented"
             )
 
-        _load_into_dbdata(dbgym_cfg, conn, load_info)
+        _load_into_dbdata(dbgym_workspace, conn, load_info)
 
 
 def _load_into_dbdata(
-    dbgym_cfg: DBGymConfig, conn: sqlalchemy.Connection, load_info: LoadInfoBaseClass
+    dbgym_workspace: DBGymWorkspace, conn: sqlalchemy.Connection, load_info: LoadInfoBaseClass
 ) -> None:
-    sql_file_execute(dbgym_cfg, conn, load_info.get_schema_fpath())
+    sql_file_execute(dbgym_workspace, conn, load_info.get_schema_fpath())
 
     # Truncate all tables first before even loading a single one.
     for table, _ in load_info.get_tables_and_fpaths():
         sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # Then, load the tables.
     for table, table_fpath in load_info.get_tables_and_fpaths():
-        with open_and_save(dbgym_cfg, table_fpath, "r") as table_csv:
+        with open_and_save(dbgym_workspace, table_fpath, "r") as table_csv:
             assert conn.connection.dbapi_connection is not None
             cur = conn.connection.dbapi_connection.cursor()
             try:
@@ -292,7 +292,7 @@ def _load_into_dbdata(
 
     constraints_fpath = load_info.get_constraints_fpath()
     if constraints_fpath is not None:
-        sql_file_execute(dbgym_cfg, conn, constraints_fpath)
+        sql_file_execute(dbgym_workspace, conn, constraints_fpath)
 
 
 # The start and stop functions slightly duplicate functionality from pg_conn.py. However, I chose to do it this way
@@ -301,23 +301,23 @@ def _load_into_dbdata(
 # even though they are a little redundant. It seems better than making `dbms` depend on the behavior of the
 # tuning environment.
 def start_postgres(
-    dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path
+    dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path
 ) -> None:
-    _start_or_stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath, True)
+    _start_or_stop_postgres(dbgym_workspace, pgbin_path, dbdata_dpath, True)
 
 
-def stop_postgres(dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path) -> None:
-    _start_or_stop_postgres(dbgym_cfg, pgbin_path, dbdata_dpath, False)
+def stop_postgres(dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path) -> None:
+    _start_or_stop_postgres(dbgym_workspace, pgbin_path, dbdata_dpath, False)
 
 
 def _start_or_stop_postgres(
-    dbgym_cfg: DBGymConfig, pgbin_path: Path, dbdata_dpath: Path, is_start: bool
+    dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path, is_start: bool
 ) -> None:
     # They should be absolute paths and should exist
     assert is_fully_resolved(pgbin_path)
     assert is_fully_resolved(dbdata_dpath)
     pgport = DEFAULT_POSTGRES_PORT
-    save_file(dbgym_cfg, pgbin_path / "pg_ctl")
+    save_file(dbgym_workspace, pgbin_path / "pg_ctl")
 
     if is_start:
         # We use subprocess.run() because subprocess_run() never returns when running "pg_ctl start".

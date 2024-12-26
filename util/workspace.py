@@ -99,7 +99,7 @@ def get_default_tables_dname(scale_factor: float | str) -> str:
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 # Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
-#   integration test. The "source of truth" of codebase paths is based on DBGymConfig.cur_source_path(), which will always
+#   integration test. The "source of truth" of codebase paths is based on DBGymWorkspace.cur_source_path(), which will always
 #   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
 #   ok to have to hardcode them when reading.
 # Details
@@ -159,7 +159,7 @@ def get_default_pgbin_path(workspace_path: Path) -> Path:
     return get_default_repo_path(workspace_path) / "boot" / "build" / "postgres" / "bin"
 
 
-class DBGymConfig:
+class DBGymWorkspace:
     """
     Global configurations that apply to all parts of DB-Gym
     """
@@ -167,11 +167,11 @@ class DBGymConfig:
     num_times_created_this_run: int = 0
 
     def __init__(self, dbgym_config_path: Path):
-        # The logic around dbgym_tmp_path assumes that DBGymConfig is only constructed once.
-        DBGymConfig.num_times_created_this_run += 1
+        # The logic around dbgym_tmp_path assumes that DBGymWorkspace is only constructed once.
+        DBGymWorkspace.num_times_created_this_run += 1
         assert (
-            DBGymConfig.num_times_created_this_run == 1
-        ), f"DBGymConfig has been created {DBGymConfig.num_times_created_this_run} times. It should only be created once per run."
+            DBGymWorkspace.num_times_created_this_run == 1
+        ), f"DBGymWorkspace has been created {DBGymWorkspace.num_times_created_this_run} times. It should only be created once per run."
 
         assert is_base_git_dir(
             os.getcwd()
@@ -211,8 +211,8 @@ class DBGymConfig:
         self.dbgym_tmp_path = get_tmp_path_from_workspace_path(
             self.dbgym_workspace_path
         )
-        # The best place to delete the old dbgym_tmp_path is in DBGymConfig.__init__().
-        # This is better than deleting the dbgym_tmp_path is in DBGymConfig.__del__() because DBGymConfig may get deleted before execution has completed.
+        # The best place to delete the old dbgym_tmp_path is in DBGymWorkspace.__init__().
+        # This is better than deleting the dbgym_tmp_path is in DBGymWorkspace.__del__() because DBGymWorkspace may get deleted before execution has completed.
         # Also, by keeping the tmp directory around, you can look at it to debug issues.
         if self.dbgym_tmp_path.exists():
             shutil.rmtree(self.dbgym_tmp_path)
@@ -292,17 +292,17 @@ class DBGymConfig:
         return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
-def make_standard_dbgym_cfg() -> DBGymConfig:
+def make_standard_dbgym_workspace() -> DBGymWorkspace:
     """
-    The "standard" way to make a DBGymConfig using the DBGYM_CONFIG_PATH envvar and the
+    The "standard" way to make a DBGymWorkspace using the DBGYM_CONFIG_PATH envvar and the
     default path of dbgym_config.yaml.
     """
     dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
-    dbgym_cfg = DBGymConfig(dbgym_config_path)
-    return dbgym_cfg
+    dbgym_workspace = DBGymWorkspace(dbgym_config_path)
+    return dbgym_workspace
 
 
-def fully_resolve_path(dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]) -> Path:
+def fully_resolve_path(dbgym_workspace: DBGymWorkspace, inputpath: os.PathLike[str]) -> Path:
     """
     Fully resolve any path to a real, absolute path.
 
@@ -320,10 +320,10 @@ def fully_resolve_path(dbgym_cfg: DBGymConfig, inputpath: os.PathLike[str]) -> P
     realabspath = Path(inputpath)
     # `expanduser()` is always "ok" to call first.
     realabspath = realabspath.expanduser()
-    # The reason we don't call Path.absolute() is because the path should be relative to dbgym_cfg.dbgym_repo_path,
+    # The reason we don't call Path.absolute() is because the path should be relative to dbgym_workspace.dbgym_repo_path,
     #   which is not necessary where cwd() points at the time of calling this function.
     if not realabspath.is_absolute():
-        realabspath = dbgym_cfg.dbgym_repo_path / realabspath
+        realabspath = dbgym_workspace.dbgym_repo_path / realabspath
     # `resolve()` has two uses: normalize the path (remove ..) and resolve symlinks.
     # I believe the pathlib library (https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve) does it this
     #   way to avoid an edge case related to symlinks and normalizing paths (footnote 1 of the linked docs)
@@ -436,7 +436,7 @@ def is_child_path(child_path: os.PathLike[str], parent_dpath: os.PathLike[str]) 
         )
 
 
-def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> IO[Any]:
+def open_and_save(dbgym_workspace: DBGymWorkspace, open_fpath: Path, mode: str = "r") -> IO[Any]:
     """
     Open a file and "save" it to [workspace]/task_runs/run_*/.
     It takes in a str | Path to match the interface of open().
@@ -468,14 +468,14 @@ def open_and_save(dbgym_cfg: DBGymConfig, open_fpath: Path, mode: str = "r") -> 
     assert os.path.isfile(open_fpath), f"open_fpath ({open_fpath}) is not a file"
 
     # save
-    save_file(dbgym_cfg, open_fpath)
+    save_file(dbgym_workspace, open_fpath)
 
     # open
     return open(open_fpath, mode=mode)
 
 
 def extract_from_task_run_fordpath(
-    dbgym_cfg: DBGymConfig, task_run_fordpath: Path
+    dbgym_workspace: DBGymWorkspace, task_run_fordpath: Path
 ) -> tuple[Path, str, Path, str]:
     """
     The task_runs/ folder is organized like task_runs/run_*/[codebase]/[org]/any/path/you/want.
@@ -486,19 +486,19 @@ def extract_from_task_run_fordpath(
     parent_dpath = task_run_fordpath.parent
     # TODO(phw2): make this a common function
     assert not parent_dpath.samefile(
-        dbgym_cfg.dbgym_runs_path
-    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/ dir instead of directly in dbgym_cfg.dbgym_runs_path ({dbgym_cfg.dbgym_runs_path})"
+        dbgym_workspace.dbgym_runs_path
+    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/ dir instead of directly in dbgym_workspace.dbgym_runs_path ({dbgym_workspace.dbgym_runs_path})"
     assert not parent_dpath_of_path(parent_dpath).samefile(
-        dbgym_cfg.dbgym_runs_path
-    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
+        dbgym_workspace.dbgym_runs_path
+    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/ dir instead of directly in run_*/ ({dbgym_workspace.dbgym_runs_path})"
     assert not parent_dpath_of_path(parent_dpath_of_path(parent_dpath)).samefile(
-        dbgym_cfg.dbgym_runs_path
-    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_cfg.dbgym_runs_path})"
+        dbgym_workspace.dbgym_runs_path
+    ), f"task_run_fordpath ({task_run_fordpath}) should be inside a run_*/[codebase]/[organization]/ dir instead of directly in run_*/ ({dbgym_workspace.dbgym_runs_path})"
     # org_dpath is the run_*/[codebase]/[organization]/ dir that task_run_fordpath is in
     org_dpath = parent_dpath
     while not parent_dpath_of_path(
         parent_dpath_of_path(parent_dpath_of_path(org_dpath))
-    ).samefile(dbgym_cfg.dbgym_runs_path):
+    ).samefile(dbgym_workspace.dbgym_runs_path):
         org_dpath = parent_dpath_of_path(org_dpath)
     org_dname = basename_of_path(org_dpath)
     codebase_dpath = parent_dpath_of_path(org_dpath)
@@ -509,7 +509,7 @@ def extract_from_task_run_fordpath(
 
 # TODO(phw2): really look at the clean PR to see what it changed
 # TODO(phw2): after merging agent-train, refactor some code in agent-train to use save_file() instead of open_and_save()
-def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
+def save_file(dbgym_workspace: DBGymWorkspace, fpath: Path) -> None:
     """
     If an external function takes in a file/directory as input, you will not be able to call open_and_save().
         In these situations, just call save_file().
@@ -525,19 +525,19 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
     assert os.path.exists(fpath), f"fpath ({fpath}) does not exist"
     assert os.path.isfile(fpath), f"fpath ({fpath}) is not a file"
     assert not is_child_path(
-        fpath, dbgym_cfg.dbgym_this_run_path
-    ), f"fpath ({fpath}) was generated in this task run ({dbgym_cfg.dbgym_this_run_path}). You do not need to save it"
+        fpath, dbgym_workspace.dbgym_this_run_path
+    ), f"fpath ({fpath}) was generated in this task run ({dbgym_workspace.dbgym_this_run_path}). You do not need to save it"
 
     # save _something_ to dbgym_this_run_path
     # save a symlink if the opened file was generated by a run. this is for two reasons:
     #   1. files or dirs generated by a run are supposed to be immutable so saving a symlink is safe
     #   2. files or dirs generated by a run may be very large (up to 100s of GBs) so we don't want to copy them
-    if is_child_path(fpath, dbgym_cfg.dbgym_runs_path):
+    if is_child_path(fpath, dbgym_workspace.dbgym_runs_path):
         # get paths we'll need later.
         _, codebase_dname, org_dpath, org_dname = extract_from_task_run_fordpath(
-            dbgym_cfg, fpath
+            dbgym_workspace, fpath
         )
-        this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / codebase_dname / org_dname
+        this_run_save_dpath = dbgym_workspace.dbgym_this_run_path / codebase_dname / org_dname
         os.makedirs(this_run_save_dpath, exist_ok=True)
 
         # if the fpath file is directly in org_dpath, we symlink the file directly
@@ -562,7 +562,7 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
     # if it wasn't generated by a run
     else:
         # since we don't know where the file is at all, the location is "unknown" and the org is "all"
-        this_run_save_dpath = dbgym_cfg.dbgym_this_run_path / "unknown" / "all"
+        this_run_save_dpath = dbgym_workspace.dbgym_this_run_path / "unknown" / "all"
         os.makedirs(this_run_save_dpath, exist_ok=True)
         fname = basename_of_path(fpath)
         # in this case, we want to copy instead of symlinking since it might disappear in the future
@@ -572,12 +572,12 @@ def save_file(dbgym_cfg: DBGymConfig, fpath: Path) -> None:
 
 # TODO(phw2): refactor our manual symlinking in postgres/cli.py to use link_result() instead
 def link_result(
-    dbgym_cfg: DBGymConfig,
+    dbgym_workspace: DBGymWorkspace,
     result_fordpath: Path,
     custom_result_name: Optional[str] = None,
 ) -> Path:
     """
-    result_fordpath must be a "result", meaning it was generated inside dbgym_cfg.dbgym_this_run_path.
+    result_fordpath must be a "result", meaning it was generated inside dbgym_workspace.dbgym_this_run_path.
     Further, result_fordpath must have been generated by this invocation to task.py. This also means that
         result_fordpath itself can be a file or a dir but not a symlink.
     Given a file or directory in task_runs/run_*/[codebase]/[org], this will create a symlink inside
@@ -590,8 +590,8 @@ def link_result(
     assert is_fully_resolved(
         result_fordpath
     ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-    result_fordpath = fully_resolve_path(dbgym_cfg, result_fordpath)
-    assert is_child_path(result_fordpath, dbgym_cfg.dbgym_this_run_path)
+    result_fordpath = fully_resolve_path(dbgym_workspace, result_fordpath)
+    assert is_child_path(result_fordpath, dbgym_workspace.dbgym_this_run_path)
     assert not os.path.islink(result_fordpath)
 
     if type(custom_result_name) is str:
@@ -606,13 +606,13 @@ def link_result(
 
     # Figure out the parent directory path of the symlink
     codebase_dpath, codebase_dname, _, org_dname = extract_from_task_run_fordpath(
-        dbgym_cfg, result_fordpath
+        dbgym_workspace, result_fordpath
     )
     # We're only supposed to save files generated by us, which means they should be in cur_task_runs_path()
     assert codebase_dpath.samefile(
-        dbgym_cfg.cur_task_runs_path()
+        dbgym_workspace.cur_task_runs_path()
     ), f"link_result should only be called on files generated by this invocation to task.py"
-    symlink_parent_dpath = dbgym_cfg.dbgym_symlinks_path / codebase_dname / org_dname
+    symlink_parent_dpath = dbgym_workspace.dbgym_symlinks_path / codebase_dname / org_dname
     symlink_parent_dpath.mkdir(parents=True, exist_ok=True)
 
     # Remove the old symlink ("old" meaning created in an earlier run) if there is one

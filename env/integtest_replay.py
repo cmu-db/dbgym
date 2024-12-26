@@ -19,7 +19,7 @@ class ReplayTests(unittest.TestCase):
 
     def test_replay(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             IntegtestWorkspace.get_default_metadata(),
         )
         writer.write_step(
@@ -41,7 +41,7 @@ class ReplayTests(unittest.TestCase):
             )
         )
         replay_data = replay(
-            IntegtestWorkspace.get_dbgym_cfg(), writer.tuning_artifacts_dpath
+            IntegtestWorkspace.get_dbgym_workspace(), writer.tuning_artifacts_dpath
         )
 
         # We do some very simple sanity checks here due to the inherent randomness of executing a workload.

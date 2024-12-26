@@ -5,11 +5,11 @@ from env.pg_conn import PostgresConn
 from env.tuning_artifacts import TuningArtifactsReader
 from env.workload import Workload
 from util.pg import DEFAULT_POSTGRES_PORT
-from util.workspace import DBGymConfig
+from util.workspace import DBGymWorkspace
 
 
 def replay(
-    dbgym_cfg: DBGymConfig, tuning_artifacts_dpath: Path
+    dbgym_workspace: DBGymWorkspace, tuning_artifacts_dpath: Path
 ) -> list[tuple[float, int]]:
     """
     Returns the total runtime and the number of timed out queries for each step.
@@ -20,7 +20,7 @@ def replay(
 
     reader = TuningArtifactsReader(tuning_artifacts_dpath)
     pg_conn = PostgresConn(
-        dbgym_cfg,
+        dbgym_workspace,
         DEFAULT_POSTGRES_PORT,
         reader.get_metadata().pristine_dbdata_snapshot_path,
         reader.get_metadata().dbdata_parent_path,
@@ -28,7 +28,7 @@ def replay(
         None,
     )
     workload = Workload(
-        dbgym_cfg,
+        dbgym_workspace,
         reader.get_metadata().workload_path,
     )
 

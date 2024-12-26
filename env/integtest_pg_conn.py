@@ -38,7 +38,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             pgport,
             self.metadata.pristine_dbdata_snapshot_path,
             self.metadata.dbdata_parent_path,

@@ -26,7 +26,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_delta_at_step(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             IntegtestWorkspace.get_default_metadata(),
         )
 
@@ -51,7 +51,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_all_deltas_in_order(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             IntegtestWorkspace.get_default_metadata(),
         )
 
@@ -72,7 +72,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_metadata(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             IntegtestWorkspace.get_default_metadata(),
         )
         reader = TuningArtifactsReader(writer.tuning_artifacts_dpath)

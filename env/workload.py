@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from util.workspace import DBGymConfig, is_fully_resolved, open_and_save
+from util.workspace import DBGymWorkspace, is_fully_resolved, open_and_save
 
 
 class Workload:
-    def __init__(self, dbgym_cfg: DBGymConfig, workload_dpath: Path) -> None:
-        self.dbgym_cfg = dbgym_cfg
+    def __init__(self, dbgym_workspace: DBGymWorkspace, workload_dpath: Path) -> None:
+        self.dbgym_workspace = dbgym_workspace
         self.workload_dpath = workload_dpath
         assert is_fully_resolved(self.workload_dpath)
 
@@ -15,13 +15,13 @@ class Workload:
 
         assert order_fpath.exists()
 
-        with open_and_save(self.dbgym_cfg, order_fpath) as f:
+        with open_and_save(self.dbgym_workspace, order_fpath) as f:
             for line in f:
                 qid, qpath = line.strip().split(",")
                 qpath = Path(qpath)
                 assert is_fully_resolved(qpath)
 
-                with open_and_save(self.dbgym_cfg, qpath) as qf:
+                with open_and_save(self.dbgym_workspace, qpath) as qf:
                     self.queries[qid] = qf.read()
                 self.query_order.append(qid)
 

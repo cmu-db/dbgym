@@ -22,7 +22,7 @@ class WorkloadTests(unittest.TestCase):
 
     def test_workload(self) -> None:
         workload_dpath = fully_resolve_path(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            IntegtestWorkspace.get_dbgym_workspace(),
             get_default_workload_path(
                 IntegtestWorkspace.get_workspace_path(),
                 INTEGTEST_BENCHMARK,
@@ -33,7 +33,7 @@ class WorkloadTests(unittest.TestCase):
             ),
         )
 
-        workload = Workload(IntegtestWorkspace.get_dbgym_cfg(), workload_dpath)
+        workload = Workload(IntegtestWorkspace.get_dbgym_workspace(), workload_dpath)
 
         # Check the order of query IDs.
         self.assertEqual(

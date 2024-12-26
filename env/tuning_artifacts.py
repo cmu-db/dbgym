@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, NewType, TypedDict
 
-from util.workspace import DBGymConfig, is_fully_resolved
+from util.workspace import DBGymWorkspace, is_fully_resolved
 
 # PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents
 # while these types are only used in the interface between the orchestrator and the tuning agents.
@@ -77,9 +77,9 @@ def get_metadata_fpath(tuning_artifacts_dpath: Path) -> Path:
 
 
 class TuningArtifactsWriter:
-    def __init__(self, dbgym_cfg: DBGymConfig, metadata: TuningMetadata) -> None:
-        self.dbgym_cfg = dbgym_cfg
-        self.tuning_artifacts_dpath = self.dbgym_cfg.cur_task_runs_artifacts_path(
+    def __init__(self, dbgym_workspace: DBGymWorkspace, metadata: TuningMetadata) -> None:
+        self.dbgym_workspace = dbgym_workspace
+        self.tuning_artifacts_dpath = self.dbgym_workspace.cur_task_runs_artifacts_path(
             "tuning_artifacts", mkdir=True
         )
         assert is_fully_resolved(self.tuning_artifacts_dpath)
