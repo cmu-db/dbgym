@@ -1,10 +1,10 @@
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import yaml
 
-from env.tuning_artifacts import DBMSConfigDelta, TuningMetadata
+from env.tuning_artifacts import TuningMetadata
 from util.workspace import (
     DBGymWorkspace,
     fully_resolve_path,

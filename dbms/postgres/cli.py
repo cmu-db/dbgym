@@ -269,7 +269,9 @@ def _load_benchmark_into_dbdata(
 
 
 def _load_into_dbdata(
-    dbgym_workspace: DBGymWorkspace, conn: sqlalchemy.Connection, load_info: LoadInfoBaseClass
+    dbgym_workspace: DBGymWorkspace,
+    conn: sqlalchemy.Connection,
+    load_info: LoadInfoBaseClass,
 ) -> None:
     sql_file_execute(dbgym_workspace, conn, load_info.get_schema_fpath())
 
@@ -306,12 +308,17 @@ def start_postgres(
     _start_or_stop_postgres(dbgym_workspace, pgbin_path, dbdata_dpath, True)
 
 
-def stop_postgres(dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path) -> None:
+def stop_postgres(
+    dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path
+) -> None:
     _start_or_stop_postgres(dbgym_workspace, pgbin_path, dbdata_dpath, False)
 
 
 def _start_or_stop_postgres(
-    dbgym_workspace: DBGymWorkspace, pgbin_path: Path, dbdata_dpath: Path, is_start: bool
+    dbgym_workspace: DBGymWorkspace,
+    pgbin_path: Path,
+    dbdata_dpath: Path,
+    is_start: bool,
 ) -> None:
     # They should be absolute paths and should exist
     assert is_fully_resolved(pgbin_path)

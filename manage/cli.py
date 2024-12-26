@@ -68,7 +68,9 @@ def add_symlinks_in_dpath(
                 processed_symlinks.add(file_path)
 
 
-def _count_files_in_workspace(dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace) -> int:
+def _count_files_in_workspace(
+    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
+) -> int:
     """
     Counts the number of files (regular file or dir or symlink) in the workspace.
     """
@@ -88,7 +90,9 @@ def _count_files_in_workspace(dbgym_workspace: DBGymWorkspace | MockDBGymWorkspa
 
 
 def clean_workspace(
-    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace, mode: str = "safe", verbose: bool = False
+    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
+    mode: str = "safe",
+    verbose: bool = False,
 ) -> None:
     """
     Clean all [workspace]/task_runs/run_*/ directories that are not referenced by any "active symlinks".
@@ -104,7 +108,9 @@ def clean_workspace(
     # 1. Initialize paths to process
     if dbgym_workspace.dbgym_symlinks_path.exists():
         add_symlinks_in_dpath(
-            symlink_fpaths_to_process, dbgym_workspace.dbgym_symlinks_path, processed_symlinks
+            symlink_fpaths_to_process,
+            dbgym_workspace.dbgym_symlinks_path,
+            processed_symlinks,
         )
 
     # 2. Go through symlinks, figuring out which "children of task runs" to keep
@@ -139,7 +145,9 @@ def clean_workspace(
 
             # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
             task_run_child_fordpath = None
-            if parent_dpath_of_path(real_fordpath).samefile(dbgym_workspace.dbgym_runs_path):
+            if parent_dpath_of_path(real_fordpath).samefile(
+                dbgym_workspace.dbgym_runs_path
+            ):
                 # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
                 #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
                 #   the structure somehow, it's just a good idea not to delete it.

@@ -65,7 +65,9 @@ def tpch_workload(
     ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
     _clone_tpch_kit(dbgym_workspace)
     _generate_tpch_queries(dbgym_workspace, seed_start, seed_end, scale_factor)
-    _generate_tpch_workload(dbgym_workspace, seed_start, seed_end, query_subset, scale_factor)
+    _generate_tpch_workload(
+        dbgym_workspace, seed_start, seed_end, query_subset, scale_factor
+    )
 
 
 def _get_queries_dname(seed: int, scale_factor: float) -> str:
@@ -93,7 +95,9 @@ def _clone_tpch_kit(dbgym_workspace: DBGymWorkspace) -> None:
 
 
 def _get_tpch_kit_dpath(dbgym_workspace: DBGymWorkspace) -> Path:
-    tpch_kit_dpath = (dbgym_workspace.cur_symlinks_build_path() / "tpch-kit.link").resolve()
+    tpch_kit_dpath = (
+        dbgym_workspace.cur_symlinks_build_path() / "tpch-kit.link"
+    ).resolve()
     assert is_fully_resolved(tpch_kit_dpath)
     return tpch_kit_dpath
 

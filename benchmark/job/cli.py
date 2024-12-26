@@ -236,9 +236,9 @@ def _generate_job_workload(
     query_subset: str,
 ) -> None:
     workload_name = get_workload_name(DEFAULT_SCALE_FACTOR, query_subset)
-    expected_workload_symlink_dpath = dbgym_workspace.cur_symlinks_data_path(mkdir=True) / (
-        workload_name + ".link"
-    )
+    expected_workload_symlink_dpath = dbgym_workspace.cur_symlinks_data_path(
+        mkdir=True
+    ) / (workload_name + ".link")
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating: {expected_workload_symlink_dpath}"

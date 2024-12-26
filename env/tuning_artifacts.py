@@ -77,7 +77,9 @@ def get_metadata_fpath(tuning_artifacts_dpath: Path) -> Path:
 
 
 class TuningArtifactsWriter:
-    def __init__(self, dbgym_workspace: DBGymWorkspace, metadata: TuningMetadata) -> None:
+    def __init__(
+        self, dbgym_workspace: DBGymWorkspace, metadata: TuningMetadata
+    ) -> None:
         self.dbgym_workspace = dbgym_workspace
         self.tuning_artifacts_dpath = self.dbgym_workspace.cur_task_runs_artifacts_path(
             "tuning_artifacts", mkdir=True
