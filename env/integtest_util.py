@@ -16,11 +16,6 @@ from util.workspace import (
     get_workload_name,
 )
 
-# These are the values used by set_up_gymlib_integtest_workspace.sh.
-# TODO: make set_up_gymlib_integtest_workspace.sh take in these values directly as envvars.
-INTEGTEST_BENCHMARK = "tpch"
-INTEGTEST_SCALE_FACTOR = 0.01
-
 
 class GymlibIntegtestManager:
     """
@@ -31,6 +26,11 @@ class GymlibIntegtestManager:
     that the functions have very generic names (e.g. set_up_workspace()) but having them
     inside a class makes it clear that they are related to the gymlib integration tests.
     """
+
+    # These are the values used by set_up_gymlib_integtest_workspace.sh.
+    # TODO: make set_up_gymlib_integtest_workspace.sh take in these values directly as envvars.
+    BENCHMARK = "tpch"
+    SCALE_FACTOR = 0.01
 
     DBGYM_CONFIG_FPATH = Path("env/gymlib_integtest_dbgym_config.yaml")
     DBGYM_WORKSPACE: Optional[DBGymWorkspace] = None
@@ -71,17 +71,21 @@ class GymlibIntegtestManager:
                 dbgym_workspace,
                 get_default_workload_path(
                     workspace_path,
-                    INTEGTEST_BENCHMARK,
+                    GymlibIntegtestManager.BENCHMARK,
                     get_workload_name(
-                        INTEGTEST_SCALE_FACTOR,
-                        get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
+                        GymlibIntegtestManager.SCALE_FACTOR,
+                        get_default_workload_name_suffix(
+                            GymlibIntegtestManager.BENCHMARK
+                        ),
                     ),
                 ),
             ),
             pristine_dbdata_snapshot_path=fully_resolve_path(
                 dbgym_workspace,
                 get_default_pristine_dbdata_snapshot_path(
-                    workspace_path, INTEGTEST_BENCHMARK, INTEGTEST_SCALE_FACTOR
+                    workspace_path,
+                    GymlibIntegtestManager.BENCHMARK,
+                    GymlibIntegtestManager.SCALE_FACTOR,
                 ),
             ),
             dbdata_parent_path=fully_resolve_path(

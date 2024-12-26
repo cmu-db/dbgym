@@ -1,11 +1,7 @@
 import unittest
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
-from env.integtest_util import (
-    INTEGTEST_BENCHMARK,
-    INTEGTEST_SCALE_FACTOR,
-    GymlibIntegtestManager,
-)
+from env.integtest_util import GymlibIntegtestManager
 from env.workload import Workload
 from util.workspace import (
     fully_resolve_path,
@@ -25,10 +21,10 @@ class WorkloadTests(unittest.TestCase):
             GymlibIntegtestManager.get_dbgym_workspace(),
             get_default_workload_path(
                 GymlibIntegtestManager.get_workspace_path(),
-                INTEGTEST_BENCHMARK,
+                GymlibIntegtestManager.BENCHMARK,
                 get_workload_name(
-                    INTEGTEST_SCALE_FACTOR,
-                    get_default_workload_name_suffix(INTEGTEST_BENCHMARK),
+                    GymlibIntegtestManager.SCALE_FACTOR,
+                    get_default_workload_name_suffix(GymlibIntegtestManager.BENCHMARK),
                 ),
             ),
         )
