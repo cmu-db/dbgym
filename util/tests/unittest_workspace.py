@@ -25,13 +25,10 @@ class WorkspaceTests(unittest.TestCase):
         if self.scratchspace_path.exists():
             shutil.rmtree(self.scratchspace_path)
 
-    def test_workspace_init(self) -> None:
-        starting_structure = FilesystemStructure({})
-        CleanTests.create_structure(self.scratchspace_path, starting_structure)
-
-        workspace = DBGymWorkspace(self.workspace_path)
-        ending_symlinks_structure = FilesystemStructure({})
-        ending_task_runs_structure = FilesystemStructure(
+    @staticmethod
+    def get_workspace_init_structure(workspace: DBGymWorkspace) -> FilesystemStructure:
+        symlinks_structure = FilesystemStructure({})
+        task_runs_structure = FilesystemStructure(
             {
                 "latest_run.link": (
                     "symlink",
@@ -40,9 +37,16 @@ class WorkspaceTests(unittest.TestCase):
                 workspace.dbgym_this_run_path.name: {},
             }
         )
-        ending_structure = CleanTests.make_workspace_structure(
-            ending_symlinks_structure, ending_task_runs_structure
+        return CleanTests.make_workspace_structure(
+            symlinks_structure, task_runs_structure
         )
+
+    def test_init_from_nonexistent_workspace(self) -> None:
+        starting_structure = FilesystemStructure({})
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+
+        workspace = DBGymWorkspace(self.workspace_path)
+        ending_structure = WorkspaceTests.get_workspace_init_structure(workspace)
 
         self.assertTrue(
             CleanTests.verify_structure(self.scratchspace_path, ending_structure)
