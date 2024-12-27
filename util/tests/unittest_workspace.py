@@ -10,7 +10,7 @@ from util.tests.filesystem_unittest_util import (
     make_workspace_structure,
     verify_structure,
 )
-from util.workspace import DBGymWorkspace
+from util.workspace import DBGymWorkspace, save_file
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -50,6 +50,19 @@ class WorkspaceTests(unittest.TestCase):
         )
         return make_workspace_structure(symlinks_structure, task_runs_structure)
 
+    @staticmethod
+    def get_updated_structure_from_workspace_init(
+        structure: FilesystemStructure, workspace: DBGymWorkspace
+    ) -> FilesystemStructure:
+        structure["dbgym_workspace"]["task_runs"][
+            workspace.dbgym_this_run_path.name
+        ] = {}
+        structure["dbgym_workspace"]["task_runs"]["latest_run.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}",
+        )
+        return structure
+
     def test_init_from_nonexistent_workspace(self) -> None:
         starting_structure = FilesystemStructure({})
         create_structure(self.scratchspace_path, starting_structure)
@@ -78,12 +91,8 @@ class WorkspaceTests(unittest.TestCase):
         # so DBGymWorkspace.num_times_created_this_run would be 0.
         DBGymWorkspace.num_times_created_this_run = 0
         workspace = DBGymWorkspace(self.workspace_path)
-        ending_structure["dbgym_workspace"]["task_runs"][
-            workspace.dbgym_this_run_path.name
-        ] = {}
-        ending_structure["dbgym_workspace"]["task_runs"]["latest_run.link"] = (
-            "symlink",
-            f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}",
+        ending_structure = WorkspaceTests.get_updated_structure_from_workspace_init(
+            ending_structure, workspace
         )
 
         self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
