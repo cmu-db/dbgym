@@ -11,7 +11,7 @@ from util.tests.filesystem_unittest_util import (
     make_workspace_structure,
     verify_structure,
 )
-from util.workspace import DBGymWorkspace, link_result, save_file
+from util.workspace import DBGymWorkspace
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -85,12 +85,14 @@ class WorkspaceTests(unittest.TestCase):
     def link_result_helper(
         self, result_path: Path, custom_link_name: Optional[str] = None
     ) -> None:
+        assert custom_link_name != f"{result_path.name}.link", "You probably made a mistake in the test"
         assert self.workspace is not None and self.expected_structure is not None
         self.workspace.link_result(result_path, custom_link_name=custom_link_name)
         link_name = (
             f"{result_path.name}.link" if custom_link_name is None else custom_link_name
         )
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        if "dbgym" not in self.expected_structure["dbgym_workspace"]["symlinks"]:
+            self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][link_name] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
@@ -124,18 +126,24 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         result_path = self.make_result_helper()
         with self.assertRaises(AssertionError):
-            self.link_result_helper(result_path, custom_link_name="custom_link")
+            self.link_result_helper(result_path, custom_link_name="custom")
 
     def test_link_result_valid_custom_link_name(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
-        self.link_result_helper(result_path, custom_link_name="custom_link.link")
+        self.link_result_helper(result_path, custom_link_name="custom.link")
 
     def test_link_same_result_twice(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
         self.link_result_helper(result_path)
         self.link_result_helper(result_path)
+
+    def test_link_same_result_with_different_name(self) -> None:
+        self.init_workspace_helper()
+        result_path = self.make_result_helper()
+        self.link_result_helper(result_path)
+        self.link_result_helper(result_path, custom_link_name="custom.link")
 
     # TODO: test overriding existing symlink
     # TODO: test linking result from another run should raise
