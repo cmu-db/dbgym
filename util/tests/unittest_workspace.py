@@ -4,7 +4,12 @@ import shutil
 import unittest
 from pathlib import Path
 
-from manage.tests.unittest_clean import CleanTests, FilesystemStructure
+from util.tests.filesystem_unittest_util import (
+    FilesystemStructure,
+    create_structure,
+    make_workspace_structure,
+    verify_structure,
+)
 from util.workspace import DBGymWorkspace
 
 
@@ -43,31 +48,25 @@ class WorkspaceTests(unittest.TestCase):
                 workspace.dbgym_this_run_path.name: {},
             }
         )
-        return CleanTests.make_workspace_structure(
-            symlinks_structure, task_runs_structure
-        )
+        return make_workspace_structure(symlinks_structure, task_runs_structure)
 
     def test_init_from_nonexistent_workspace(self) -> None:
         starting_structure = FilesystemStructure({})
-        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        create_structure(self.scratchspace_path, starting_structure)
 
         workspace = DBGymWorkspace(self.workspace_path)
         ending_structure = WorkspaceTests.get_workspace_init_structure(workspace)
 
-        self.assertTrue(
-            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
-        )
+        self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
 
     def test_init_from_empty_workspace(self) -> None:
         starting_structure = FilesystemStructure({"dbgym_workspace": {}})
-        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+        create_structure(self.scratchspace_path, starting_structure)
 
         workspace = DBGymWorkspace(self.workspace_path)
         ending_structure = WorkspaceTests.get_workspace_init_structure(workspace)
 
-        self.assertTrue(
-            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
-        )
+        self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
 
     def test_init_from_already_initialized_workspace(self) -> None:
         # This first initialization will create a task run.
@@ -87,9 +86,7 @@ class WorkspaceTests(unittest.TestCase):
             f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}",
         )
 
-        self.assertTrue(
-            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
-        )
+        self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
 
 
 if __name__ == "__main__":

@@ -382,19 +382,6 @@ def is_fully_resolved(path: Path) -> bool:
     return str(resolved_path) == str(path)
 
 
-def path_exists_dont_follow_symlinks(path: Path) -> bool:
-    """
-    As of writing this comment, ray is currently constraining us to python <3.12. However, the "follow_symlinks" option in
-    Path.exists() only comes up in python 3.12. Thus, this is the only way to check if a path exists without following symlinks.
-    """
-    # If the path exists and is a symlink, os.path.islink() will be true (even if the symlink is broken)
-    if os.path.islink(path):
-        return True
-    # Otherwise, we know it's either non-existent or not a symlink, so path.exists() works fine
-    else:
-        return path.exists()
-
-
 def parent_dpath_of_path(dpath: Path) -> Path:
     """
     This function only calls Path.parent, but in a safer way.
