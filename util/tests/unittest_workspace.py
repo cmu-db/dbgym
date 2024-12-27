@@ -77,7 +77,7 @@ class WorkspaceTests(unittest.TestCase):
         # Create parent directories if needed
         result_path.parent.mkdir(parents=True, exist_ok=True)
         result_path.touch()
-        
+
         # Build up the nested dict structure for the expected path
         current_dict = self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
@@ -112,10 +112,13 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_link_result_basic_functionality(self) -> None:
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][f"{result_path.name}.link"] = (
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            f"{result_path.name}.link"
+        ] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
@@ -123,15 +126,20 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def test_link_result_does_not_copy_directory_structure_to_symlinks_dir(self) -> None:
+    def test_link_result_does_not_copy_directory_structure_to_symlinks_dir(
+        self,
+    ) -> None:
         """
         Unlike save_file, link_result does not copy the directory structure to the symlinks directory.
         """
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper(relative_path="dir1/dir2/dir3/result.txt")
         self.workspace.link_result(result_path)
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][f"{result_path.name}.link"] = (
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            f"{result_path.name}.link"
+        ] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/dir1/dir2/dir3/{result_path.name}",
         )
@@ -141,16 +149,20 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_link_result_invalid_custom_link_name(self) -> None:
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         with self.assertRaises(AssertionError):
             self.workspace.link_result(result_path, custom_link_name=f"custom")
 
     def test_link_result_valid_custom_link_name(self) -> None:
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path, custom_link_name="custom.link")
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"]["custom.link"] = (
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            "custom.link"
+        ] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
@@ -160,6 +172,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_link_same_result_twice_with_same_link_name(self) -> None:
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
         self.workspace.link_result(result_path)
@@ -176,6 +189,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_link_same_result_with_different_name(self) -> None:
         self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
         self.workspace.link_result(result_path, custom_link_name="custom.link")
@@ -198,7 +212,6 @@ class WorkspaceTests(unittest.TestCase):
 
     # TODO: test linking result from another run should raise
     # TODO: test that it should link in the agent dir in the links
-    # TODO: test that it will ignore the directory structure (unlike save which keeps it)
     # TODO: test linking a symlink or a non-fully-resolved path
 
 
