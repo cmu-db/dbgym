@@ -1,9 +1,9 @@
 # TODO: figure out where to put the filesystem structure helpers. I think I want to put them inside gymlib and make a separate folder just testing the helpers.
 
 import shutil
-from typing import Optional
 import unittest
 from pathlib import Path
+from typing import Optional
 
 from util.tests.filesystem_unittest_util import (
     FilesystemStructure,
@@ -27,8 +27,8 @@ class WorkspaceTests(unittest.TestCase):
         if self.scratchspace_path.exists():
             shutil.rmtree(self.scratchspace_path)
 
-        self.workspace = None
-        self.expected_structure = None
+        self.workspace: Optional[DBGymWorkspace] = None
+        self.expected_structure: Optional[FilesystemStructure] = None
 
     def tearDown(self) -> None:
         # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
@@ -59,7 +59,9 @@ class WorkspaceTests(unittest.TestCase):
             self.expected_structure["dbgym_workspace"]["task_runs"][
                 self.workspace.dbgym_this_run_path.name
             ] = {}
-            self.expected_structure["dbgym_workspace"]["task_runs"]["latest_run.link"] = (
+            self.expected_structure["dbgym_workspace"]["task_runs"][
+                "latest_run.link"
+            ] = (
                 "symlink",
                 f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}",
             )
@@ -68,26 +70,34 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def make_result_helper(self, result_name: str="result.txt") -> Path:
+    def make_result_helper(self, result_name: str = "result.txt") -> Path:
+        assert self.workspace is not None and self.expected_structure is not None
         result_path = self.workspace.dbgym_this_run_path / result_name
         result_path.touch()
         self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
         ][result_name] = ("file",)
-        self.assertTrue(verify_structure(self.scratchspace_path, self.expected_structure))
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
         return result_path
 
-    def link_result_helper(self, result_path: Path, custom_link_name: Optional[str]=None) -> None:
+    def link_result_helper(
+        self, result_path: Path, custom_link_name: Optional[str] = None
+    ) -> None:
+        assert self.workspace is not None and self.expected_structure is not None
         self.workspace.link_result(result_path, custom_link_name=custom_link_name)
-        link_name = f"{result_path.name}.link" if custom_link_name is None else custom_link_name
+        link_name = (
+            f"{result_path.name}.link" if custom_link_name is None else custom_link_name
+        )
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            link_name
-        ] = (
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][link_name] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
-        self.assertTrue(verify_structure(self.scratchspace_path, self.expected_structure))
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
     def test_init_fields(self) -> None:
         workspace = DBGymWorkspace(self.workspace_path)
