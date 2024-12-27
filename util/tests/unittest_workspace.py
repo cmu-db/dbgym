@@ -36,6 +36,7 @@ class WorkspaceTests(unittest.TestCase):
             shutil.rmtree(self.scratchspace_path)
 
     # All these helper functions will perform an action, update the expected structure, and then verify the structure.
+    # Importantly though, I don't have helper functions for the complex functions that I want to test (e.g. link_result and save_file).
     def init_workspace_helper(self) -> None:
         # Reset this to avoid the error of it being created twice.
         # In real usage, the second run would be a different Python process so DBGymWorkspace.num_times_created_this_run would be 0.
@@ -82,25 +83,6 @@ class WorkspaceTests(unittest.TestCase):
         )
         return result_path
 
-    def link_result_helper(
-        self, result_path: Path, custom_link_name: Optional[str] = None
-    ) -> None:
-        assert custom_link_name != f"{result_path.name}.link", "You probably made a mistake in the test"
-        assert self.workspace is not None and self.expected_structure is not None
-        self.workspace.link_result(result_path, custom_link_name=custom_link_name)
-        link_name = (
-            f"{result_path.name}.link" if custom_link_name is None else custom_link_name
-        )
-        if "dbgym" not in self.expected_structure["dbgym_workspace"]["symlinks"]:
-            self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][link_name] = (
-            "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
-        )
-        self.assertTrue(
-            verify_structure(self.scratchspace_path, self.expected_structure)
-        )
-
     def test_init_fields(self) -> None:
         workspace = DBGymWorkspace(self.workspace_path)
         self.assertEqual(workspace.app_name, "dbgym")
@@ -120,30 +102,72 @@ class WorkspaceTests(unittest.TestCase):
     def test_link_result_basic_functionality(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
-        self.link_result_helper(result_path)
+        self.workspace.link_result(result_path)
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][f"{result_path.name}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
     def test_link_result_invalid_custom_link_name(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
         with self.assertRaises(AssertionError):
-            self.link_result_helper(result_path, custom_link_name="custom")
+            self.workspace.link_result(result_path, custom_link_name=f"custom")
 
     def test_link_result_valid_custom_link_name(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
-        self.link_result_helper(result_path, custom_link_name="custom.link")
+        self.workspace.link_result(result_path, custom_link_name="custom.link")
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"]["custom.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
-    def test_link_same_result_twice(self) -> None:
+    def test_link_same_result_twice_with_same_link_name(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
-        self.link_result_helper(result_path)
-        self.link_result_helper(result_path)
+        self.workspace.link_result(result_path)
+        self.workspace.link_result(result_path)
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            f"{result_path.name}.link"
+        ] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
     def test_link_same_result_with_different_name(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
-        self.link_result_helper(result_path)
-        self.link_result_helper(result_path, custom_link_name="custom.link")
+        self.workspace.link_result(result_path)
+        self.workspace.link_result(result_path, custom_link_name="custom.link")
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            f"{result_path.name}.link"
+        ] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
+            f"custom.link"
+        ] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
     # TODO: test overriding existing symlink
     # TODO: test linking result from another run should raise
