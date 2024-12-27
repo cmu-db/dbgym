@@ -1,6 +1,7 @@
 # TODO: figure out where to put the filesystem structure helpers. I think I want to put them inside gymlib and make a separate folder just testing the helpers.
 
 import shutil
+from typing import Optional
 import unittest
 from pathlib import Path
 
@@ -76,11 +77,12 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(verify_structure(self.scratchspace_path, self.expected_structure))
         return result_path
 
-    def link_result_helper(self, result_path: Path) -> None:
-        self.workspace.link_result(result_path)
+    def link_result_helper(self, result_path: Path, custom_link_name: Optional[str]=None) -> None:
+        self.workspace.link_result(result_path, custom_link_name=custom_link_name)
+        link_name = f"{result_path.name}.link" if custom_link_name is None else custom_link_name
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"{result_path.name}.link"
+            link_name
         ] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
@@ -97,7 +99,6 @@ class WorkspaceTests(unittest.TestCase):
     def test_init_from_empty_workspace(self) -> None:
         starting_structure = FilesystemStructure({"dbgym_workspace": {}})
         create_structure(self.scratchspace_path, starting_structure)
-
         self.init_workspace_helper()
 
     def test_init_from_already_initialized_workspace(self) -> None:
@@ -107,6 +108,23 @@ class WorkspaceTests(unittest.TestCase):
     def test_link_result_basic_functionality(self) -> None:
         self.init_workspace_helper()
         result_path = self.make_result_helper()
+        self.link_result_helper(result_path)
+
+    def test_link_result_invalid_custom_link_name(self) -> None:
+        self.init_workspace_helper()
+        result_path = self.make_result_helper()
+        with self.assertRaises(AssertionError):
+            self.link_result_helper(result_path, custom_link_name="custom_link")
+
+    def test_link_result_valid_custom_link_name(self) -> None:
+        self.init_workspace_helper()
+        result_path = self.make_result_helper()
+        self.link_result_helper(result_path, custom_link_name="custom_link.link")
+
+    def test_link_same_result_twice(self) -> None:
+        self.init_workspace_helper()
+        result_path = self.make_result_helper()
+        self.link_result_helper(result_path)
         self.link_result_helper(result_path)
 
     # TODO: test overriding existing symlink

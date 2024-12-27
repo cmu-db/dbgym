@@ -227,7 +227,7 @@ class DBGymWorkspace:
     def link_result(
         self,
         result_fordpath: Path,
-        custom_result_name: Optional[str] = None,
+        custom_link_name: Optional[str] = None,
     ) -> Path:
         """
         result_fordpath must be a "result", meaning it was generated inside dbgym_workspace.dbgym_this_run_path.
@@ -246,13 +246,13 @@ class DBGymWorkspace:
         assert is_child_path(result_fordpath, self.dbgym_this_run_path)
         assert not os.path.islink(result_fordpath)
 
-        if type(custom_result_name) is str:
-            result_name = custom_result_name
+        if type(custom_link_name) is str:
+            link_name = custom_link_name
         else:
             if os.path.isfile(result_fordpath):
-                result_name = basename_of_path(result_fordpath) + ".link"
+                link_name = basename_of_path(result_fordpath) + ".link"
             elif os.path.isdir(result_fordpath):
-                result_name = basename_of_path(result_fordpath) + ".link"
+                link_name = basename_of_path(result_fordpath) + ".link"
             else:
                 raise AssertionError("result_fordpath must be either a file or dir")
 
@@ -264,10 +264,10 @@ class DBGymWorkspace:
         # Note that in a multi-threaded setting, this might remove one created by a process in the same run,
         #   meaning it's not "old" by our definition of "old". However, we'll always end up with a symlink
         #   file of the current run regardless of the order of threads.
-        assert result_name.endswith(".link") and not result_name.endswith(
+        assert link_name.endswith(".link") and not link_name.endswith(
             ".link.link"
-        ), f'result_name ({result_name}) should end with ".link"'
-        symlink_path = symlink_parent_dpath / result_name
+        ), f'link_name ({link_name}) should end with ".link"'
+        symlink_path = symlink_parent_dpath / link_name
         try_remove_file(symlink_path)
         try_create_symlink(result_fordpath, symlink_path)
 
