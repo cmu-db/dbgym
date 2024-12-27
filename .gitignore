@@ -7,3 +7,4 @@ build/
 workspace/
 default_*_benchbase_config_*.xml
 *.egg-info/
+*.code-workspace
