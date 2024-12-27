@@ -1,6 +1,6 @@
 import unittest
 
-from env.tests.integtest_util import GymlibIntegtestManager
+from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
