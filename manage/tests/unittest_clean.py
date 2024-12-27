@@ -234,7 +234,7 @@ class CleanTests(unittest.TestCase):
         # This just ensures that it doesn't raise an exception.
         clean_workspace(MockDBGymWorkspace(self.workspace_path))
 
-    def test_no_symlinks_dir_and_no_task_runs_dir(self) -> None:
+    def test_empty_workspace(self) -> None:
         starting_structure = FilesystemStructure({"dbgym_workspace": {}})
         ending_structure = FilesystemStructure({"dbgym_workspace": {}})
         CleanTests.create_structure(self.scratchspace_path, starting_structure)
