@@ -71,13 +71,24 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def make_result_helper(self, result_name: str = "result.txt") -> Path:
+    def make_result_helper(self, relative_path: str = "result.txt") -> Path:
         assert self.workspace is not None and self.expected_structure is not None
-        result_path = self.workspace.dbgym_this_run_path / result_name
+        result_path = self.workspace.dbgym_this_run_path / relative_path
+        # Create parent directories if needed
+        result_path.parent.mkdir(parents=True, exist_ok=True)
         result_path.touch()
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        
+        # Build up the nested dict structure for the expected path
+        current_dict = self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
-        ][result_name] = ("file",)
+        ]
+        path_parts = relative_path.split("/")
+        for part in path_parts[:-1]:
+            if part not in current_dict:
+                current_dict[part] = {}
+            current_dict = current_dict[part]
+        current_dict[path_parts[-1]] = ("file",)
+
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
@@ -107,6 +118,22 @@ class WorkspaceTests(unittest.TestCase):
         self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][f"{result_path.name}.link"] = (
             "symlink",
             f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    def test_link_result_does_not_copy_directory_structure_to_symlinks_dir(self) -> None:
+        """
+        Unlike save_file, link_result does not copy the directory structure to the symlinks directory.
+        """
+        self.init_workspace_helper()
+        result_path = self.make_result_helper(relative_path="dir1/dir2/dir3/result.txt")
+        self.workspace.link_result(result_path)
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][f"{result_path.name}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/dir1/dir2/dir3/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -169,7 +196,6 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    # TODO: test overriding existing symlink
     # TODO: test linking result from another run should raise
     # TODO: test that it should link in the agent dir in the links
     # TODO: test that it will ignore the directory structure (unlike save which keeps it)
