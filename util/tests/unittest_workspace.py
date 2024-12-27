@@ -1,8 +1,8 @@
 # TODO: figure out where to put the filesystem structure helpers. I think I want to put them inside gymlib and make a separate folder just testing the helpers.
 
-from pathlib import Path
 import shutil
 import unittest
+from pathlib import Path
 
 from manage.tests.unittest_clean import FilesystemStructure
 
