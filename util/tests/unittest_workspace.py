@@ -10,7 +10,7 @@ from util.tests.filesystem_unittest_util import (
     make_workspace_structure,
     verify_structure,
 )
-from util.workspace import DBGymWorkspace, save_file
+from util.workspace import DBGymWorkspace, link_result, save_file
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -33,6 +33,7 @@ class WorkspaceTests(unittest.TestCase):
         DBGymWorkspace.num_times_created_this_run = 0
 
     def tearDown(self) -> None:
+        # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
         if self.scratchspace_path.exists():
             shutil.rmtree(self.scratchspace_path)
 
@@ -62,6 +63,10 @@ class WorkspaceTests(unittest.TestCase):
             f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}",
         )
         return structure
+
+    def test_init_fields(self) -> None:
+        workspace = DBGymWorkspace(self.workspace_path)
+        self.assertEqual(workspace.app_name, "dbgym")
 
     def test_init_from_nonexistent_workspace(self) -> None:
         starting_structure = FilesystemStructure({})
@@ -96,6 +101,35 @@ class WorkspaceTests(unittest.TestCase):
         )
 
         self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
+
+    def test_link_result_basic_functionality(self) -> None:
+        # Setup.
+        workspace = DBGymWorkspace(self.workspace_path)
+        ending_structure = WorkspaceTests.get_workspace_init_structure(workspace)
+
+        # Make a result file.
+        result_path = workspace.dbgym_this_run_path / "result.txt"
+        result_path.touch()
+        ending_structure["dbgym_workspace"]["task_runs"][
+            workspace.dbgym_this_run_path.name
+        ]["result.txt"] = ("file",)
+
+        # Link the result file.
+        workspace.link_result(result_path)
+        ending_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
+        ending_structure["dbgym_workspace"]["symlinks"]["dbgym"]["result.txt.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}/result.txt",
+        )
+
+        # Verify structure.
+        self.assertTrue(verify_structure(self.scratchspace_path, ending_structure))
+
+    # TODO: test overriding existing symlink
+    # TODO: test linking result from another run should raise
+    # TODO: test that it should link in the agent dir in the links
+    # TODO: test that it will ignore the directory structure (unlike save which keeps it)
+    # TODO: test linking a symlink or a non-fully-resolved path
 
 
 if __name__ == "__main__":
