@@ -130,6 +130,7 @@ class CleanTests(unittest.TestCase):
                 "dbgym_workspace": {
                     "symlinks": symlinks_structure,
                     "task_runs": task_runs_structure,
+                    "tmp": {},
                 }
             }
         )

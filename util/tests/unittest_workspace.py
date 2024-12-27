@@ -4,7 +4,8 @@ import shutil
 import unittest
 from pathlib import Path
 
-from manage.tests.unittest_clean import FilesystemStructure
+from manage.tests.unittest_clean import CleanTests, FilesystemStructure
+from util.workspace import DBGymWorkspace
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -25,4 +26,24 @@ class WorkspaceTests(unittest.TestCase):
             shutil.rmtree(self.scratchspace_path)
 
     def test_workspace_init(self) -> None:
-        pass
+        starting_structure = FilesystemStructure({})
+        CleanTests.create_structure(self.scratchspace_path, starting_structure)
+
+        workspace = DBGymWorkspace(self.workspace_path)
+        ending_symlinks_structure = FilesystemStructure({})
+        ending_task_runs_structure = FilesystemStructure(
+            {
+                "latest_run.link": (
+                    "symlink",
+                    f"dbgym_workspace/task_runs/{workspace.dbgym_this_run_path.name}",
+                ),
+                workspace.dbgym_this_run_path.name: {},
+            }
+        )
+        ending_structure = CleanTests.make_workspace_structure(
+            ending_symlinks_structure, ending_task_runs_structure
+        )
+
+        self.assertTrue(
+            CleanTests.verify_structure(self.scratchspace_path, ending_structure)
+        )
