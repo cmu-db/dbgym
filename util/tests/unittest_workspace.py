@@ -157,7 +157,7 @@ class WorkspaceTests(unittest.TestCase):
         self,
     ) -> None:
         """
-        Unlike save_file, link_result does not copy the directory structure to the symlinks directory.
+        We always just want link_result to link to the base symlinks dir.
         """
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
@@ -276,6 +276,30 @@ class WorkspaceTests(unittest.TestCase):
             "result_fordpath \(.*\) should be a fully resolved path",
         ):
             self.workspace.link_result(symlink_path)
+
+    def test_save_file_dependency(self) -> None:
+        """
+        See the comments in save_file() for what a "dependency" is.
+        """
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        prev_run_name = self.workspace.dbgym_this_run_path.name
+        result_path = self.make_result_helper()
+        self.init_workspace_helper()
+        self.workspace.save_file(result_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{result_path.name}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    # TODO: test save_file on a config
+    # TODO: test save_file on something generated this run
+    # TODO: test that save_file saves the whole directory
 
 
 if __name__ == "__main__":
