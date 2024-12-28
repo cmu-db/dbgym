@@ -151,7 +151,7 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(AssertionError, "link_name \\(custom\\) should end with \"\\.link\""):
             self.workspace.link_result(result_path, custom_link_name=f"custom")
 
     def test_link_result_valid_custom_link_name(self) -> None:
@@ -209,6 +209,13 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
+
+    def test_link_result_from_another_run_raises_error(self) -> None:
+        self.init_workspace_helper()
+        result_path = self.make_result_helper()
+        self.init_workspace_helper()
+        with self.assertRaisesRegex(AssertionError, "The result must have been generated in \*this\* run\_\*/ dir"):
+            self.workspace.link_result(result_path)
 
     # TODO: test linking result from another run should raise
     # TODO: test that it should link in the agent dir in the links
