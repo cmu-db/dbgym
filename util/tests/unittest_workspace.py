@@ -1,5 +1,6 @@
 # TODO: figure out where to put the filesystem structure helpers. I think I want to put them inside gymlib and make a separate folder just testing the helpers.
 
+import os
 import shutil
 import unittest
 from pathlib import Path
@@ -30,10 +31,10 @@ class WorkspaceTests(unittest.TestCase):
         self.workspace: Optional[DBGymWorkspace] = None
         self.expected_structure: Optional[FilesystemStructure] = None
 
-    # def tearDown(self) -> None:
-    #     # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
-    #     if self.scratchspace_path.exists():
-    #         shutil.rmtree(self.scratchspace_path)
+    def tearDown(self) -> None:
+        # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
+        if self.scratchspace_path.exists():
+            shutil.rmtree(self.scratchspace_path)
 
     # All these helper functions will perform an action, update the expected structure, and then verify the structure.
     # Importantly though, I don't have helper functions for the complex functions that I want to test (e.g. link_result and save_file).
@@ -71,14 +72,28 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def make_file_helper(self, relative_path: str) -> Path:
+    def make_file_helper(
+        self, relative_path: str, file_obj: tuple[str, ...] = ("file",)
+    ) -> Path:
+        """
+        You can override file_obj to make it a symlink instead.
+        """
         assert self.workspace is not None and self.expected_structure is not None
         assert (
             ".." not in relative_path
         ), 'relative_path should not contain ".." (it should be inside the scratchspace dir)'
         file_path = self.scratchspace_path / relative_path
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.touch()
+
+        if file_obj[0] == "file":
+            assert len(file_obj) == 1
+            file_path.touch()
+        elif file_obj[0] == "symlink":
+            assert len(file_obj) == 2
+            target_path = self.scratchspace_path / file_obj[1]
+            os.symlink(target_path, file_path)
+        else:
+            assert False, f"Unsupported file_obj: {file_obj}"
 
         # Build up the nested dict structure for the expected path
         current_dict = self.expected_structure
@@ -87,20 +102,23 @@ class WorkspaceTests(unittest.TestCase):
             if part not in current_dict:
                 current_dict[part] = {}
             current_dict = current_dict[part]
-        current_dict[path_parts[-1]] = ("file",)
+        current_dict[path_parts[-1]] = file_obj
 
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
         return file_path
 
-    def make_result_helper(self, relative_path: str = "result.txt") -> Path:
+    def make_result_helper(
+        self, relative_path: str = "result.txt", file_obj: tuple[str, ...] = ("file",)
+    ) -> Path:
         assert self.workspace is not None and self.expected_structure is not None
         assert (
             ".." not in relative_path
         ), 'relative_path should not contain ".." (it should be inside the run_*/ dir)'
         return self.make_file_helper(
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{relative_path}"
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{relative_path}",
+            file_obj=file_obj,
         )
 
     def test_init_fields(self) -> None:
@@ -243,7 +261,21 @@ class WorkspaceTests(unittest.TestCase):
             self.workspace.link_result(result_path)
 
     def test_link_result_cannot_link_symlink(self) -> None:
-        pass
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result_path = self.make_result_helper()
+        symlink_path = self.make_result_helper(
+            "symlink.link",
+            file_obj=(
+                "symlink",
+                f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+            ),
+        )
+        with self.assertRaisesRegex(
+            AssertionError,
+            "result_fordpath \(.*\) should be a fully resolved path",
+        ):
+            self.workspace.link_result(symlink_path)
 
     # TODO: test linking a symlink or a non-fully-resolved path
 
