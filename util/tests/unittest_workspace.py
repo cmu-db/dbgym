@@ -30,10 +30,10 @@ class WorkspaceTests(unittest.TestCase):
         self.workspace: Optional[DBGymWorkspace] = None
         self.expected_structure: Optional[FilesystemStructure] = None
 
-    def tearDown(self) -> None:
-        # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
-        if self.scratchspace_path.exists():
-            shutil.rmtree(self.scratchspace_path)
+    # def tearDown(self) -> None:
+    #     # You can comment this out if you want to inspect the scratchspace after a test (often used for debugging).
+    #     if self.scratchspace_path.exists():
+    #         shutil.rmtree(self.scratchspace_path)
 
     # All these helper functions will perform an action, update the expected structure, and then verify the structure.
     # Importantly though, I don't have helper functions for the complex functions that I want to test (e.g. link_result and save_file).
@@ -71,17 +71,17 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def make_result_helper(self, relative_path: str = "result.txt") -> Path:
+    def make_file_helper(self, relative_path: str) -> Path:
         assert self.workspace is not None and self.expected_structure is not None
-        result_path = self.workspace.dbgym_this_run_path / relative_path
-        # Create parent directories if needed
-        result_path.parent.mkdir(parents=True, exist_ok=True)
-        result_path.touch()
+        assert (
+            ".." not in relative_path
+        ), 'relative_path should not contain ".." (it should be inside the scratchspace dir)'
+        file_path = self.scratchspace_path / relative_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.touch()
 
         # Build up the nested dict structure for the expected path
-        current_dict = self.expected_structure["dbgym_workspace"]["task_runs"][
-            self.workspace.dbgym_this_run_path.name
-        ]
+        current_dict = self.expected_structure
         path_parts = relative_path.split("/")
         for part in path_parts[:-1]:
             if part not in current_dict:
@@ -92,7 +92,16 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
-        return result_path
+        return file_path
+
+    def make_result_helper(self, relative_path: str = "result.txt") -> Path:
+        assert self.workspace is not None and self.expected_structure is not None
+        assert (
+            ".." not in relative_path
+        ), 'relative_path should not contain ".." (it should be inside the run_*/ dir)'
+        return self.make_file_helper(
+            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{relative_path}"
+        )
 
     def test_init_fields(self) -> None:
         workspace = DBGymWorkspace(self.workspace_path)
@@ -151,7 +160,9 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
-        with self.assertRaisesRegex(AssertionError, "link_name \\(custom\\) should end with \"\\.link\""):
+        with self.assertRaisesRegex(
+            AssertionError, 'link_name \\(custom\\) should end with "\\.link"'
+        ):
             self.workspace.link_result(result_path, custom_link_name=f"custom")
 
     def test_link_result_valid_custom_link_name(self) -> None:
@@ -214,11 +225,26 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         result_path = self.make_result_helper()
         self.init_workspace_helper()
-        with self.assertRaisesRegex(AssertionError, "The result must have been generated in \*this\* run\_\*/ dir"):
+        assert self.workspace is not None and self.expected_structure is not None
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The result must have been generated in \*this\* run\_\*/ dir",
+        ):
             self.workspace.link_result(result_path)
 
-    # TODO: test linking result from another run should raise
-    # TODO: test that it should link in the agent dir in the links
+    def test_link_result_from_external_dir_raises_error(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result_path = self.make_file_helper("external/result.txt")
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The result must have been generated in \*this\* run\_\*/ dir",
+        ):
+            self.workspace.link_result(result_path)
+
+    def test_link_result_cannot_link_symlink(self) -> None:
+        pass
+
     # TODO: test linking a symlink or a non-fully-resolved path
 
 

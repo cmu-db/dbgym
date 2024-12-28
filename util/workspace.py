@@ -243,7 +243,9 @@ class DBGymWorkspace:
         assert is_fully_resolved(
             result_fordpath
         ), f"result_fordpath ({result_fordpath}) should be a fully resolved path"
-        assert is_child_path(result_fordpath, self.dbgym_this_run_path), "The result must have been generated in *this* run_*/ dir"
+        assert is_child_path(
+            result_fordpath, self.dbgym_this_run_path
+        ), "The result must have been generated in *this* run_*/ dir"
         assert not os.path.islink(result_fordpath)
 
         if type(custom_link_name) is str:
