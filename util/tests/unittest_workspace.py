@@ -312,9 +312,37 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    # TODO: test save_file on a config
-    # TODO: test save_file on something generated this run
-    # TODO: test that save_file saves the whole directory
+    def test_save_file_dependency_inside_directory(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        prev_run_name = self.workspace.dbgym_this_run_path.name
+        result_path = self.make_result_helper("dir1/dir2/result.txt")
+        self.make_result_helper("dir1/other1.txt")
+        self.make_result_helper("dir1/dir3/other2.txt")
+        self.init_workspace_helper()
+        self.workspace.save_file(result_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ]["dir1.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_name}/dir1",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    def test_save_file_generated_this_run_raises_error(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result_path = self.make_result_helper()
+        with self.assertRaisesRegex(
+            AssertionError,
+            "fpath \(.*\) was generated in this task run \(.*\)\. You do not need to save it",
+        ):
+            self.workspace.save_file(result_path)
+
+    # TODO: test saving the same config/dependency twice
+    # TODO: test saving different configs/dependencies with the same name
 
 
 if __name__ == "__main__":
