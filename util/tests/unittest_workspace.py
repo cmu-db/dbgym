@@ -277,8 +277,6 @@ class WorkspaceTests(unittest.TestCase):
         ):
             self.workspace.link_result(symlink_path)
 
-    # TODO: test linking a symlink or a non-fully-resolved path
-
 
 if __name__ == "__main__":
     unittest.main()
