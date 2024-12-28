@@ -297,6 +297,24 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
+    def test_save_file_same_dependency_twice(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        prev_run_name = self.workspace.dbgym_this_run_path.name
+        result_path = self.make_result_helper()
+        self.init_workspace_helper()
+        self.workspace.save_file(result_path)
+        self.workspace.save_file(result_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{result_path.name}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_name}/{result_path.name}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
     def test_save_file_config(self) -> None:
         """
         See the comments in save_file() for what a "config" is.
@@ -304,6 +322,19 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_file_helper("external/result.txt")
+        self.workspace.save_file(result_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{result_path.name}"] = ("file",)
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    def test_save_file_same_config_twice(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result_path = self.make_file_helper("external/result.txt")
+        self.workspace.save_file(result_path)
         self.workspace.save_file(result_path)
         self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
