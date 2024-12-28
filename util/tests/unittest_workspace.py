@@ -297,6 +297,21 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
+    def test_save_file_config(self) -> None:
+        """
+        See the comments in save_file() for what a "config" is.
+        """
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result_path = self.make_file_helper("external/result.txt")
+        self.workspace.save_file(result_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{result_path.name}"] = ("file",)
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
     # TODO: test save_file on a config
     # TODO: test save_file on something generated this run
     # TODO: test that save_file saves the whole directory
