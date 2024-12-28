@@ -25,8 +25,12 @@ def create_structure(root_path: Path, structure: FilesystemStructure) -> None:
                     FilesystemStructure(cast(dict[str, Any], content)),
                 )
             elif isinstance(content, tuple) and content[0] == "file":
-                assert len(content) == 1
-                full_path.touch()
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                if len(content) == 2:
+                    full_path.write_text(content[1])
+                else:
+                    assert len(content) == 1
+                    full_path.touch()
             elif isinstance(content, tuple) and content[0] == "symlink":
                 assert len(content) == 2
                 target_path = root_path / content[1]

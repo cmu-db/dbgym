@@ -86,7 +86,7 @@ class WorkspaceTests(unittest.TestCase):
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         if file_obj[0] == "file":
-            assert len(file_obj) == 1
+            assert len(file_obj) in [1, 2]
             file_path.touch()
         elif file_obj[0] == "symlink":
             assert len(file_obj) == 2
@@ -321,11 +321,11 @@ class WorkspaceTests(unittest.TestCase):
         """
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
-        result_path = self.make_file_helper("external/result.txt")
+        result_path = self.make_file_helper("external/result.txt", file_obj=("file", "contents"))
         self.workspace.save_file(result_path)
         self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
-        ][f"{result_path.name}"] = ("file",)
+        ][f"{result_path.name}"] = ("file", "contents")
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
@@ -372,7 +372,6 @@ class WorkspaceTests(unittest.TestCase):
         ):
             self.workspace.save_file(result_path)
 
-    # TODO: test saving the same config/dependency twice
     # TODO: test saving different configs/dependencies with the same name
 
 
