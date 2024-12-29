@@ -181,6 +181,8 @@ class DBGymWorkspace:
                 )
                 # `exist_ok` is False because we don't want to override a previous task run's data.
                 self.dbgym_this_run_path.mkdir(parents=True, exist_ok=False)
+                # Break if it succeeds so we don't do it a second time.
+                break
             except FileExistsError:
                 # In case we call task.py twice in one second, sleeping here will fix it.
                 # Waiting one second is enough since we assume there's only one task.py running at a time.
