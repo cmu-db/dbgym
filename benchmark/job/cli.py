@@ -139,15 +139,19 @@ def job_group(dbgym_workspace: DBGymWorkspace) -> None:
     dbgym_workspace.append_group("job")
 
 
-@job_group.command(name="data")
+@job_group.command(name="tables")
 # We expose this option to keep its interface consistent with other workloads, but you should never pass in something other than DEFAULT_SCALE_FACTOR.
 @click.argument("scale-factor", type=float)
 @click.pass_obj
-# The reason generate data is separate from create dbdata is because generate-data is generic
+# The reason generate data is separate from create dbdata is because generate data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
-def job_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+def job_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+    _job_tables(dbgym_workspace, scale_factor)
+
+
+def _job_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
     assert scale_factor == DEFAULT_SCALE_FACTOR
-    _download_job_data(dbgym_workspace)
+    _download_job_tables(dbgym_workspace)
 
 
 @job_group.command(name="workload")
@@ -166,7 +170,7 @@ def job_workload(
     _generate_job_workload(dbgym_workspace, query_subset)
 
 
-def _download_job_data(dbgym_workspace: DBGymWorkspace) -> None:
+def _download_job_tables(dbgym_workspace: DBGymWorkspace) -> None:
     _download_and_untar_dir(
         dbgym_workspace,
         JOB_TABLES_URL,
@@ -198,36 +202,41 @@ def _download_and_untar_dir(
     an "original" directory name. If this is the case, you should set
     `untarred_original_dname` to ensure that it gets renamed to `untarred_dname`.
     """
-    expected_symlink_dpath = (
-        dbgym_workspace.cur_symlinks_data_path(mkdir=True) / f"{untarred_dname}.link"
+    expected_symlink_path = (
+        dbgym_workspace.dbgym_cur_symlinks_path / f"{untarred_dname}.link"
     )
-    if expected_symlink_dpath.exists():
+    if expected_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping download: {expected_symlink_dpath}"
+            f"Skipping download: {expected_symlink_path}"
         )
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_dpath}")
-    real_data_path = dbgym_workspace.cur_task_runs_data_path(mkdir=True)
-    subprocess_run(f"curl -O {download_url}", cwd=real_data_path)
-    untarred_data_dpath = dbgym_workspace.cur_task_runs_data_path(untarred_dname)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_path}")
+    subprocess_run(f"curl -O {download_url}", cwd=dbgym_workspace.dbgym_this_run_path)
+    untarred_data_path = dbgym_workspace.dbgym_this_run_path / untarred_dname
 
     if untarred_original_dname is not None:
-        assert not untarred_data_dpath.exists()
-        subprocess_run(f"tar -zxvf {download_tarred_fname}", cwd=real_data_path)
-        assert (real_data_path / untarred_original_dname).exists()
+        assert not untarred_data_path.exists()
         subprocess_run(
-            f"mv {untarred_original_dname} {untarred_dname}", cwd=real_data_path
+            f"tar -zxvf {download_tarred_fname}",
+            cwd=dbgym_workspace.dbgym_this_run_path,
+        )
+        assert (dbgym_workspace.dbgym_this_run_path / untarred_original_dname).exists()
+        subprocess_run(
+            f"mv {untarred_original_dname} {untarred_dname}",
+            cwd=dbgym_workspace.dbgym_this_run_path,
         )
     else:
-        untarred_data_dpath.mkdir(parents=True, exist_ok=False)
-        subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_dpath)
+        untarred_data_path.mkdir(parents=True, exist_ok=False)
+        subprocess_run(f"tar -zxvf ../{download_tarred_fname}", cwd=untarred_data_path)
 
-    assert untarred_data_dpath.exists()
-    subprocess_run(f"rm {download_tarred_fname}", cwd=real_data_path)
-    symlink_dpath = link_result(dbgym_workspace, untarred_data_dpath)
-    assert expected_symlink_dpath.samefile(symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_dpath}")
+    assert untarred_data_path.exists()
+    subprocess_run(
+        f"rm {download_tarred_fname}", cwd=dbgym_workspace.dbgym_this_run_path
+    )
+    symlink_path = dbgym_workspace.link_result(untarred_data_path)
+    assert expected_symlink_path.samefile(symlink_path)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_path}")
 
 
 def _generate_job_workload(
@@ -239,12 +248,12 @@ def _generate_job_workload(
         DEFAULT_SCALE_FACTOR,
         get_workload_suffix("job", query_subset=query_subset),
     )
-    expected_workload_symlink_dpath = dbgym_workspace.cur_symlinks_data_path(
+    expected_workload_symlink_path = dbgym_workspace.cur_symlinks_data_path(
         mkdir=True
     ) / (workload_name + ".link")
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generating: {expected_workload_symlink_dpath}"
+        f"Generating: {expected_workload_symlink_path}"
     )
     real_dpath = dbgym_workspace.cur_task_runs_data_path(workload_name, mkdir=True)
 
@@ -269,8 +278,8 @@ def _generate_job_workload(
             ), "We should only write existent real absolute paths to a file"
             f.write(f"Q{qname},{sql_fpath}\n")
 
-    workload_symlink_dpath = link_result(dbgym_workspace, real_dpath)
-    assert workload_symlink_dpath == expected_workload_symlink_dpath
+    workload_symlink_path = link_result(dbgym_workspace, real_dpath)
+    assert workload_symlink_path == expected_workload_symlink_path
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generated: {expected_workload_symlink_dpath}"
+        f"Generated: {expected_workload_symlink_path}"
     )

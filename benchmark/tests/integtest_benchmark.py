@@ -9,6 +9,8 @@ from gymlib.symlinks_paths import (
 )
 
 # It's ok to import private functions from the benchmark module because this is an integration test.
+from benchmark.constants import DEFAULT_SCALE_FACTOR
+from benchmark.job.cli import _job_tables
 from benchmark.tpch.cli import _tpch_tables, _tpch_workload
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.workspace import (
@@ -39,6 +41,16 @@ class TestBenchmark(unittest.TestCase):
         )
         self.assertFalse(tables_path.exists())
         _tpch_tables(self.workspace, scale_factor)
+        self.assertTrue(tables_path.exists())
+        self.assertTrue(fully_resolve_path(tables_path).exists())
+
+    def test_job_tables(self) -> None:
+        scale_factor = DEFAULT_SCALE_FACTOR
+        tables_path = get_tables_symlink_path(
+            self.workspace.dbgym_workspace_path, "job", scale_factor
+        )
+        self.assertFalse(tables_path.exists())
+        _job_tables(self.workspace, scale_factor)
         self.assertTrue(tables_path.exists())
         self.assertTrue(fully_resolve_path(tables_path).exists())
 
