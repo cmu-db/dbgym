@@ -131,6 +131,7 @@ class DBGymWorkspace:
 
     def __init__(self, dbgym_workspace_path: Path):
         # The logic around dbgym_tmp_path assumes that DBGymWorkspace is only constructed once.
+        # This is because DBGymWorkspace creates a new run_*/ dir when it's initialized.
         DBGymWorkspace.num_times_created_this_run += 1
         assert (
             DBGymWorkspace.num_times_created_this_run == 1

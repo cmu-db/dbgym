@@ -67,6 +67,8 @@ class GymlibIntegtestManager:
         #
         # However, it also can't be created more than once so we need to check `is None`.
         if GymlibIntegtestManager.DBGYM_WORKSPACE is None:
+            # Reset this in case it had been created by a test *not* using GymlibIntegtestManager.set_up_workspace().
+            DBGymWorkspace.num_times_created_this_run = 0
             GymlibIntegtestManager.DBGYM_WORKSPACE = DBGymWorkspace(workspace_path)
 
     @staticmethod
