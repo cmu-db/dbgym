@@ -2,13 +2,13 @@ import logging
 from typing import Optional
 
 import click
+from gymlib.symlinks_paths import get_tables_dirname
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
     DBGymWorkspace,
-    get_default_tables_dname,
     get_workload_name,
     is_fully_resolved,
     link_result,
@@ -172,7 +172,7 @@ def _download_job_data(dbgym_workspace: DBGymWorkspace) -> None:
         dbgym_workspace,
         JOB_TABLES_URL,
         "imdb.tgz",
-        get_default_tables_dname(DEFAULT_SCALE_FACTOR),
+        get_tables_dirname("job", DEFAULT_SCALE_FACTOR),
     )
 
 

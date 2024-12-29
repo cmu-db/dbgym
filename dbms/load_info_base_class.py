@@ -12,7 +12,7 @@ class LoadInfoBaseClass:
     def get_schema_fpath(self) -> Path:
         raise NotImplementedError
 
-    def get_tables_and_fpaths(self) -> list[tuple[str, Path]]:
+    def get_tables_and_paths(self) -> list[tuple[str, Path]]:
         raise NotImplementedError
 
     # We assume the table file has a "csv-like" format where values are separated by a delimiter.

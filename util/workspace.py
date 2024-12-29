@@ -45,24 +45,8 @@ def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
     return get_runs_path_from_workspace_path(workspace_path) / "latest_run.link"
 
 
-def get_scale_factor_string(scale_factor: float | str) -> str:
-    if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
-        return scale_factor
-    else:
-        if float(int(scale_factor)) == scale_factor:
-            return str(int(scale_factor))
-        else:
-            return str(scale_factor).replace(".", "point")
-
-
-def get_dbdata_tgz_name(benchmark_name: str, scale_factor: float | str) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
-
-
 # Other parameters
-BENCHMARK_NAME_PLACEHOLDER: str = "[benchmark_name]"
-WORKLOAD_NAME_PLACEHOLDER: str = "[workload_name]"
-SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
+
 
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
@@ -70,8 +54,6 @@ DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
 
 
 # Generally useful functions
-def get_workload_name(scale_factor: float | str, suffix: str) -> str:
-    return f"workload_sf{get_scale_factor_string(scale_factor)}_{suffix}"
 
 
 def get_default_workload_name_suffix(benchmark_name: str) -> str:
@@ -85,8 +67,6 @@ def get_default_workload_name_suffix(benchmark_name: str) -> str:
 
 # Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
 #   Since they can refer to either the actual or the link, they do not have ".link" in them.
-def get_default_tables_dname(scale_factor: float | str) -> str:
-    return f"tables_sf{get_scale_factor_string(scale_factor)}"
 
 
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
@@ -102,17 +82,6 @@ def get_default_tables_dname(scale_factor: float | str) -> str:
 #    folder called run_*/*/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
 #    run_*/*/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
 #    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
-def get_default_tables_path(
-    workspace_path: Path, benchmark_name: str, scale_factor: float | str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / f"dbgym_benchmark_{benchmark_name}"
-        / "data"
-        / (get_default_tables_dname(scale_factor) + ".link")
-    )
-
-
 def get_default_workload_path(
     workspace_path: Path, benchmark_name: str, workload_name: str
 ) -> Path:
@@ -124,6 +93,27 @@ def get_default_workload_path(
     )
 
 
+SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
+
+
+def get_scale_factor_string(scale_factor: float | str) -> str:
+    if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
+        return scale_factor
+    else:
+        if float(int(scale_factor)) == scale_factor:
+            return str(int(scale_factor))
+        else:
+            return str(scale_factor).replace(".", "point")
+
+
+def get_dbdata_tgz_filename(benchmark_name: str, scale_factor: float | str) -> str:
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
+
+
+def get_workload_name(scale_factor: float | str, suffix: str) -> str:
+    return f"workload_sf{get_scale_factor_string(scale_factor)}_{suffix}"
+
+
 def get_default_pristine_dbdata_snapshot_path(
     workspace_path: Path, benchmark_name: str, scale_factor: float | str
 ) -> Path:
@@ -131,7 +121,7 @@ def get_default_pristine_dbdata_snapshot_path(
         get_symlinks_path_from_workspace_path(workspace_path)
         / "dbgym_dbms_postgres"
         / "data"
-        / (get_dbdata_tgz_name(benchmark_name, scale_factor) + ".link")
+        / (get_dbdata_tgz_filename(benchmark_name, scale_factor) + ".link")
     )
 
 
@@ -187,6 +177,7 @@ class DBGymWorkspace:
             self.dbgym_workspace_path
         )
         self.dbgym_symlinks_path.mkdir(parents=True, exist_ok=True)
+        self.dbgym_cur_symlinks_path = self.dbgym_symlinks_path / self.app_name
         # tmp/ is a workspace for this run only
         # One use for it is to place the unzipped dbdata.
         # There's no need to save the actual dbdata dir in run_*/ because we just save a symlink to
@@ -357,7 +348,7 @@ class DBGymWorkspace:
             cur_path = cur_path / dir
         return cur_path
 
-    def cur_symlinks_path(self, *dirs: str, mkdir: bool = False) -> Path:
+    def _cur_symlinks_path(self, *dirs: str, mkdir: bool = False) -> Path:
         flattened_structure = "_".join(self.cur_path_list)
         cur_path = self.dbgym_symlinks_path / flattened_structure
         for dir in dirs:
@@ -376,13 +367,13 @@ class DBGymWorkspace:
         return cur_path
 
     def cur_symlinks_bin_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_symlinks_path("bin", *dirs, mkdir=mkdir)
+        return self._cur_symlinks_path("bin", *dirs, mkdir=mkdir)
 
     def cur_symlinks_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_symlinks_path("build", *dirs, mkdir=mkdir)
+        return self._cur_symlinks_path("build", *dirs, mkdir=mkdir)
 
     def cur_symlinks_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_symlinks_path("data", *dirs, mkdir=mkdir)
+        return self._cur_symlinks_path("data", *dirs, mkdir=mkdir)
 
     def cur_task_runs_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
         return self.cur_task_runs_path("build", *dirs, mkdir=mkdir)

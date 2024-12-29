@@ -33,7 +33,7 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,
     fully_resolve_path,
-    get_dbdata_tgz_name,
+    get_dbdata_tgz_filename,
     get_default_dbdata_parent_dpath,
     get_default_pgbin_path,
     is_fully_resolved,
@@ -202,7 +202,7 @@ def _create_dbdata(
     # Note that you can't pass "[dbdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[dbdata].tgz" as a dir.
     dbdata_tgz_real_fpath = dbgym_workspace.cur_task_runs_data_path(
         mkdir=True
-    ) / get_dbdata_tgz_name(benchmark_name, scale_factor)
+    ) / get_dbdata_tgz_filename(benchmark_name, scale_factor)
     # We need to cd into dbdata_dpath so that the tar file does not contain folders for the whole path of dbdata_dpath.
     subprocess_run(f"tar -czf {dbdata_tgz_real_fpath} .", cwd=dbdata_dpath)
 
@@ -276,10 +276,10 @@ def _load_into_dbdata(
     sql_file_execute(dbgym_workspace, conn, load_info.get_schema_fpath())
 
     # Truncate all tables first before even loading a single one.
-    for table, _ in load_info.get_tables_and_fpaths():
+    for table, _ in load_info.get_tables_and_paths():
         sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # Then, load the tables.
-    for table, table_fpath in load_info.get_tables_and_fpaths():
+    for table, table_fpath in load_info.get_tables_and_paths():
         with open_and_save(dbgym_workspace, table_fpath, "r") as table_csv:
             assert conn.connection.dbapi_connection is not None
             cur = conn.connection.dbapi_connection.cursor()

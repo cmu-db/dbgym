@@ -1,16 +1,16 @@
 from pathlib import Path
 from typing import Optional
 
+from gymlib.symlinks_paths import get_tables_symlink_path
+
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import DBGymWorkspace, get_default_tables_dname, is_fully_resolved
+from util.workspace import DBGymWorkspace, fully_resolve_path
 
 JOB_SCHEMA_FNAME = "job_schema.sql"
 
 
 class JobLoadInfo(LoadInfoBaseClass):
-    CODEBASE_PATH_COMPONENTS = ["dbgym", "benchmark", "job"]
-    CODEBASE_DNAME = "_".join(CODEBASE_PATH_COMPONENTS)
     TABLES = [
         "aka_name",
         "aka_title",
@@ -36,38 +36,29 @@ class JobLoadInfo(LoadInfoBaseClass):
     ]
 
     def __init__(self, dbgym_workspace: DBGymWorkspace):
-        # schema and constraints
-        schema_root_dpath = dbgym_workspace.base_dbgym_repo_dpath
-        for component in JobLoadInfo.CODEBASE_PATH_COMPONENTS[
-            1:
-        ]:  # [1:] to skip "dbgym"
-            schema_root_dpath /= component
-        self._schema_fpath = schema_root_dpath / JOB_SCHEMA_FNAME
+        # Schema (directly in the codebase).
+        job_codebase_path = dbgym_workspace.base_dbgym_repo_dpath / "benchmark" / "job"
+        self._schema_fpath = job_codebase_path / JOB_SCHEMA_FNAME
         assert (
             self._schema_fpath.exists()
         ), f"self._schema_fpath ({self._schema_fpath}) does not exist"
 
         # Tables
-        data_root_dpath = (
-            dbgym_workspace.dbgym_symlinks_path / JobLoadInfo.CODEBASE_DNAME / "data"
+        tables_path = fully_resolve_path(
+            get_tables_symlink_path(
+                dbgym_workspace.dbgym_workspace_path, "job", DEFAULT_SCALE_FACTOR
+            )
         )
-        tables_symlink_dpath = (
-            data_root_dpath / f"{get_default_tables_dname(DEFAULT_SCALE_FACTOR)}.link"
-        )
-        tables_dpath = tables_symlink_dpath.resolve()
-        assert is_fully_resolved(
-            tables_dpath
-        ), f"tables_dpath ({tables_dpath}) should be an existent real absolute path. Make sure you have generated the TPC-H data"
-        self._tables_and_fpaths = []
+        self._tables_and_paths = []
         for table in JobLoadInfo.TABLES:
-            table_fpath = tables_dpath / f"{table}.csv"
-            self._tables_and_fpaths.append((table, table_fpath))
+            table_fpath = tables_path / f"{table}.csv"
+            self._tables_and_paths.append((table, table_fpath))
 
     def get_schema_fpath(self) -> Path:
         return self._schema_fpath
 
-    def get_tables_and_fpaths(self) -> list[tuple[str, Path]]:
-        return self._tables_and_fpaths
+    def get_tables_and_paths(self) -> list[tuple[str, Path]]:
+        return self._tables_and_paths
 
     def get_table_file_delimiter(self) -> str:
         return ","
