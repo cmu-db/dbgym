@@ -301,7 +301,7 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
         prev_run_name = self.workspace.dbgym_this_run_path.name
-        result_path = self.make_result_helper()
+        result_path = self.make_result_helper(file_obj=("file",))
         self.init_workspace_helper()
         self.workspace.save_file(result_path)
         self.workspace.save_file(result_path)
@@ -315,10 +315,64 @@ class WorkspaceTests(unittest.TestCase):
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
 
-    def test_save_file_two_different_dependencies_with_same_name(self) -> None:
-        # TODO
-        # TODO: also do the config version
-        pass
+    def test_save_file_two_different_dependencies_with_same_filename_both_directly_inside_run(
+        self,
+    ) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        prev_run_names = []
+        prev_run_names.append(self.workspace.dbgym_this_run_path.name)
+        result1_path = self.make_result_helper(file_obj=("file",))
+        self.init_workspace_helper()
+        prev_run_names.append(self.workspace.dbgym_this_run_path.name)
+        result2_path = self.make_result_helper(file_obj=("file",))
+        filename = result1_path.name
+        assert filename == result2_path.name
+
+        self.init_workspace_helper()
+        self.workspace.save_file(result1_path)
+        self.workspace.save_file(result2_path)
+        # The second save_file() should have overwritten the first one.
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{filename}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_names[-1]}/{filename}",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    def test_save_file_two_different_dependencies_with_same_filename_but_different_outermost_dirs(
+        self,
+    ) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        prev_run_name = self.workspace.dbgym_this_run_path.name
+        result1_path = self.make_result_helper("dir1/result.txt", file_obj=("file",))
+        result2_path = self.make_result_helper("result.txt", file_obj=("file",))
+        filename = result1_path.name
+        assert filename == result2_path.name
+
+        self.init_workspace_helper()
+        self.workspace.save_file(result1_path)
+        self.workspace.save_file(result2_path)
+        # The second save_file() should not overwrite the first one because the outermost dirs are different.
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{filename}.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_name}/{filename}",
+        )
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ]["dir1.link"] = (
+            "symlink",
+            f"dbgym_workspace/task_runs/{prev_run_name}/dir1",
+        )
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
 
     def test_save_file_config(self) -> None:
         """
@@ -340,12 +394,35 @@ class WorkspaceTests(unittest.TestCase):
     def test_save_file_same_config_twice(self) -> None:
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
-        result_path = self.make_file_helper("external/result.txt")
+        result_path = self.make_file_helper(
+            "external/result.txt", file_obj=("file", "contents")
+        )
         self.workspace.save_file(result_path)
         self.workspace.save_file(result_path)
         self.expected_structure["dbgym_workspace"]["task_runs"][
             self.workspace.dbgym_this_run_path.name
-        ][f"{result_path.name}"] = ("file",)
+        ][f"{result_path.name}"] = ("file", "contents")
+        self.assertTrue(
+            verify_structure(self.scratchspace_path, self.expected_structure)
+        )
+
+    def test_save_file_two_different_configs_with_same_filename(self) -> None:
+        self.init_workspace_helper()
+        assert self.workspace is not None and self.expected_structure is not None
+        result1_path = self.make_file_helper(
+            "external/result.txt", file_obj=("file", "contents1")
+        )
+        result2_path = self.make_file_helper(
+            "external/dir1/result.txt", file_obj=("file", "contents2")
+        )
+        filename = result1_path.name
+        assert filename == result2_path.name
+
+        self.workspace.save_file(result1_path)
+        self.workspace.save_file(result2_path)
+        self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.workspace.dbgym_this_run_path.name
+        ][f"{filename}"] = ("file", "contents2")
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
         )
@@ -378,8 +455,6 @@ class WorkspaceTests(unittest.TestCase):
             "fpath \(.*\) was generated in this task run \(.*\)\. You do not need to save it",
         ):
             self.workspace.save_file(result_path)
-
-    # TODO: test saving different configs/dependencies with the same name
 
 
 if __name__ == "__main__":
