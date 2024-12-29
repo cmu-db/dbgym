@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 # TODO: move these into workspace.py and move workspace.py into gymlib.
 SYMLINKS_DNAME = "symlinks"
@@ -20,7 +21,22 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
 
 
 def get_tables_dirname(benchmark: str, scale_factor: float | str) -> str:
-    return f"{benchmark}_sf{get_scale_factor_string(scale_factor)}_tables"
+    return f"tables_{benchmark}_sf{get_scale_factor_string(scale_factor)}"
+
+
+def get_workload_suffix(benchmark: str, **kwargs: Any) -> str:
+    if benchmark == "tpch":
+        assert kwargs.keys() == {"seed_start", "seed_end", "query_subset"}
+        return f"{kwargs['seed_start']}_{kwargs['seed_end']}_{kwargs['query_subset']}"
+    elif benchmark == "job":
+        assert kwargs.keys() == {"query_subset"}
+        return f"{kwargs['query_subset']}"
+    else:
+        assert False
+
+
+def get_workload_dirname(benchmark: str, scale_factor: float | str, suffix: str) -> str:
+    return f"workload_{benchmark}_sf{get_scale_factor_string(scale_factor)}_{suffix}"
 
 
 def get_tables_symlink_path(
@@ -30,5 +46,16 @@ def get_tables_symlink_path(
         workspace_path
         / SYMLINKS_DNAME
         / DBGYM_APP_NAME
-        / get_tables_dirname(benchmark, scale_factor)
+        / (get_tables_dirname(benchmark, scale_factor) + ".link")
+    )
+
+
+def get_workload_symlink_path(
+    workspace_path: Path, benchmark: str, scale_factor: float | str, suffix: str
+) -> Path:
+    return (
+        workspace_path
+        / SYMLINKS_DNAME
+        / DBGYM_APP_NAME
+        / (get_workload_dirname(benchmark, scale_factor, suffix) + ".link")
     )

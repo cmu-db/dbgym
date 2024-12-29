@@ -3,12 +3,7 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.workload import Workload
-from util.workspace import (
-    fully_resolve_path,
-    get_default_workload_name_suffix,
-    get_default_workload_path,
-    get_workload_name,
-)
+from util.workspace import fully_resolve_path, get_default_workload_path
 
 
 class WorkloadTests(unittest.TestCase):
@@ -17,16 +12,7 @@ class WorkloadTests(unittest.TestCase):
         GymlibIntegtestManager.set_up_workspace()
 
     def test_workload(self) -> None:
-        workload_dpath = fully_resolve_path(
-            get_default_workload_path(
-                GymlibIntegtestManager.get_dbgym_workspace().dbgym_workspace_path,
-                GymlibIntegtestManager.BENCHMARK,
-                get_workload_name(
-                    GymlibIntegtestManager.SCALE_FACTOR,
-                    get_default_workload_name_suffix(GymlibIntegtestManager.BENCHMARK),
-                ),
-            ),
-        )
+        workload_dpath = GymlibIntegtestManager.get_default_metadata().workload_path
 
         workload = Workload(
             GymlibIntegtestManager.get_dbgym_workspace(), workload_dpath

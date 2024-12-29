@@ -2,17 +2,16 @@ import logging
 from typing import Optional
 
 import click
-from gymlib.symlinks_paths import get_tables_dirname
+from gymlib.symlinks_paths import (
+    get_tables_dirname,
+    get_workload_dirname,
+    get_workload_suffix,
+)
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
-from util.workspace import (
-    DBGymWorkspace,
-    get_workload_name,
-    is_fully_resolved,
-    link_result,
-)
+from util.workspace import DBGymWorkspace, is_fully_resolved, link_result
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
 JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"
@@ -235,7 +234,11 @@ def _generate_job_workload(
     dbgym_workspace: DBGymWorkspace,
     query_subset: str,
 ) -> None:
-    workload_name = get_workload_name(DEFAULT_SCALE_FACTOR, query_subset)
+    workload_name = get_workload_dirname(
+        "job",
+        DEFAULT_SCALE_FACTOR,
+        get_workload_suffix("job", query_subset=query_subset),
+    )
     expected_workload_symlink_dpath = dbgym_workspace.cur_symlinks_data_path(
         mkdir=True
     ) / (workload_name + ".link")

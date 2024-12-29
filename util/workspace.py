@@ -53,22 +53,6 @@ def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
 
 
-# Generally useful functions
-
-
-def get_default_workload_name_suffix(benchmark_name: str) -> str:
-    if benchmark_name == "tpch":
-        return f"{DEFAULT_TPCH_SEED}_{DEFAULT_TPCH_SEED}_all"
-    if benchmark_name == "job":
-        return "all"
-    else:
-        assert False
-
-
-# Standard names of files/directories. These can refer to either the actual file/directory or a link to the file/directory.
-#   Since they can refer to either the actual or the link, they do not have ".link" in them.
-
-
 # Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
 # The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
 # Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
@@ -108,10 +92,6 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
 
 def get_dbdata_tgz_filename(benchmark_name: str, scale_factor: float | str) -> str:
     return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
-
-
-def get_workload_name(scale_factor: float | str, suffix: str) -> str:
-    return f"workload_sf{get_scale_factor_string(scale_factor)}_{suffix}"
 
 
 def get_default_pristine_dbdata_snapshot_path(

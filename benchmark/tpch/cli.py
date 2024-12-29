@@ -1,7 +1,12 @@
 import logging
 
 import click
-from gymlib.symlinks_paths import get_tables_dirname, get_tables_symlink_path
+from gymlib.symlinks_paths import (
+    get_tables_dirname,
+    get_tables_symlink_path,
+    get_workload_dirname,
+    get_workload_suffix,
+)
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
@@ -9,8 +14,8 @@ from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import (
     DBGymWorkspace,
+    fully_resolve_path,
     get_scale_factor_string,
-    get_workload_name,
     is_fully_resolved,
     link_result,
 )
@@ -68,6 +73,19 @@ def tpch_workload(
     query_subset: str,
     scale_factor: float,
 ) -> None:
+    _tpch_workload(dbgym_workspace, seed_start, seed_end, query_subset, scale_factor)
+
+
+def _tpch_workload(
+    dbgym_workspace: DBGymWorkspace,
+    seed_start: int,
+    seed_end: int,
+    query_subset: str,
+    scale_factor: float,
+) -> None:
+    """
+    This function exists as a hook for integration tests.
+    """
     assert (
         seed_start <= seed_end
     ), f"seed_start ({seed_start}) must be <= seed_end ({seed_end})"
@@ -124,6 +142,7 @@ def _generate_tpch_queries(
             dbgym_workspace.dbgym_this_run_path
             / _get_queries_dirname(seed, scale_factor)
         )
+        queries_parent_path.mkdir(parents=False, exist_ok=False)
         for i in range(1, NUM_TPCH_QUERIES + 1):
             target_sql = (queries_parent_path / f"{i}.sql").resolve()
             subprocess_run(
@@ -158,7 +177,7 @@ def _generate_tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) 
     tables_parent_path = dbgym_workspace.dbgym_this_run_path / get_tables_dirname(
         "tpch", scale_factor
     )
-    tables_parent_path.mkdir(parents=True, exist_ok=False)
+    tables_parent_path.mkdir(parents=False, exist_ok=False)
     subprocess_run(f"mv ./*.tbl {tables_parent_path}", cwd=tpch_kit_dpath / "dbgen")
 
     tables_symlink_dpath = dbgym_workspace.link_result(tables_parent_path)
@@ -175,16 +194,22 @@ def _generate_tpch_workload(
     query_subset: str,
     scale_factor: float,
 ) -> None:
-    symlink_data_dpath = dbgym_workspace.cur_symlinks_data_path(mkdir=True)
-    workload_name = get_workload_name(
-        scale_factor, f"{seed_start}_{seed_end}_{query_subset}"
+    workload_name = get_workload_dirname(
+        "tpch",
+        scale_factor,
+        get_workload_suffix(
+            "tpch", seed_start=seed_start, seed_end=seed_end, query_subset=query_subset
+        ),
     )
-    expected_workload_symlink_dpath = symlink_data_dpath / (workload_name + ".link")
+    expected_workload_symlink_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+        workload_name + ".link"
+    )
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating: {expected_workload_symlink_dpath}"
     )
-    real_dpath = dbgym_workspace.cur_task_runs_data_path(workload_name, mkdir=True)
+    workload_path = dbgym_workspace.dbgym_this_run_path / workload_name
+    workload_path.mkdir(parents=False, exist_ok=False)
 
     query_names = None
     if query_subset == "all":
@@ -196,20 +221,21 @@ def _generate_tpch_workload(
     else:
         assert False
 
-    with open(real_dpath / "order.txt", "w") as f:
+    with open(workload_path / "order.txt", "w") as f:
         for seed in range(seed_start, seed_end + 1):
+            queries_parent_path = dbgym_workspace.dbgym_cur_symlinks_path / (
+                _get_queries_dirname(seed, scale_factor) + ".link"
+            )
+
             for qname in query_names:
-                sql_fpath = (
-                    symlink_data_dpath
-                    / (_get_queries_dirname(seed, scale_factor) + ".link")
-                ).resolve() / f"{qname}.sql"
+                sql_fpath = fully_resolve_path(queries_parent_path / f"{qname}.sql")
                 assert is_fully_resolved(
                     sql_fpath
                 ), "We should only write existent real absolute paths to a file"
                 f.write(f"S{seed}-Q{qname},{sql_fpath}\n")
                 # TODO(WAN): add option to deep-copy the workload.
 
-    workload_symlink_dpath = link_result(dbgym_workspace, real_dpath)
+    workload_symlink_dpath = dbgym_workspace.link_result(workload_path)
     assert workload_symlink_dpath == expected_workload_symlink_dpath
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generated: {expected_workload_symlink_dpath}"
