@@ -37,6 +37,10 @@ class GymlibIntegtestManager:
 
     @staticmethod
     def set_up_workspace() -> None:
+        """
+        Set up the workspace if it has not already been set up.
+        None of the integtest_*.py files will delete the workspace so that future tests run faster.
+        """
         workspace_path = get_workspace_path_from_config(
             GymlibIntegtestManager.DBGYM_CONFIG_PATH
         )

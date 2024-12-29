@@ -29,6 +29,13 @@ def tpch_group(dbgym_workspace: DBGymWorkspace) -> None:
 # The reason generate data is separate from create dbdata is because generate-data is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
 def tpch_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+    _tpch_data(dbgym_workspace, scale_factor)
+
+
+def _tpch_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+    """
+    This function exists as a hook for integration tests.
+    """
     _clone_tpch_kit(dbgym_workspace)
     _generate_data(dbgym_workspace, scale_factor)
 
@@ -87,7 +94,7 @@ def _clone_tpch_kit(dbgym_workspace: DBGymWorkspace) -> None:
     logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
     real_build_path = dbgym_workspace.cur_task_runs_build_path()
     subprocess_run(
-        f"./clone_tpch_kit.sh {real_build_path}", cwd=dbgym_workspace.cur_source_path()
+        f"./clone_tpch_kit.sh {real_build_path}", cwd=dbgym_workspace.base_dbgym_repo_dpath / "benchmark" / "tpch"
     )
     symlink_dpath = link_result(dbgym_workspace, real_build_path / "tpch-kit")
     assert expected_symlink_dpath.samefile(symlink_dpath)
