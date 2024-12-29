@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import click
 from gymlib.symlinks_paths import get_tables_dirname, get_tables_symlink_path
@@ -25,21 +24,21 @@ def tpch_group(dbgym_workspace: DBGymWorkspace) -> None:
     dbgym_workspace.append_group("tpch")
 
 
-@tpch_group.command(name="data")
+@tpch_group.command(name="tables")
 @click.argument("scale-factor", type=float)
 @click.pass_obj
-# The reason generate data is separate from create dbdata is because generate-data is generic
+# The reason generate tables is separate from create dbdata is because tpch_tables is generic
 #   to all DBMSs while create dbdata is specific to a single DBMS.
-def tpch_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
-    _tpch_data(dbgym_workspace, scale_factor)
+def tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+    _tpch_tables(dbgym_workspace, scale_factor)
 
 
-def _tpch_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+def _tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
     """
     This function exists as a hook for integration tests.
     """
     _clone_tpch_kit(dbgym_workspace)
-    _generate_data(dbgym_workspace, scale_factor)
+    _generate_tpch_tables(dbgym_workspace, scale_factor)
 
 
 @tpch_group.command(name="workload")
@@ -139,7 +138,7 @@ def _generate_tpch_queries(
     )
 
 
-def _generate_data(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
+def _generate_tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
     tpch_kit_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
         TPCH_KIT_DIRNAME + ".link"
     )
