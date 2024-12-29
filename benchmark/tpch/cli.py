@@ -201,12 +201,17 @@ def _generate_tpch_workload(
             "tpch", seed_start=seed_start, seed_end=seed_end, query_subset=query_subset
         ),
     )
-    expected_workload_symlink_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+    expected_workload_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
         workload_name + ".link"
     )
+    if expected_workload_symlink_path.exists():
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            f"Skipping generation: {expected_workload_symlink_path}"
+        )
+        return
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generating: {expected_workload_symlink_dpath}"
+        f"Generating: {expected_workload_symlink_path}"
     )
     workload_path = dbgym_workspace.dbgym_this_run_path / workload_name
     workload_path.mkdir(parents=False, exist_ok=False)
@@ -233,10 +238,9 @@ def _generate_tpch_workload(
                     sql_fpath
                 ), "We should only write existent real absolute paths to a file"
                 f.write(f"S{seed}-Q{qname},{sql_fpath}\n")
-                # TODO(WAN): add option to deep-copy the workload.
 
-    workload_symlink_dpath = dbgym_workspace.link_result(workload_path)
-    assert workload_symlink_dpath == expected_workload_symlink_dpath
+    workload_symlink_path = dbgym_workspace.link_result(workload_path)
+    assert workload_symlink_path == expected_workload_symlink_path
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generated: {expected_workload_symlink_dpath}"
+        f"Generated: {expected_workload_symlink_path}"
     )

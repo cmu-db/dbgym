@@ -11,7 +11,12 @@ from gymlib.symlinks_paths import (
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
-from util.workspace import DBGymWorkspace, is_fully_resolved, link_result
+from util.workspace import (
+    DBGymWorkspace,
+    fully_resolve_path,
+    is_fully_resolved,
+    link_result,
+)
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
 JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"
@@ -165,6 +170,12 @@ def _job_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
 def job_workload(
     dbgym_workspace: DBGymWorkspace, query_subset: str, scale_factor: float
 ) -> None:
+    _job_workload(dbgym_workspace, query_subset, scale_factor)
+
+
+def _job_workload(
+    dbgym_workspace: DBGymWorkspace, query_subset: str, scale_factor: float
+) -> None:
     assert scale_factor == DEFAULT_SCALE_FACTOR
     _download_job_queries(dbgym_workspace)
     _generate_job_workload(dbgym_workspace, query_subset)
@@ -248,14 +259,20 @@ def _generate_job_workload(
         DEFAULT_SCALE_FACTOR,
         get_workload_suffix("job", query_subset=query_subset),
     )
-    expected_workload_symlink_path = dbgym_workspace.cur_symlinks_data_path(
-        mkdir=True
-    ) / (workload_name + ".link")
+    expected_workload_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
+        workload_name + ".link"
+    )
+    if expected_workload_symlink_path.exists():
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            f"Skipping generation: {expected_workload_symlink_path}"
+        )
+        return
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating: {expected_workload_symlink_path}"
     )
-    real_dpath = dbgym_workspace.cur_task_runs_data_path(workload_name, mkdir=True)
+    workload_path = dbgym_workspace.dbgym_this_run_path / workload_name
+    workload_path.mkdir(parents=False, exist_ok=False)
 
     query_names = None
     if query_subset == "all":
@@ -267,18 +284,16 @@ def _generate_job_workload(
     else:
         assert False
 
-    with open(real_dpath / "order.txt", "w") as f:
+    with open(workload_path / "order.txt", "w") as f:
+        queries_parent_path = dbgym_workspace.dbgym_cur_symlinks_path / (
+            JOB_QUERIES_DNAME + ".link"
+        )
+
         for qname in query_names:
-            sql_fpath = (
-                dbgym_workspace.cur_symlinks_data_path(mkdir=True)
-                / (f"{JOB_QUERIES_DNAME}.link")
-            ).resolve() / f"{qname}.sql"
-            assert is_fully_resolved(
-                sql_fpath
-            ), "We should only write existent real absolute paths to a file"
+            sql_fpath = fully_resolve_path(queries_parent_path / f"{qname}.sql")
             f.write(f"Q{qname},{sql_fpath}\n")
 
-    workload_symlink_path = link_result(dbgym_workspace, real_dpath)
+    workload_symlink_path = dbgym_workspace.link_result(workload_path)
     assert workload_symlink_path == expected_workload_symlink_path
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generated: {expected_workload_symlink_path}"
