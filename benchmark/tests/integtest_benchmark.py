@@ -28,6 +28,10 @@ class TestBenchmark(unittest.TestCase):
         # Get a clean start each time.
         if workspace_path.exists():
             shutil.rmtree(workspace_path)
+
+        # Reset this to avoid the error of it being created twice.
+        # In real usage, the second run would be a different Python process so DBGymWorkspace.num_times_created_this_run would be 0.
+        DBGymWorkspace.num_times_created_this_run = 0
         self.workspace = DBGymWorkspace(workspace_path)
 
     def tearDown(self) -> None:
