@@ -11,7 +11,7 @@ import psycopg
 import sqlalchemy
 from sqlalchemy import create_engine, text
 
-from util.workspace import DBGymConfig, open_and_save
+from util.workspace import DBGymWorkspace, open_and_save
 
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"
@@ -27,8 +27,8 @@ def sqlalchemy_conn_execute(
     return conn.execute(text(sql))
 
 
-def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> list[str]:
-    with open_and_save(dbgym_cfg, filepath) as f:
+def sql_file_queries(dbgym_workspace: DBGymWorkspace, filepath: Path) -> list[str]:
+    with open_and_save(dbgym_workspace, filepath) as f:
         lines: list[str] = []
         for line in f:
             if line.startswith("--"):
@@ -42,9 +42,9 @@ def sql_file_queries(dbgym_cfg: DBGymConfig, filepath: Path) -> list[str]:
 
 
 def sql_file_execute(
-    dbgym_cfg: DBGymConfig, conn: sqlalchemy.Connection, filepath: Path
+    dbgym_workspace: DBGymWorkspace, conn: sqlalchemy.Connection, filepath: Path
 ) -> None:
-    for sql in sql_file_queries(dbgym_cfg, filepath):
+    for sql in sql_file_queries(dbgym_workspace, filepath):
         sqlalchemy_conn_execute(conn, sql)
 
 

@@ -1,6 +1,6 @@
 import unittest
 
-from env.integtest_util import IntegtestWorkspace
+from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
@@ -14,7 +14,7 @@ from env.tuning_artifacts import (
 class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
-        IntegtestWorkspace.set_up_workspace()
+        GymlibIntegtestManager.set_up_workspace()
 
     @staticmethod
     def make_config(letter: str) -> DBMSConfigDelta:
@@ -26,8 +26,8 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_delta_at_step(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
-            IntegtestWorkspace.get_default_metadata(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
+            GymlibIntegtestManager.get_default_metadata(),
         )
 
         writer.write_step(PostgresConnTests.make_config("a"))
@@ -51,8 +51,8 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_all_deltas_in_order(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
-            IntegtestWorkspace.get_default_metadata(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
+            GymlibIntegtestManager.get_default_metadata(),
         )
 
         writer.write_step(PostgresConnTests.make_config("a"))
@@ -72,12 +72,12 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_metadata(self) -> None:
         writer = TuningArtifactsWriter(
-            IntegtestWorkspace.get_dbgym_cfg(),
-            IntegtestWorkspace.get_default_metadata(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
+            GymlibIntegtestManager.get_default_metadata(),
         )
         reader = TuningArtifactsReader(writer.tuning_artifacts_dpath)
         metadata = reader.get_metadata()
-        expected_metadata = IntegtestWorkspace.get_default_metadata()
+        expected_metadata = GymlibIntegtestManager.get_default_metadata()
         self.assertEqual(metadata, expected_metadata)
 
 

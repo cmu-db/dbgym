@@ -3,8 +3,8 @@ import unittest
 
 import psycopg
 
-from env.integtest_util import IntegtestWorkspace
 from env.pg_conn import PostgresConn
+from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from util.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,
@@ -15,7 +15,7 @@ from util.pg import (
 class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
-        IntegtestWorkspace.set_up_workspace()
+        GymlibIntegtestManager.set_up_workspace()
 
     def setUp(self) -> None:
         self.assertFalse(
@@ -23,7 +23,7 @@ class PostgresConnTests(unittest.TestCase):
             "Make sure Postgres isn't running before starting the integration test. `pkill postgres` is one way "
             + "to ensure this. Be careful about accidentally taking down other people's Postgres instances though.",
         )
-        self.metadata = IntegtestWorkspace.get_default_metadata()
+        self.metadata = GymlibIntegtestManager.get_default_metadata()
 
         # The reason we restart Postgres every time is to ensure a "clean" starting point
         # so that all tests are independent of each other.
@@ -38,7 +38,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
-            IntegtestWorkspace.get_dbgym_cfg(),
+            GymlibIntegtestManager.get_dbgym_workspace(),
             pgport,
             self.metadata.pristine_dbdata_snapshot_path,
             self.metadata.dbdata_parent_path,

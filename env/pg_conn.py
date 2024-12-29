@@ -24,7 +24,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
-from util.workspace import DBGymConfig, open_and_save, parent_dpath_of_path
+from util.workspace import DBGymWorkspace, open_and_save, parent_dpath_of_path
 
 CONNECT_TIMEOUT = 300
 
@@ -35,7 +35,7 @@ class PostgresConn:
     # are organized in the workspace.
     def __init__(
         self,
-        dbgym_cfg: DBGymConfig,
+        dbgym_workspace: DBGymWorkspace,
         pgport: int,
         pristine_dbdata_snapshot_fpath: Path,
         dbdata_parent_dpath: Path,
@@ -44,7 +44,7 @@ class PostgresConn:
         boot_config_fpath: Optional[Path],
     ) -> None:
 
-        self.dbgym_cfg = dbgym_cfg
+        self.dbgym_workspace = dbgym_workspace
         self.pgport = pgport
         self.pgbin_path = pgbin_path
         self.boot_config_fpath = boot_config_fpath
@@ -59,7 +59,7 @@ class PostgresConn:
         #   state of the database as it is being tuned. It is generated while tuning and is
         #   discarded once tuning is completed.
         self.checkpoint_dbdata_snapshot_fpath = (
-            dbgym_cfg.dbgym_tmp_path / "checkpoint_dbdata.tgz"
+            dbgym_workspace.dbgym_tmp_path / "checkpoint_dbdata.tgz"
         )
         # dbdata_parent_dpath is the parent directory of the dbdata that is *actively being tuned*.
         # It is *not* the parent directory of pristine_dbdata_snapshot_fpath.
@@ -103,11 +103,11 @@ class PostgresConn:
 
     def move_log(self) -> None:
         pglog_fpath = (
-            self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+            self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
             / f"pg{self.pgport}.log"
         )
         pglog_this_step_fpath = (
-            self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+            self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
             / f"pg{self.pgport}.log.{self.log_step}"
         )
         if pglog_fpath.exists():
@@ -299,7 +299,7 @@ class PostgresConn:
                 "-l",
                 # We log to pg{self.pgport}.log instead of pg.log so that different PostgresConn objects
                 #   don't all try to write to the same file.
-                self.dbgym_cfg.cur_task_runs_artifacts_path(mkdir=True)
+                self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
                 / f"pg{self.pgport}.log",
                 "start",
             ].run(retcode=None)
@@ -346,7 +346,7 @@ class PostgresConn:
 
         # Set up Boot if we're told to do so
         if self.boot_config_fpath is not None:
-            with open_and_save(self.dbgym_cfg, self.boot_config_fpath) as f:
+            with open_and_save(self.dbgym_workspace, self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
 
             self._set_up_boot(
