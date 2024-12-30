@@ -50,7 +50,7 @@ def get_tables_symlink_path(
         workspace_path
         / SYMLINKS_DNAME
         / DBGYM_APP_NAME
-        / (get_tables_dirname(benchmark, scale_factor) + ".link")
+        / name_to_linkname(get_tables_dirname(benchmark, scale_factor))
     )
 
 
@@ -61,7 +61,7 @@ def get_workload_symlink_path(
         workspace_path
         / SYMLINKS_DNAME
         / DBGYM_APP_NAME
-        / (get_workload_dirname(benchmark, scale_factor, suffix) + ".link")
+        / name_to_linkname(get_workload_dirname(benchmark, scale_factor, suffix))
     )
 
 
@@ -80,16 +80,20 @@ def get_dbdata_tgz_symlink_path(
         workspace_path
         / SYMLINKS_DNAME
         / DBGYM_APP_NAME
-        / (get_dbdata_tgz_filename(benchmark_name, scale_factor) + ".link")
+        / name_to_linkname(get_dbdata_tgz_filename(benchmark_name, scale_factor))
     )
 
 
-# TODO: refactor stuff to use this
+def is_linkname(name: str) -> bool:
+    assert not name.endswith(".link.link")
+    return name.endswith(".link")
+
+
 def name_to_linkname(name: str) -> str:
-    assert not name.endswith(".link")
+    assert not is_linkname(name)
     return f"{name}.link"
 
 
 def linkname_to_name(linkname: str) -> str:
-    assert linkname.endswith(".link")
+    assert is_linkname(linkname)
     return linkname[: -len(".link")]

@@ -8,6 +8,7 @@ from gymlib.symlinks_paths import (
     get_workload_suffix,
     get_workload_symlink_path,
     linkname_to_name,
+    name_to_linkname,
 )
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
@@ -98,7 +99,7 @@ def _get_queries_dirname(seed: int, scale_factor: float) -> str:
 
 def _clone_tpch_kit(dbgym_workspace: DBGymWorkspace) -> None:
     expected_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-        TPCH_KIT_DIRNAME + ".link"
+        name_to_linkname(TPCH_KIT_DIRNAME)
     )
     if expected_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -122,14 +123,14 @@ def _generate_tpch_queries(
     dbgym_workspace: DBGymWorkspace, seed_start: int, seed_end: int, scale_factor: float
 ) -> None:
     tpch_kit_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-        TPCH_KIT_DIRNAME + ".link"
+        name_to_linkname(TPCH_KIT_DIRNAME)
     )
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating queries: [{seed_start}, {seed_end}]"
     )
     for seed in range(seed_start, seed_end + 1):
         expected_queries_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-            _get_queries_dirname(seed, scale_factor) + ".link"
+            name_to_linkname(_get_queries_dirname(seed, scale_factor))
         )
         if expected_queries_symlink_path.exists():
             continue
@@ -155,7 +156,7 @@ def _generate_tpch_queries(
 
 def _generate_tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
     tpch_kit_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-        TPCH_KIT_DIRNAME + ".link"
+        name_to_linkname(TPCH_KIT_DIRNAME)
     )
     expected_tables_symlink_path = get_tables_symlink_path(
         dbgym_workspace.dbgym_workspace_path, "tpch", scale_factor
@@ -225,7 +226,7 @@ def _generate_tpch_workload(
     with open(workload_path / "order.txt", "w") as f:
         for seed in range(seed_start, seed_end + 1):
             queries_parent_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-                _get_queries_dirname(seed, scale_factor) + ".link"
+                name_to_linkname(_get_queries_dirname(seed, scale_factor))
             )
 
             for qname in query_names:

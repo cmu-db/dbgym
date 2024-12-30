@@ -6,6 +6,7 @@ from gymlib.symlinks_paths import (
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,
+    name_to_linkname,
 )
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
@@ -255,7 +256,7 @@ def _generate_job_workload(
         get_workload_suffix("job", query_subset=query_subset),
     )
     expected_workload_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-        workload_name + ".link"
+        name_to_linkname(workload_name)
     )
     if expected_workload_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -281,7 +282,7 @@ def _generate_job_workload(
 
     with open(workload_path / "order.txt", "w") as f:
         queries_parent_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-            JOB_QUERIES_DNAME + ".link"
+            name_to_linkname(JOB_QUERIES_DNAME)
         )
 
         for qname in query_names:
