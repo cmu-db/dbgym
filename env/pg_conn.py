@@ -22,7 +22,11 @@ import yaml
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
-from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from dbms.postgres.cli import (
+    DBGYM_POSTGRES_DBNAME,
+    SHARED_PRELOAD_LIBRARIES,
+    get_kv_connstr,
+)
 from util.workspace import DBGymWorkspace, parent_path_of_path
 
 CONNECT_TIMEOUT = 300
