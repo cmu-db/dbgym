@@ -6,7 +6,6 @@ from pathlib import Path
 
 import click
 
-from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
 from util.workspace import (
     DBGymWorkspace,
     get_runs_path_from_workspace_path,
@@ -47,7 +46,7 @@ def manage_clean(dbgym_workspace: DBGymWorkspace, mode: str) -> None:
 @click.pass_obj
 def manage_count(dbgym_workspace: DBGymWorkspace) -> None:
     num_files = _count_files_in_workspace(dbgym_workspace)
-    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
+    print(
         f"The workspace ({dbgym_workspace.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
     )
 
@@ -186,10 +185,10 @@ def clean_workspace(
     ending_num_files = _count_files_in_workspace(dbgym_workspace)
 
     if verbose:
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
+        logging.info(
             f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files"
         )
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
+        logging.info(
             f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}"
         )
 

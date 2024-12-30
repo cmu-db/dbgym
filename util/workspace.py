@@ -14,8 +14,6 @@ from typing import IO, Any, Optional
 import yaml
 from gymlib import is_linkname, name_to_linkname
 
-from util.log import DBGYM_LOGGER_NAME
-
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 
 
@@ -500,5 +498,5 @@ def is_ssd(path: Path) -> bool:
                 return is_ssd
         return False
     except Exception as e:
-        logging.getLogger(DBGYM_LOGGER_NAME).error(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return False

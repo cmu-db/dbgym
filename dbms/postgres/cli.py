@@ -21,7 +21,6 @@ from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.log import DBGYM_LOGGER_NAME
 from util.pg import (
     DBGYM_POSTGRES_DBNAME,
     DBGYM_POSTGRES_PASS,
@@ -72,14 +71,10 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
         dbgym_workspace.dbgym_workspace_path
     )
     if not rebuild and expected_repo_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _postgres_build: {expected_repo_symlink_path}"
-        )
+        logging.info(f"Skipping _postgres_build: {expected_repo_symlink_path}")
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Setting up repo in {expected_repo_symlink_path}"
-    )
+    logging.info(f"Setting up repo in {expected_repo_symlink_path}")
     repo_real_path = dbgym_workspace.dbgym_this_run_path / "repo"
     repo_real_path.mkdir(parents=False, exist_ok=False)
     subprocess_run(
@@ -90,9 +85,7 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     # only link at the end so that the link only ever points to a complete repo
     repo_symlink_path = dbgym_workspace.link_result(repo_real_path)
     assert expected_repo_symlink_path.samefile(repo_symlink_path)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Set up repo in {expected_repo_symlink_path}"
-    )
+    logging.info(f"Set up repo in {expected_repo_symlink_path}")
 
 
 @postgres_group.command(
@@ -198,9 +191,7 @@ def _create_dbdata(
         scale_factor,
     )
     if expected_dbdata_tgz_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _create_dbdata: {expected_dbdata_tgz_symlink_path}"
-        )
+        logging.info(f"Skipping _create_dbdata: {expected_dbdata_tgz_symlink_path}")
         return
 
     # It's ok for the dbdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place.
@@ -236,9 +227,7 @@ def _create_dbdata(
     # Only link at the end so that the link only ever points to a complete dbdata.
     dbdata_tgz_symlink_path = dbgym_workspace.link_result(dbdata_tgz_real_path)
     assert expected_dbdata_tgz_symlink_path.samefile(dbdata_tgz_symlink_path)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Created dbdata in {dbdata_tgz_symlink_path}"
-    )
+    logging.info(f"Created dbdata in {dbdata_tgz_symlink_path}")
 
 
 def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:

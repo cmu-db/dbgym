@@ -10,7 +10,6 @@ from gymlib import (
 )
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
-from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
 from util.workspace import DBGymWorkspace, fully_resolve_path
 
@@ -213,12 +212,10 @@ def _download_and_untar_dir(
         dbgym_workspace.dbgym_cur_symlinks_path / f"{untarred_dname}.link"
     )
     if expected_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping download: {expected_symlink_path}"
-        )
+        logging.info(f"Skipping download: {expected_symlink_path}")
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloading: {expected_symlink_path}")
+    logging.info(f"Downloading: {expected_symlink_path}")
     subprocess_run(f"curl -O {download_url}", cwd=dbgym_workspace.dbgym_this_run_path)
     untarred_data_path = dbgym_workspace.dbgym_this_run_path / untarred_dname
 
@@ -243,7 +240,7 @@ def _download_and_untar_dir(
     )
     symlink_path = dbgym_workspace.link_result(untarred_data_path)
     assert expected_symlink_path.samefile(symlink_path)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Downloaded: {expected_symlink_path}")
+    logging.info(f"Downloaded: {expected_symlink_path}")
 
 
 def _generate_job_workload(
@@ -259,14 +256,10 @@ def _generate_job_workload(
         name_to_linkname(workload_name)
     )
     if expected_workload_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping generation: {expected_workload_symlink_path}"
-        )
+        logging.info(f"Skipping generation: {expected_workload_symlink_path}")
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generating: {expected_workload_symlink_path}"
-    )
+    logging.info(f"Generating: {expected_workload_symlink_path}")
     workload_path = dbgym_workspace.dbgym_this_run_path / workload_name
     workload_path.mkdir(parents=False, exist_ok=False)
 
@@ -291,6 +284,4 @@ def _generate_job_workload(
 
     workload_symlink_path = dbgym_workspace.link_result(workload_path)
     assert workload_symlink_path == expected_workload_symlink_path
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generated: {expected_workload_symlink_path}"
-    )
+    logging.info(f"Generated: {expected_workload_symlink_path}")
