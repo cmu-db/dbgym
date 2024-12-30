@@ -3,13 +3,14 @@ import shutil
 import unittest
 from pathlib import Path
 
-from manage.cli import MockDBGymWorkspace, clean_workspace
-from util.tests.filesystem_unittest_util import (
+from gymlib.tests.filesystem_unittest_util import (
     FilesystemStructure,
     create_structure,
     make_workspace_structure,
     verify_structure,
 )
+
+from manage.cli import MockDBGymWorkspace, clean_workspace
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.

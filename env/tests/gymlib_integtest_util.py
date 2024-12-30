@@ -4,21 +4,21 @@ from pathlib import Path
 from typing import Optional
 
 # TODO: remove symlinks_paths from the import
-from gymlib import (
+from gymlib.symlinks_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,
 )
-
-from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.tuning_artifacts import TuningMetadata
-from util.workspace import (
+from gymlib.workspace import (
     DBGymWorkspace,
     fully_resolve_path,
     get_tmp_path_from_workspace_path,
     get_workspace_path_from_config,
 )
+
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED
+from env.tuning_artifacts import TuningMetadata
 
 
 class GymlibIntegtestManager:

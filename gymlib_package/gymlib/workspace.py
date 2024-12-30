@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import IO, Any, Optional
 
 import yaml
-from gymlib import is_linkname, name_to_linkname
+from gymlib.symlinks_paths import is_linkname, name_to_linkname
 
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 

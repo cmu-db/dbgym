@@ -1,7 +1,8 @@
 import logging
 
 import click
-from gymlib import (
+from gymlib.shell import subprocess_run
+from gymlib.symlinks_paths import (
     get_scale_factor_string,
     get_tables_dirname,
     get_tables_symlink_path,
@@ -10,11 +11,10 @@ from gymlib import (
     linkname_to_name,
     name_to_linkname,
 )
-from gymlib.shell import subprocess_run
+from gymlib.workspace import DBGymWorkspace, fully_resolve_path, is_fully_resolved
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
-from util.workspace import DBGymWorkspace, fully_resolve_path, is_fully_resolved
 
 TPCH_KIT_DIRNAME = "tpch-kit"
 

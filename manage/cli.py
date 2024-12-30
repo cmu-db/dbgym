@@ -5,8 +5,7 @@ from itertools import chain
 from pathlib import Path
 
 import click
-
-from util.workspace import (
+from gymlib.workspace import (
     DBGymWorkspace,
     get_runs_path_from_workspace_path,
     get_symlinks_path_from_workspace_path,

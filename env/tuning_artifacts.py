@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, NewType
 
-from util.workspace import DBGymWorkspace, is_fully_resolved
+from gymlib.workspace import DBGymWorkspace, is_fully_resolved
 
 # PostgresConn doesn't use these types because PostgresConn is used internally by tuning agents
 # while these types are only used in the interface between the orchestrator and the tuning agents.

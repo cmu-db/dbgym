@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from util.workspace import DBGymWorkspace, is_fully_resolved
+from gymlib.workspace import DBGymWorkspace, is_fully_resolved
 
 
 class Workload:

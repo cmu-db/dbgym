@@ -1,5 +1,7 @@
 import unittest
 
+from gymlib.workspace import DBGymWorkspace
+
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from env.replay import replay
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
@@ -10,7 +12,6 @@ from env.tuning_artifacts import (
     SysKnobsDelta,
     TuningArtifactsWriter,
 )
-from util.workspace import DBGymWorkspace
 
 
 class ReplayTests(unittest.TestCase):

@@ -6,13 +6,13 @@ import unittest
 from pathlib import Path
 from typing import Optional
 
-from util.tests.filesystem_unittest_util import (
+from gymlib.tests.filesystem_unittest_util import (
     FilesystemStructure,
     create_structure,
     make_workspace_structure,
     verify_structure,
 )
-from util.workspace import DBGymWorkspace
+from gymlib.workspace import DBGymWorkspace
 
 
 class WorkspaceTests(unittest.TestCase):

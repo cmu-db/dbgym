@@ -2,16 +2,16 @@ import logging
 from typing import Optional
 
 import click
-from gymlib import (
+from gymlib.shell import subprocess_run
+from gymlib.symlinks_paths import (
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,
     name_to_linkname,
 )
-from gymlib.shell import subprocess_run
+from gymlib.workspace import DBGymWorkspace, fully_resolve_path
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
-from util.workspace import DBGymWorkspace, fully_resolve_path
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
 JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"

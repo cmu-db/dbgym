@@ -1,5 +1,7 @@
 import unittest
 
+from gymlib.workspace import DBGymWorkspace
+
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.tuning_artifacts import (
     DBMSConfigDelta,
@@ -9,7 +11,6 @@ from env.tuning_artifacts import (
     TuningArtifactsReader,
     TuningArtifactsWriter,
 )
-from util.workspace import DBGymWorkspace
 
 
 class PostgresConnTests(unittest.TestCase):
