@@ -10,7 +10,7 @@ from typing import Optional
 
 import click
 import sqlalchemy
-from gymlib.symlinks_paths import (
+from gymlib import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_repo_symlink_path,

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from gymlib.symlinks_paths import get_tables_symlink_path
+from gymlib import get_tables_symlink_path
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.load_info_base_class import LoadInfoBaseClass

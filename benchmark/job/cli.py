@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import click
-from gymlib.symlinks_paths import (
+from gymlib import (
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,

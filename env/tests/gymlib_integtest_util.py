@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 # TODO: remove symlinks_paths from the import
-from gymlib.symlinks_paths import (
+from gymlib import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_workload_suffix,
