@@ -11,6 +11,9 @@ def subprocess_run(
     check_returncode: bool = True,
     verbose: bool = True,
 ) -> subprocess.Popen[str]:
+    """
+    We use this instead of subprocess.run() because of the cwd option.
+    """
     cwd_msg = f"(cwd: {cwd if cwd is not None else os.getcwd()})"
 
     if verbose:
