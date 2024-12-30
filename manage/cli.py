@@ -12,7 +12,7 @@ from util.workspace import (
     get_runs_path_from_workspace_path,
     get_symlinks_path_from_workspace_path,
     is_child_path,
-    parent_dpath_of_path,
+    parent_path_of_path,
 )
 
 
@@ -52,13 +52,13 @@ def manage_count(dbgym_workspace: DBGymWorkspace) -> None:
     )
 
 
-def add_symlinks_in_dpath(
-    symlinks_stack: list[Path], root_dpath: Path, processed_symlinks: set[Path]
+def add_symlinks_in_path(
+    symlinks_stack: list[Path], root_path: Path, processed_symlinks: set[Path]
 ) -> None:
     """
     Will modify symlinks_stack and processed_symlinks.
     """
-    for root_pathstr, dir_names, file_names in os.walk(root_dpath):
+    for root_pathstr, dir_names, file_names in os.walk(root_path):
         root_path = Path(root_pathstr)
         # symlinks can either be files or directories, so we go through both dir_names and file_names
         for file_name in chain(dir_names, file_names):
@@ -101,14 +101,14 @@ def clean_workspace(
       any symlinks referenced in task_runs/run_*/ directories we have already decided to keep.
     """
     # This stack holds the symlinks that are left to be processed
-    symlink_fpaths_to_process: list[Path] = []
+    symlink_paths_to_process: list[Path] = []
     # This set holds the symlinks that have already been processed to avoid infinite loops
     processed_symlinks: set[Path] = set()
 
     # 1. Initialize paths to process
     if dbgym_workspace.dbgym_symlinks_path.exists():
-        add_symlinks_in_dpath(
-            symlink_fpaths_to_process,
+        add_symlinks_in_path(
+            symlink_paths_to_process,
             dbgym_workspace.dbgym_symlinks_path,
             processed_symlinks,
         )
@@ -116,64 +116,60 @@ def clean_workspace(
     # 2. Go through symlinks, figuring out which "children of task runs" to keep
     # Based on the rules of the framework, "children of task runs" should be run_*/ directories.
     # However, the user's workspace might happen to break these rules by putting directories not
-    #   named "run_*/" or files directly in task_runs/. Thus, I use the term "task_run_child_fordpaths"
-    #   instead of "run_dpaths".
-    task_run_child_fordpaths_to_keep = set()
+    #   named "run_*/" or files directly in task_runs/. Thus, I use the term "task_run_child_paths"
+    #   instead of "run_paths".
+    task_run_child_paths_to_keep = set()
 
     if dbgym_workspace.dbgym_runs_path.exists():
-        while symlink_fpaths_to_process:
-            symlink_fpath: Path = symlink_fpaths_to_process.pop()
-            assert symlink_fpath.is_symlink()
+        while symlink_paths_to_process:
+            symlink_path: Path = symlink_paths_to_process.pop()
+            assert symlink_path.is_symlink()
             # Path.resolve() resolves all layers of symlinks while os.readlink() only resolves one layer.
             # However, os.readlink() literally reads the string contents of the link. We need to do some
             #   processing on the result of os.readlink() to convert it to an absolute path
-            real_fordpath = symlink_fpath.resolve()
-            one_layer_resolved_fordpath = os.readlink(symlink_fpath)
-            assert str(real_fordpath) == str(
-                os.readlink(symlink_fpath)
-            ), f"symlink_fpath ({symlink_fpath}) seems to point to *another* symlink. This is difficult to handle, so it is currently disallowed. Please resolve this situation manually."
+            real_path = symlink_path.resolve()
+            one_layer_resolved_path = os.readlink(symlink_path)
+            assert str(real_path) == str(
+                os.readlink(symlink_path)
+            ), f"symlink_path ({symlink_path}) seems to point to *another* symlink. This is difficult to handle, so it is currently disallowed. Please resolve this situation manually."
 
             # If the file doesn't exist, we'll just ignore it.
-            if not real_fordpath.exists():
+            if not real_path.exists():
                 continue
             # We're only trying to figure out which direct children of task_runs/ to save. If the file isn't
             #   even a descendant, we don't care about it.
-            if not is_child_path(real_fordpath, dbgym_workspace.dbgym_runs_path):
+            if not is_child_path(real_path, dbgym_workspace.dbgym_runs_path):
                 continue
 
-            assert not real_fordpath.samefile(dbgym_workspace.dbgym_runs_path)
+            assert not real_path.samefile(dbgym_workspace.dbgym_runs_path)
 
-            # Figure out the task_run_child_fordpath to put into task_run_child_fordpaths_to_keep
-            task_run_child_fordpath = None
-            if parent_dpath_of_path(real_fordpath).samefile(
-                dbgym_workspace.dbgym_runs_path
-            ):
+            # Figure out the task_run_child_path to put into task_run_child_paths_to_keep
+            task_run_child_path = None
+            if parent_path_of_path(real_path).samefile(dbgym_workspace.dbgym_runs_path):
                 # While it's true that it shouldn't be possible to symlink to a directory directly in task_runs/,
                 #   we'll just not delete it if the user happens to have one like this. Even if the user messed up
                 #   the structure somehow, it's just a good idea not to delete it.
-                task_run_child_fordpath = real_fordpath
+                task_run_child_path = real_path
             else:
                 # Technically, it's not allowed to symlink to any files not in task_runs/run_*/[codebase]/[organization]/.
                 #   However, as with above, we won't just nuke files if the workspace doesn't follow this rule for
                 #   some reason.
-                task_run_child_fordpath = real_fordpath
-                while not parent_dpath_of_path(task_run_child_fordpath).samefile(
+                task_run_child_path = real_path
+                while not parent_path_of_path(task_run_child_path).samefile(
                     dbgym_workspace.dbgym_runs_path
                 ):
-                    task_run_child_fordpath = parent_dpath_of_path(
-                        task_run_child_fordpath
-                    )
-            assert task_run_child_fordpath != None
-            assert parent_dpath_of_path(task_run_child_fordpath).samefile(
+                    task_run_child_path = parent_path_of_path(task_run_child_path)
+            assert task_run_child_path != None
+            assert parent_path_of_path(task_run_child_path).samefile(
                 dbgym_workspace.dbgym_runs_path
-            ), f"task_run_child_fordpath ({task_run_child_fordpath}) is not a direct child of dbgym_workspace.dbgym_runs_path"
-            task_run_child_fordpaths_to_keep.add(task_run_child_fordpath)
+            ), f"task_run_child_path ({task_run_child_path}) is not a direct child of dbgym_workspace.dbgym_runs_path"
+            task_run_child_paths_to_keep.add(task_run_child_path)
 
-            # If on safe mode, add symlinks inside the task_run_child_fordpath to be processed
+            # If on safe mode, add symlinks inside the task_run_child_path to be processed
             if mode == "safe":
-                add_symlinks_in_dpath(
-                    symlink_fpaths_to_process,
-                    task_run_child_fordpath,
+                add_symlinks_in_path(
+                    symlink_paths_to_process,
+                    task_run_child_path,
                     processed_symlinks,
                 )
 
@@ -181,12 +177,12 @@ def clean_workspace(
     # It's true that symlinks might link outside of task_runs/*. We'll just not care about those
     starting_num_files = _count_files_in_workspace(dbgym_workspace)
     if dbgym_workspace.dbgym_runs_path.exists():
-        for child_fordpath in dbgym_workspace.dbgym_runs_path.iterdir():
-            if child_fordpath not in task_run_child_fordpaths_to_keep:
-                if child_fordpath.is_dir():
-                    shutil.rmtree(child_fordpath)
+        for child_path in dbgym_workspace.dbgym_runs_path.iterdir():
+            if child_path not in task_run_child_paths_to_keep:
+                if child_path.is_dir():
+                    shutil.rmtree(child_path)
                 else:
-                    os.remove(child_fordpath)
+                    os.remove(child_path)
     ending_num_files = _count_files_in_workspace(dbgym_workspace)
 
     if verbose:

@@ -101,41 +101,41 @@ def _get_queries_dirname(seed: int, scale_factor: float) -> str:
 
 
 def _clone_tpch_kit(dbgym_workspace: DBGymWorkspace) -> None:
-    expected_symlink_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+    expected_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
         TPCH_KIT_DIRNAME + ".link"
     )
-    if expected_symlink_dpath.exists():
+    if expected_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping clone: {expected_symlink_dpath}"
+            f"Skipping clone: {expected_symlink_path}"
         )
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_dpath}")
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloning: {expected_symlink_path}")
     subprocess_run(
         f"./clone_tpch_kit.sh {dbgym_workspace.dbgym_this_run_path}",
-        cwd=dbgym_workspace.base_dbgym_repo_dpath / "benchmark" / "tpch",
+        cwd=dbgym_workspace.base_dbgym_repo_path / "benchmark" / "tpch",
     )
-    symlink_dpath = dbgym_workspace.link_result(
+    symlink_path = dbgym_workspace.link_result(
         dbgym_workspace.dbgym_this_run_path / TPCH_KIT_DIRNAME
     )
-    assert expected_symlink_dpath.samefile(symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_dpath}")
+    assert expected_symlink_path.samefile(symlink_path)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(f"Cloned: {expected_symlink_path}")
 
 
 def _generate_tpch_queries(
     dbgym_workspace: DBGymWorkspace, seed_start: int, seed_end: int, scale_factor: float
 ) -> None:
-    tpch_kit_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+    tpch_kit_path = dbgym_workspace.dbgym_cur_symlinks_path / (
         TPCH_KIT_DIRNAME + ".link"
     )
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating queries: [{seed_start}, {seed_end}]"
     )
     for seed in range(seed_start, seed_end + 1):
-        expected_queries_symlink_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+        expected_queries_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
             _get_queries_dirname(seed, scale_factor) + ".link"
         )
-        if expected_queries_symlink_dpath.exists():
+        if expected_queries_symlink_path.exists():
             continue
 
         queries_parent_path = (
@@ -147,43 +147,43 @@ def _generate_tpch_queries(
             target_sql = (queries_parent_path / f"{i}.sql").resolve()
             subprocess_run(
                 f"DSS_QUERY=./queries ./qgen {i} -r {seed} -s {scale_factor} > {target_sql}",
-                cwd=tpch_kit_dpath / "dbgen",
+                cwd=tpch_kit_path / "dbgen",
                 verbose=False,
             )
-        queries_symlink_dpath = dbgym_workspace.link_result(queries_parent_path)
-        assert queries_symlink_dpath.samefile(expected_queries_symlink_dpath)
+        queries_symlink_path = dbgym_workspace.link_result(queries_parent_path)
+        assert queries_symlink_path.samefile(expected_queries_symlink_path)
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generated queries: [{seed_start}, {seed_end}]"
     )
 
 
 def _generate_tpch_tables(dbgym_workspace: DBGymWorkspace, scale_factor: float) -> None:
-    tpch_kit_dpath = dbgym_workspace.dbgym_cur_symlinks_path / (
+    tpch_kit_path = dbgym_workspace.dbgym_cur_symlinks_path / (
         TPCH_KIT_DIRNAME + ".link"
     )
-    expected_tables_symlink_dpath = get_tables_symlink_path(
+    expected_tables_symlink_path = get_tables_symlink_path(
         dbgym_workspace.dbgym_workspace_path, "tpch", scale_factor
     )
-    if expected_tables_symlink_dpath.exists():
+    if expected_tables_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping generation: {expected_tables_symlink_dpath}"
+            f"Skipping generation: {expected_tables_symlink_path}"
         )
         return
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generating: {expected_tables_symlink_dpath}"
+        f"Generating: {expected_tables_symlink_path}"
     )
-    subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=tpch_kit_dpath / "dbgen")
+    subprocess_run(f"./dbgen -vf -s {scale_factor}", cwd=tpch_kit_path / "dbgen")
     tables_parent_path = dbgym_workspace.dbgym_this_run_path / get_tables_dirname(
         "tpch", scale_factor
     )
     tables_parent_path.mkdir(parents=False, exist_ok=False)
-    subprocess_run(f"mv ./*.tbl {tables_parent_path}", cwd=tpch_kit_dpath / "dbgen")
+    subprocess_run(f"mv ./*.tbl {tables_parent_path}", cwd=tpch_kit_path / "dbgen")
 
-    tables_symlink_dpath = dbgym_workspace.link_result(tables_parent_path)
-    assert tables_symlink_dpath.samefile(expected_tables_symlink_dpath)
+    tables_symlink_path = dbgym_workspace.link_result(tables_parent_path)
+    assert tables_symlink_path.samefile(expected_tables_symlink_path)
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Generated: {expected_tables_symlink_dpath}"
+        f"Generated: {expected_tables_symlink_path}"
     )
 
 
@@ -233,11 +233,11 @@ def _generate_tpch_workload(
             )
 
             for qname in query_names:
-                sql_fpath = fully_resolve_path(queries_parent_path / f"{qname}.sql")
+                sql_path = fully_resolve_path(queries_parent_path / f"{qname}.sql")
                 assert is_fully_resolved(
-                    sql_fpath
+                    sql_path
                 ), "We should only write existent real absolute paths to a file"
-                f.write(f"S{seed}-Q{qname},{sql_fpath}\n")
+                f.write(f"S{seed}-Q{qname},{sql_path}\n")
 
     workload_symlink_path = dbgym_workspace.link_result(workload_path)
     assert workload_symlink_path == expected_workload_symlink_path

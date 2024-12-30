@@ -273,7 +273,7 @@ class WorkspaceTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             AssertionError,
-            "result_fordpath \(.*\) should be a fully resolved path",
+            "result_path \(.*\) should be a fully resolved path",
         ):
             self.workspace.link_result(symlink_path)
 
@@ -452,7 +452,7 @@ class WorkspaceTests(unittest.TestCase):
         result_path = self.make_result_helper()
         with self.assertRaisesRegex(
             AssertionError,
-            "fpath \(.*\) was generated in this task run \(.*\)\. You do not need to save it",
+            "path \(.*\) was generated in this task run \(.*\)\. You do not need to save it",
         ):
             self.workspace.save_file(result_path)
 

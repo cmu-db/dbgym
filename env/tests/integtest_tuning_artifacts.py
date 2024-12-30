@@ -34,7 +34,7 @@ class PostgresConnTests(unittest.TestCase):
         writer.write_step(PostgresConnTests.make_config("b"))
         writer.write_step(PostgresConnTests.make_config("c"))
 
-        reader = TuningArtifactsReader(writer.tuning_artifacts_dpath)
+        reader = TuningArtifactsReader(writer.tuning_artifacts_path)
 
         self.assertEqual(
             reader.get_delta_at_step(1), PostgresConnTests.make_config("b")
@@ -59,7 +59,7 @@ class PostgresConnTests(unittest.TestCase):
         writer.write_step(PostgresConnTests.make_config("b"))
         writer.write_step(PostgresConnTests.make_config("c"))
 
-        reader = TuningArtifactsReader(writer.tuning_artifacts_dpath)
+        reader = TuningArtifactsReader(writer.tuning_artifacts_path)
 
         self.assertEqual(
             reader.get_all_deltas_in_order(),
@@ -75,7 +75,7 @@ class PostgresConnTests(unittest.TestCase):
             GymlibIntegtestManager.get_dbgym_workspace(),
             GymlibIntegtestManager.get_default_metadata(),
         )
-        reader = TuningArtifactsReader(writer.tuning_artifacts_dpath)
+        reader = TuningArtifactsReader(writer.tuning_artifacts_path)
         metadata = reader.get_metadata()
         expected_metadata = GymlibIntegtestManager.get_default_metadata()
         self.assertEqual(metadata, expected_metadata)

@@ -37,11 +37,11 @@ class JobLoadInfo(LoadInfoBaseClass):
 
     def __init__(self, dbgym_workspace: DBGymWorkspace):
         # Schema (directly in the codebase).
-        job_codebase_path = dbgym_workspace.base_dbgym_repo_dpath / "benchmark" / "job"
-        self._schema_fpath = job_codebase_path / JOB_SCHEMA_FNAME
+        job_codebase_path = dbgym_workspace.base_dbgym_repo_path / "benchmark" / "job"
+        self._schema_path = job_codebase_path / JOB_SCHEMA_FNAME
         assert (
-            self._schema_fpath.exists()
-        ), f"self._schema_fpath ({self._schema_fpath}) does not exist"
+            self._schema_path.exists()
+        ), f"self._schema_path ({self._schema_path}) does not exist"
 
         # Tables
         tables_path = fully_resolve_path(
@@ -51,11 +51,11 @@ class JobLoadInfo(LoadInfoBaseClass):
         )
         self._tables_and_paths = []
         for table in JobLoadInfo.TABLES:
-            table_fpath = tables_path / f"{table}.csv"
-            self._tables_and_paths.append((table, table_fpath))
+            table_path = tables_path / f"{table}.csv"
+            self._tables_and_paths.append((table, table_path))
 
-    def get_schema_fpath(self) -> Path:
-        return self._schema_fpath
+    def get_schema_path(self) -> Path:
+        return self._schema_path
 
     def get_tables_and_paths(self) -> list[tuple[str, Path]]:
         return self._tables_and_paths
@@ -63,7 +63,7 @@ class JobLoadInfo(LoadInfoBaseClass):
     def get_table_file_delimiter(self) -> str:
         return ","
 
-    def get_constraints_fpath(self) -> Optional[Path]:
+    def get_constraints_path(self) -> Optional[Path]:
         # JOB does not have any constraints. It does have indexes, but we don't want to create
         # those indexes so that the tuning agent can start from a clean slate.
         return None

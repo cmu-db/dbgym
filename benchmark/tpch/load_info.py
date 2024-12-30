@@ -24,17 +24,15 @@ class TpchLoadInfo(LoadInfoBaseClass):
 
     def __init__(self, dbgym_workspace: DBGymWorkspace, scale_factor: float):
         # Schema and constraints (directly in the codebase).
-        tpch_codebase_path = (
-            dbgym_workspace.base_dbgym_repo_dpath / "benchmark" / "tpch"
-        )
-        self._schema_fpath = tpch_codebase_path / TPCH_SCHEMA_FNAME
+        tpch_codebase_path = dbgym_workspace.base_dbgym_repo_path / "benchmark" / "tpch"
+        self._schema_path = tpch_codebase_path / TPCH_SCHEMA_FNAME
         assert (
-            self._schema_fpath.exists()
-        ), f"self._schema_fpath ({self._schema_fpath}) does not exist"
-        self._constraints_fpath = tpch_codebase_path / TPCH_CONSTRAINTS_FNAME
+            self._schema_path.exists()
+        ), f"self._schema_path ({self._schema_path}) does not exist"
+        self._constraints_path = tpch_codebase_path / TPCH_CONSTRAINTS_FNAME
         assert (
-            self._constraints_fpath.exists()
-        ), f"self._constraints_fpath ({self._constraints_fpath}) does not exist"
+            self._constraints_path.exists()
+        ), f"self._constraints_path ({self._constraints_path}) does not exist"
 
         # Tables
         tables_path = fully_resolve_path(
@@ -47,8 +45,8 @@ class TpchLoadInfo(LoadInfoBaseClass):
             table_path = tables_path / f"{table}.tbl"
             self._tables_and_paths.append((table, table_path))
 
-    def get_schema_fpath(self) -> Path:
-        return self._schema_fpath
+    def get_schema_path(self) -> Path:
+        return self._schema_path
 
     def get_tables_and_paths(self) -> list[tuple[str, Path]]:
         return self._tables_and_paths
@@ -56,5 +54,5 @@ class TpchLoadInfo(LoadInfoBaseClass):
     def get_table_file_delimiter(self) -> str:
         return "|"
 
-    def get_constraints_fpath(self) -> Optional[Path]:
-        return self._constraints_fpath
+    def get_constraints_path(self) -> Optional[Path]:
+        return self._constraints_path

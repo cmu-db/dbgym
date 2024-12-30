@@ -290,8 +290,8 @@ def _generate_job_workload(
         )
 
         for qname in query_names:
-            sql_fpath = fully_resolve_path(queries_parent_path / f"{qname}.sql")
-            f.write(f"Q{qname},{sql_fpath}\n")
+            sql_path = fully_resolve_path(queries_parent_path / f"{qname}.sql")
+            f.write(f"Q{qname},{sql_path}\n")
 
     workload_symlink_path = dbgym_workspace.link_result(workload_path)
     assert workload_symlink_path == expected_workload_symlink_path

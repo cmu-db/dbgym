@@ -38,7 +38,7 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,
     fully_resolve_path,
-    get_default_dbdata_parent_dpath,
+    get_default_dbdata_parent_path,
     is_fully_resolved,
     is_ssd,
 )
@@ -68,30 +68,30 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     """
     This function exists as a hook for integration tests.
     """
-    expected_repo_symlink_dpath = get_repo_symlink_path(
+    expected_repo_symlink_path = get_repo_symlink_path(
         dbgym_workspace.dbgym_workspace_path
     )
-    if not rebuild and expected_repo_symlink_dpath.exists():
+    if not rebuild and expected_repo_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _postgres_build: {expected_repo_symlink_dpath}"
+            f"Skipping _postgres_build: {expected_repo_symlink_path}"
         )
         return
 
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Setting up repo in {expected_repo_symlink_dpath}"
+        f"Setting up repo in {expected_repo_symlink_path}"
     )
-    repo_real_dpath = dbgym_workspace.dbgym_this_run_path / "repo"
-    repo_real_dpath.mkdir(parents=False, exist_ok=False)
+    repo_real_path = dbgym_workspace.dbgym_this_run_path / "repo"
+    repo_real_path.mkdir(parents=False, exist_ok=False)
     subprocess_run(
-        f"./_build_repo.sh {repo_real_dpath}",
-        cwd=dbgym_workspace.base_dbgym_repo_dpath / "dbms" / "postgres",
+        f"./_build_repo.sh {repo_real_path}",
+        cwd=dbgym_workspace.base_dbgym_repo_path / "dbms" / "postgres",
     )
 
     # only link at the end so that the link only ever points to a complete repo
-    repo_symlink_dpath = dbgym_workspace.link_result(repo_real_dpath)
-    assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
+    repo_symlink_path = dbgym_workspace.link_result(repo_real_path)
+    assert expected_repo_symlink_path.samefile(repo_symlink_path)
     logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Set up repo in {expected_repo_symlink_dpath}"
+        f"Set up repo in {expected_repo_symlink_path}"
     )
 
 
@@ -112,13 +112,13 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     "--intended-dbdata-hardware",
     type=click.Choice(["hdd", "ssd"]),
     default="hdd",
-    help=f"The intended hardware dbdata should be on. Used as a sanity check for --dbdata-parent-dpath.",
+    help=f"The intended hardware dbdata should be on. Used as a sanity check for --dbdata-parent-path.",
 )
 @click.option(
-    "--dbdata-parent-dpath",
+    "--dbdata-parent-path",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_dpath(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 def postgres_dbdata(
     dbgym_workspace: DBGymWorkspace,
@@ -126,7 +126,7 @@ def postgres_dbdata(
     scale_factor: float,
     pgbin_path: Optional[Path],
     intended_dbdata_hardware: str,
-    dbdata_parent_dpath: Optional[Path],
+    dbdata_parent_path: Optional[Path],
 ) -> None:
     _postgres_dbdata(
         dbgym_workspace,
@@ -134,7 +134,7 @@ def postgres_dbdata(
         scale_factor,
         pgbin_path,
         intended_dbdata_hardware,
-        dbdata_parent_dpath,
+        dbdata_parent_path,
     )
 
 
@@ -144,7 +144,7 @@ def _postgres_dbdata(
     scale_factor: float,
     pgbin_path: Optional[Path],
     intended_dbdata_hardware: str,
-    dbdata_parent_dpath: Optional[Path],
+    dbdata_parent_path: Optional[Path],
 ) -> None:
     """
     This function exists as a hook for integration tests.
@@ -152,30 +152,30 @@ def _postgres_dbdata(
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path is None:
         pgbin_path = get_pgbin_symlink_path(dbgym_workspace.dbgym_workspace_path)
-    if dbdata_parent_dpath is None:
-        dbdata_parent_dpath = get_default_dbdata_parent_dpath(
+    if dbdata_parent_path is None:
+        dbdata_parent_path = get_default_dbdata_parent_path(
             dbgym_workspace.dbgym_workspace_path
         )
 
     # Fully resolve all input paths.
     pgbin_path = fully_resolve_path(pgbin_path)
-    dbdata_parent_dpath = fully_resolve_path(dbdata_parent_dpath)
+    dbdata_parent_path = fully_resolve_path(dbdata_parent_path)
 
     # Check assertions on args
     if intended_dbdata_hardware == "hdd":
         assert not is_ssd(
-            dbdata_parent_dpath
-        ), f"Intended hardware is HDD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an SSD"
+            dbdata_parent_path
+        ), f"Intended hardware is HDD but dbdata_parent_path ({dbdata_parent_path}) is an SSD"
     elif intended_dbdata_hardware == "ssd":
         assert is_ssd(
-            dbdata_parent_dpath
-        ), f"Intended hardware is SSD but dbdata_parent_dpath ({dbdata_parent_dpath}) is an HDD"
+            dbdata_parent_path
+        ), f"Intended hardware is SSD but dbdata_parent_path ({dbdata_parent_path}) is an HDD"
     else:
         assert False
 
     # Create dbdata
     _create_dbdata(
-        dbgym_workspace, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath
+        dbgym_workspace, benchmark_name, scale_factor, pgbin_path, dbdata_parent_path
     )
 
 
@@ -184,7 +184,7 @@ def _create_dbdata(
     benchmark_name: str,
     scale_factor: float,
     pgbin_path: Path,
-    dbdata_parent_dpath: Path,
+    dbdata_parent_path: Path,
 ) -> None:
     """
     If you change the code of _create_dbdata(), you should also delete the symlink so that the next time you run
@@ -202,13 +202,13 @@ def _create_dbdata(
         return
 
     # It's ok for the dbdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place.
-    dbdata_path = dbdata_parent_dpath / "dbdata_being_created"
-    # We might be reusing the same dbdata_parent_dpath, so delete dbdata_path if it already exists
+    dbdata_path = dbdata_parent_path / "dbdata_being_created"
+    # We might be reusing the same dbdata_parent_path, so delete dbdata_path if it already exists
     if dbdata_path.exists():
         shutil.rmtree(dbdata_path)
 
     # Call initdb.
-    # Save any script we call from pgbin_symlink_dpath because they are dependencies generated from another task run.
+    # Save any script we call from pgbin_symlink_path because they are dependencies generated from another task run.
     dbgym_workspace.save_file(pgbin_path / "initdb")
     subprocess_run(f'./initdb -D "{dbdata_path}"', cwd=pgbin_path)
 
@@ -242,23 +242,23 @@ def _create_dbdata(
 
 def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:
     # get necessary vars
-    pgbin_real_dpath = get_pgbin_symlink_path(
+    pgbin_real_path = get_pgbin_symlink_path(
         dbgym_workspace.dbgym_workspace_path
     ).resolve()
-    assert pgbin_real_dpath.exists()
+    assert pgbin_real_path.exists()
     dbgym_pguser = DBGYM_POSTGRES_USER
     dbgym_pgpass = DBGYM_POSTGRES_PASS
     pgport = DEFAULT_POSTGRES_PORT
 
     # Create user
-    dbgym_workspace.save_file(pgbin_real_dpath / "psql")
+    dbgym_workspace.save_file(pgbin_real_path / "psql")
     subprocess_run(
         f"./psql -c \"create user {dbgym_pguser} with superuser password '{dbgym_pgpass}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_real_dpath,
+        cwd=pgbin_real_path,
     )
     subprocess_run(
         f'./psql -c "grant pg_monitor to {dbgym_pguser}" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
-        cwd=pgbin_real_dpath,
+        cwd=pgbin_real_path,
     )
 
     # Load shared preload libraries
@@ -267,14 +267,14 @@ def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:
             # You have to use TO and you can't put single quotes around the libraries (https://postgrespro.com/list/thread-id/2580120)
             # The method I wrote here works for both one library and multiple libraries
             f'./psql -c "ALTER SYSTEM SET shared_preload_libraries TO {SHARED_PRELOAD_LIBRARIES};" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost',
-            cwd=pgbin_real_dpath,
+            cwd=pgbin_real_path,
         )
 
     # Create the dbgym database. Since one dbdata dir maps to one benchmark, all benchmarks will use the same database
     # as opposed to using databases named after the benchmark.
     subprocess_run(
         f"./psql -c \"create database {DBGYM_POSTGRES_DBNAME} with owner = '{dbgym_pguser}'\" {DEFAULT_POSTGRES_DBNAME} -p {pgport} -h localhost",
-        cwd=pgbin_real_dpath,
+        cwd=pgbin_real_path,
     )
 
 
@@ -301,14 +301,14 @@ def _load_into_dbdata(
     conn: sqlalchemy.Connection,
     load_info: LoadInfoBaseClass,
 ) -> None:
-    sql_file_execute(dbgym_workspace, conn, load_info.get_schema_fpath())
+    sql_file_execute(dbgym_workspace, conn, load_info.get_schema_path())
 
     # Truncate all tables first before even loading a single one.
     for table, _ in load_info.get_tables_and_paths():
         sqlalchemy_conn_execute(conn, f"TRUNCATE {table} CASCADE")
     # Then, load the tables.
-    for table, table_fpath in load_info.get_tables_and_paths():
-        with dbgym_workspace.open_and_save(table_fpath, "r") as table_csv:
+    for table, table_path in load_info.get_tables_and_paths():
+        with dbgym_workspace.open_and_save(table_path, "r") as table_csv:
             assert conn.connection.dbapi_connection is not None
             cur = conn.connection.dbapi_connection.cursor()
             try:
@@ -320,9 +320,9 @@ def _load_into_dbdata(
             finally:
                 cur.close()
 
-    constraints_fpath = load_info.get_constraints_fpath()
-    if constraints_fpath is not None:
-        sql_file_execute(dbgym_workspace, conn, constraints_fpath)
+    constraints_path = load_info.get_constraints_path()
+    if constraints_path is not None:
+        sql_file_execute(dbgym_workspace, conn, constraints_path)
 
 
 # The start and stop functions slightly duplicate functionality from pg_conn.py. However, I chose to do it this way

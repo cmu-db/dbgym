@@ -16,7 +16,7 @@ from env.tuning_artifacts import TuningMetadata
 from util.workspace import (
     DBGymWorkspace,
     fully_resolve_path,
-    get_default_dbdata_parent_dpath,
+    get_default_dbdata_parent_path,
     get_workspace_path_from_config,
 )
 
@@ -105,7 +105,7 @@ class GymlibIntegtestManager:
                 ),
             ),
             dbdata_parent_path=fully_resolve_path(
-                get_default_dbdata_parent_dpath(dbgym_workspace.dbgym_workspace_path),
+                get_default_dbdata_parent_path(dbgym_workspace.dbgym_workspace_path),
             ),
             pgbin_path=fully_resolve_path(
                 get_pgbin_symlink_path(dbgym_workspace.dbgym_workspace_path),

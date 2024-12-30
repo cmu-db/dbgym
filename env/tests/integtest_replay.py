@@ -42,7 +42,7 @@ class ReplayTests(unittest.TestCase):
         )
         replay_data = replay(
             GymlibIntegtestManager.get_dbgym_workspace(),
-            writer.tuning_artifacts_dpath,
+            writer.tuning_artifacts_path,
         )
 
         # We do some very simple sanity checks here due to the inherent randomness of executing a workload.

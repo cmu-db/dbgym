@@ -11,11 +11,9 @@ class WorkloadTests(unittest.TestCase):
         GymlibIntegtestManager.set_up_workspace()
 
     def test_workload(self) -> None:
-        workload_dpath = GymlibIntegtestManager.get_default_metadata().workload_path
+        workload_path = GymlibIntegtestManager.get_default_metadata().workload_path
 
-        workload = Workload(
-            GymlibIntegtestManager.get_dbgym_workspace(), workload_dpath
-        )
+        workload = Workload(GymlibIntegtestManager.get_dbgym_workspace(), workload_path)
 
         # Check the order of query IDs.
         self.assertEqual(

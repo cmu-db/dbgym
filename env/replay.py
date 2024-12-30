@@ -9,7 +9,7 @@ from util.workspace import DBGymWorkspace
 
 
 def replay(
-    dbgym_workspace: DBGymWorkspace, tuning_artifacts_dpath: Path
+    dbgym_workspace: DBGymWorkspace, tuning_artifacts_path: Path
 ) -> list[tuple[float, int]]:
     """
     Returns the total runtime and the number of timed out queries for each step.
@@ -18,7 +18,7 @@ def replay(
     """
     replay_data: list[tuple[float, int]] = []
 
-    reader = TuningArtifactsReader(tuning_artifacts_dpath)
+    reader = TuningArtifactsReader(tuning_artifacts_path)
     pg_conn = PostgresConn(
         dbgym_workspace,
         DEFAULT_POSTGRES_PORT,
