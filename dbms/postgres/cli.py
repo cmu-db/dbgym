@@ -171,7 +171,9 @@ def _postgres_dbdata(
             dbdata_parent_path
         ), f"Intended hardware is SSD but dbdata_parent_path ({dbdata_parent_path}) is an HDD"
     else:
-        assert False
+        assert (
+            False
+        ), f'Intended hardware is "{intended_dbdata_hardware}" which is invalid'
 
     # Create dbdata
     _create_dbdata(

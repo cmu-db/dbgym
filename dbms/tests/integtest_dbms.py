@@ -1,3 +1,4 @@
+import os
 import shutil
 import unittest
 from pathlib import Path
@@ -54,7 +55,10 @@ class DBMSTests(unittest.TestCase):
             self.workspace.dbgym_workspace_path, "tpch", scale_factor
         )
         self.assertFalse(dbdata_tgz_path.exists())
-        _postgres_dbdata(self.workspace, "tpch", scale_factor, None, "hdd", None)
+        intended_dbdata_hardware = os.environ.get("INTENDED_DBDATA_HARDWARE", "hdd")
+        _postgres_dbdata(
+            self.workspace, "tpch", scale_factor, None, intended_dbdata_hardware, None
+        )
         self.assertTrue(dbdata_tgz_path.exists())
         self.assertTrue(fully_resolve_path(dbdata_tgz_path).exists())
 
