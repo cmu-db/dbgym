@@ -16,6 +16,7 @@ from gymlib import (
     get_repo_symlink_path,
     linkname_to_name,
 )
+from gymlib.shell import subprocess_run
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
@@ -32,7 +33,6 @@ from util.pg import (
     sql_file_execute,
     sqlalchemy_conn_execute,
 )
-from util.shell import subprocess_run
 from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,

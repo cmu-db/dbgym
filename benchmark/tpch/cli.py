@@ -10,10 +10,10 @@ from gymlib import (
     linkname_to_name,
     name_to_linkname,
 )
+from gymlib.shell import subprocess_run
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
-from util.shell import subprocess_run
 from util.workspace import DBGymWorkspace, fully_resolve_path, is_fully_resolved
 
 TPCH_KIT_DIRNAME = "tpch-kit"

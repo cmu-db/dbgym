@@ -8,9 +8,9 @@ from gymlib import (
     get_workload_suffix,
     name_to_linkname,
 )
+from gymlib.shell import subprocess_run
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
-from util.shell import subprocess_run
 from util.workspace import DBGymWorkspace, fully_resolve_path
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
