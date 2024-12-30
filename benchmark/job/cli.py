@@ -11,12 +11,7 @@ from gymlib.symlinks_paths import (
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.log import DBGYM_LOGGER_NAME
 from util.shell import subprocess_run
-from util.workspace import (
-    DBGymWorkspace,
-    fully_resolve_path,
-    is_fully_resolved,
-    link_result,
-)
+from util.workspace import DBGymWorkspace, fully_resolve_path
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
 JOB_QUERIES_URL = "https://event.cwi.nl/da/job/job.tgz"

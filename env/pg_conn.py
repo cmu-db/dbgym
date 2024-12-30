@@ -24,7 +24,7 @@ from psycopg.errors import ProgramLimitExceeded, QueryCanceled
 
 from util.log import DBGYM_LOGGER_NAME
 from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
-from util.workspace import DBGymWorkspace, open_and_save, parent_path_of_path
+from util.workspace import DBGymWorkspace, parent_path_of_path
 
 CONNECT_TIMEOUT = 300
 
