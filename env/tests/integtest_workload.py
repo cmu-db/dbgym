@@ -3,17 +3,22 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.workload import Workload
+from util.workspace import DBGymWorkspace
 
 
 class WorkloadTests(unittest.TestCase):
+    workspace: DBGymWorkspace
+
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+        WorkloadTests.workspace = DBGymWorkspace(
+            GymlibIntegtestManager.get_workspace_path()
+        )
 
     def test_workload(self) -> None:
         workload_path = GymlibIntegtestManager.get_default_metadata().workload_path
-
-        workload = Workload(GymlibIntegtestManager.get_dbgym_workspace(), workload_path)
+        workload = Workload(WorkloadTests.workspace, workload_path)
 
         # Check the order of query IDs.
         self.assertEqual(

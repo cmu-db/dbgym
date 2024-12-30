@@ -35,9 +35,7 @@ class GymlibIntegtestManager:
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
     DBGYM_CONFIG_PATH = Path("env/tests/gymlib_integtest_dbgym_config.yaml")
-
-    # This is set at most once by set_up_workspace().
-    DBGYM_WORKSPACE: Optional[DBGymWorkspace] = None
+    WORKSPACE_PATH: Optional[Path] = None
 
     @staticmethod
     def set_up_workspace() -> None:
@@ -45,12 +43,12 @@ class GymlibIntegtestManager:
         Set up the workspace if it has not already been set up.
         None of the integtest_*.py files will delete the workspace so that future tests run faster.
         """
-        workspace_path = get_workspace_path_from_config(
+        GymlibIntegtestManager.WORKSPACE_PATH = get_workspace_path_from_config(
             GymlibIntegtestManager.DBGYM_CONFIG_PATH
         )
 
         # This if statement prevents us from setting up the workspace twice, which saves time.
-        if not workspace_path.exists():
+        if not GymlibIntegtestManager.WORKSPACE_PATH.exists():
             subprocess.run(
                 ["./env/tests/_set_up_gymlib_integtest_workspace.sh"],
                 env={
@@ -64,23 +62,13 @@ class GymlibIntegtestManager:
                 check=True,
             )
 
-        # Once we get here, we have an invariant that the workspace exists. We need this
-        # invariant to be true in order to create the DBGymWorkspace.
-        #
-        # However, it also can't be created more than once so we need to check `is None`.
-        if GymlibIntegtestManager.DBGYM_WORKSPACE is None:
-            # Reset this in case it had been created by a test *not* using GymlibIntegtestManager.set_up_workspace().
-            DBGymWorkspace._num_times_created_this_run = 0
-            GymlibIntegtestManager.DBGYM_WORKSPACE = DBGymWorkspace(workspace_path)
-
     @staticmethod
-    def get_dbgym_workspace() -> DBGymWorkspace:
-        assert GymlibIntegtestManager.DBGYM_WORKSPACE is not None
-        return GymlibIntegtestManager.DBGYM_WORKSPACE
+    def get_workspace_path() -> Path:
+        assert GymlibIntegtestManager.WORKSPACE_PATH is not None
+        return GymlibIntegtestManager.WORKSPACE_PATH
 
     @staticmethod
     def get_default_metadata() -> TuningMetadata:
-        dbgym_workspace = GymlibIntegtestManager.get_dbgym_workspace()
         assert GymlibIntegtestManager.BENCHMARK == "tpch"
         suffix = get_workload_suffix(
             GymlibIntegtestManager.BENCHMARK,
@@ -91,7 +79,7 @@ class GymlibIntegtestManager:
         return TuningMetadata(
             workload_path=fully_resolve_path(
                 get_workload_symlink_path(
-                    dbgym_workspace.dbgym_workspace_path,
+                    GymlibIntegtestManager.get_workspace_path(),
                     GymlibIntegtestManager.BENCHMARK,
                     GymlibIntegtestManager.SCALE_FACTOR,
                     suffix,
@@ -99,15 +87,17 @@ class GymlibIntegtestManager:
             ),
             pristine_dbdata_snapshot_path=fully_resolve_path(
                 get_dbdata_tgz_symlink_path(
-                    dbgym_workspace.dbgym_workspace_path,
+                    GymlibIntegtestManager.get_workspace_path(),
                     GymlibIntegtestManager.BENCHMARK,
                     GymlibIntegtestManager.SCALE_FACTOR,
                 ),
             ),
             dbdata_parent_path=fully_resolve_path(
-                get_tmp_path_from_workspace_path(dbgym_workspace.dbgym_workspace_path),
+                get_tmp_path_from_workspace_path(
+                    GymlibIntegtestManager.get_workspace_path()
+                ),
             ),
             pgbin_path=fully_resolve_path(
-                get_pgbin_symlink_path(dbgym_workspace.dbgym_workspace_path),
+                get_pgbin_symlink_path(GymlibIntegtestManager.get_workspace_path()),
             ),
         )

@@ -10,16 +10,22 @@ from env.tuning_artifacts import (
     SysKnobsDelta,
     TuningArtifactsWriter,
 )
+from util.workspace import DBGymWorkspace
 
 
 class ReplayTests(unittest.TestCase):
+    workspace: DBGymWorkspace
+
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+        ReplayTests.workspace = DBGymWorkspace(
+            GymlibIntegtestManager.get_workspace_path()
+        )
 
     def test_replay(self) -> None:
         writer = TuningArtifactsWriter(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            ReplayTests.workspace,
             GymlibIntegtestManager.get_default_metadata(),
         )
         writer.write_step(
@@ -41,7 +47,7 @@ class ReplayTests(unittest.TestCase):
             )
         )
         replay_data = replay(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            ReplayTests.workspace,
             writer.tuning_artifacts_path,
         )
 

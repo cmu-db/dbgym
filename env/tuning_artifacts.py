@@ -1,7 +1,7 @@
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, NewType, TypedDict
+from typing import Any, NewType
 
 from util.workspace import DBGymWorkspace, is_fully_resolved
 
@@ -84,6 +84,7 @@ class TuningArtifactsWriter:
         self.tuning_artifacts_path = (
             self.dbgym_workspace.dbgym_this_run_path / "tuning_artifacts"
         )
+        # exist_ok is False because you should only create one TuningArtifactsWriter per run.
         self.tuning_artifacts_path.mkdir(parents=False, exist_ok=False)
         assert is_fully_resolved(self.tuning_artifacts_path)
         self.next_step_num = 0

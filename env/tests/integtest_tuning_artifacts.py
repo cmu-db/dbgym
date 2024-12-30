@@ -9,12 +9,18 @@ from env.tuning_artifacts import (
     TuningArtifactsReader,
     TuningArtifactsWriter,
 )
+from util.workspace import DBGymWorkspace
 
 
 class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+
+    def setUp(self) -> None:
+        # We re-create a workspace for each test because each test will create its own TuningArtifactsWriter.
+        DBGymWorkspace._num_times_created_this_run = 0
+        self.workspace = DBGymWorkspace(GymlibIntegtestManager.get_workspace_path())
 
     @staticmethod
     def make_config(letter: str) -> DBMSConfigDelta:
@@ -26,7 +32,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_delta_at_step(self) -> None:
         writer = TuningArtifactsWriter(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            self.workspace,
             GymlibIntegtestManager.get_default_metadata(),
         )
 
@@ -51,7 +57,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_all_deltas_in_order(self) -> None:
         writer = TuningArtifactsWriter(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            self.workspace,
             GymlibIntegtestManager.get_default_metadata(),
         )
 
@@ -72,7 +78,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def test_get_metadata(self) -> None:
         writer = TuningArtifactsWriter(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            self.workspace,
             GymlibIntegtestManager.get_default_metadata(),
         )
         reader = TuningArtifactsReader(writer.tuning_artifacts_path)
