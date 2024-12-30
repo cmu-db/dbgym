@@ -1,1 +1,1 @@
-from . import magic
+from . import magic, symlinks_paths

@@ -1,7 +1,7 @@
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, NewType, TypedDict
+from typing import Any, NewType
 
 from util.workspace import DBGymWorkspace, is_fully_resolved
 
@@ -68,12 +68,12 @@ class DBMSConfigDelta:
     qknobs: QueryKnobsDelta
 
 
-def get_delta_at_step_fpath(tuning_artifacts_dpath: Path, step_num: int) -> Path:
-    return tuning_artifacts_dpath / f"step{step_num}_delta.json"
+def get_delta_at_step_path(tuning_artifacts_path: Path, step_num: int) -> Path:
+    return tuning_artifacts_path / f"step{step_num}_delta.json"
 
 
-def get_metadata_fpath(tuning_artifacts_dpath: Path) -> Path:
-    return tuning_artifacts_dpath / "metadata.json"
+def get_metadata_path(tuning_artifacts_path: Path) -> Path:
+    return tuning_artifacts_path / "metadata.json"
 
 
 class TuningArtifactsWriter:
@@ -81,14 +81,16 @@ class TuningArtifactsWriter:
         self, dbgym_workspace: DBGymWorkspace, metadata: TuningMetadata
     ) -> None:
         self.dbgym_workspace = dbgym_workspace
-        self.tuning_artifacts_dpath = self.dbgym_workspace.cur_task_runs_artifacts_path(
-            "tuning_artifacts", mkdir=True
+        self.tuning_artifacts_path = (
+            self.dbgym_workspace.dbgym_this_run_path / "tuning_artifacts"
         )
-        assert is_fully_resolved(self.tuning_artifacts_dpath)
+        # exist_ok is False because you should only create one TuningArtifactsWriter per run.
+        self.tuning_artifacts_path.mkdir(parents=False, exist_ok=False)
+        assert is_fully_resolved(self.tuning_artifacts_path)
         self.next_step_num = 0
 
         # Write metadata file
-        with get_metadata_fpath(self.tuning_artifacts_dpath).open("w") as f:
+        with get_metadata_path(self.tuning_artifacts_path).open("w") as f:
             json.dump(metadata.asdict(), f)
 
     def write_step(self, dbms_cfg_delta: DBMSConfigDelta) -> None:
@@ -97,23 +99,23 @@ class TuningArtifactsWriter:
         """
         curr_step_num = self.next_step_num
         self.next_step_num += 1
-        with get_delta_at_step_fpath(self.tuning_artifacts_dpath, curr_step_num).open(
+        with get_delta_at_step_path(self.tuning_artifacts_path, curr_step_num).open(
             "w"
         ) as f:
             json.dump(asdict(dbms_cfg_delta), f)
 
 
 class TuningArtifactsReader:
-    def __init__(self, tuning_artifacts_dpath: Path) -> None:
-        self.tuning_artifacts_dpath = tuning_artifacts_dpath
-        assert is_fully_resolved(self.tuning_artifacts_dpath)
+    def __init__(self, tuning_artifacts_path: Path) -> None:
+        self.tuning_artifacts_path = tuning_artifacts_path
+        assert is_fully_resolved(self.tuning_artifacts_path)
         num_steps = 0
-        while get_delta_at_step_fpath(self.tuning_artifacts_dpath, num_steps).exists():
+        while get_delta_at_step_path(self.tuning_artifacts_path, num_steps).exists():
             num_steps += 1
         self.num_steps = num_steps
 
     def get_metadata(self) -> TuningMetadata:
-        with get_metadata_fpath(self.tuning_artifacts_dpath).open("r") as f:
+        with get_metadata_path(self.tuning_artifacts_path).open("r") as f:
             data = json.load(f)
             return TuningMetadata(
                 workload_path=Path(data["workload_path"]),
@@ -126,7 +128,7 @@ class TuningArtifactsReader:
 
     def get_delta_at_step(self, step_num: int) -> DBMSConfigDelta:
         assert step_num >= 0 and step_num < self.num_steps
-        with get_delta_at_step_fpath(self.tuning_artifacts_dpath, step_num).open(
+        with get_delta_at_step_path(self.tuning_artifacts_path, step_num).open(
             "r"
         ) as f:
             data = json.load(f)

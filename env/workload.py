@@ -1,27 +1,27 @@
 from pathlib import Path
 
-from util.workspace import DBGymWorkspace, is_fully_resolved, open_and_save
+from util.workspace import DBGymWorkspace, is_fully_resolved
 
 
 class Workload:
-    def __init__(self, dbgym_workspace: DBGymWorkspace, workload_dpath: Path) -> None:
+    def __init__(self, dbgym_workspace: DBGymWorkspace, workload_path: Path) -> None:
         self.dbgym_workspace = dbgym_workspace
-        self.workload_dpath = workload_dpath
-        assert is_fully_resolved(self.workload_dpath)
+        self.workload_path = workload_path
+        assert is_fully_resolved(self.workload_path)
 
         self.queries: dict[str, str] = {}
-        order_fpath = self.workload_dpath / "order.txt"
+        order_path = self.workload_path / "order.txt"
         self.query_order: list[str] = []
 
-        assert order_fpath.exists()
+        assert order_path.exists()
 
-        with open_and_save(self.dbgym_workspace, order_fpath) as f:
+        with self.dbgym_workspace.open_and_save(order_path) as f:
             for line in f:
                 qid, qpath = line.strip().split(",")
                 qpath = Path(qpath)
                 assert is_fully_resolved(qpath)
 
-                with open_and_save(self.dbgym_workspace, qpath) as qf:
+                with self.dbgym_workspace.open_and_save(qpath) as qf:
                     self.queries[qid] = qf.read()
                 self.query_order.append(qid)
 

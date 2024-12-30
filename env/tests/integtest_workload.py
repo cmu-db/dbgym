@@ -3,34 +3,24 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.workload import Workload
-from util.workspace import (
-    fully_resolve_path,
-    get_default_workload_name_suffix,
-    get_default_workload_path,
-    get_workload_name,
-)
+from util.workspace import DBGymWorkspace
 
 
 class WorkloadTests(unittest.TestCase):
+    workspace: DBGymWorkspace
+
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+        # Reset _num_times_created_this_run since previous tests may have created a workspace.
+        DBGymWorkspace._num_times_created_this_run = 0
+        WorkloadTests.workspace = DBGymWorkspace(
+            GymlibIntegtestManager.get_workspace_path()
+        )
 
     def test_workload(self) -> None:
-        workload_dpath = fully_resolve_path(
-            get_default_workload_path(
-                GymlibIntegtestManager.get_dbgym_workspace().dbgym_workspace_path,
-                GymlibIntegtestManager.BENCHMARK,
-                get_workload_name(
-                    GymlibIntegtestManager.SCALE_FACTOR,
-                    get_default_workload_name_suffix(GymlibIntegtestManager.BENCHMARK),
-                ),
-            ),
-        )
-
-        workload = Workload(
-            GymlibIntegtestManager.get_dbgym_workspace(), workload_dpath
-        )
+        workload_path = GymlibIntegtestManager.get_default_metadata().workload_path
+        workload = Workload(WorkloadTests.workspace, workload_path)
 
         # Check the order of query IDs.
         self.assertEqual(

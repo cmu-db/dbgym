@@ -10,12 +10,20 @@ from util.pg import (
     get_is_postgres_running,
     get_running_postgres_ports,
 )
+from util.workspace import DBGymWorkspace
 
 
 class PostgresConnTests(unittest.TestCase):
+    workspace: DBGymWorkspace
+
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+        # Reset _num_times_created_this_run since previous tests may have created a workspace.
+        DBGymWorkspace._num_times_created_this_run = 0
+        PostgresConnTests.workspace = DBGymWorkspace(
+            GymlibIntegtestManager.get_workspace_path()
+        )
 
     def setUp(self) -> None:
         self.assertFalse(
@@ -38,7 +46,7 @@ class PostgresConnTests(unittest.TestCase):
 
     def create_pg_conn(self, pgport: int = DEFAULT_POSTGRES_PORT) -> PostgresConn:
         return PostgresConn(
-            GymlibIntegtestManager.get_dbgym_workspace(),
+            PostgresConnTests.workspace,
             pgport,
             self.metadata.pristine_dbdata_snapshot_path,
             self.metadata.dbdata_parent_path,

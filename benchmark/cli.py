@@ -8,7 +8,7 @@ from util.workspace import DBGymWorkspace
 @click.group(name="benchmark")
 @click.pass_obj
 def benchmark_group(dbgym_workspace: DBGymWorkspace) -> None:
-    dbgym_workspace.append_group("benchmark")
+    pass
 
 
 benchmark_group.add_command(tpch_group)

@@ -8,7 +8,7 @@ DBGYM_LOGGER_NAME = "dbgym"
 DBGYM_OUTPUT_LOGGER_NAME = f"{DBGYM_LOGGER_NAME}.output"
 
 
-def set_up_loggers(log_dpath: Path) -> None:
+def set_up_loggers(log_path: Path) -> None:
     """
     Set up everything related to the logging library.
 
@@ -21,7 +21,7 @@ def set_up_loggers(log_dpath: Path) -> None:
     _set_up_logger(
         logging.getLogger(DBGYM_LOGGER_NAME),
         log_format,
-        log_dpath / f"{DBGYM_LOGGER_NAME}.log",
+        log_path / f"{DBGYM_LOGGER_NAME}.log",
     )
 
     # The output logger is meant to output things to the console. We use it instead of using print to indicate that something is
@@ -40,7 +40,7 @@ def set_up_loggers(log_dpath: Path) -> None:
 def _set_up_logger(
     logger: Logger,
     format: str,
-    output_log_fpath: Optional[Path],
+    output_log_path: Optional[Path],
     console_level: int = logging.ERROR,
     file_level: int = logging.DEBUG,
 ) -> None:
@@ -55,18 +55,18 @@ def _set_up_logger(
     logger.addHandler(console_handler)
 
     # Let it output everything to the output file.
-    if output_log_fpath is not None:
-        file_handler = logging.FileHandler(output_log_fpath)
+    if output_log_path is not None:
+        file_handler = logging.FileHandler(output_log_path)
         file_handler.setFormatter(formatter)
         file_handler.setLevel(file_level)
         logger.addHandler(file_handler)
 
 
-def set_up_warnings(log_dpath: Path) -> None:
+def set_up_warnings(log_path: Path) -> None:
     """
     Some libraries (like torch) use warnings instead of logging for warnings. I want to redirect these too to avoid cluttering the console.
     """
-    warnings_fpath = log_dpath / "warnings.log"
+    warnings_path = log_path / "warnings.log"
 
     def write_warning_to_file(
         message: Any,
@@ -76,7 +76,7 @@ def set_up_warnings(log_dpath: Path) -> None:
         file: Optional[Any] = None,
         line: Optional[Any] = None,
     ) -> None:
-        with open(warnings_fpath, "a") as f:
+        with open(warnings_path, "a") as f:
             f.write(f"{filename}:{lineno}: {category.__name__}: {message}\n")
 
     warnings.showwarning = write_warning_to_file
