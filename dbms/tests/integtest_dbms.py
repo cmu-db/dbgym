@@ -2,9 +2,10 @@ import shutil
 import unittest
 from pathlib import Path
 
-from gymlib.symlinks_paths import get_repo_symlink_path
+from gymlib.symlinks_paths import get_dbdata_tgz_symlink_path, get_repo_symlink_path
 
-from dbms.postgres.cli import _postgres_build
+from benchmark.tpch.cli import _tpch_tables
+from dbms.postgres.cli import _postgres_build, _postgres_dbdata
 from util.workspace import (
     DBGymWorkspace,
     fully_resolve_path,
@@ -36,6 +37,26 @@ class DBMSTests(unittest.TestCase):
         _postgres_build(self.workspace, False)
         self.assertTrue(repo_path.exists())
         self.assertTrue(fully_resolve_path(repo_path).exists())
+
+    def test_postgres_dbdata(self) -> None:
+        # Setup
+        # Make sure to recreate self.workspace so that each function call counts as its own run.
+        scale_factor = 0.01
+        _postgres_build(self.workspace, False)
+        DBGymWorkspace.num_times_created_this_run = 0
+        self.workspace = DBGymWorkspace(self.workspace.dbgym_workspace_path)
+        _tpch_tables(self.workspace, scale_factor)
+        DBGymWorkspace.num_times_created_this_run = 0
+        self.workspace = DBGymWorkspace(self.workspace.dbgym_workspace_path)
+
+        # Test
+        dbdata_tgz_path = get_dbdata_tgz_symlink_path(
+            self.workspace.dbgym_workspace_path, "tpch", scale_factor
+        )
+        self.assertFalse(dbdata_tgz_path.exists())
+        _postgres_dbdata(self.workspace, "tpch", scale_factor, None, "hdd", None)
+        self.assertTrue(dbdata_tgz_path.exists())
+        self.assertTrue(fully_resolve_path(dbdata_tgz_path).exists())
 
 
 if __name__ == "__main__":

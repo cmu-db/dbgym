@@ -87,21 +87,6 @@ def get_scale_factor_string(scale_factor: float | str) -> str:
             return str(scale_factor).replace(".", "point")
 
 
-def get_dbdata_tgz_filename(benchmark_name: str, scale_factor: float | str) -> str:
-    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
-
-
-def get_default_pristine_dbdata_snapshot_path(
-    workspace_path: Path, benchmark_name: str, scale_factor: float | str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_dbms_postgres"
-        / "data"
-        / (get_dbdata_tgz_filename(benchmark_name, scale_factor) + ".link")
-    )
-
-
 def get_default_dbdata_parent_dpath(workspace_path: Path) -> Path:
     return get_tmp_path_from_workspace_path(workspace_path)
 
@@ -301,6 +286,38 @@ class DBGymWorkspace:
             # In this case, we want to copy instead of symlinking since it might disappear in the future.
             copy_fpath = self.dbgym_this_run_path / fname
             shutil.copy(fpath, copy_fpath)
+
+    def open_and_save(self, open_fpath: Path, mode: str = "r") -> IO[Any]:
+        """
+        Open a file and "save" it to [workspace]/task_runs/run_*/.
+        It takes in a str | Path to match the interface of open().
+        This file does not work if open_fpath is a symlink, to make its interface identical to that of open().
+            Make sure to resolve all symlinks with fully_resolve_path().
+        To avoid confusion, I'm enforcing this function to only work with absolute paths.
+        # TODO: maybe make it work on non-fully-resolved paths to better match open()
+        See the comment of save_file() for what "saving" means
+        If you are generating a "result" for the run, _do not_ use this. Just use the normal open().
+            This shouldn't be too hard to remember because this function crashes if open_fpath doesn't exist,
+            and when you write results you're usually opening open_fpaths which do not exist.
+        """
+        # Validate open_fpath
+        assert isinstance(open_fpath, Path)
+        assert is_fully_resolved(
+            open_fpath
+        ), f"open_and_save(): open_fpath ({open_fpath}) should be a fully resolved path"
+        assert not os.path.islink(
+            open_fpath
+        ), f"open_fpath ({open_fpath}) should not be a symlink"
+        assert os.path.exists(open_fpath), f"open_fpath ({open_fpath}) does not exist"
+        # `open_and_save`` *must* be called on files because it doesn't make sense to open a directory. note that this doesn't mean we'll always save
+        #   a file though. we sometimes save a directory (see save_file() for details)
+        assert os.path.isfile(open_fpath), f"open_fpath ({open_fpath}) is not a file"
+
+        # Save
+        self.save_file(open_fpath)
+
+        # Open
+        return open(open_fpath, mode=mode)
 
     # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is explained further in the documentation.
     def append_group(self, name: str) -> None:
@@ -507,6 +524,7 @@ def is_child_path(child_path: os.PathLike[str], parent_dpath: os.PathLike[str]) 
         )
 
 
+# TODO(phw2): deprecate this once I'm done with unittest_workspace.py
 def open_and_save(
     dbgym_workspace: DBGymWorkspace, open_fpath: Path, mode: str = "r"
 ) -> IO[Any]:

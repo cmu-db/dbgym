@@ -4,8 +4,9 @@ import click
 from gymlib.symlinks_paths import (
     get_tables_dirname,
     get_tables_symlink_path,
-    get_workload_dirname,
     get_workload_suffix,
+    get_workload_symlink_path,
+    linkname_to_name,
 )
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
@@ -17,7 +18,6 @@ from util.workspace import (
     fully_resolve_path,
     get_scale_factor_string,
     is_fully_resolved,
-    link_result,
 )
 
 TPCH_KIT_DIRNAME = "tpch-kit"
@@ -194,15 +194,13 @@ def _generate_tpch_workload(
     query_subset: str,
     scale_factor: float,
 ) -> None:
-    workload_name = get_workload_dirname(
+    expected_workload_symlink_path = get_workload_symlink_path(
+        dbgym_workspace.dbgym_workspace_path,
         "tpch",
         scale_factor,
         get_workload_suffix(
             "tpch", seed_start=seed_start, seed_end=seed_end, query_subset=query_subset
         ),
-    )
-    expected_workload_symlink_path = dbgym_workspace.dbgym_cur_symlinks_path / (
-        workload_name + ".link"
     )
     if expected_workload_symlink_path.exists():
         logging.getLogger(DBGYM_LOGGER_NAME).info(
@@ -213,7 +211,9 @@ def _generate_tpch_workload(
     logging.getLogger(DBGYM_LOGGER_NAME).info(
         f"Generating: {expected_workload_symlink_path}"
     )
-    workload_path = dbgym_workspace.dbgym_this_run_path / workload_name
+    workload_path = dbgym_workspace.dbgym_this_run_path / linkname_to_name(
+        expected_workload_symlink_path.name
+    )
     workload_path.mkdir(parents=False, exist_ok=False)
 
     query_names = None

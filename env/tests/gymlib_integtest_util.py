@@ -5,6 +5,7 @@ from typing import Optional
 
 # TODO: remove symlinks_paths from the import
 from gymlib.symlinks_paths import (
+    get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,
@@ -16,7 +17,6 @@ from util.workspace import (
     DBGymWorkspace,
     fully_resolve_path,
     get_default_dbdata_parent_dpath,
-    get_default_pristine_dbdata_snapshot_path,
     get_workspace_path_from_config,
 )
 
@@ -98,7 +98,7 @@ class GymlibIntegtestManager:
                 ),
             ),
             pristine_dbdata_snapshot_path=fully_resolve_path(
-                get_default_pristine_dbdata_snapshot_path(
+                get_dbdata_tgz_symlink_path(
                     dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
                     GymlibIntegtestManager.SCALE_FACTOR,

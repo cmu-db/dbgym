@@ -39,6 +39,10 @@ def get_workload_dirname(benchmark: str, scale_factor: float | str, suffix: str)
     return f"workload_{benchmark}_sf{get_scale_factor_string(scale_factor)}_{suffix}"
 
 
+def get_dbdata_tgz_filename(benchmark_name: str, scale_factor: float | str) -> str:
+    return f"{benchmark_name}_sf{get_scale_factor_string(scale_factor)}_pristine_dbdata.tgz"
+
+
 def get_tables_symlink_path(
     workspace_path: Path, benchmark: str, scale_factor: float | str
 ) -> Path:
@@ -67,3 +71,25 @@ def get_repo_symlink_path(workspace_path: Path) -> Path:
 
 def get_pgbin_symlink_path(workspace_path: Path) -> Path:
     return get_repo_symlink_path(workspace_path) / "boot" / "build" / "postgres" / "bin"
+
+
+def get_dbdata_tgz_symlink_path(
+    workspace_path: Path, benchmark_name: str, scale_factor: float | str
+) -> Path:
+    return (
+        workspace_path
+        / SYMLINKS_DNAME
+        / DBGYM_APP_NAME
+        / (get_dbdata_tgz_filename(benchmark_name, scale_factor) + ".link")
+    )
+
+
+# TODO: refactor stuff to use this
+def name_to_linkname(name: str) -> str:
+    assert not name.endswith(".link")
+    return f"{name}.link"
+
+
+def linkname_to_name(linkname: str) -> str:
+    assert linkname.endswith(".link")
+    return linkname[: -len(".link")]
