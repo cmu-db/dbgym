@@ -26,7 +26,7 @@ TPCH_KIT_DIRNAME = "tpch-kit"
 @click.group(name="tpch")
 @click.pass_obj
 def tpch_group(dbgym_workspace: DBGymWorkspace) -> None:
-    dbgym_workspace.append_group("tpch")
+    pass
 
 
 @tpch_group.command(name="tables")

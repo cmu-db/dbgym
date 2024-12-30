@@ -47,7 +47,7 @@ from util.workspace import (
 @click.group(name="postgres")
 @click.pass_obj
 def postgres_group(dbgym_workspace: DBGymWorkspace) -> None:
-    dbgym_workspace.append_group("postgres")
+    pass
 
 
 @postgres_group.command(

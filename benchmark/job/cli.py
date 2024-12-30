@@ -136,7 +136,7 @@ JOB_QUERIES_DNAME = "job-queries"
 @click.group(name="job")
 @click.pass_obj
 def job_group(dbgym_workspace: DBGymWorkspace) -> None:
-    dbgym_workspace.append_group("job")
+    pass
 
 
 @job_group.command(name="tables")

@@ -83,7 +83,6 @@ class DBGymWorkspace:
         ), f"DBGymWorkspace has been created {DBGymWorkspace._num_times_created_this_run} times. It should only be created once per run."
 
         self.base_dbgym_repo_path = get_base_dbgym_repo_path()
-        self.cur_path_list: list[str] = ["dbgym"]
         self.app_name = (
             "dbgym"  # TODO: discover this dynamically. app means dbgym or an agent
         )
@@ -294,10 +293,6 @@ class DBGymWorkspace:
 
         # Open
         return open(open_path, mode=mode)
-
-    # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is explained further in the documentation.
-    def append_group(self, name: str) -> None:
-        self.cur_path_list.append(name)
 
 
 def get_workspace_path_from_config(dbgym_config_path: Path) -> Path:
