@@ -50,30 +50,6 @@ def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
 DEFAULT_BOOT_CONFIG_PATH = POSTGRES_PATH / "default_boot_config.yaml"
 
 
-# Paths of dependencies in the workspace. These are named "*_path" because they will be an absolute path
-# The reason these _cannot_ be relative paths is because relative paths are relative to the codebase root, not the workspace root
-# Note that it's okay to hardcode the codebase paths (like dbgym_dbms_postgres) here. In the worst case, we'll just break an
-#   integration test. The "source of truth" of codebase paths is based on DBGymWorkspace.cur_source_path(), which will always
-#   reflect the actual codebase structure. As long as we automatically enforce getting the right codebase paths when writing, it's
-#   ok to have to hardcode them when reading.
-# Details
-#  - If a name already has the workload_name, I omit scale factor. This is because the workload_name includes the scale factor
-#  - By convention, symlinks should end with ".link". The bug that motivated this decision involved replaying a tuning run. When
-#    replaying a tuning run, you read the tuning_steps/ folder of the tuning run. Earlier, I created a symlink to that tuning_steps/
-#    folder called run_*/*/tuning_steps. However, replay itself generates an replay_info.log file, which goes in
-#    run_*/*/tuning_steps/. The bug was that my replay function was overwriting the replay_info.log file of the
-#    tuning run. By naming all symlinks "*.link", we avoid the possibility of subtle bugs like this happening.
-def get_default_workload_path(
-    workspace_path: Path, benchmark_name: str, workload_name: str
-) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / f"dbgym_benchmark_{benchmark_name}"
-        / "data"
-        / (workload_name + ".link")
-    )
-
-
 SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 
 
@@ -322,51 +298,6 @@ class DBGymWorkspace:
     # `append_group()` is used to mark the "codebase path" of an invocation of the CLI. The "codebase path" is explained further in the documentation.
     def append_group(self, name: str) -> None:
         self.cur_path_list.append(name)
-
-    def cur_source_path(self, *dirs: str) -> Path:
-        cur_path = self.base_dbgym_repo_path
-        assert self.cur_path_list[0] == "dbgym"
-        for folder in self.cur_path_list[1:]:
-            cur_path = cur_path / folder
-        for dir in dirs:
-            cur_path = cur_path / dir
-        return cur_path
-
-    def _cur_symlinks_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        flattened_structure = "_".join(self.cur_path_list)
-        cur_path = self.dbgym_symlinks_path / flattened_structure
-        for dir in dirs:
-            cur_path = cur_path / dir
-        if mkdir:
-            cur_path.mkdir(parents=True, exist_ok=True)
-        return cur_path
-
-    def cur_task_runs_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        flattened_structure = "_".join(self.cur_path_list)
-        cur_path = self.dbgym_this_run_path / flattened_structure
-        for dir in dirs:
-            cur_path = cur_path / dir
-        if mkdir:
-            cur_path.mkdir(parents=True, exist_ok=True)
-        return cur_path
-
-    def cur_symlinks_bin_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self._cur_symlinks_path("bin", *dirs, mkdir=mkdir)
-
-    def cur_symlinks_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self._cur_symlinks_path("build", *dirs, mkdir=mkdir)
-
-    def cur_symlinks_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self._cur_symlinks_path("data", *dirs, mkdir=mkdir)
-
-    def cur_task_runs_build_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_task_runs_path("build", *dirs, mkdir=mkdir)
-
-    def cur_task_runs_data_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_task_runs_path("data", *dirs, mkdir=mkdir)
-
-    def cur_task_runs_artifacts_path(self, *dirs: str, mkdir: bool = False) -> Path:
-        return self.cur_task_runs_path("artifacts", *dirs, mkdir=mkdir)
 
 
 def get_workspace_path_from_config(dbgym_config_path: Path) -> Path:

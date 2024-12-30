@@ -18,7 +18,7 @@ def task(ctx: click.Context) -> None:
     dbgym_workspace = make_standard_dbgym_workspace()
     ctx.obj = dbgym_workspace
 
-    log_path = dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
+    log_path = dbgym_workspace.dbgym_this_run_path
     set_up_loggers(log_path)
     set_up_warnings(log_path)
 

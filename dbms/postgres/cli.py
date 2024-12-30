@@ -226,7 +226,6 @@ def _create_dbdata(
     stop_postgres(dbgym_workspace, pgbin_path, dbdata_path)
 
     # Create .tgz file.
-    # Note that you can't pass "[dbdata].tgz" as an arg to cur_task_runs_data_path() because that would create "[dbdata].tgz" as a dir.
     dbdata_tgz_real_path = dbgym_workspace.dbgym_this_run_path / linkname_to_name(
         expected_dbdata_tgz_symlink_path.name
     )

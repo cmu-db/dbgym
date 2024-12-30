@@ -102,12 +102,9 @@ class PostgresConn:
             self._conn = None
 
     def move_log(self) -> None:
-        pglog_path = (
-            self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
-            / f"pg{self.pgport}.log"
-        )
+        pglog_path = self.dbgym_workspace.dbgym_this_run_path / f"pg{self.pgport}.log"
         pglog_this_step_path = (
-            self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
+            self.dbgym_workspace.dbgym_this_run_path
             / f"pg{self.pgport}.log.{self.log_step}"
         )
         if pglog_path.exists():
@@ -299,8 +296,7 @@ class PostgresConn:
                 "-l",
                 # We log to pg{self.pgport}.log instead of pg.log so that different PostgresConn objects
                 #   don't all try to write to the same file.
-                self.dbgym_workspace.cur_task_runs_artifacts_path(mkdir=True)
-                / f"pg{self.pgport}.log",
+                self.dbgym_workspace.dbgym_this_run_path / f"pg{self.pgport}.log",
                 "start",
             ].run(retcode=None)
 

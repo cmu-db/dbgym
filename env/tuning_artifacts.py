@@ -81,9 +81,10 @@ class TuningArtifactsWriter:
         self, dbgym_workspace: DBGymWorkspace, metadata: TuningMetadata
     ) -> None:
         self.dbgym_workspace = dbgym_workspace
-        self.tuning_artifacts_path = self.dbgym_workspace.cur_task_runs_artifacts_path(
-            "tuning_artifacts", mkdir=True
+        self.tuning_artifacts_path = (
+            self.dbgym_workspace.dbgym_this_run_path / "tuning_artifacts"
         )
+        self.tuning_artifacts_path.mkdir(parents=False, exist_ok=False)
         assert is_fully_resolved(self.tuning_artifacts_path)
         self.next_step_num = 0
 
