@@ -96,15 +96,15 @@ class DBGymWorkspace:
     Global configurations that apply to all parts of DB-Gym
     """
 
-    num_times_created_this_run: int = 0
+    _num_times_created_this_run: int = 0
 
     def __init__(self, dbgym_workspace_path: Path):
         # The logic around dbgym_tmp_path assumes that DBGymWorkspace is only constructed once.
         # This is because DBGymWorkspace creates a new run_*/ dir when it's initialized.
-        DBGymWorkspace.num_times_created_this_run += 1
+        DBGymWorkspace._num_times_created_this_run += 1
         assert (
-            DBGymWorkspace.num_times_created_this_run == 1
-        ), f"DBGymWorkspace has been created {DBGymWorkspace.num_times_created_this_run} times. It should only be created once per run."
+            DBGymWorkspace._num_times_created_this_run == 1
+        ), f"DBGymWorkspace has been created {DBGymWorkspace._num_times_created_this_run} times. It should only be created once per run."
 
         self.base_dbgym_repo_path = get_base_dbgym_repo_path()
         self.cur_path_list: list[str] = ["dbgym"]

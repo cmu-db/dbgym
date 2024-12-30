@@ -40,8 +40,8 @@ class WorkspaceTests(unittest.TestCase):
     # Importantly though, I don't have helper functions for the complex functions that I want to test (e.g. link_result and save_file).
     def init_workspace_helper(self) -> None:
         # Reset this to avoid the error of it being created twice.
-        # In real usage, the second run would be a different Python process so DBGymWorkspace.num_times_created_this_run would be 0.
-        DBGymWorkspace.num_times_created_this_run = 0
+        # In real usage, the second run would be a different Python process so DBGymWorkspace._num_times_created_this_run would be 0.
+        DBGymWorkspace._num_times_created_this_run = 0
         self.workspace = DBGymWorkspace(self.workspace_path)
 
         if self.expected_structure is None:
