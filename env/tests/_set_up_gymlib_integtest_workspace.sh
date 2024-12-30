@@ -16,7 +16,7 @@ set -euo pipefail
 # INTENDED_DBDATA_HARDWARE can be set elsewhere (e.g. by tests_ci.yaml) but we use hdd by default.
 INTENDED_DBDATA_HARDWARE="${INTENDED_DBDATA_HARDWARE:-hdd}"
 
-python3 task.py benchmark $BENCHMARK data $SCALE_FACTOR
+python3 task.py benchmark $BENCHMARK tables $SCALE_FACTOR
 python3 task.py benchmark $BENCHMARK workload --scale-factor $SCALE_FACTOR
 
 python3 task.py dbms postgres build

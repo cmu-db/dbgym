@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 # TODO: remove symlinks_paths from the import
-from gymlib.symlinks_paths import get_workload_dirname, get_workload_suffix
+from gymlib.symlinks_paths import get_workload_suffix, get_workload_symlink_path
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from env.tuning_artifacts import TuningMetadata
@@ -14,7 +14,6 @@ from util.workspace import (
     get_default_dbdata_parent_dpath,
     get_default_pgbin_path,
     get_default_pristine_dbdata_snapshot_path,
-    get_default_workload_path,
     get_workspace_path_from_config,
 )
 
@@ -88,14 +87,11 @@ class GymlibIntegtestManager:
         )
         return TuningMetadata(
             workload_path=fully_resolve_path(
-                get_default_workload_path(
+                get_workload_symlink_path(
                     dbgym_workspace.dbgym_workspace_path,
                     GymlibIntegtestManager.BENCHMARK,
-                    get_workload_dirname(
-                        GymlibIntegtestManager.BENCHMARK,
-                        GymlibIntegtestManager.SCALE_FACTOR,
-                        suffix,
-                    ),
+                    GymlibIntegtestManager.SCALE_FACTOR,
+                    suffix
                 ),
             ),
             pristine_dbdata_snapshot_path=fully_resolve_path(
