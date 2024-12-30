@@ -346,7 +346,7 @@ class PostgresConn:
 
         # Set up Boot if we're told to do so
         if self.boot_config_fpath is not None:
-            with open_and_save(self.dbgym_workspace, self.boot_config_fpath) as f:
+            with self.dbgym_workspace.open_and_save(self.boot_config_fpath) as f:
                 boot_config = yaml.safe_load(f)
 
             self._set_up_boot(

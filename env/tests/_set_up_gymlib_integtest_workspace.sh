@@ -11,7 +11,7 @@
 #   the Postgres repo is very large and (b) the built binary will be different for different machines.
 # This script should be run from the base dbgym/ directory.
 
-set -euo pipefail
+set -euxo pipefail
 
 # INTENDED_DBDATA_HARDWARE can be set elsewhere (e.g. by tests_ci.yaml) but we use hdd by default.
 INTENDED_DBDATA_HARDWARE="${INTENDED_DBDATA_HARDWARE:-hdd}"

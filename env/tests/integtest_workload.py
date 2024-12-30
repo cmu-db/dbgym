@@ -3,7 +3,6 @@ import unittest
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from env.tests.gymlib_integtest_util import GymlibIntegtestManager
 from env.workload import Workload
-from util.workspace import fully_resolve_path, get_default_workload_path
 
 
 class WorkloadTests(unittest.TestCase):
