@@ -3,7 +3,6 @@ At a high level, this file's goal is to (1) build postgres and (2) create dbdata
 """
 
 import logging
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import Optional
 
 import click
 import sqlalchemy
+from gymlib.symlinks_paths import get_pgbin_symlink_path, get_repo_symlink_path
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
@@ -35,7 +35,6 @@ from util.workspace import (
     fully_resolve_path,
     get_dbdata_tgz_filename,
     get_default_dbdata_parent_dpath,
-    get_default_pgbin_path,
     is_fully_resolved,
     is_ssd,
     link_result,
@@ -61,7 +60,38 @@ def postgres_group(dbgym_workspace: DBGymWorkspace) -> None:
     help="Include this flag to rebuild Postgres even if it already exists.",
 )
 def postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
-    _build_repo(dbgym_workspace, rebuild)
+    _postgres_build(dbgym_workspace, rebuild)
+
+
+def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
+    """
+    This function exists as a hook for integration tests.
+    """
+    expected_repo_symlink_dpath = get_repo_symlink_path(
+        dbgym_workspace.dbgym_workspace_path
+    )
+    if not rebuild and expected_repo_symlink_dpath.exists():
+        logging.getLogger(DBGYM_LOGGER_NAME).info(
+            f"Skipping _postgres_build: {expected_repo_symlink_dpath}"
+        )
+        return
+
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"Setting up repo in {expected_repo_symlink_dpath}"
+    )
+    repo_real_dpath = dbgym_workspace.dbgym_this_run_path / "repo"
+    repo_real_dpath.mkdir(parents=False, exist_ok=False)
+    subprocess_run(
+        f"./_build_repo.sh {repo_real_dpath}",
+        cwd=dbgym_workspace.base_dbgym_repo_dpath / "dbms" / "postgres",
+    )
+
+    # only link at the end so that the link only ever points to a complete repo
+    repo_symlink_dpath = dbgym_workspace.link_result(repo_real_dpath)
+    assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
+    logging.getLogger(DBGYM_LOGGER_NAME).info(
+        f"Set up repo in {expected_repo_symlink_dpath}"
+    )
 
 
 @postgres_group.command(
@@ -75,7 +105,7 @@ def postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     "--pgbin-path",
     type=Path,
     default=None,
-    help=f"The path to the bin containing Postgres executables. The default is {get_default_pgbin_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the bin containing Postgres executables. The default is {get_pgbin_symlink_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 @click.option(
     "--intended-dbdata-hardware",
@@ -99,7 +129,7 @@ def postgres_dbdata(
 ) -> None:
     # Set args to defaults programmatically (do this before doing anything else in the function)
     if pgbin_path is None:
-        pgbin_path = get_default_pgbin_path(dbgym_workspace.dbgym_workspace_path)
+        pgbin_path = get_pgbin_symlink_path(dbgym_workspace.dbgym_workspace_path)
     if dbdata_parent_dpath is None:
         dbdata_parent_dpath = get_default_dbdata_parent_dpath(
             dbgym_workspace.dbgym_workspace_path
@@ -124,40 +154,6 @@ def postgres_dbdata(
     # Create dbdata
     _create_dbdata(
         dbgym_workspace, benchmark_name, scale_factor, pgbin_path, dbdata_parent_dpath
-    )
-
-
-def _get_pgbin_symlink_path(dbgym_workspace: DBGymWorkspace) -> Path:
-    return dbgym_workspace.cur_symlinks_build_path(
-        "repo.link", "boot", "build", "postgres", "bin"
-    )
-
-
-def _get_repo_symlink_path(dbgym_workspace: DBGymWorkspace) -> Path:
-    return dbgym_workspace.cur_symlinks_build_path("repo.link")
-
-
-def _build_repo(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
-    expected_repo_symlink_dpath = _get_repo_symlink_path(dbgym_workspace)
-    if not rebuild and expected_repo_symlink_dpath.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _build_repo: {expected_repo_symlink_dpath}"
-        )
-        return
-
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Setting up repo in {expected_repo_symlink_dpath}"
-    )
-    repo_real_dpath = dbgym_workspace.cur_task_runs_build_path("repo", mkdir=True)
-    subprocess_run(
-        f"./build_repo.sh {repo_real_dpath}", cwd=dbgym_workspace.cur_source_path()
-    )
-
-    # only link at the end so that the link only ever points to a complete repo
-    repo_symlink_dpath = link_result(dbgym_workspace, repo_real_dpath)
-    assert expected_repo_symlink_dpath.samefile(repo_symlink_dpath)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Set up repo in {expected_repo_symlink_dpath}"
     )
 
 
@@ -216,7 +212,9 @@ def _create_dbdata(
 
 def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:
     # get necessary vars
-    pgbin_real_dpath = _get_pgbin_symlink_path(dbgym_workspace).resolve()
+    pgbin_real_dpath = get_pgbin_symlink_path(
+        dbgym_workspace.dbgym_workspace_path
+    ).resolve()
     assert pgbin_real_dpath.exists()
     dbgym_pguser = DBGYM_POSTGRES_USER
     dbgym_pgpass = DBGYM_POSTGRES_PASS

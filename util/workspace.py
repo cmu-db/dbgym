@@ -45,9 +45,6 @@ def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
     return get_runs_path_from_workspace_path(workspace_path) / "latest_run.link"
 
 
-# Other parameters
-
-
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
 DEFAULT_BOOT_CONFIG_FPATH = POSTGRES_PATH / "default_boot_config.yaml"
@@ -107,19 +104,6 @@ def get_default_pristine_dbdata_snapshot_path(
 
 def get_default_dbdata_parent_dpath(workspace_path: Path) -> Path:
     return get_tmp_path_from_workspace_path(workspace_path)
-
-
-def get_default_repo_path(workspace_path: Path) -> Path:
-    return (
-        get_symlinks_path_from_workspace_path(workspace_path)
-        / "dbgym_dbms_postgres"
-        / "build"
-        / "repo.link"
-    )
-
-
-def get_default_pgbin_path(workspace_path: Path) -> Path:
-    return get_default_repo_path(workspace_path) / "boot" / "build" / "postgres" / "bin"
 
 
 class DBGymWorkspace:

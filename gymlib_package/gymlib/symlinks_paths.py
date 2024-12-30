@@ -59,3 +59,11 @@ def get_workload_symlink_path(
         / DBGYM_APP_NAME
         / (get_workload_dirname(benchmark, scale_factor, suffix) + ".link")
     )
+
+
+def get_repo_symlink_path(workspace_path: Path) -> Path:
+    return workspace_path / SYMLINKS_DNAME / DBGYM_APP_NAME / "repo.link"
+
+
+def get_pgbin_symlink_path(workspace_path: Path) -> Path:
+    return get_repo_symlink_path(workspace_path) / "boot" / "build" / "postgres" / "bin"

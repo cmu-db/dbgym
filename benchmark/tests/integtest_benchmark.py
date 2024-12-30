@@ -20,11 +20,13 @@ from util.workspace import (
 )
 
 
-class TestBenchmark(unittest.TestCase):
+class BenchmarkTests(unittest.TestCase):
     DBGYM_CONFIG_PATH = Path("benchmark/tests/benchmark_integtest_dbgym_config.yaml")
 
     def setUp(self) -> None:
-        workspace_path = get_workspace_path_from_config(TestBenchmark.DBGYM_CONFIG_PATH)
+        workspace_path = get_workspace_path_from_config(
+            BenchmarkTests.DBGYM_CONFIG_PATH
+        )
         # Get a clean start each time.
         if workspace_path.exists():
             shutil.rmtree(workspace_path)
