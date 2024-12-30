@@ -1,12 +1,12 @@
 from collections import defaultdict
 from pathlib import Path
 
+from gymlib.pg_conn import PostgresConn
+from gymlib.tuning_artifacts import TuningArtifactsReader
+from gymlib.workload import Workload
 from gymlib.workspace import DBGymWorkspace
 
-from env.pg_conn import PostgresConn
-from env.tuning_artifacts import TuningArtifactsReader
-from env.workload import Workload
-from util.pg import DEFAULT_POSTGRES_PORT
+from dbms.postgres.cli import DEFAULT_POSTGRES_PORT
 
 
 def replay(

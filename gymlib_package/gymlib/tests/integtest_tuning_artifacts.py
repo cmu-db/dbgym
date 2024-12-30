@@ -1,9 +1,7 @@
 import unittest
 
-from gymlib.workspace import DBGymWorkspace
-
-from env.tests.gymlib_integtest_util import GymlibIntegtestManager
-from env.tuning_artifacts import (
+from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
+from gymlib.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
@@ -11,6 +9,7 @@ from env.tuning_artifacts import (
     TuningArtifactsReader,
     TuningArtifactsWriter,
 )
+from gymlib.workspace import DBGymWorkspace
 
 
 class PostgresConnTests(unittest.TestCase):

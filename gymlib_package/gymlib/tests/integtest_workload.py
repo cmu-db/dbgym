@@ -1,10 +1,10 @@
 import unittest
 
+from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
+from gymlib.workload import Workload
 from gymlib.workspace import DBGymWorkspace
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
-from env.tests.gymlib_integtest_util import GymlibIntegtestManager
-from env.workload import Workload
 
 
 class WorkloadTests(unittest.TestCase):
