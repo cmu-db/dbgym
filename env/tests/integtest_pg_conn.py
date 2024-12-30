@@ -19,6 +19,8 @@ class PostgresConnTests(unittest.TestCase):
     @staticmethod
     def setUpClass() -> None:
         GymlibIntegtestManager.set_up_workspace()
+        # Reset _num_times_created_this_run since previous tests may have created a workspace.
+        DBGymWorkspace._num_times_created_this_run = 0
         PostgresConnTests.workspace = DBGymWorkspace(
             GymlibIntegtestManager.get_workspace_path()
         )
