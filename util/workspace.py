@@ -11,20 +11,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Optional
 
-import redis
 import yaml
 
-from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 from util.log import DBGYM_LOGGER_NAME
-from util.shell import subprocess_run
 
-# Relative paths of different folders in the codebase
-DBMS_PATH = Path("dbms")
-POSTGRES_PATH = DBMS_PATH / "postgres"
-TUNE_PATH = Path("tune")
-
-# Paths of different parts of the workspace
-# I made these Path objects even though they're not real paths just so they can work correctly with my other helper functions
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
 
 
@@ -47,24 +37,7 @@ def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
 
 # Paths of config files in the codebase. These are always relative paths.
 # The reason these can be relative paths instead of functions taking in codebase_path as input is because relative paths are relative to the codebase root
-DEFAULT_BOOT_CONFIG_PATH = POSTGRES_PATH / "default_boot_config.yaml"
-
-
-SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
-
-
-def get_scale_factor_string(scale_factor: float | str) -> str:
-    if type(scale_factor) is str and scale_factor == SCALE_FACTOR_PLACEHOLDER:
-        return scale_factor
-    else:
-        if float(int(scale_factor)) == scale_factor:
-            return str(int(scale_factor))
-        else:
-            return str(scale_factor).replace(".", "point")
-
-
-def get_default_dbdata_parent_path(workspace_path: Path) -> Path:
-    return get_tmp_path_from_workspace_path(workspace_path)
+DEFAULT_BOOT_CONFIG_PATH = Path("dbms") / "postgres" / "default_boot_config.yaml"
 
 
 class DBGymWorkspace:
@@ -506,43 +479,6 @@ def try_remove_file(path: Path) -> None:
     except FileNotFoundError:
         # it's ok if it doesn't exist
         pass
-
-
-# TODO: move this stuff to shell.py
-def restart_ray(redis_port: int) -> None:
-    """
-    Stop and start Ray.
-    This is good to do between each stage to avoid bugs from carrying over across stages
-    """
-    subprocess_run("ray stop -f")
-    ncpu = os.cpu_count()
-    # --disable-usage-stats avoids a Y/N prompt
-    subprocess_run(
-        f"OMP_NUM_THREADS={ncpu} ray start --head --port={redis_port} --num-cpus={ncpu} --disable-usage-stats"
-    )
-
-
-def make_redis_started(port: int) -> None:
-    """
-    Start Redis if it's not already started.
-    Note that Ray uses Redis but does *not* use this function. It starts Redis on its own.
-    One current use for this function to start/stop Redis for Boot.
-    """
-    try:
-        r = redis.Redis(port=port)
-        r.ping()
-        # This means Redis is running, so we do nothing
-        do_start_redis = False
-    except (redis.ConnectionError, redis.TimeoutError):
-        # This means Redis is not running, so we start it
-        do_start_redis = True
-
-    # I'm starting Redis outside of except so that errors in r.ping get propagated correctly
-    if do_start_redis:
-        subprocess_run(f"redis-server --port {port} --daemonize yes")
-        # When you start Redis in daemon mode, it won't let you know if it's started, so we ping again to check
-        r = redis.Redis(port=port)
-        r.ping()
 
 
 def is_ssd(path: Path) -> bool:

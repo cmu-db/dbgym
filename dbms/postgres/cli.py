@@ -38,7 +38,7 @@ from util.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,
     fully_resolve_path,
-    get_default_dbdata_parent_path,
+    get_tmp_path_from_workspace_path,
     is_fully_resolved,
     is_ssd,
 )
@@ -118,7 +118,7 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     "--dbdata-parent-path",
     default=None,
     type=Path,
-    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_default_dbdata_parent_path(WORKSPACE_PATH_PLACEHOLDER)}.",
+    help=f"The path to the parent directory of the dbdata which will be actively tuned. The default is {get_tmp_path_from_workspace_path(WORKSPACE_PATH_PLACEHOLDER)}.",
 )
 def postgres_dbdata(
     dbgym_workspace: DBGymWorkspace,
@@ -153,7 +153,7 @@ def _postgres_dbdata(
     if pgbin_path is None:
         pgbin_path = get_pgbin_symlink_path(dbgym_workspace.dbgym_workspace_path)
     if dbdata_parent_path is None:
-        dbdata_parent_path = get_default_dbdata_parent_path(
+        dbdata_parent_path = get_tmp_path_from_workspace_path(
             dbgym_workspace.dbgym_workspace_path
         )
 
