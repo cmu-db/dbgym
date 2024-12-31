@@ -19,15 +19,10 @@ from typing import Any, Optional, Union
 import psutil
 import psycopg
 import yaml
+from gymlib.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
 from gymlib.workspace import DBGymWorkspace, parent_path_of_path
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
-
-from dbms.postgres.cli import (
-    DBGYM_POSTGRES_DBNAME,
-    SHARED_PRELOAD_LIBRARIES,
-    get_kv_connstr,
-)
 
 CONNECT_TIMEOUT = 300
 

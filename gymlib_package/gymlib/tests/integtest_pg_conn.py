@@ -2,15 +2,14 @@ import copy
 import unittest
 
 import psycopg
-from gymlib.pg_conn import PostgresConn
-from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
-from gymlib.workspace import DBGymWorkspace
-
-from dbms.postgres.cli import (
+from gymlib.pg import (
     DEFAULT_POSTGRES_PORT,
     get_is_postgres_running,
     get_running_postgres_ports,
 )
+from gymlib.pg_conn import PostgresConn
+from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
+from gymlib.workspace import DBGymWorkspace
 
 
 class PostgresConnTests(unittest.TestCase):
