@@ -1,26 +1,32 @@
-<h1>Indexes</h1>
+<head>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+</head>
 
-<form id="indexForm" onsubmit="addIndex(event)">
-    <select id="indexName" required>
-        <option value="">Select Table</option>
-        <option value="fruits">Fruits</option>
-        <option value="stores">Stores</option>
-    </select>
-    <button type="submit">Create Index</button>
-</form>
-<table id="indexTable">
-    <thead>
-        <tr>
-            <th>Index Name</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody id="indexTableBody">
-        <!-- Table rows will be added here dynamically -->
-    </tbody>
-</table>
+<body>
+    <h1>Indexes</h1>
 
-<button style="display: block; margin-top: 20px;" onclick="window.location.href='sysknobs.html'">System Knobs</button>
+    <form id="indexForm" onsubmit="addIndex(event)">
+        <select id="indexName" required>
+            <option value="">Select Table</option>
+            <option value="fruits">Fruits</option>
+            <option value="stores">Stores</option>
+        </select>
+        <button type="submit">Create Index</button>
+    </form>
+    <table id="indexTable">
+        <thead>
+            <tr>
+                <th>Index Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="indexTableBody">
+            <!-- Table rows will be added here dynamically -->
+        </tbody>
+    </table>
+
+    <button class="next-button" onclick="window.location.href='sysknobs.html'">System Knobs</button>
+</body>
 
 <script>
     let indexes = [];

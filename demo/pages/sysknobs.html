@@ -1,24 +1,30 @@
-<h1>System-Wide Knobs</h1>
+<head>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+</head>
 
-<table>
-    <thead>
-        <tr>
-            <th>Knob</th>
-            <th>Default</th>
-            <th>Current</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>shared_buffers</td>
-            <td>128MB</td>
-            <td><select>
-                <option value="64MB">64MB</option>
-                <option value="128MB">128MB</option>
-                <option value="256MB">256MB</option>
-            </select></td>
-        </tr>
-    </tbody>
-</table>
+<body>
+    <h1>System-Wide Knobs</h1>
 
-<button style="display: block; margin-top: 20px;" onclick="window.location.href='qknobs.html'">Query Knobs</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Knob</th>
+                <th>Default</th>
+                <th>Current</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>shared_buffers</td>
+                <td>128MB</td>
+                <td><select>
+                    <option value="64MB">64MB</option>
+                    <option value="128MB">128MB</option>
+                    <option value="256MB">256MB</option>
+                </select></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button class="next-button" onclick="window.location.href='qknobs.html'">Query Knobs</button>
+</body>
