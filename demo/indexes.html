@@ -1,0 +1,54 @@
+<h1>Indexes</h1>
+<form id="indexForm" onsubmit="addIndex(event)">
+    <select id="indexName" required>
+        <option value="">Select Table</option>
+        <option value="fruits">Fruits</option>
+        <option value="stores">Stores</option>
+    </select>
+    <button type="submit">Create Index</button>
+</form>
+<table id="indexTable">
+    <thead>
+        <tr>
+            <th>Index Name</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="indexTableBody">
+        <!-- Table rows will be added here dynamically -->
+    </tbody>
+</table>
+
+<script>
+    let indexes = [];
+
+    function addIndex(event) {
+        event.preventDefault();
+        const indexName = document.getElementById('indexName').value.trim();
+        
+        if (indexName) {
+            indexes.push(indexName);
+            document.getElementById('indexName').value = '';
+            updateTable();
+        }
+    }
+
+    function deleteIndex(index) {
+        indexes = indexes.filter((_, i) => i !== index);
+        updateTable();
+    }
+
+    function updateTable() {
+        const tableBody = document.getElementById('indexTableBody');
+        tableBody.innerHTML = '';
+        
+        indexes.forEach((index, i) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index}</td>
+                <td><button onclick="deleteIndex(${i})">Delete</button></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+</script>
