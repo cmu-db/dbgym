@@ -1,69 +1,118 @@
 <head>
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
-        table {
-            padding: 20px;
+        html, body {
+            height: 100%;
+            margin: 0;
         }
         .container {
             display: flex;
+            height: 100%;
+        }
+        .sidebar {
+            width: 200px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            display: flex;
             flex-direction: column;
-            align-items: center;
+        }
+        .table-container {
+            flex-grow: 1;
+            padding: 10px;
+        }
+        .button {
+            display: block;
+            margin: 5px 0;
+        }
+        .active-button {
+            background-color: #007bff; /* Highlight color for active button */
+            color: white; /* Text color for active button */
         }
     </style>
+    <script>
+        function updateTable(data, button) {
+            // Update the table content based on the button pressed
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+
+            // Highlight the active button
+            const buttons = document.querySelectorAll('.button');
+            buttons.forEach(btn => btn.classList.remove('active-button'));
+            button.classList.add('active-button');
+        }
+
+        function query1Click() {
+            const data = [
+                ['Data 1A', 'Data 1B', 'Data 1C'],
+                ['Data 1D', 'Data 1E', 'Data 1F']
+            ];
+            updateTable(data, document.getElementById('query1'));
+        }
+
+        function query2Click() {
+            const data = [
+                ['Data 2A', 'Data 2B', 'Data 2C'],
+                ['Data 2D', 'Data 2E', 'Data 2F']
+            ];
+            updateTable(data, document.getElementById('query2'));
+        }
+
+        function query3Click() {
+            const data = [
+                ['Data 3A', 'Data 3B', 'Data 3C'],
+                ['Data 3D', 'Data 3E', 'Data 3F']
+            ];
+            updateTable(data, document.getElementById('query3'));
+        }
+
+        // Call query1Click on page load
+        window.onload = function() {
+            query1Click();
+        };
+    </script>
 </head>
 
 <body>
     <div class="header-bar">
         <h1>Per-Query Knobs</h1>
-        <button class="next-button" onclick="window.location.href='leaderboard.html'">See Results</button>
+        <button class="next-button" onclick="window.location.href='leaderboard.html'">Run Workload!</button>
     </div>
 
     <div class="container">
-        <table>
-            <tr>
-                <td>
-                    <button onclick="document.getElementById('table1').hidden = !document.getElementById('table1').hidden">
-                        Toggle Table 1
-                    </button>
-                    <table id="table1" hidden>
-                        <thead>
-                            <tr>
-                                <th>Knob</th>
-                                <th>Default</th>
-                                <th>Current</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Table 1 Content 1</td>
-                                <td>Table 1 Content 2</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <button onclick="document.getElementById('table2').hidden = !document.getElementById('table2').hidden">
-                        Toggle Table 2
-                    </button>
-                    <table id="table2" hidden>
-                        <thead>
-                            <tr>
-                                <th>Knob</th>
-                                <th>Default</th>
-                                <th>Current</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Table 2 Content 1</td>
-                                <td>Table 2 Content 2</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
-        </table>
+        <div class="sidebar">
+            <button id="query1" class="button" onclick="query1Click()">Query 1</button>
+            <button id="query2" class="button" onclick="query2Click()">Query 2</button>
+            <button id="query3" class="button" onclick="query3Click()">Query 3</button>
+            <!-- Add more buttons as needed -->
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Column 1</th>
+                        <th>Column 2</th>
+                        <th>Column 3</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td>Data 1</td>
+                        <td>Data 2</td>
+                        <td>Data 3</td>
+                    </tr>
+                    <!-- Initial data row -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
