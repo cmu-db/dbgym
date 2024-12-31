@@ -24,10 +24,53 @@
 
     <div class="container">
         <form id="indexForm" onsubmit="addIndex(event)">
-            <select id="indexName" required>
-                <option value="">Select Table</option>
-                <option value="fruits">Fruits</option>
-                <option value="stores">Stores</option>
+            <select id="indexTable" required onchange="updateColumns()">
+                <script>
+                    const tables = [
+                        { value: "", text: "Select Table", columns: [] },
+                        { value: "title", text: "title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }] },
+                        { value: "aka_title", text: "aka_title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }] }
+                    ];
+                    
+                    const indexTableSelect = document.getElementById('indexTable');
+                    tables.forEach(table => {
+                        const option = document.createElement('option');
+                        option.value = table.value;
+                        option.textContent = table.text;
+                        indexTableSelect.appendChild(option);
+                    });
+
+                    function updateColumns() {
+                        const selectedTable = indexTableSelect.value;
+                        const indexColumnSelect = document.getElementById('indexColumn');
+                        indexColumnSelect.innerHTML = ''; // Clear existing options
+
+                        const selectedTableObj = tables.find(table => table.value === selectedTable);
+                        if (selectedTableObj) {
+                            selectedTableObj.columns.forEach(column => {
+                                const option = document.createElement('option');
+                                option.value = column.value;
+                                option.textContent = column.text;
+                                indexColumnSelect.appendChild(option);
+                            });
+                        }
+                    }
+                </script>
+            </select>
+            <select id="indexColumn" required>
+                <script>
+                    const columns = [
+                        { value: "", text: "Select Column" },
+                    ];
+                    
+                    const indexColumnSelect = document.getElementById('indexColumn');
+                    columns.forEach(column => {
+                        const option = document.createElement('option');
+                        option.value = column.value;
+                        option.textContent = column.text;
+                        indexColumnSelect.appendChild(option);
+                    });
+                </script>
             </select>
             <button type="submit">Create Index</button>
         </form>
@@ -35,7 +78,8 @@
         <table id="indexTable">
             <thead>
                 <tr>
-                    <th>Index Name</th>
+                    <th>Table</th>
+                    <th>Column</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -51,11 +95,13 @@
 
     function addIndex(event) {
         event.preventDefault();
-        const indexName = document.getElementById('indexName').value.trim();
+        const indexTable = document.getElementById('indexTable').value.trim();
+        const indexColumn = document.getElementById('indexColumn').value.trim(); // Get the selected column
         
-        if (indexName) {
-            indexes.push(indexName);
-            document.getElementById('indexName').value = '';
+        if (indexTable && indexColumn) {
+            indexes.push({ table: indexTable, column: indexColumn }); // Store both table and column
+            document.getElementById('indexTable').value = '';
+            document.getElementById('indexColumn').value = ''; // Clear the column selection
             updateTable();
         }
     }
@@ -72,7 +118,8 @@
         indexes.forEach((index, i) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${index}</td>
+                <td>${index.table}</td>
+                <td>${index.column}</td>
                 <td><button onclick="deleteIndex(${i})">Delete</button></td>
             `;
             tableBody.appendChild(row);
