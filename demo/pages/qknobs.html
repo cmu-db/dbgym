@@ -11,66 +11,97 @@
         }
         .sidebar {
             width: 200px;
-            padding: 10px;
-            background-color: #f0f0f0;
+            background-color: #c41230;
             display: flex;
             flex-direction: column;
         }
         .table-container {
             flex-grow: 1;
             padding: 10px;
+            margin-left: 20px;
         }
-        .button {
+        .query-button {
             display: block;
-            margin: 5px 0;
+            padding: 20px;
+            border: none;
+            box-shadow: none;
+            background-color: #c41230;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+        }
+        .query-button:hover {
+            background-color: #d2435a;
         }
         .active-button {
-            background-color: #007bff; /* Highlight color for active button */
-            color: white; /* Text color for active button */
+            background-color: white;
+            color: black;
         }
     </style>
     <script>
+        let activeButton = null; // Track the currently active button
+
         function updateTable(data, button) {
             // Update the table content based on the button pressed
             const tableBody = document.getElementById('table-body');
+            const tableTitle = document.getElementById('table-title'); // Get the title element
             tableBody.innerHTML = ''; // Clear existing rows
+
+            tableTitle.textContent = `Query ${button.textContent.split(' ')[1]} Knobs`; // Update title
 
             data.forEach(row => {
                 const tr = document.createElement('tr');
-                row.forEach(cell => {
+                row.forEach((cell, index) => {
                     const td = document.createElement('td');
-                    td.textContent = cell;
+                    if (index === 2) { // Check if it's the third column
+                        const select = document.createElement('select');
+                        // Add options to the select element from the cell array
+                        cell.forEach(optionText => {
+                            const option = document.createElement('option');
+                            option.textContent = optionText;
+                            select.appendChild(option);
+                        });
+                        td.appendChild(select);
+                    } else {
+                        td.textContent = cell;
+                    }
                     tr.appendChild(td);
                 });
                 tableBody.appendChild(tr);
             });
 
             // Highlight the active button
-            const buttons = document.querySelectorAll('.button');
-            buttons.forEach(btn => btn.classList.remove('active-button'));
+            const buttons = document.querySelectorAll('.query-button');
+            buttons.forEach(btn => {
+                btn.classList.remove('active-button');
+                btn.style.backgroundColor = ''; // Reset background color
+            });
+
             button.classList.add('active-button');
+            button.style.backgroundColor = 'white'; // Set active button color
+            activeButton = button; // Update the active button reference
         }
 
         function query1Click() {
             const data = [
-                ['Data 1A', 'Data 1B', 'Data 1C'],
-                ['Data 1D', 'Data 1E', 'Data 1F']
+                ['enable_nestloop', 'ON', ['ON', 'OFF']],
+                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
             ];
             updateTable(data, document.getElementById('query1'));
         }
 
         function query2Click() {
             const data = [
-                ['Data 2A', 'Data 2B', 'Data 2C'],
-                ['Data 2D', 'Data 2E', 'Data 2F']
+                ['enable_nestloop', 'ON', ['ON', 'OFF']],
+                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
             ];
             updateTable(data, document.getElementById('query2'));
         }
 
         function query3Click() {
             const data = [
-                ['Data 3A', 'Data 3B', 'Data 3C'],
-                ['Data 3D', 'Data 3E', 'Data 3F']
+                ['enable_nestloop', 'ON', ['ON', 'OFF']],
+                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
             ];
             updateTable(data, document.getElementById('query3'));
         }
@@ -90,27 +121,21 @@
 
     <div class="container">
         <div class="sidebar">
-            <button id="query1" class="button" onclick="query1Click()">Query 1</button>
-            <button id="query2" class="button" onclick="query2Click()">Query 2</button>
-            <button id="query3" class="button" onclick="query3Click()">Query 3</button>
-            <!-- Add more buttons as needed -->
+            <button id="query1" class="query-button" onclick="query1Click()">Query 1</button>
+            <button id="query2" class="query-button" onclick="query2Click()">Query 2</button>
+            <button id="query3" class="query-button" onclick="query3Click()">Query 3</button>
         </div>
         <div class="table-container">
+            <h3 id="table-title">Query 1 Knobs</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Column 1</th>
-                        <th>Column 2</th>
-                        <th>Column 3</th>
+                        <th>Knob</th>
+                        <th>Default</th>
+                        <th>Current</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <tr>
-                        <td>Data 1</td>
-                        <td>Data 2</td>
-                        <td>Data 3</td>
-                    </tr>
-                    <!-- Initial data row -->
                 </tbody>
             </table>
         </div>
