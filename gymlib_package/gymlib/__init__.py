@@ -1,1 +1,1 @@
-from . import magic, shell, symlinks_paths, workspace
+from . import magic, symlinks_paths, workspace
