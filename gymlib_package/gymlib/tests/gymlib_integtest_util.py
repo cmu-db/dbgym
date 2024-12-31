@@ -3,22 +3,21 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-# TODO: remove symlinks_paths from the import
-from gymlib.symlinks_paths import (
+# TODO: remove infra_paths from the import
+from gymlib.infra_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,
 )
-
-from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.tuning_artifacts import TuningMetadata
-from util.workspace import (
-    DBGymWorkspace,
+from gymlib.tuning_artifacts import TuningMetadata
+from gymlib.workspace import (
     fully_resolve_path,
     get_tmp_path_from_workspace_path,
     get_workspace_path_from_config,
 )
+
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED
 
 
 class GymlibIntegtestManager:
@@ -34,7 +33,9 @@ class GymlibIntegtestManager:
     # These constants are also used by _set_up_gymlib_integtest_workspace.sh.
     BENCHMARK = "tpch"
     SCALE_FACTOR = 0.01
-    DBGYM_CONFIG_PATH = Path("env/tests/gymlib_integtest_dbgym_config.yaml")
+    DBGYM_CONFIG_PATH = Path(
+        "gymlib_package/gymlib/tests/gymlib_integtest_dbgym_config.yaml"
+    )
     WORKSPACE_PATH: Optional[Path] = None
 
     @staticmethod
@@ -50,7 +51,7 @@ class GymlibIntegtestManager:
         # This if statement prevents us from setting up the workspace twice, which saves time.
         if not GymlibIntegtestManager.WORKSPACE_PATH.exists():
             subprocess.run(
-                ["./env/tests/_set_up_gymlib_integtest_workspace.sh"],
+                ["./gymlib_package/gymlib/tests/_set_up_gymlib_integtest_workspace.sh"],
                 env={
                     "BENCHMARK": GymlibIntegtestManager.BENCHMARK,
                     "SCALE_FACTOR": str(GymlibIntegtestManager.SCALE_FACTOR),

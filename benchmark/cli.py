@@ -1,8 +1,8 @@
 import click
+from gymlib.workspace import DBGymWorkspace
 
 from benchmark.job.cli import job_group
 from benchmark.tpch.cli import tpch_group
-from util.workspace import DBGymWorkspace
 
 
 @click.group(name="benchmark")

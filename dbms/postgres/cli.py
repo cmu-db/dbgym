@@ -6,42 +6,39 @@ import logging
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import click
 import sqlalchemy
-from gymlib.symlinks_paths import (
+from gymlib.infra_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_repo_symlink_path,
-    linkname_to_name,
 )
-
-from benchmark.constants import DEFAULT_SCALE_FACTOR
-from benchmark.job.load_info import JobLoadInfo
-from benchmark.tpch.load_info import TpchLoadInfo
-from dbms.load_info_base_class import LoadInfoBaseClass
-from util.log import DBGYM_LOGGER_NAME
-from util.pg import (
-    DBGYM_POSTGRES_DBNAME,
-    DBGYM_POSTGRES_PASS,
-    DBGYM_POSTGRES_USER,
-    DEFAULT_POSTGRES_DBNAME,
-    DEFAULT_POSTGRES_PORT,
-    SHARED_PRELOAD_LIBRARIES,
-    create_sqlalchemy_conn,
-    sql_file_execute,
-    sqlalchemy_conn_execute,
-)
-from util.shell import subprocess_run
-from util.workspace import (
+from gymlib.pg import create_sqlalchemy_conn, sql_file_execute
+from gymlib.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,
     fully_resolve_path,
     get_tmp_path_from_workspace_path,
     is_fully_resolved,
     is_ssd,
+    linkname_to_name,
 )
+from sqlalchemy import text
+
+from benchmark.constants import DEFAULT_SCALE_FACTOR
+from benchmark.job.load_info import JobLoadInfo
+from benchmark.tpch.load_info import TpchLoadInfo
+from dbms.load_info_base_class import LoadInfoBaseClass
+from util.shell import subprocess_run
+
+DBGYM_POSTGRES_USER = "dbgym_user"
+DBGYM_POSTGRES_PASS = "dbgym_pass"
+DBGYM_POSTGRES_DBNAME = "dbgym"
+DEFAULT_POSTGRES_DBNAME = "postgres"
+DEFAULT_POSTGRES_PORT = 5432
+SHARED_PRELOAD_LIBRARIES = "boot,pg_hint_plan,pg_prewarm"
 
 
 @click.group(name="postgres")
@@ -72,14 +69,10 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
         dbgym_workspace.dbgym_workspace_path
     )
     if not rebuild and expected_repo_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _postgres_build: {expected_repo_symlink_path}"
-        )
+        logging.info(f"Skipping _postgres_build: {expected_repo_symlink_path}")
         return
 
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Setting up repo in {expected_repo_symlink_path}"
-    )
+    logging.info(f"Setting up repo in {expected_repo_symlink_path}")
     repo_real_path = dbgym_workspace.dbgym_this_run_path / "repo"
     repo_real_path.mkdir(parents=False, exist_ok=False)
     subprocess_run(
@@ -90,9 +83,7 @@ def _postgres_build(dbgym_workspace: DBGymWorkspace, rebuild: bool) -> None:
     # only link at the end so that the link only ever points to a complete repo
     repo_symlink_path = dbgym_workspace.link_result(repo_real_path)
     assert expected_repo_symlink_path.samefile(repo_symlink_path)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Set up repo in {expected_repo_symlink_path}"
-    )
+    logging.info(f"Set up repo in {expected_repo_symlink_path}")
 
 
 @postgres_group.command(
@@ -198,9 +189,7 @@ def _create_dbdata(
         scale_factor,
     )
     if expected_dbdata_tgz_symlink_path.exists():
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
-            f"Skipping _create_dbdata: {expected_dbdata_tgz_symlink_path}"
-        )
+        logging.info(f"Skipping _create_dbdata: {expected_dbdata_tgz_symlink_path}")
         return
 
     # It's ok for the dbdata/ directory to be temporary. It just matters that the .tgz is saved in a safe place.
@@ -236,9 +225,7 @@ def _create_dbdata(
     # Only link at the end so that the link only ever points to a complete dbdata.
     dbdata_tgz_symlink_path = dbgym_workspace.link_result(dbdata_tgz_real_path)
     assert expected_dbdata_tgz_symlink_path.samefile(dbdata_tgz_symlink_path)
-    logging.getLogger(DBGYM_LOGGER_NAME).info(
-        f"Created dbdata in {dbdata_tgz_symlink_path}"
-    )
+    logging.info(f"Created dbdata in {dbdata_tgz_symlink_path}")
 
 
 def _generic_dbdata_setup(dbgym_workspace: DBGymWorkspace) -> None:
@@ -370,3 +357,9 @@ def _start_or_stop_postgres(
             f"./pg_ctl -D \"{dbdata_path}\" -o '-p {pgport}' stop",
             cwd=pgbin_path,
         )
+
+
+def sqlalchemy_conn_execute(
+    conn: sqlalchemy.Connection, sql: str
+) -> sqlalchemy.engine.CursorResult[Any]:
+    return conn.execute(text(sql))

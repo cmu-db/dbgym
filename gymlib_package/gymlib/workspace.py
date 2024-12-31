@@ -12,28 +12,46 @@ from pathlib import Path
 from typing import IO, Any, Optional
 
 import yaml
-from gymlib.symlinks_paths import is_linkname, name_to_linkname
-
-from util.log import DBGYM_LOGGER_NAME
 
 WORKSPACE_PATH_PLACEHOLDER = Path("[workspace]")
+SYMLINKS_DNAME = "symlinks"
+TMP_DNAME = "tmp"
+RUNS_DNAME = "task_runs"
+DBGYM_APP_NAME = "dbgym"
+LATEST_RUN_FNAME = "latest_run"
 
 
-# Helper functions that both this file and other files use
+def is_linkname(name: str) -> bool:
+    assert not name.endswith(".link.link")
+    return name.endswith(".link")
+
+
+def name_to_linkname(name: str) -> str:
+    assert not is_linkname(name)
+    return f"{name}.link"
+
+
+def linkname_to_name(linkname: str) -> str:
+    assert is_linkname(linkname)
+    return linkname[: -len(".link")]
+
+
 def get_symlinks_path_from_workspace_path(workspace_path: Path) -> Path:
-    return workspace_path / "symlinks"
+    return workspace_path / SYMLINKS_DNAME
 
 
 def get_tmp_path_from_workspace_path(workspace_path: Path) -> Path:
-    return workspace_path / "tmp"
+    return workspace_path / TMP_DNAME
 
 
 def get_runs_path_from_workspace_path(workspace_path: Path) -> Path:
-    return workspace_path / "task_runs"
+    return workspace_path / RUNS_DNAME
 
 
 def get_latest_run_path_from_workspace_path(workspace_path: Path) -> Path:
-    return get_runs_path_from_workspace_path(workspace_path) / "latest_run.link"
+    return get_runs_path_from_workspace_path(workspace_path) / name_to_linkname(
+        LATEST_RUN_FNAME
+    )
 
 
 # Paths of config files in the codebase. These are always relative paths.
@@ -57,9 +75,7 @@ class DBGymWorkspace:
         ), f"DBGymWorkspace has been created {DBGymWorkspace._num_times_created_this_run} times. It should only be created once per run."
 
         self.base_dbgym_repo_path = get_base_dbgym_repo_path()
-        self.app_name = (
-            "dbgym"  # TODO: discover this dynamically. app means dbgym or an agent
-        )
+        self.app_name = DBGYM_APP_NAME  # TODO: discover this dynamically. app means dbgym or an agent
 
         # Set and create paths.
         self.dbgym_workspace_path = dbgym_workspace_path
@@ -286,7 +302,6 @@ def make_standard_dbgym_workspace() -> DBGymWorkspace:
     default path of dbgym_config.yaml.
     """
     dbgym_config_path = Path(os.getenv("DBGYM_CONFIG_PATH", "dbgym_config.yaml"))
-    assert dbgym_config_path == Path("env/tests/gymlib_integtest_dbgym_config.yaml")
     dbgym_workspace_path = get_workspace_path_from_config(dbgym_config_path)
     dbgym_workspace = DBGymWorkspace(dbgym_workspace_path)
     return dbgym_workspace
@@ -500,5 +515,5 @@ def is_ssd(path: Path) -> bool:
                 return is_ssd
         return False
     except Exception as e:
-        logging.getLogger(DBGYM_LOGGER_NAME).error(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return False

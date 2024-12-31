@@ -3,15 +3,15 @@ import shutil
 import unittest
 from pathlib import Path
 
-from gymlib.symlinks_paths import get_dbdata_tgz_symlink_path, get_repo_symlink_path
-
-from benchmark.tpch.cli import _tpch_tables
-from dbms.postgres.cli import _postgres_build, _postgres_dbdata
-from util.workspace import (
+from gymlib.infra_paths import get_dbdata_tgz_symlink_path, get_repo_symlink_path
+from gymlib.workspace import (
     DBGymWorkspace,
     fully_resolve_path,
     get_workspace_path_from_config,
 )
+
+from benchmark.tpch.cli import _tpch_tables
+from dbms.postgres.cli import _postgres_build, _postgres_dbdata
 
 
 class DBMSTests(unittest.TestCase):

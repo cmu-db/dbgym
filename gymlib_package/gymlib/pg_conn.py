@@ -19,12 +19,10 @@ from typing import Any, Optional, Union
 import psutil
 import psycopg
 import yaml
+from gymlib.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from gymlib.workspace import DBGymWorkspace, parent_path_of_path
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
-
-from util.log import DBGYM_LOGGER_NAME
-from util.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
-from util.workspace import DBGymWorkspace, parent_path_of_path
 
 CONNECT_TIMEOUT = 300
 
@@ -177,14 +175,10 @@ class PostgresConn:
                 qid_runtime = float(c["Execution Time"]) * 1e3
                 explain_data = c
 
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{query} evaluated in {qid_runtime/1e6}"
-            )
+            logging.debug(f"{query} evaluated in {qid_runtime/1e6}")
 
         except QueryCanceled:
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                f"{query} exceeded evaluation timeout {timeout}"
-            )
+            logging.debug(f"{query} exceeded evaluation timeout {timeout}")
             qid_runtime = timeout * 1e6
             did_time_out = True
         except Exception as e:
@@ -203,14 +197,12 @@ class PostgresConn:
             return
 
         while True:
-            logging.getLogger(DBGYM_LOGGER_NAME).debug("Shutting down postgres...")
+            logging.debug("Shutting down postgres...")
             _, stdout, stderr = local[f"{self.pgbin_path}/pg_ctl"][
                 "stop", "--wait", "-t", "180", "-D", self.dbdata_path
             ].run(retcode=None)
             time.sleep(1)
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                "Stop message: (%s, %s)", stdout, stderr
-            )
+            logging.debug("Stop message: (%s, %s)", stdout, stderr)
 
             # Wait until pg_isready fails.
             retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
@@ -303,12 +295,10 @@ class PostgresConn:
             if retcode == 0 or pid_lock.exists():
                 break
 
-            logging.getLogger(DBGYM_LOGGER_NAME).warning(
-                "startup encountered: (%s, %s)", stdout, stderr
-            )
+            logging.warning("startup encountered: (%s, %s)", stdout, stderr)
             attempts += 1
             if attempts >= 5:
-                logging.getLogger(DBGYM_LOGGER_NAME).error(
+                logging.error(
                     "Number of attempts to start postgres has exceeded limit."
                 )
                 assert False, "Could not start postgres."
@@ -318,9 +308,7 @@ class PostgresConn:
         while True:
             if num_cycles >= CONNECT_TIMEOUT:
                 # In this case, we've failed to start postgres.
-                logging.getLogger(DBGYM_LOGGER_NAME).error(
-                    "Failed to start postgres before timeout..."
-                )
+                logging.error("Failed to start postgres before timeout...")
                 return False
 
             retcode, _, _ = local[f"{self.pgbin_path}/pg_isready"][
@@ -336,9 +324,7 @@ class PostgresConn:
 
             time.sleep(1)
             num_cycles += 1
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(
-                "Waiting for postgres to bootup but it is not..."
-            )
+            logging.debug("Waiting for postgres to bootup but it is not...")
 
         # Set up Boot if we're told to do so
         if self.boot_config_path is not None:
@@ -384,7 +370,7 @@ class PostgresConn:
         """
         # If any of these commands fail, they'll throw a Python exception
         # Thus, if none of them throw an exception, we know they passed
-        logging.getLogger(DBGYM_LOGGER_NAME).debug("Setting up boot")
+        logging.debug("Setting up boot")
         self.conn().execute("DROP EXTENSION IF EXISTS boot")
         self.conn().execute("CREATE EXTENSION IF NOT EXISTS boot")
         self.conn().execute("SELECT boot_connect()")
@@ -399,7 +385,7 @@ class PostgresConn:
         self.conn().execute(f"SET boot.mu_hyp_opt={mu_hyp_opt}")
         self.conn().execute(f"SET boot.mu_hyp_time={mu_hyp_time}")
         self.conn().execute(f"SET boot.mu_hyp_stdev={mu_hyp_stdev}")
-        logging.getLogger(DBGYM_LOGGER_NAME).debug("Set up boot")
+        logging.debug("Set up boot")
 
     def psql(self, sql: str) -> tuple[int, Optional[str]]:
         """
@@ -425,7 +411,7 @@ class PostgresConn:
                 ]
 
             for row in r:
-                logging.getLogger(DBGYM_LOGGER_NAME).info(f"Killing process {row[0]}")
+                logging.info(f"Killing process {row[0]}")
                 try:
                     psutil.Process(row[0]).kill()
                 except:
@@ -447,17 +433,17 @@ class PostgresConn:
         except ProgramLimitExceeded as e:
             timer.cancel()
             self.disconnect()
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Action error: {e}")
+            logging.debug(f"Action error: {e}")
             return -1, str(e)
         except QueryCanceled as e:
             timer.cancel()
             self.disconnect()
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Action error: {e}")
+            logging.debug(f"Action error: {e}")
             return -1, f"canceling statement: {sql}."
         except psycopg.OperationalError as e:
             timer.cancel()
             self.disconnect()
-            logging.getLogger(DBGYM_LOGGER_NAME).debug(f"Action error: {e}")
+            logging.debug(f"Action error: {e}")
             return -1, f"operational error: {sql}."
         except psycopg.errors.UndefinedTable:
             timer.cancel()

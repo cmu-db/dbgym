@@ -4,52 +4,7 @@ import shutil
 from itertools import chain
 from pathlib import Path
 
-import click
-
-from util.log import DBGYM_LOGGER_NAME, DBGYM_OUTPUT_LOGGER_NAME
-from util.workspace import (
-    DBGymWorkspace,
-    get_runs_path_from_workspace_path,
-    get_symlinks_path_from_workspace_path,
-    is_child_path,
-    parent_path_of_path,
-)
-
-
-# This is used in test_clean.py. It's defined here to avoid a circular import.
-class MockDBGymWorkspace:
-    def __init__(self, scratchspace_path: Path):
-        self.dbgym_workspace_path = scratchspace_path
-        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
-            scratchspace_path
-        )
-        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
-
-
-@click.group(name="manage")
-def manage_group() -> None:
-    pass
-
-
-@click.command("clean")
-@click.pass_obj
-@click.option(
-    "--mode",
-    type=click.Choice(["safe", "aggressive"]),
-    default="safe",
-    help='The mode to clean the workspace (default="safe"). "aggressive" means "only keep run_*/ folders referenced by a file in symlinks/". "safe" means "in addition to that, recursively keep any run_*/ folders referenced by any symlinks in run_*/ folders we are keeping."',
-)
-def manage_clean(dbgym_workspace: DBGymWorkspace, mode: str) -> None:
-    clean_workspace(dbgym_workspace, mode=mode, verbose=True)
-
-
-@click.command("count")
-@click.pass_obj
-def manage_count(dbgym_workspace: DBGymWorkspace) -> None:
-    num_files = _count_files_in_workspace(dbgym_workspace)
-    logging.getLogger(DBGYM_OUTPUT_LOGGER_NAME).info(
-        f"The workspace ({dbgym_workspace.dbgym_workspace_path}) has {num_files} total files/dirs/symlinks."
-    )
+from gymlib.workspace import DBGymWorkspace, is_child_path, parent_path_of_path
 
 
 def add_symlinks_in_path(
@@ -68,9 +23,7 @@ def add_symlinks_in_path(
                 processed_symlinks.add(file_path)
 
 
-def _count_files_in_workspace(
-    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
-) -> int:
+def count_files_in_workspace(dbgym_workspace: DBGymWorkspace) -> int:
     """
     Counts the number of files (regular file or dir or symlink) in the workspace.
     """
@@ -90,7 +43,7 @@ def _count_files_in_workspace(
 
 
 def clean_workspace(
-    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
+    dbgym_workspace: DBGymWorkspace,
     mode: str = "safe",
     verbose: bool = False,
 ) -> None:
@@ -175,7 +128,7 @@ def clean_workspace(
 
     # 3. Go through all children of task_runs/*, deleting any that we weren't told to keep
     # It's true that symlinks might link outside of task_runs/*. We'll just not care about those
-    starting_num_files = _count_files_in_workspace(dbgym_workspace)
+    starting_num_files = count_files_in_workspace(dbgym_workspace)
     if dbgym_workspace.dbgym_runs_path.exists():
         for child_path in dbgym_workspace.dbgym_runs_path.iterdir():
             if child_path not in task_run_child_paths_to_keep:
@@ -183,16 +136,12 @@ def clean_workspace(
                     shutil.rmtree(child_path)
                 else:
                     os.remove(child_path)
-    ending_num_files = _count_files_in_workspace(dbgym_workspace)
+    ending_num_files = count_files_in_workspace(dbgym_workspace)
 
     if verbose:
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
+        logging.info(
             f"Removed {starting_num_files - ending_num_files} out of {starting_num_files} files"
         )
-        logging.getLogger(DBGYM_LOGGER_NAME).info(
+        logging.info(
             f"Workspace went from {starting_num_files - ending_num_files} to {starting_num_files}"
         )
-
-
-manage_group.add_command(manage_clean)
-manage_group.add_command(manage_count)

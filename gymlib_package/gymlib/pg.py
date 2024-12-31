@@ -9,9 +9,8 @@ import pglast
 import psutil
 import psycopg
 import sqlalchemy
+from gymlib.workspace import DBGymWorkspace
 from sqlalchemy import create_engine, text
-
-from util.workspace import DBGymWorkspace
 
 DBGYM_POSTGRES_USER = "dbgym_user"
 DBGYM_POSTGRES_PASS = "dbgym_pass"

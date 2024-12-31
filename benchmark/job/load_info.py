@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Optional
 
-from gymlib.symlinks_paths import get_tables_symlink_path
+from gymlib.infra_paths import get_tables_symlink_path
+from gymlib.workspace import DBGymWorkspace, fully_resolve_path
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from dbms.load_info_base_class import LoadInfoBaseClass
-from util.workspace import DBGymWorkspace, fully_resolve_path
 
 JOB_SCHEMA_FNAME = "job_schema.sql"
 

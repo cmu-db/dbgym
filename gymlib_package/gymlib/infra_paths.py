@@ -1,9 +1,12 @@
+"""
+"Infra" refers to benchmark/ and dbms/. These are all the paths used to access the files created by benchmark/ and dbms/.
+They're inside gymlib because agents will need to access them.
+"""
+
 from pathlib import Path
 from typing import Any
 
-# TODO: move these into workspace.py and move workspace.py into gymlib.
-SYMLINKS_DNAME = "symlinks"
-DBGYM_APP_NAME = "dbgym"
+from gymlib.workspace import DBGYM_APP_NAME, SYMLINKS_DNAME, name_to_linkname
 
 SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 BENCHMARK_NAME_PLACEHOLDER: str = "[benchmark_name]"
@@ -82,18 +85,3 @@ def get_dbdata_tgz_symlink_path(
         / DBGYM_APP_NAME
         / name_to_linkname(get_dbdata_tgz_filename(benchmark_name, scale_factor))
     )
-
-
-def is_linkname(name: str) -> bool:
-    assert not name.endswith(".link.link")
-    return name.endswith(".link")
-
-
-def name_to_linkname(name: str) -> str:
-    assert not is_linkname(name)
-    return f"{name}.link"
-
-
-def linkname_to_name(linkname: str) -> str:
-    assert is_linkname(linkname)
-    return linkname[: -len(".link")]

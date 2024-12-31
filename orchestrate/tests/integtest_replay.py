@@ -1,16 +1,17 @@
 import unittest
 
-from benchmark.tpch.constants import DEFAULT_TPCH_SEED
-from env.replay import replay
-from env.tests.gymlib_integtest_util import GymlibIntegtestManager
-from env.tuning_artifacts import (
+from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
+from gymlib.tuning_artifacts import (
     DBMSConfigDelta,
     IndexesDelta,
     QueryKnobsDelta,
     SysKnobsDelta,
     TuningArtifactsWriter,
 )
-from util.workspace import DBGymWorkspace
+from gymlib.workspace import DBGymWorkspace
+
+from benchmark.tpch.constants import DEFAULT_TPCH_SEED
+from orchestrate.replay import replay
 
 
 class ReplayTests(unittest.TestCase):

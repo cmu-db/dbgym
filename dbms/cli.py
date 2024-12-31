@@ -1,7 +1,7 @@
 import click
+from gymlib.workspace import DBGymWorkspace
 
 from dbms.postgres.cli import postgres_group
-from util.workspace import DBGymWorkspace
 
 
 @click.group(name="dbms")

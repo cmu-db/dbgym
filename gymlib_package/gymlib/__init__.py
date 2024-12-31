@@ -1,1 +1,1 @@
-from . import magic, symlinks_paths
+from . import infra_paths, workspace
