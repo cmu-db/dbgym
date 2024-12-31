@@ -4,23 +4,7 @@ import shutil
 from itertools import chain
 from pathlib import Path
 
-from gymlib.workspace import (
-    DBGymWorkspace,
-    get_runs_path_from_workspace_path,
-    get_symlinks_path_from_workspace_path,
-    is_child_path,
-    parent_path_of_path,
-)
-
-
-# This is used in test_clean.py. However, we also need it in count_files_in_workspace, so it's defined here to avoid a circular import.
-class MockDBGymWorkspace:
-    def __init__(self, scratchspace_path: Path):
-        self.dbgym_workspace_path = scratchspace_path
-        self.dbgym_symlinks_path = get_symlinks_path_from_workspace_path(
-            scratchspace_path
-        )
-        self.dbgym_runs_path = get_runs_path_from_workspace_path(scratchspace_path)
+from gymlib.workspace import DBGymWorkspace, is_child_path, parent_path_of_path
 
 
 def add_symlinks_in_path(
@@ -39,9 +23,7 @@ def add_symlinks_in_path(
                 processed_symlinks.add(file_path)
 
 
-def count_files_in_workspace(
-    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
-) -> int:
+def count_files_in_workspace(dbgym_workspace: DBGymWorkspace) -> int:
     """
     Counts the number of files (regular file or dir or symlink) in the workspace.
     """
@@ -61,7 +43,7 @@ def count_files_in_workspace(
 
 
 def clean_workspace(
-    dbgym_workspace: DBGymWorkspace | MockDBGymWorkspace,
+    dbgym_workspace: DBGymWorkspace,
     mode: str = "safe",
     verbose: bool = False,
 ) -> None:
