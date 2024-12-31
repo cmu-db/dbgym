@@ -4,6 +4,11 @@
         table {
             padding: 20px;
         }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 
@@ -13,24 +18,26 @@
         <button class="next-button" onclick="window.location.href='qknobs.html'">Query Knobs</button>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Knob</th>
-                <th>Default</th>
-                <th>Current</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>shared_buffers</td>
-                <td>128MB</td>
-                <td><select>
-                    <option value="64MB">64MB</option>
-                    <option value="128MB">128MB</option>
-                    <option value="256MB">256MB</option>
-                </select></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Knob</th>
+                    <th>Default</th>
+                    <th>Current</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>shared_buffers</td>
+                    <td>128MB</td>
+                    <td><select>
+                        <option value="64MB">64MB</option>
+                        <option value="128MB">128MB</option>
+                        <option value="256MB">256MB</option>
+                    </select></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </body>

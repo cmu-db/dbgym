@@ -4,6 +4,11 @@
         table {
             padding: 20px;
         }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 
@@ -13,50 +18,52 @@
         <button class="next-button" onclick="window.location.href='leaderboard.html'">See Results</button>
     </div>
 
-    <table>
-        <tr>
-            <td>
-                <button onclick="document.getElementById('table1').hidden = !document.getElementById('table1').hidden">
-                    Toggle Table 1
-                </button>
-                <table id="table1" hidden>
-                    <thead>
-                        <tr>
-                            <th>Knob</th>
-                            <th>Default</th>
-                            <th>Current</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Table 1 Content 1</td>
-                            <td>Table 1 Content 2</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <button onclick="document.getElementById('table2').hidden = !document.getElementById('table2').hidden">
-                    Toggle Table 2
-                </button>
-                <table id="table2" hidden>
-                    <thead>
-                        <tr>
-                            <th>Knob</th>
-                            <th>Default</th>
-                            <th>Current</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Table 2 Content 1</td>
-                            <td>Table 2 Content 2</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-    </table>
+    <div class="container">
+        <table>
+            <tr>
+                <td>
+                    <button onclick="document.getElementById('table1').hidden = !document.getElementById('table1').hidden">
+                        Toggle Table 1
+                    </button>
+                    <table id="table1" hidden>
+                        <thead>
+                            <tr>
+                                <th>Knob</th>
+                                <th>Default</th>
+                                <th>Current</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Table 1 Content 1</td>
+                                <td>Table 1 Content 2</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <button onclick="document.getElementById('table2').hidden = !document.getElementById('table2').hidden">
+                        Toggle Table 2
+                    </button>
+                    <table id="table2" hidden>
+                        <thead>
+                            <tr>
+                                <th>Knob</th>
+                                <th>Default</th>
+                                <th>Current</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Table 2 Content 1</td>
+                                <td>Table 2 Content 2</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>

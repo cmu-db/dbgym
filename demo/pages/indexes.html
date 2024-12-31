@@ -8,6 +8,11 @@
             padding: 20px;
             padding-top: 0;
         }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 
@@ -17,25 +22,28 @@
         <button class="next-button" onclick="window.location.href='sysknobs.html'">System Knobs</button>
     </div>
 
-    <form id="indexForm" onsubmit="addIndex(event)">
-        <select id="indexName" required>
-            <option value="">Select Table</option>
-            <option value="fruits">Fruits</option>
-            <option value="stores">Stores</option>
-        </select>
-        <button type="submit">Create Index</button>
-    </form>
-    <table id="indexTable">
-        <thead>
-            <tr>
-                <th>Index Name</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="indexTableBody">
-            <!-- Table rows will be added here dynamically -->
-        </tbody>
-    </table>
+    <div class="container">
+        <form id="indexForm" onsubmit="addIndex(event)">
+            <select id="indexName" required>
+                <option value="">Select Table</option>
+                <option value="fruits">Fruits</option>
+                <option value="stores">Stores</option>
+            </select>
+            <button type="submit">Create Index</button>
+        </form>
+    
+        <table id="indexTable">
+            <thead>
+                <tr>
+                    <th>Index Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="indexTableBody">
+                <!-- Table rows will be added here dynamically -->
+            </tbody>
+        </table>
+    </div>
 </body>
 
 <script>
