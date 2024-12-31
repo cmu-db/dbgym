@@ -3,7 +3,7 @@ from gymlib.workspace import make_standard_dbgym_workspace
 
 from benchmark.cli import benchmark_group
 from dbms.cli import dbms_group
-from manage.cli import manage_group
+from orchestrate.cli import manage_group
 
 # TODO(phw2): Save commit, git diff, and run command.
 # TODO(phw2): Remove write permissions on old run_*/ dirs to enforce that they are immutable.

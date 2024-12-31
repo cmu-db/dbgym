@@ -1,6 +1,5 @@
 import unittest
 
-from gymlib.replay import replay
 from gymlib.tests.gymlib_integtest_util import GymlibIntegtestManager
 from gymlib.tuning_artifacts import (
     DBMSConfigDelta,
@@ -12,6 +11,7 @@ from gymlib.tuning_artifacts import (
 from gymlib.workspace import DBGymWorkspace
 
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
+from orchestrate.replay import replay
 
 
 class ReplayTests(unittest.TestCase):

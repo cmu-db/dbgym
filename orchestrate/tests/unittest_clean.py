@@ -10,7 +10,7 @@ from gymlib.tests.filesystem_unittest_util import (
     verify_structure,
 )
 
-from manage.cli import MockDBGymWorkspace, clean_workspace
+from orchestrate.clean import MockDBGymWorkspace, clean_workspace
 
 # This is here instead of on `if __name__ == "__main__"` because we often run individual tests, which
 #   does not go through the `if __name__ == "__main__"` codepath.
