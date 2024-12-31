@@ -3,7 +3,10 @@
 </head>
 
 <body>
-    <h1>Indexes</h1>
+    <div class="header-bar">
+        <h1>Indexes</h1>
+        <button class="next-button" onclick="window.location.href='sysknobs.html'">System Knobs</button>
+    </div>
 
     <form id="indexForm" onsubmit="addIndex(event)">
         <select id="indexName" required>
@@ -24,8 +27,6 @@
             <!-- Table rows will be added here dynamically -->
         </tbody>
     </table>
-
-    <button class="next-button" onclick="window.location.href='sysknobs.html'">System Knobs</button>
 </body>
 
 <script>

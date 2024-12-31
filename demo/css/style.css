@@ -1,9 +1,27 @@
 body {
+    margin: 0;
+    padding: 0;
     font-family: Helvetica, Arial, sans-serif;
 }
 
+.header-bar {
+    background-color: black;
+    width: 100%;
+    padding: 20px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.header-bar h1 {
+    color: white;
+    margin: 0;
+}
+
 .next-button {
-    position: fixed;
-    top: 20px;
-    right: 20px;
+    padding: 8px 20px;
+    font-size: 16px;
+    cursor: pointer;
 }
