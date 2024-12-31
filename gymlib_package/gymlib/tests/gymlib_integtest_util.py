@@ -3,8 +3,8 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-# TODO: remove symlinks_paths from the import
-from gymlib.symlinks_paths import (
+# TODO: remove infra_paths from the import
+from gymlib.infra_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_workload_suffix,

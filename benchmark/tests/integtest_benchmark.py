@@ -2,7 +2,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from gymlib.symlinks_paths import (
+from gymlib.infra_paths import (
     get_tables_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,

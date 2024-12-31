@@ -10,12 +10,12 @@ from typing import Any, Optional
 
 import click
 import sqlalchemy
-from gymlib.pg import create_sqlalchemy_conn, sql_file_execute
-from gymlib.symlinks_paths import (
+from gymlib.infra_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_repo_symlink_path,
 )
+from gymlib.pg import create_sqlalchemy_conn, sql_file_execute
 from gymlib.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,

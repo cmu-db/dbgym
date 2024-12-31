@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from gymlib.symlinks_paths import get_tables_symlink_path
+from gymlib.infra_paths import get_tables_symlink_path
 from gymlib.workspace import DBGymWorkspace, fully_resolve_path
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR

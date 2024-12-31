@@ -1,3 +1,8 @@
+"""
+"Infra" refers to benchmark/ and dbms/. These are all the paths used to access the files created by benchmark/ and dbms/.
+They're inside gymlib because agents will need to access them.
+"""
+
 from pathlib import Path
 from typing import Any
 

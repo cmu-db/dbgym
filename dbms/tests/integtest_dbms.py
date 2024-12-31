@@ -3,7 +3,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from gymlib.symlinks_paths import get_dbdata_tgz_symlink_path, get_repo_symlink_path
+from gymlib.infra_paths import get_dbdata_tgz_symlink_path, get_repo_symlink_path
 from gymlib.workspace import (
     DBGymWorkspace,
     fully_resolve_path,

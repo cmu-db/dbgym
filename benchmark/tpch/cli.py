@@ -1,7 +1,7 @@
 import logging
 
 import click
-from gymlib.symlinks_paths import (
+from gymlib.infra_paths import (
     get_scale_factor_string,
     get_tables_dirname,
     get_tables_symlink_path,
