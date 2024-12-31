@@ -12,7 +12,15 @@ from gymlib.tests.filesystem_unittest_util import (
     make_workspace_structure,
     verify_structure,
 )
-from gymlib.workspace import DBGymWorkspace
+from gymlib.workspace import (
+    DBGYM_APP_NAME,
+    RUNS_DNAME,
+    SYMLINKS_DNAME,
+    DBGymWorkspace,
+    name_to_linkname,
+)
+
+from gymlib_package.gymlib.workspace import LATEST_RUN_FNAME
 
 
 class WorkspaceTests(unittest.TestCase):
@@ -58,14 +66,14 @@ class WorkspaceTests(unittest.TestCase):
                 ),
             )
         else:
-            self.expected_structure["dbgym_workspace"]["task_runs"][
+            self.expected_structure["dbgym_workspace"][RUNS_DNAME][
                 self.workspace.dbgym_this_run_path.name
             ] = {}
-            self.expected_structure["dbgym_workspace"]["task_runs"][
-                "latest_run.link"
+            self.expected_structure["dbgym_workspace"][RUNS_DNAME][
+                name_to_linkname(LATEST_RUN_FNAME)
             ] = (
                 "symlink",
-                f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}",
+                f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}",
             )
 
         self.assertTrue(
@@ -123,7 +131,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_init_fields(self) -> None:
         workspace = DBGymWorkspace(self.workspace_path)
-        self.assertEqual(workspace.app_name, "dbgym")
+        self.assertEqual(workspace.app_name, DBGYM_APP_NAME)
 
     def test_init_from_nonexistent_workspace(self) -> None:
         self.init_workspace_helper()
@@ -142,12 +150,12 @@ class WorkspaceTests(unittest.TestCase):
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"{result_path.name}.link"
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME] = {}
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname(result_path.name)
         ] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -163,12 +171,12 @@ class WorkspaceTests(unittest.TestCase):
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper(relative_path="dir1/dir2/dir3/result.txt")
         self.workspace.link_result(result_path)
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"{result_path.name}.link"
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME] = {}
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname(result_path.name)
         ] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/dir1/dir2/dir3/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/dir1/dir2/dir3/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -187,13 +195,15 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
-        self.workspace.link_result(result_path, custom_link_name="custom.link")
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            "custom.link"
+        self.workspace.link_result(
+            result_path, custom_link_name=name_to_linkname("custom")
+        )
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME] = {}
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname("custom")
         ] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -205,12 +215,12 @@ class WorkspaceTests(unittest.TestCase):
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
         self.workspace.link_result(result_path)
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"{result_path.name}.link"
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME] = {}
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname(result_path.name)
         ] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -221,19 +231,21 @@ class WorkspaceTests(unittest.TestCase):
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         self.workspace.link_result(result_path)
-        self.workspace.link_result(result_path, custom_link_name="custom.link")
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"] = {}
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"{result_path.name}.link"
-        ] = (
-            "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        self.workspace.link_result(
+            result_path, custom_link_name=name_to_linkname("custom")
         )
-        self.expected_structure["dbgym_workspace"]["symlinks"]["dbgym"][
-            f"custom.link"
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME] = {}
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname(result_path.name)
         ] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+        )
+        self.expected_structure["dbgym_workspace"][SYMLINKS_DNAME][DBGYM_APP_NAME][
+            name_to_linkname("custom")
+        ] = (
+            "symlink",
+            f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -265,10 +277,10 @@ class WorkspaceTests(unittest.TestCase):
         assert self.workspace is not None and self.expected_structure is not None
         result_path = self.make_result_helper()
         symlink_path = self.make_result_helper(
-            "symlink.link",
+            name_to_linkname("symlink"),
             file_obj=(
                 "symlink",
-                f"dbgym_workspace/task_runs/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
+                f"dbgym_workspace/{RUNS_DNAME}/{self.workspace.dbgym_this_run_path.name}/{result_path.name}",
             ),
         )
         with self.assertRaisesRegex(
@@ -287,11 +299,11 @@ class WorkspaceTests(unittest.TestCase):
         result_path = self.make_result_helper()
         self.init_workspace_helper()
         self.workspace.save_file(result_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ][f"{result_path.name}.link"] = (
+        ][name_to_linkname(result_path.name)] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -305,11 +317,11 @@ class WorkspaceTests(unittest.TestCase):
         self.init_workspace_helper()
         self.workspace.save_file(result_path)
         self.workspace.save_file(result_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ][f"{result_path.name}.link"] = (
+        ][name_to_linkname(result_path.name)] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_name}/{result_path.name}",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_name}/{result_path.name}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -333,11 +345,11 @@ class WorkspaceTests(unittest.TestCase):
         self.workspace.save_file(result1_path)
         self.workspace.save_file(result2_path)
         # The second save_file() should have overwritten the first one.
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ][f"{filename}.link"] = (
+        ][name_to_linkname(filename)] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_names[-1]}/{filename}",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_names[-1]}/{filename}",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -358,17 +370,17 @@ class WorkspaceTests(unittest.TestCase):
         self.workspace.save_file(result1_path)
         self.workspace.save_file(result2_path)
         # The second save_file() should not overwrite the first one because the outermost dirs are different.
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ][f"{filename}.link"] = (
+        ][name_to_linkname(filename)] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_name}/{filename}",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_name}/{filename}",
         )
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ]["dir1.link"] = (
+        ][name_to_linkname("dir1")] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_name}/dir1",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_name}/dir1",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)
@@ -384,7 +396,7 @@ class WorkspaceTests(unittest.TestCase):
             "external/result.txt", file_obj=("file", "contents")
         )
         self.workspace.save_file(result_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
         ][f"{result_path.name}"] = ("file", "contents")
         self.assertTrue(
@@ -399,7 +411,7 @@ class WorkspaceTests(unittest.TestCase):
         )
         self.workspace.save_file(result_path)
         self.workspace.save_file(result_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
         ][f"{result_path.name}"] = ("file", "contents")
         self.assertTrue(
@@ -420,7 +432,7 @@ class WorkspaceTests(unittest.TestCase):
 
         self.workspace.save_file(result1_path)
         self.workspace.save_file(result2_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
         ][f"{filename}"] = ("file", "contents2")
         self.assertTrue(
@@ -436,11 +448,11 @@ class WorkspaceTests(unittest.TestCase):
         self.make_result_helper("dir1/dir3/other2.txt")
         self.init_workspace_helper()
         self.workspace.save_file(result_path)
-        self.expected_structure["dbgym_workspace"]["task_runs"][
+        self.expected_structure["dbgym_workspace"][RUNS_DNAME][
             self.workspace.dbgym_this_run_path.name
-        ]["dir1.link"] = (
+        ][name_to_linkname("dir1")] = (
             "symlink",
-            f"dbgym_workspace/task_runs/{prev_run_name}/dir1",
+            f"dbgym_workspace/{RUNS_DNAME}/{prev_run_name}/dir1",
         )
         self.assertTrue(
             verify_structure(self.scratchspace_path, self.expected_structure)

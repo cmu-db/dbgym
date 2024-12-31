@@ -7,10 +7,14 @@ from gymlib.symlinks_paths import (
     get_tables_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,
+)
+from gymlib.workspace import (
+    DBGymWorkspace,
+    fully_resolve_path,
+    is_fully_resolved,
     linkname_to_name,
     name_to_linkname,
 )
-from gymlib.workspace import DBGymWorkspace, fully_resolve_path, is_fully_resolved
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES

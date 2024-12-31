@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from typing import Any, NewType, cast
 
+from gymlib.workspace import RUNS_DNAME, SYMLINKS_DNAME, TMP_DNAME
+
 FilesystemStructure = NewType("FilesystemStructure", dict[str, Any])
 
 
@@ -113,9 +115,9 @@ def make_workspace_structure(
     return FilesystemStructure(
         {
             "dbgym_workspace": {
-                "symlinks": symlinks_structure,
-                "task_runs": task_runs_structure,
-                "tmp": {},
+                SYMLINKS_DNAME: symlinks_structure,
+                RUNS_DNAME: task_runs_structure,
+                TMP_DNAME: {},
             }
         }
     )

@@ -15,7 +15,6 @@ from gymlib.symlinks_paths import (
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_repo_symlink_path,
-    linkname_to_name,
 )
 from gymlib.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
@@ -24,6 +23,7 @@ from gymlib.workspace import (
     get_tmp_path_from_workspace_path,
     is_fully_resolved,
     is_ssd,
+    linkname_to_name,
 )
 from sqlalchemy import text
 

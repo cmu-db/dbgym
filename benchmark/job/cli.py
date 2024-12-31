@@ -6,9 +6,8 @@ from gymlib.symlinks_paths import (
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,
-    name_to_linkname,
 )
-from gymlib.workspace import DBGymWorkspace, fully_resolve_path
+from gymlib.workspace import DBGymWorkspace, fully_resolve_path, name_to_linkname
 
 from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.shell import subprocess_run
