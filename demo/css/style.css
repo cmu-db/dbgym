@@ -20,7 +20,13 @@ body {
     margin: 0;
 }
 
-.next-button {
+.next-button, #popupButton {
     padding: 8px 20px;
     cursor: pointer;
+}
+
+#popupButton {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
 }
