@@ -1,0 +1,36 @@
+<button id="popupButton" onclick="
+    document.getElementById('overlay').style.display = 'block'; 
+    document.getElementById('popupWindow').style.display = 'block'; 
+">
+    View Queries
+</button>
+
+<div id="overlay"></div>
+<div id="popupWindow">
+    <table>
+        <thead>
+            <tr>
+                <th>Query #</th>
+                <th>Text</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Query 1: Enable Nestloop and Hashjoin</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Query 2: Enable Nestloop and Hashjoin</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Query 3: Enable Nestloop and Hashjoin</td>
+            </tr>
+        </tbody>
+    </table>
+    <button onclick="
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('popupWindow').style.display = 'none';
+    ">Close</button>
+</div>
