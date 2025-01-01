@@ -1,0 +1,8 @@
+<!-- Button to print JSON to console -->
+<button id="printJsonButton" onclick="
+const userData = localStorage.getItem('userData');
+if (userData) {
+    console.log('Current User Data JSON:', JSON.parse(userData));
+} else {
+    console.log('No user data found in local storage.');
+}">Print JSON to Console</button>

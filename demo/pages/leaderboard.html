@@ -35,4 +35,15 @@
             </tbody>
         </table>
     </div>
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
 </body>
