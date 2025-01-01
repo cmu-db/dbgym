@@ -23,12 +23,16 @@ body {
 .next-button, #popupButton {
     padding: 8px 20px;
     cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 #popupButton {
     position: fixed;
     bottom: 20px;
     right: 20px;
+    background-color: #c41230;
+    color: white;
 }
 #popupWindow {
     display: none; /* Hidden by default */
