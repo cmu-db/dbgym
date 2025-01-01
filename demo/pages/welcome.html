@@ -18,6 +18,9 @@
             margin-bottom: 10px;
             margin-top: 10px;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -29,20 +32,20 @@
     <div class="container">
         <form id="userForm">
             <div>
+                <input type="checkbox" id="showPerformance" onclick="toggleNameField()">
+                <label for="showPerformance">Would you like to show your performance on the leaderboard?</label>
+            </div>
+            <div id="nameField" class="hidden">
                 <label for="name">Name:</label>
                 <input type="text" id="name" placeholder="Enter your name" required>
             </div>
             <div>
+                <input type="checkbox" id="emailNotification" onclick="toggleEmailField()">
+                <label for="emailNotification">Would you like to get an email notification when the evaluation finishes?</label>
+            </div>
+            <div id="emailField" class="hidden">
                 <label for="email">Email:</label>
                 <input type="email" id="email" placeholder="Enter your email" required>
-            </div>
-            <div>
-                <input type="checkbox" id="showPerformance">
-                <label for="showPerformance">Would you like to show your performance on the leaderboard?</label>
-            </div>
-            <div>
-                <input type="checkbox" id="emailNotification">
-                <label for="emailNotification">Would you like to get an email notification when the evaluation finishes?</label>
             </div>
         </form>
     </div>
@@ -59,11 +62,21 @@
     </div>
 
     <script>
+        function toggleNameField() {
+            const nameField = document.getElementById('nameField');
+            nameField.classList.toggle('hidden', !document.getElementById('showPerformance').checked);
+        }
+
+        function toggleEmailField() {
+            const emailField = document.getElementById('emailField');
+            emailField.classList.toggle('hidden', !document.getElementById('emailNotification').checked);
+        }
+
         function saveData() {
             // Create a JSON object with user data
             const userData = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
+                name: document.getElementById('nameField').classList.contains('hidden') ? '' : document.getElementById('name').value,
+                email: document.getElementById('emailField').classList.contains('hidden') ? '' : document.getElementById('email').value,
                 showPerformance: document.getElementById('showPerformance').checked,
                 emailNotification: document.getElementById('emailNotification').checked
             };
