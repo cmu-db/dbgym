@@ -61,6 +61,16 @@
                             option.textContent = optionText;
                             select.appendChild(option);
                         });
+                        // Add event listener to log selected knob when changed
+                        select.addEventListener('change', () => {
+                            const selectedKnobs = Array.from(tableBody.querySelectorAll('select')).map(select => select.value);
+                            console.log("Currently selected knobs:", selectedKnobs);
+
+                            // Update local storage with the new value
+                            const knobName = row[0]; // Assuming the first column is the knob name
+                            const query = "query" + button.textContent.split(' ')[1].toLowerCase(); // Get the query number (query1, query2, etc.)
+                            updateUserData(query, knobName, select.value);
+                        });
                         td.appendChild(select);
                     } else {
                         td.textContent = cell;
@@ -82,34 +92,66 @@
             activeButton = button; // Update the active button reference
         }
 
-        function query1Click() {
-            const data = [
+        const queriesKnobData = {
+            query1: [
                 ['enable_nestloop', 'ON', ['ON', 'OFF']],
                 ['enable_hashjoin', 'ON', ['ON', 'OFF']]
-            ];
-            updateTable(data, document.getElementById('query1'));
+            ],
+            query2: [
+                ['enable_seqscan', 'OFF', ['ON', 'OFF']],
+                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
+            ],
+            query3: [
+                ['enable_nestloop', 'ON', ['ON', 'OFF']],
+                ['enable_seqscan', 'OFF', ['ON', 'OFF']]
+            ]
+        }
+
+        function query1Click() {
+            updateTable(queriesKnobData.query1, document.getElementById('query1'));
         }
 
         function query2Click() {
-            const data = [
-                ['enable_nestloop', 'ON', ['ON', 'OFF']],
-                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
-            ];
-            updateTable(data, document.getElementById('query2'));
+            updateTable(queriesKnobData.query2, document.getElementById('query2'));
         }
 
         function query3Click() {
-            const data = [
-                ['enable_nestloop', 'ON', ['ON', 'OFF']],
-                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
-            ];
-            updateTable(data, document.getElementById('query3'));
+            updateTable(queriesKnobData.query3, document.getElementById('query3'));
         }
 
         // Call query1Click on page load
         window.onload = function() {
             query1Click();
+            updateUserDataOnLoad();
         };
+
+        // New function to update userData based on default values
+        function updateUserDataOnLoad() {
+            Object.keys(queriesKnobData).forEach(query => {
+                const defaultData = queriesKnobData[query]; // Use queriesKnobData for default values
+                const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} };
+
+                if (!userData.qknobs[query]) {
+                    userData.qknobs[query] = {};
+                }
+
+                defaultData.forEach(([knobName, defaultValue]) => {
+                    userData.qknobs[query][knobName] = defaultValue; // Set default values
+                });
+
+                localStorage.setItem('userData', JSON.stringify(userData)); // Save updated userData
+            });
+        }
+
+        // Add this function to update local storage
+        function updateUserData(query, knobName, value) {
+            const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} };
+            if (!userData.qknobs[query]) {
+                userData.qknobs[query] = {};
+            }
+            userData.qknobs[query][knobName] = value;
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
     </script>
 </head>
 
