@@ -15,7 +15,7 @@
 <body>
     <div class="header-bar">
         <h1>System-Wide Knobs</h1>
-        <button class="next-button" onclick="window.location.href='qknobs.html'">Query Knobs</button>
+        <button class="next-button" onclick="saveAndMoveToQueryKnobs()">Query Knobs</button>
     </div>
 
     <div class="container">
@@ -33,7 +33,7 @@
                     <td>128MB</td>
                     <td><select>
                         <option value="64MB">64MB</option>
-                        <option value="128MB">128MB</option>
+                        <option value="128MB" selected>128MB</option>
                         <option value="256MB">256MB</option>
                     </select></td>
                 </tr>
@@ -41,7 +41,7 @@
                     <td>checkpoint_segments</td>
                     <td>3</td>
                     <td><select>
-                        <option value="3">3</option>
+                        <option value="3" selected>3</option>
                         <option value="9">9</option>
                         <option value="27">27</option>
                     </select></td>
@@ -71,4 +71,29 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script>
+        function saveAndMoveToQueryKnobs() {
+            // Retrieve existing userData from local storage
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+            // Initialize sysknobs dictionary
+            const sysknobs = {};
+
+            // Get current values from the dropdowns
+            sysknobs.shared_buffers = document.querySelector('select').value; // Get value of shared_buffers
+            sysknobs.checkpoint_segments = document.querySelectorAll('select')[1].value; // Get value of checkpoint_segments
+
+            // Update userData with sysknobs
+            userData.sysknobs = sysknobs;
+
+            // Save updated userData back to local storage
+            localStorage.setItem('userData', JSON.stringify(userData));
+
+            console.log(userData); // For demonstration, log the userData
+
+            // Redirect to the queryKnobs page
+            window.location.href = 'qknobs.html';
+        }
+    </script>
 </body>

@@ -26,7 +26,7 @@
 <body>
     <div class="header-bar">
         <h1>Database Gym</h1>
-        <button class="next-button" onclick="saveData()">Start</button>
+        <button class="next-button" onclick="saveAndMoveToIndexes()">Start</button>
     </div>
 
     <div class="container">
@@ -72,7 +72,7 @@
             emailField.classList.toggle('hidden', !document.getElementById('emailNotification').checked);
         }
 
-        function saveData() {
+        function saveAndMoveToIndexes() {
             // Create a JSON object with user data
             const userData = {
                 name: document.getElementById('nameField').classList.contains('hidden') ? '' : document.getElementById('name').value,
