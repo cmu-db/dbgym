@@ -115,13 +115,44 @@
 <script>
     let indexes = [];
 
+    // Function to clear indexes in userData on page load
+    function clearIndexes() {
+        // Retrieve existing userData from local storage
+        const userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+        // Clear the indexes array
+        userData.indexes = []; // Set indexes to an empty array
+
+        // Save the updated userData back to local storage
+        localStorage.setItem('userData', JSON.stringify(userData));
+    }
+
+    // Call clearIndexes when the page loads
+    window.onload = function() {
+        clearIndexes();
+        // Optionally, you can also initialize the indexes array if needed
+        indexes = [];
+    };
+
     function addIndex(event) {
         event.preventDefault();
         const indexTable = document.getElementById('indexTable').value.trim();
         const indexColumn = document.getElementById('indexColumn').value.trim(); // Get the selected column
         
         if (indexTable && indexColumn) {
-            indexes.push({ table: indexTable, column: indexColumn }); // Store both table and column
+            const newIndex = { table: indexTable, column: indexColumn }; // Create a new index object
+            indexes.push(newIndex); // Store the new index
+
+            // Retrieve existing userData from local storage
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+            // Add the new index to the userData
+            userData.indexes = userData.indexes || []; // Initialize if it doesn't exist
+            userData.indexes.push(newIndex); // Add the new index
+
+            // Save the updated userData back to local storage
+            localStorage.setItem('userData', JSON.stringify(userData));
+
             document.getElementById('indexTable').value = '';
             document.getElementById('indexColumn').value = ''; // Clear the column selection
             updateTable();
@@ -129,8 +160,20 @@
     }
 
     function deleteIndex(index) {
-        indexes = indexes.filter((_, i) => i !== index);
-        updateTable();
+        // Remove the index from the local indexes array
+        indexes = indexes.filter((_, i) => i !== index); // Remove the index from the array
+
+        // Retrieve existing userData from local storage
+        const userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+        // Remove the index from the userData
+        userData.indexes = userData.indexes || []; // Ensure indexes exists
+        userData.indexes.splice(index, 1); // Remove the index from userData
+
+        // Save the updated userData back to local storage
+        localStorage.setItem('userData', JSON.stringify(userData));
+
+        updateTable(); // Update the displayed table
     }
 
     function updateTable() {
