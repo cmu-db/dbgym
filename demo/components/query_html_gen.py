@@ -2,7 +2,7 @@ def query_to_html(query: str) -> str:
     assert "='" not in query, "Some queries in the repo are incorrectly formatted this way"
 
     # Keywords
-    keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "AS", "LIKE", "!=", " = ", "NULL"]
+    keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "AS", "LIKE", "!=", " = ", " > ", "NULL"]
     for keyword in keywords:
         query = query.replace(keyword, f"<span class='query-red'>{keyword}</span>")
 
@@ -12,14 +12,15 @@ def query_to_html(query: str) -> str:
         query = query.replace(function, f"<span class='query-lightblue'>{function}</span>")
 
     # Tables
-    tables = ["ct", "it", "lt", "t", "mc", "mi_idx", "cn", "mk", "k", "ml"]
+    tables = ["ct", "it", "lt", "t", "mc", "mi_idx", "cn", "n", "mk", "k", "ml", "ci"]
     for table in tables:
         query = query.replace(f"{table}.", f"<span class='query-lightblue'>{table}</span>.")
 
     # Columns
     columns = [
         "note", "title", "production_year", "id", "movie_id", "company_type_id", "info_type_id", "kind", "info",
-        "keyword_id", "link_type_id", "company_id", "country_code", "name", "keyword", "link"
+        "keyword_id", "link_type_id", "company_id", "country_code", "name", "keyword", "link",
+        "production_year", "person_id"
     ]
     for column in columns:
         query = query.replace(f".{column}", f".<span class='query-lightblue'>{column}</span>")
@@ -36,6 +37,8 @@ def query_to_html(query: str) -> str:
         "%Warner%",
         "sequel",
         "%follow%",
+        "marvel-cinematic-universe",
+        "%Downey%Robert%",
     ]
     for string in strings:
         query = query.replace(f"'{string}'", f"<span class='query-darkblue'>'{string}'</span>")
@@ -43,7 +46,8 @@ def query_to_html(query: str) -> str:
     # Numbers
     numbers = [
         "1950",
-        "2000"
+        "2000",
+        "2010"
     ]
     for number in numbers:
         query = query.replace(f"{number}", f"<span class='query-lightblue'>{number}</span>")
@@ -71,6 +75,24 @@ WHERE ct.kind = 'production companies'
   AND mc.movie_id = mi_idx.movie_id
   AND it.id = mi_idx.info_type_id;"""
     
+
+    query6a = """SELECT MIN(k.keyword) AS movie_keyword,
+       MIN(n.name) AS actor_name,
+       MIN(t.title) AS marvel_movie<br>
+FROM cast_info AS ci,
+     keyword AS k,
+     movie_keyword AS mk,
+     name AS n,
+     title AS t<br>
+WHERE k.keyword = 'marvel-cinematic-universe'
+  AND n.name LIKE '%Downey%Robert%'
+  AND t.production_year > 2010
+  AND k.id = mk.keyword_id
+  AND t.id = mk.movie_id
+  AND t.id = ci.movie_id
+  AND ci.movie_id = mk.movie_id
+  AND n.id = ci.person_id;"""
+
     query11a = """SELECT MIN(cn.name) AS from_company,
        MIN(lt.link) AS movie_link_type,
        MIN(t.title) AS non_polish_sequel_movie<br>
@@ -101,7 +123,7 @@ WHERE cn.country_code != '[pl]'
   AND ml.movie_id = mc.movie_id
   AND mk.movie_id = mc.movie_id;"""
     
-    queries = [("1a", query1a), ("11a", query11a)]
+    queries = [("1a", query1a), ("6a", query6a), ("11a", query11a)]
 
     for query_name, query in queries:
         html_query = query_to_html(query)
