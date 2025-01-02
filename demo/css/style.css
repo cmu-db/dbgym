@@ -49,9 +49,10 @@ body {
 #popupWindow {
     display: none; /* Hidden by default */
     position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    height: 60%;
+    width: 90%;
+    left: 5%;
+    top: 20%;
     background-color: white;
     border: 1px solid #ccc;
     padding: 20px;
@@ -66,4 +67,17 @@ body {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
+}
+.query-text {
+    font-size: 16px;
+    font-family: monospace;
+}
+.query-red {
+    color: red;
+}
+.query-lightblue {
+    color: #4ea3ff;
+}
+.query-darkblue {
+    color: rgb(17, 17, 255);
 }
