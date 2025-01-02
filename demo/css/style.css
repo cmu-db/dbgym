@@ -57,10 +57,10 @@ body {
 #popupWindow {
     display: none; /* Hidden by default */
     position: fixed;
-    height: 50%;
+    height: 60%;
     width: 90%;
     left: 5%;
-    top: 25%;
+    top: 20%;
     background-color: white;
     border: 1px solid #ccc;
     padding: 20px;

@@ -125,5 +125,14 @@
             window.location.href = 'indexes.html';
         }
     </script>
+
+    <script>
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') { // Check if the Esc key is pressed
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('popupWindow').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
