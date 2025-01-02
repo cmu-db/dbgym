@@ -2,7 +2,7 @@ def query_to_html(query: str) -> str:
     assert "='" not in query, "Some queries in the repo are incorrectly formatted this way"
 
     # Keywords
-    keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "AS", "LIKE", "!=", " = ", " > ", "NULL"]
+    keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "AS", "LIKE", "!=", " = ", " > ", "NULL", " IN "]
     for keyword in keywords:
         query = query.replace(keyword, f"<span class='query-red'>{keyword}</span>")
 
@@ -12,7 +12,7 @@ def query_to_html(query: str) -> str:
         query = query.replace(function, f"<span class='query-lightblue'>{function}</span>")
 
     # Tables
-    tables = ["ct", "it", "lt", "t", "mc", "mi_idx", "cn", "n", "mk", "k", "ml", "ci"]
+    tables = ["ct", "it", "lt", "t", "mc", "mi_idx", "cn", "n", "mk", "k", "ml", "ci", "mi"]
     for table in tables:
         query = query.replace(f"{table}.", f"<span class='query-lightblue'>{table}</span>.")
 
@@ -39,6 +39,8 @@ def query_to_html(query: str) -> str:
         "%follow%",
         "marvel-cinematic-universe",
         "%Downey%Robert%",
+        "Bulgaria",
+        "%sequel%"
     ]
     for string in strings:
         query = query.replace(f"'{string}'", f"<span class='query-darkblue'>'{string}'</span>")
@@ -75,7 +77,19 @@ WHERE ct.kind = 'production companies'
   AND mc.movie_id = mi_idx.movie_id
   AND it.id = mi_idx.info_type_id;"""
     
-
+    query3b = """SELECT MIN(t.title) AS movie_title
+FROM keyword AS k,
+     movie_info AS mi,
+     movie_keyword AS mk,
+     title AS t
+WHERE k.keyword LIKE '%sequel%'
+  AND mi.info IN ('Bulgaria')
+  AND t.production_year > 2010
+  AND t.id = mi.movie_id
+  AND t.id = mk.movie_id
+  AND mk.movie_id = mi.movie_id
+  AND k.id = mk.keyword_id;"""
+    
     query6a = """SELECT MIN(k.keyword) AS movie_keyword,
        MIN(n.name) AS actor_name,
        MIN(t.title) AS marvel_movie<br>
@@ -123,7 +137,7 @@ WHERE cn.country_code != '[pl]'
   AND ml.movie_id = mc.movie_id
   AND mk.movie_id = mc.movie_id;"""
     
-    queries = [("1a", query1a), ("6a", query6a), ("11a", query11a)]
+    queries = [("1a", query1a), ("3b", query3b), ("6a", query6a), ("11a", query11a)]
 
     for query_name, query in queries:
         html_query = query_to_html(query)
