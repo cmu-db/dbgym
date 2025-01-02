@@ -100,15 +100,18 @@
         </div>
         
         <div id="queriesContainer">
+            <script src="../js/loadPopupHtml.js"></script>
             <script>
                 fetch('../components/queries.html')
                     .then(response => response.text())
                     .then(data => {
                         document.getElementById('queriesContainer').innerHTML = data;
                     })
+                    .then(data => {
+                        initializePopup();
+                    })
                     .catch(error => console.error("Error loading popup:", error));
             </script>
-            <script src="../js/loadPopupHtml.js"></script>
         </div>
     </div>
 

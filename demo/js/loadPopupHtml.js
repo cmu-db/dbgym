@@ -20,5 +20,3 @@ function initializePopup() {
         })
         .catch(error => console.error('Error loading HTML:', error));
 }
-
-initializePopup();
