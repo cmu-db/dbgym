@@ -51,6 +51,8 @@
 
             tableTitle.textContent = `Query ${button.textContent.split(' ')[1]} Knobs`; // Update title
 
+            const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} }; // Retrieve userData
+
             data.forEach(row => {
                 const tr = document.createElement('tr');
                 row.forEach((cell, index) => {
@@ -63,6 +65,12 @@
                             option.textContent = optionText;
                             select.appendChild(option);
                         });
+                        // Set the selected value based on userData
+                        const knobName = row[0]; // Assuming the first column is the knob name
+                        const query = "query" + button.textContent.split(' ')[1].toLowerCase(); // Get the query number
+                        if (userData.qknobs[query] && userData.qknobs[query][knobName]) {
+                            select.value = userData.qknobs[query][knobName]; // Set the selected value
+                        }
                         // Add event listener to log selected knob when changed
                         select.addEventListener('change', () => {
                             const selectedKnobs = Array.from(tableBody.querySelectorAll('select')).map(select => select.value);
@@ -123,15 +131,19 @@
 
         // Call query1Click on page load
         window.onload = function() {
-            query1Click();
             updateUserDataOnLoad();
+            query1Click();
         };
 
         // New function to update userData based on default values
         function updateUserDataOnLoad() {
             Object.keys(queriesKnobData).forEach(query => {
                 const defaultData = queriesKnobData[query]; // Use queriesKnobData for default values
-                const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} };
+                const userData = JSON.parse(localStorage.getItem('userData'));
+
+                if (!userData.qknobs) {
+                    userData.qknobs = {};
+                }
 
                 if (!userData.qknobs[query]) {
                     userData.qknobs[query] = {};
