@@ -5,196 +5,77 @@
     <title>Step 3/3: Query Knobs</title>
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-        .sidebar {
-            width: 200px;
-            background-color: #c41230;
-            display: flex;
-            flex-direction: column;
-        }
-        .table-container {
-            flex-grow: 1;
-            padding: 10px;
-            margin-left: 20px;
-        }
-        .query-button {
-            display: block;
+        #qknobsTable {
             padding: 20px;
-            border: none;
-            box-shadow: none;
-            background-color: #c41230;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-        }
-        .query-button:hover {
-            background-color: #d2435a;
-        }
-        .active-button {
-            background-color: white;
-            color: black;
         }
     </style>
-    <script>
-        let activeButton = null; // Track the currently active button
-
-        function updateTable(data, button) {
-            // Update the table content based on the button pressed
-            const tableBody = document.getElementById('table-body');
-            const tableTitle = document.getElementById('table-title'); // Get the title element
-            tableBody.innerHTML = ''; // Clear existing rows
-
-            tableTitle.textContent = `Query ${button.textContent.split(' ')[1]} Knobs`; // Update title
-
-            const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} }; // Retrieve userData
-
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                row.forEach((cell, index) => {
-                    const td = document.createElement('td');
-                    if (index === 2) { // Check if it's the third column
-                        const select = document.createElement('select');
-                        // Add options to the select element from the cell array
-                        cell.forEach(optionText => {
-                            const option = document.createElement('option');
-                            option.textContent = optionText;
-                            select.appendChild(option);
-                        });
-                        // Set the selected value based on userData
-                        const knobName = row[0]; // Assuming the first column is the knob name
-                        const query = "query" + button.textContent.split(' ')[1].toLowerCase(); // Get the query number
-                        if (userData.qknobs[query] && userData.qknobs[query][knobName]) {
-                            select.value = userData.qknobs[query][knobName]; // Set the selected value
-                        }
-                        // Add event listener to log selected knob when changed
-                        select.addEventListener('change', () => {
-                            const selectedKnobs = Array.from(tableBody.querySelectorAll('select')).map(select => select.value);
-                            console.log("Currently selected knobs:", selectedKnobs);
-
-                            // Update local storage with the new value
-                            const knobName = row[0]; // Assuming the first column is the knob name
-                            const query = "query" + button.textContent.split(' ')[1].toLowerCase(); // Get the query number (query1, query2, etc.)
-                            updateUserData(query, knobName, select.value);
-                        });
-                        td.appendChild(select);
-                    } else {
-                        td.textContent = cell;
-                    }
-                    tr.appendChild(td);
-                });
-                tableBody.appendChild(tr);
-            });
-
-            // Highlight the active button
-            const buttons = document.querySelectorAll('.query-button');
-            buttons.forEach(btn => {
-                btn.classList.remove('active-button');
-                btn.style.backgroundColor = ''; // Reset background color
-            });
-
-            button.classList.add('active-button');
-            button.style.backgroundColor = 'white'; // Set active button color
-            activeButton = button; // Update the active button reference
-        }
-
-        const queriesKnobData = {
-            query1: [
-                ['enable_nestloop', 'ON', ['ON', 'OFF']],
-                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
-            ],
-            query2: [
-                ['enable_seqscan', 'OFF', ['ON', 'OFF']],
-                ['enable_hashjoin', 'ON', ['ON', 'OFF']]
-            ],
-            query3: [
-                ['enable_nestloop', 'ON', ['ON', 'OFF']],
-                ['enable_seqscan', 'OFF', ['ON', 'OFF']]
-            ]
-        }
-
-        function query1Click() {
-            updateTable(queriesKnobData.query1, document.getElementById('query1'));
-        }
-
-        function query2Click() {
-            updateTable(queriesKnobData.query2, document.getElementById('query2'));
-        }
-
-        function query3Click() {
-            updateTable(queriesKnobData.query3, document.getElementById('query3'));
-        }
-
-        // Call query1Click on page load
-        window.onload = function() {
-            updateUserDataOnLoad();
-            query1Click();
-        };
-
-        // New function to update userData based on default values
-        function updateUserDataOnLoad() {
-            Object.keys(queriesKnobData).forEach(query => {
-                const defaultData = queriesKnobData[query]; // Use queriesKnobData for default values
-                const userData = JSON.parse(localStorage.getItem('userData'));
-
-                if (!userData.qknobs) {
-                    userData.qknobs = {};
-                }
-
-                if (!userData.qknobs[query]) {
-                    userData.qknobs[query] = {};
-                }
-
-                defaultData.forEach(([knobName, defaultValue]) => {
-                    userData.qknobs[query][knobName] = defaultValue; // Set default values
-                });
-
-                localStorage.setItem('userData', JSON.stringify(userData)); // Save updated userData
-            });
-        }
-
-        // Add this function to update local storage
-        function updateUserData(query, knobName, value) {
-            const userData = JSON.parse(localStorage.getItem('userData')) || { qknobs: {} };
-            if (!userData.qknobs[query]) {
-                userData.qknobs[query] = {};
-            }
-            userData.qknobs[query][knobName] = value;
-            localStorage.setItem('userData', JSON.stringify(userData));
-        }
-    </script>
 </head>
 
 <body>
     <div class="header-bar">
         <h1>Step 3/3: Per-Query Knobs</h1>
-        <button class="next-button" onclick="window.location.href='leaderboard.html'">Submit →</button>
+        <button class="next-button" onclick="saveAndMoveToLeaderboard()">Submit →</button>
     </div>
 
     <div class="container">
-        <div class="sidebar">
-            <button id="query1" class="query-button" onclick="query1Click()">Query 1</button>
-            <button id="query2" class="query-button" onclick="query2Click()">Query 2</button>
-            <button id="query3" class="query-button" onclick="query3Click()">Query 3</button>
-        </div>
-
         <div class="actionsContainer">
-            <div class="table-container">
-                <h3 id="table-title">Query 1 Knobs</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Knob</th>
-                            <th>Default</th>
-                            <th>Current</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                    </tbody>
-                </table>
-            </div>
+            <table id="qknobsTable">
+                <thead>
+                    <tr>
+                        <th>Knob</th>
+                        <th>Default</th>
+                        <th>Q1</th>
+                        <th>Q2</th>
+                        <th>Q3</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>enable_nestloop</td>
+                        <td>ON</td>
+                        <td>
+                            <select id="enable_nestloop_q1">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="enable_nestloop_q2">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="enable_nestloop_q3">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>enable_hashjoin</td>
+                        <td>ON</td>
+                        <td>
+                            <select id="enable_hashjoin_q1">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="enable_hashjoin_q2">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="enable_hashjoin_q3">
+                                <option value="ON" selected>ON</option>
+                                <option value="OFF">OFF</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <div id="queriesContainer">
@@ -223,4 +104,35 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script>
+        function saveAndMoveToLeaderboard() {
+            // Retrieve existing userData from local storage
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+
+            // Initialize qknobs dictionary
+            const qknobs = {};
+            qknobs.enable_nestloop = {};
+            qknobs.enable_hashjoin = {};
+
+            // Get current values from the dropdowns
+            qknobs.enable_nestloop.q1 = document.getElementById('enable_nestloop_q1').value;
+            qknobs.enable_nestloop.q2 = document.getElementById('enable_nestloop_q2').value;
+            qknobs.enable_nestloop.q3 = document.getElementById('enable_nestloop_q3').value;
+            qknobs.enable_hashjoin.q1 = document.getElementById('enable_hashjoin_q1').value;
+            qknobs.enable_hashjoin.q2 = document.getElementById('enable_hashjoin_q2').value;
+            qknobs.enable_hashjoin.q3 = document.getElementById('enable_hashjoin_q3').value;
+
+            // Update userData with qknobs
+            userData.qknobs = qknobs;
+
+            // Save updated userData back to local storage
+            localStorage.setItem('userData', JSON.stringify(userData));
+
+            console.log(userData); // For demonstration, log the userData
+
+            // Redirect to the leaderboard page
+            window.location.href = 'leaderboard.html';
+        }
+    </script>
 </body>
