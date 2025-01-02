@@ -21,6 +21,12 @@
         .hidden {
             display: none;
         }
+        #taskDescription {
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #bcc3ca;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -31,14 +37,15 @@
 
     <div class="container">
         <form id="userForm">
-            <div style="padding-top: 20px; padding-bottom: 40px;">
-                Your task:
+            <div id="taskDescription">
+                <div style="font-size: 24px; font-weight: bold;">Your task:</div>
                 <ul>
                     <li>Create indexes</li>
                     <li>Set system-wide knobs</li>
                     <li>Configure per-query knobs</li>
                 </ul>
                 to optimize the performance of <strong>three queries</strong>.<br>
+                <br>
                 Use the <strong>View Queries</strong> button in the bottom right to see the queries.
             </div>
             <div>
