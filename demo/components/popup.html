@@ -17,60 +17,11 @@
         <tbody>
             <tr>
                 <td>1</td>
-                <td class="query-text">
-                    <span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>mc</span>.<span class='query-lightblue'>note</span>) <span class='query-red'>AS</span> production_note,
-       <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title,
-       <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>production_year</span>) <span class='query-red'>AS</span> movie_year<br>
-<span class='query-red'>FROM</span> company_type <span class='query-red'>AS</span> ct,
-     info_type <span class='query-red'>AS</span> it,
-     movie_companies <span class='query-red'>AS</span> mc,
-     movie_info_idx <span class='query-red'>AS</span> mi_idx,
-     title <span class='query-red'>AS</span> t<br>
-<span class='query-red'>WHERE</span> <span class='query-lightblue'>ct</span>.<span class='query-lightblue'>kind</span><span class='query-red'> = </span><span class='query-darkblue'>'production companies'</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>info</span><span class='query-red'> = </span><span class='query-darkblue'>'top 250 rank'</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>note</span> NOT <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%(as Metro-Goldwyn-Mayer Pictures)%'</span>
-  <span class='query-red'>AND</span> (<span class='query-lightblue'>mc</span>.<span class='query-lightblue'>note</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%(co-production)%'</span>
-       <span class='query-red'>OR</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>note</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%(presents)%'</span>)
-  <span class='query-red'>AND</span> <span class='query-lightblue'>ct</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_type_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info_type_id</span>;
-</td>
+                <td class="query-text" id="query1View"></td>
             </tr>
             <tr>
                 <td>2</td>
-                <td class="query-text">
-                    <span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>cn</span>.<span class='query-lightblue'>name</span>) <span class='query-red'>AS</span> from_company,
-       <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>lt</span>.<span class='query-lightblue'>link</span>) <span class='query-red'>AS</span> movie_link_type,
-       <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> non_polish_sequel_movie<br>
-<span class='query-red'>FROM</span> company_name <span class='query-red'>AS</span> cn,
-     company_type <span class='query-red'>AS</span> ct,
-     keyword <span class='query-red'>AS</span> k,
-     link_type <span class='query-red'>AS</span> lt,
-     movie_companies <span class='query-red'>AS</span> mc,
-     movie_keyword <span class='query-red'>AS</span> mk,
-     movie_link <span class='query-red'>AS</span> ml,
-     title <span class='query-red'>AS</span> t<br>
-<span class='query-red'>WHERE</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>country_code</span> <span class='query-red'>!=</span> <span class='query-darkblue'>'[pl]'</span>
-  <span class='query-red'>AND</span> (<span class='query-lightblue'>cn</span>.<span class='query-lightblue'>name</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%Film%'</span>
-       <span class='query-red'>OR</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>name</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%Warner%'</span>)
-  <span class='query-red'>AND</span> <span class='query-lightblue'>ct</span>.<span class='query-lightblue'>kind</span><span class='query-red'> = </span><span class='query-darkblue'>'production companies'</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span><span class='query-red'> = </span><span class='query-darkblue'>'sequel'</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>lt</span>.<span class='query-lightblue'>link</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%follow%'</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>note</span> IS <span class='query-red'>NULL</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>production_year</span> BETWEEN <span class='query-lightblue'>1950</span> <span class='query-red'>AND</span> <span class='query-lightblue'>2000</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>lt</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>ml</span>.<span class='query-lightblue'>link_type_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>ml</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><span class='query-red'> = </span><span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_type_id</span><span class='query-red'> = </span><span class='query-lightblue'>ct</span>.<span class='query-lightblue'>id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_id</span><span class='query-red'> = </span><span class='query-lightblue'>cn</span>.<span class='query-lightblue'>id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>ml</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>ml</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span>
-  <span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span>;
-</td>
+                <td class="query-text" id="query2View"></td>
             </tr>
             <tr>
                 <td>3</td>

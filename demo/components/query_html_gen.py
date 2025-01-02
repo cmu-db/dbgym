@@ -100,6 +100,10 @@ WHERE cn.country_code != '[pl]'
   AND ml.movie_id = mk.movie_id
   AND ml.movie_id = mc.movie_id
   AND mk.movie_id = mc.movie_id;"""
+    
+    queries = [("1a", query1a), ("11a", query11a)]
 
-    html_query = query_to_html(query1a)
-    print(html_query)
+    for query_name, query in queries:
+        html_query = query_to_html(query)
+        with open(f"components/genned_query{query_name}.html", "w") as f:
+            f.write(html_query)
