@@ -18,9 +18,6 @@
             margin-bottom: 10px;
             margin-top: 10px;
         }
-        .hidden {
-            display: none;
-        }
         #taskDescription {
             padding: 20px;
             margin-bottom: 20px;
@@ -39,29 +36,21 @@
         <form id="userForm">
             <div id="taskDescription">
                 <div style="font-size: 24px; font-weight: bold;">Your task:</div>
-                <ul>
+                <br>
+                You have <strong>60 seconds</strong> to:
+                <ol>
                     <li>Create indexes</li>
                     <li>Set system-wide knobs</li>
                     <li>Configure per-query knobs</li>
-                </ul>
-                to optimize the performance of <strong>three queries</strong>.<br>
-                <br>
-                Click <strong>View Queries</strong> (bottom right) to see the queries at any time.
+                </ol>
+                to optimize the performance of <strong>three JOB queries</strong>.<br>
             </div>
             <div>
-                <input type="checkbox" id="showPerformance" onclick="toggleNameField()">
-                <label for="showPerformance">Would you like to show your performance on the leaderboard?</label>
-            </div>
-            <div id="nameField" class="hidden">
-                <label for="name">Name:</label>
+                <label for="name"><em>[Optional]</em> Leaderboard Name:</label>
                 <input type="text" id="name" placeholder="Enter your name" required>
             </div>
             <div>
-                <input type="checkbox" id="emailNotification" onclick="toggleEmailField()">
-                <label for="emailNotification">Would you like to get an email notification when the evaluation finishes?</label>
-            </div>
-            <div id="emailField" class="hidden">
-                <label for="email">Email:</label>
+                <label for="email"><em>[Optional]</em> Notification Email:</label>
                 <input type="email" id="email" placeholder="Enter your email" required>
             </div>
         </form>
@@ -79,7 +68,7 @@
         <script src="../js/loadPopupHtml.js"></script>
     </div>
 
-    <!-- <div id="printJsonButtonContainer">
+    <div id="printJsonButtonContainer">
         <script>
             fetch('../components/printJsonButton.html')
                 .then(response => response.text())
@@ -88,19 +77,9 @@
                 })
                 .catch(error => console.error("Error loading popup:", error));
         </script>
-    </div> -->
+    </div>
 
     <script>
-        function toggleNameField() {
-            const nameField = document.getElementById('nameField');
-            nameField.classList.toggle('hidden', !document.getElementById('showPerformance').checked);
-        }
-
-        function toggleEmailField() {
-            const emailField = document.getElementById('emailField');
-            emailField.classList.toggle('hidden', !document.getElementById('emailNotification').checked);
-        }
-
         window.onload = function() {
             // Clear userData on page load
             const userData = {};
@@ -111,10 +90,8 @@
             // Create a JSON object with user data
             const userData = {
                 welcomeData: {
-                    name: document.getElementById('nameField').classList.contains('hidden') ? '' : document.getElementById('name').value,
-                    email: document.getElementById('emailField').classList.contains('hidden') ? '' : document.getElementById('email').value,
-                    showPerformance: document.getElementById('showPerformance').checked,
-                    emailNotification: document.getElementById('emailNotification').checked
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
                 }
             };
 

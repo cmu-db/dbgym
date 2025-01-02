@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>System Knobs</title>
+    <title>Step 2/3: System Knobs</title>
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
         #sysknobsTable {
@@ -18,7 +18,7 @@
 
 <body>
     <div class="header-bar">
-        <h1>System-Wide Knobs</h1>
+        <h1>Step 2/3: System-Wide Knobs</h1>
         <button class="next-button" onclick="saveAndMoveToQueryKnobs()">Query Knobs →</button>
     </div>
 
@@ -66,7 +66,7 @@
         <script src="../js/loadPopupHtml.js"></script>
     </div>
 
-    <!-- <div id="printJsonButtonContainer">
+    <div id="printJsonButtonContainer">
         <script>
             fetch('../components/printJsonButton.html')
                 .then(response => response.text())
@@ -75,7 +75,7 @@
                 })
                 .catch(error => console.error("Error loading popup:", error));
         </script>
-    </div> -->
+    </div>
 
     <script>
         function saveAndMoveToQueryKnobs() {
