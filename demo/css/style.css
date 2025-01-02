@@ -36,12 +36,6 @@ body {
     background-color: #e8ebee;
 }
 
-#queriesContainer {
-    width: 50%;
-    margin-top: 20px;
-    margin-right: 40px;
-}
-
 .query-text {
     font-size: 16px;
     font-family: monospace;
@@ -65,4 +59,13 @@ body {
 .container {
     display: flex;
     flex-direction: row;
+}
+
+#queriesContainer {
+    width: 50%;
+    margin-top: 20px;
+}
+
+#queriesTable {
+    border-spacing: 15px;
 }

@@ -8,7 +8,7 @@
         form {
             padding: 20px;
         }
-        .container {
+        .welcomeContainer {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -24,6 +24,9 @@
             background-color: #bcc3ca;
             border-radius: 10px;
         }
+        #userForm {
+            width: 35%;
+        }
     </style>
 </head>
 <body>
@@ -32,7 +35,7 @@
         <button class="next-button" onclick="saveAndMoveToIndexes()">Begin →</button>
     </div>
 
-    <div class="container">
+    <div class="welcomeContainer">
         <form id="userForm">
             <div id="taskDescription">
                 <div style="font-size: 24px; font-weight: bold;">Your task:</div>
@@ -44,6 +47,8 @@
                     <li>Configure per-query knobs</li>
                 </ol>
                 to optimize the performance of <strong>three JOB queries</strong>.<br>
+                <br>
+                Once you press <strong>Begin</strong>, the timer will start and you will be able to see the queries.
             </div>
             <div>
                 <label for="name"><em>[Optional]</em> Leaderboard Name:</label>
