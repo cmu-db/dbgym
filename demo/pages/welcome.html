@@ -101,13 +101,21 @@
             emailField.classList.toggle('hidden', !document.getElementById('emailNotification').checked);
         }
 
+        window.onload = function() {
+            // Clear userData on page load
+            const userData = {};
+            localStorage.setItem('userData', JSON.stringify(userData));
+        };
+
         function saveAndMoveToIndexes() {
             // Create a JSON object with user data
             const userData = {
-                name: document.getElementById('nameField').classList.contains('hidden') ? '' : document.getElementById('name').value,
-                email: document.getElementById('emailField').classList.contains('hidden') ? '' : document.getElementById('email').value,
-                showPerformance: document.getElementById('showPerformance').checked,
-                emailNotification: document.getElementById('emailNotification').checked
+                welcomeData: {
+                    name: document.getElementById('nameField').classList.contains('hidden') ? '' : document.getElementById('name').value,
+                    email: document.getElementById('emailField').classList.contains('hidden') ? '' : document.getElementById('email').value,
+                    showPerformance: document.getElementById('showPerformance').checked,
+                    emailNotification: document.getElementById('emailNotification').checked
+                }
             };
 
             // Save the JSON object to local storage
