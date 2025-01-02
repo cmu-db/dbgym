@@ -20,7 +20,7 @@ body {
     margin: 0;
 }
 
-.next-button, #popupButton, .close-button {
+.next-button, #popupButton {
     padding: 8px 20px;
     cursor: pointer;
     font-size: 16px;
@@ -36,46 +36,12 @@ body {
     background-color: #e8ebee;
 }
 
-.close-button {
-    background-color: #e8ebee;
+#queriesContainer {
+    width: 50%;
+    margin-top: 20px;
+    margin-right: 40px;
 }
 
-.close-button:hover {
-    background-color: #cdd1d6;
-}
-
-#popupButton {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: #c41230;
-    color: white;
-}
-#popupButton:hover {
-    background-color: #d2435a;
-}
-#popupWindow {
-    display: none; /* Hidden by default */
-    position: fixed;
-    height: 60%;
-    width: 90%;
-    left: 5%;
-    top: 20%;
-    background-color: white;
-    border: 1px solid #ccc;
-    padding: 20px;
-    z-index: 1000;
-}
-#overlay {
-    display: none; /* Hidden by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-}
 .query-text {
     font-size: 16px;
     font-family: monospace;
@@ -88,4 +54,15 @@ body {
 }
 .query-darkblue {
     color: rgb(17, 17, 255);
+}
+
+.actionsContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+}
+.container {
+    display: flex;
+    flex-direction: row;
 }

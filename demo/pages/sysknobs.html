@@ -8,11 +8,6 @@
         #sysknobsTable {
             padding: 20px;
         }
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
     </style>
 </head>
 
@@ -23,47 +18,49 @@
     </div>
 
     <div class="container">
-        <table id="sysknobsTable">
-            <thead>
-                <tr>
-                    <th>Knob</th>
-                    <th>Default</th>
-                    <th>Current</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>shared_buffers</td>
-                    <td>128MB</td>
-                    <td><select>
-                        <option value="64MB">64MB</option>
-                        <option value="128MB" selected>128MB</option>
-                        <option value="256MB">256MB</option>
-                    </select></td>
-                </tr>
-                <tr>
-                    <td>checkpoint_segments</td>
-                    <td>3</td>
-                    <td><select>
-                        <option value="3" selected>3</option>
-                        <option value="9">9</option>
-                        <option value="27">27</option>
-                    </select></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <div class="actionsContainer">
+            <table id="sysknobsTable">
+                <thead>
+                    <tr>
+                        <th>Knob</th>
+                        <th>Default</th>
+                        <th>Current</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>shared_buffers</td>
+                        <td>128MB</td>
+                        <td><select>
+                            <option value="64MB">64MB</option>
+                            <option value="128MB" selected>128MB</option>
+                            <option value="256MB">256MB</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>checkpoint_segments</td>
+                        <td>3</td>
+                        <td><select>
+                            <option value="3" selected>3</option>
+                            <option value="9">9</option>
+                            <option value="27">27</option>
+                        </select></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <div id="popupContainer">
-        <script>
-            fetch('../components/popup.html')
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('popupContainer').innerHTML = data;
-                })
-                .catch(error => console.error("Error loading popup:", error));
-        </script>
-        <script src="../js/loadPopupHtml.js"></script>
+        <div id="queriesContainer">
+            <script>
+                fetch('../components/queries.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('queriesContainer').innerHTML = data;
+                    })
+                    .catch(error => console.error("Error loading popup:", error));
+            </script>
+            <script src="../js/loadPopupHtml.js"></script>
+        </div>
     </div>
 
     <div id="printJsonButtonContainer">

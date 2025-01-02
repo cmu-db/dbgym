@@ -56,18 +56,6 @@
         </form>
     </div>
 
-    <div id="popupContainer">
-        <script>
-            fetch('../components/popup.html')
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('popupContainer').innerHTML = data;
-                })
-                .catch(error => console.error("Error loading popup:", error));
-        </script>
-        <script src="../js/loadPopupHtml.js"></script>
-    </div>
-
     <div id="printJsonButtonContainer">
         <script>
             fetch('../components/printJsonButton.html')
@@ -101,15 +89,6 @@
             // Redirect to the next page (for example, page2.html)
             window.location.href = 'indexes.html';
         }
-    </script>
-
-    <script>
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') { // Check if the Esc key is pressed
-                document.getElementById('overlay').style.display = 'none';
-                document.getElementById('popupWindow').style.display = 'none';
-            }
-        });
     </script>
 </body>
 </html>

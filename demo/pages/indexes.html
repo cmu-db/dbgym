@@ -12,11 +12,6 @@
             padding: 20px;
             padding-top: 0;
         }
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
         #createIndexContainer {
             margin: 20px;
             background-color: #bcc3ca;
@@ -33,86 +28,88 @@
     </div>
 
     <div class="container">
-        <div id="createIndexContainer">
-            <div style="margin-top: 15px; font-size: 20px; font-weight: bold;">Create Secondary Index</div>
-            <form id="indexForm" onsubmit="addIndex(event)">
-                <select id="indexTable" required onchange="updateColumns()">
-                    <script>
-                        const tables = [
-                            { value: "", text: "Select Table", columns: [] },
-                            { value: "title", text: "title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }] },
-                            { value: "aka_title", text: "aka_title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }] }
-                        ];
-                        
-                        const indexTableSelect = document.getElementById('indexTable');
-                        tables.forEach(table => {
-                            const option = document.createElement('option');
-                            option.value = table.value;
-                            option.textContent = table.text;
-                            indexTableSelect.appendChild(option);
-                        });
+        <div class="actionsContainer">
+            <div id="createIndexContainer">
+                <div style="margin-top: 15px; font-size: 20px; font-weight: bold;">Create Secondary Index</div>
+                <form id="indexForm" onsubmit="addIndex(event)">
+                    <select id="indexTable" required onchange="updateColumns()">
+                        <script>
+                            const tables = [
+                                { value: "", text: "Select Table", columns: [] },
+                                { value: "title", text: "title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }] },
+                                { value: "aka_title", text: "aka_title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }] }
+                            ];
+                            
+                            const indexTableSelect = document.getElementById('indexTable');
+                            tables.forEach(table => {
+                                const option = document.createElement('option');
+                                option.value = table.value;
+                                option.textContent = table.text;
+                                indexTableSelect.appendChild(option);
+                            });
 
-                        function updateColumns() {
-                            const selectedTable = indexTableSelect.value;
-                            const indexColumnSelect = document.getElementById('indexColumn');
-                            indexColumnSelect.innerHTML = ''; // Clear existing options
+                            function updateColumns() {
+                                const selectedTable = indexTableSelect.value;
+                                const indexColumnSelect = document.getElementById('indexColumn');
+                                indexColumnSelect.innerHTML = ''; // Clear existing options
 
-                            const selectedTableObj = tables.find(table => table.value === selectedTable);
-                            if (selectedTableObj) {
-                                selectedTableObj.columns.forEach(column => {
-                                    const option = document.createElement('option');
-                                    option.value = column.value;
-                                    option.textContent = column.text;
-                                    indexColumnSelect.appendChild(option);
-                                });
+                                const selectedTableObj = tables.find(table => table.value === selectedTable);
+                                if (selectedTableObj) {
+                                    selectedTableObj.columns.forEach(column => {
+                                        const option = document.createElement('option');
+                                        option.value = column.value;
+                                        option.textContent = column.text;
+                                        indexColumnSelect.appendChild(option);
+                                    });
+                                }
                             }
-                        }
-                    </script>
-                </select>
-                <select id="indexColumn" required>
-                    <script>
-                        const columns = [
-                            { value: "", text: "Select Column" },
-                        ];
-                        
-                        const indexColumnSelect = document.getElementById('indexColumn');
-                        columns.forEach(column => {
-                            const option = document.createElement('option');
-                            option.value = column.value;
-                            option.textContent = column.text;
-                            indexColumnSelect.appendChild(option);
-                        });
-                    </script>
-                </select>
-                <button type="submit">Create Index</button>
-            </form>
+                        </script>
+                    </select>
+                    <select id="indexColumn" required>
+                        <script>
+                            const columns = [
+                                { value: "", text: "Select Column" },
+                            ];
+                            
+                            const indexColumnSelect = document.getElementById('indexColumn');
+                            columns.forEach(column => {
+                                const option = document.createElement('option');
+                                option.value = column.value;
+                                option.textContent = column.text;
+                                indexColumnSelect.appendChild(option);
+                            });
+                        </script>
+                    </select>
+                    <button type="submit">Create Index</button>
+                </form>
+            </div>
+        
+            <div style="margin-bottom: 10px; font-size: 20px; font-weight: bold;">Existing Secondary Indexes</div>
+            <table id="indexTable">
+                <thead>
+                    <tr>
+                        <th>Table</th>
+                        <th>Column</th>
+                        <th>Delete?</th>
+                    </tr>
+                </thead>
+                <tbody id="indexTableBody">
+                    <!-- Table rows will be added here dynamically -->
+                </tbody>
+            </table>
         </div>
-    
-        <div style="margin-bottom: 10px; font-size: 20px; font-weight: bold;">Existing Secondary Indexes</div>
-        <table id="indexTable">
-            <thead>
-                <tr>
-                    <th>Table</th>
-                    <th>Column</th>
-                    <th>Delete?</th>
-                </tr>
-            </thead>
-            <tbody id="indexTableBody">
-                <!-- Table rows will be added here dynamically -->
-            </tbody>
-        </table>
-    </div>
-
-    <div id="popupContainer">
-        <script>
-            fetch('../components/popup.html')
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('popupContainer').innerHTML = data;
-                })
-                .catch(error => console.error("Error loading popup:", error));
-        </script>
-        <script src="../js/loadPopupHtml.js"></script>
+        
+        <div id="queriesContainer">
+            <script>
+                fetch('../components/queries.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('queriesContainer').innerHTML = data;
+                    })
+                    .catch(error => console.error("Error loading popup:", error));
+            </script>
+            <script src="../js/loadPopupHtml.js"></script>
+        </div>
     </div>
 
     <div id="printJsonButtonContainer">
