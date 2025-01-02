@@ -20,7 +20,7 @@ body {
     margin: 0;
 }
 
-.next-button, #popupButton {
+.next-button, #popupButton, .close-button {
     padding: 8px 20px;
     cursor: pointer;
     font-size: 16px;
@@ -36,6 +36,14 @@ body {
     background-color: #e8ebee;
 }
 
+.close-button {
+    background-color: #e8ebee;
+}
+
+.close-button:hover {
+    background-color: #cdd1d6;
+}
+
 #popupButton {
     position: fixed;
     bottom: 20px;
@@ -49,10 +57,10 @@ body {
 #popupWindow {
     display: none; /* Hidden by default */
     position: fixed;
-    height: 60%;
+    height: 50%;
     width: 90%;
     left: 5%;
-    top: 20%;
+    top: 25%;
     background-color: white;
     border: 1px solid #ccc;
     padding: 20px;
