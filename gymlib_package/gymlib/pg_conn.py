@@ -192,7 +192,10 @@ class PostgresConn:
         return qid_runtime, did_time_out, explain_data
 
     def time_workload(
-        self, workload: Workload, qknobs: dict[str, list[str]], query_timeout: int = 0
+        self,
+        workload: Workload,
+        qknobs: dict[str, list[str]] = {},
+        query_timeout: int = 0,
     ) -> tuple[float, int]:
         """
         Returns the total runtime and the number of timed out queries.
@@ -206,7 +209,7 @@ class PostgresConn:
 
         for qid in workload.get_query_order():
             query = workload.get_query(qid)
-            this_query_knobs = qknobs[qid]
+            this_query_knobs = qknobs[qid] if qid in qknobs else []
             runtime, did_time_out, _ = self.time_query(
                 query, query_knobs=this_query_knobs, timeout=query_timeout
             )
