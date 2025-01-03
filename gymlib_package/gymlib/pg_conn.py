@@ -20,6 +20,7 @@ import psutil
 import psycopg
 import yaml
 from gymlib.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from gymlib.workload import Workload
 from gymlib.workspace import DBGymWorkspace, parent_path_of_path
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
@@ -189,6 +190,34 @@ class PostgresConn:
 
         # qid_runtime is in microseconds.
         return qid_runtime, did_time_out, explain_data
+
+    def time_workload(
+        self,
+        workload: Workload,
+        qknobs: dict[str, list[str]] = {},
+        query_timeout: int = 0,
+    ) -> tuple[float, int]:
+        """
+        Returns the total runtime and the number of timed out queries.
+
+        It's possible that your agent will want to run the workload in a more complex manner (e.g. only running
+        a subset of queries, trying many types of qknobs, etc.). It's okay to ignore the time_workload() function
+        in that case and write your own function. This is simply a nice "default" implementation.
+        """
+        total_runtime: float = 0
+        num_timed_out_queries: int = 0
+
+        for qid in workload.get_query_order():
+            query = workload.get_query(qid)
+            this_query_knobs = qknobs[qid] if qid in qknobs else []
+            runtime, did_time_out, _ = self.time_query(
+                query, query_knobs=this_query_knobs, timeout=query_timeout
+            )
+            total_runtime += runtime
+            if did_time_out:
+                num_timed_out_queries += 1
+
+        return total_runtime, num_timed_out_queries
 
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
