@@ -15,7 +15,7 @@
     <div class="header-bar">
         <h1>Step 3/3: Per-Query Knobs</h1>
         <div id="timerDisplay"></div>
-        <button class="next-button" onclick="saveAndMoveToLeaderboard()">Submit →</button>
+        <button class="next-button" onclick="saveAndMoveToSubmission()">Submit →</button>
     </div>
 
     <div class="container">
@@ -111,7 +111,7 @@
     <script src="../js/timer.js"></script>
 
     <script>
-        function saveAndMoveToLeaderboard() {
+        function saveAndMoveToSubmission() {
             // Retrieve existing userData from local storage
             const userData = JSON.parse(localStorage.getItem('userData')) || {};
 
@@ -136,8 +136,8 @@
 
             console.log(userData); // For demonstration, log the userData
 
-            // Redirect to the leaderboard page
-            window.location.href = 'leaderboard.html';
+            // Redirect to the submission page
+            window.location.href = 'submission.html';
         }
     </script>
 </body>

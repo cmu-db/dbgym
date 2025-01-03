@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Submission Complete!</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            height: 100%;
+        }
+        .centered-text {
+            padding-top: 100px;
+            font-size: 25px;
+            text-align: center;
+            color: #c41230;
+            margin: 20px;
+        }
+        .centered-logo {
+            position: absolute;
+            top: 70%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        @keyframes squish {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1, 0.9);
+            }
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            75% {
+                transform: rotate(360deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        #barrel {
+            width: 100px;
+            animation: squish 0.5s ease-in-out 0.1s, spin 1.4s ease-in-out 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h1>Submission Complete!</h1>
+    </div>
+
+    <div class="centered-text">
+        <strong>Submission Complete!</strong><br>
+        <br>
+        <br>
+        Give us a few seconds to evaluate it...
+    </div>
+
+    <div class="centered-logo">
+        <img id="barrel" src="../assets/cmu-db-logo-barrel.svg" alt="CMU DB Logo Barrel">
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(() => {
+                confetti({
+                    colors: ['#c41230'],
+                    origin: { y: 0.7 },
+                    spread: 110,
+                    gravity: 1
+                });
+            }, 550);
+        };
+    </script>
+    
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+</body>
+</html>
