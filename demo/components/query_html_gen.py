@@ -1,29 +1,79 @@
 def query_to_html(query: str) -> str:
-    assert "='" not in query, "Some queries in the repo are incorrectly formatted this way"
+    assert (
+        "='" not in query
+    ), "Some queries in the repo are incorrectly formatted this way"
 
     # Keywords
-    keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "AS", "LIKE", "!=", " = ", " > ", "NULL", " IN "]
+    keywords = [
+        "SELECT",
+        "FROM",
+        "WHERE",
+        "AND",
+        "OR",
+        "AS",
+        "LIKE",
+        "!=",
+        " = ",
+        " > ",
+        "NULL",
+        " IN ",
+    ]
     for keyword in keywords:
         query = query.replace(keyword, f"<span class='query-red'>{keyword}</span>")
 
     # Functions
     functions = ["MIN", "MAX"]
     for function in functions:
-        query = query.replace(function, f"<span class='query-lightblue'>{function}</span>")
+        query = query.replace(
+            function, f"<span class='query-lightblue'>{function}</span>"
+        )
 
     # Tables
-    tables = ["ct", "it", "lt", "t", "mc", "mi_idx", "cn", "n", "mk", "k", "ml", "ci", "mi"]
+    tables = [
+        "ct",
+        "it",
+        "lt",
+        "t",
+        "mc",
+        "mi_idx",
+        "cn",
+        "n",
+        "mk",
+        "k",
+        "ml",
+        "ci",
+        "mi",
+    ]
     for table in tables:
-        query = query.replace(f"{table}.", f"<span class='query-lightblue'>{table}</span>.")
+        query = query.replace(
+            f"{table}.", f"<span class='query-lightblue'>{table}</span>."
+        )
 
     # Columns
     columns = [
-        "note", "title", "production_year", "id", "movie_id", "company_type_id", "info_type_id", "kind", "info",
-        "keyword_id", "link_type_id", "company_id", "country_code", "name", "keyword", "link",
-        "production_year", "person_id"
+        "note",
+        "title",
+        "production_year",
+        "id",
+        "movie_id",
+        "company_type_id",
+        "info_type_id",
+        "kind",
+        "info",
+        "keyword_id",
+        "link_type_id",
+        "company_id",
+        "country_code",
+        "name",
+        "keyword",
+        "link",
+        "production_year",
+        "person_id",
     ]
     for column in columns:
-        query = query.replace(f".{column}", f".<span class='query-lightblue'>{column}</span>")
+        query = query.replace(
+            f".{column}", f".<span class='query-lightblue'>{column}</span>"
+        )
 
     # Strings
     strings = [
@@ -42,19 +92,19 @@ def query_to_html(query: str) -> str:
         "Bulgaria",
         "%sequel%",
         "[de]",
-        "character-name-in-title"
+        "character-name-in-title",
     ]
     for string in strings:
-        query = query.replace(f"'{string}'", f"<span class='query-darkblue'>'{string}'</span>")
+        query = query.replace(
+            f"'{string}'", f"<span class='query-darkblue'>'{string}'</span>"
+        )
 
     # Numbers
-    numbers = [
-        "1950",
-        "2000",
-        "2010"
-    ]
+    numbers = ["1950", "2000", "2010"]
     for number in numbers:
-        query = query.replace(f"{number}", f"<span class='query-lightblue'>{number}</span>")
+        query = query.replace(
+            f"{number}", f"<span class='query-lightblue'>{number}</span>"
+        )
 
     return query
 
@@ -78,7 +128,7 @@ WHERE ct.kind = 'production companies'
   AND t.id = mi_idx.movie_id
   AND mc.movie_id = mi_idx.movie_id
   AND it.id = mi_idx.info_type_id;"""
-    
+
     query2a = """SELECT MIN(t.title) AS movie_title<br>
 FROM company_name AS cn,
      keyword AS k,
@@ -92,7 +142,7 @@ WHERE cn.country_code = '[de]'
   AND t.id = mk.movie_id
   AND mk.keyword_id = k.id
   AND mc.movie_id = mk.movie_id;"""
-    
+
     query3b = """SELECT MIN(t.title) AS movie_title
 FROM keyword AS k,
      movie_info AS mi,
@@ -105,7 +155,7 @@ WHERE k.keyword LIKE '%sequel%'
   AND t.id = mk.movie_id
   AND mk.movie_id = mi.movie_id
   AND k.id = mk.keyword_id;"""
-    
+
     query6a = """SELECT MIN(k.keyword) AS movie_keyword,
        MIN(n.name) AS actor_name,
        MIN(t.title) AS marvel_movie<br>
@@ -152,8 +202,14 @@ WHERE cn.country_code != '[pl]'
   AND ml.movie_id = mk.movie_id
   AND ml.movie_id = mc.movie_id
   AND mk.movie_id = mc.movie_id;"""
-    
-    queries = [("1a", query1a), ("2a", query2a), ("3b", query3b), ("6a", query6a), ("11a", query11a)]
+
+    queries = [
+        ("1a", query1a),
+        ("2a", query2a),
+        ("3b", query3b),
+        ("6a", query6a),
+        ("11a", query11a),
+    ]
 
     for query_name, query in queries:
         html_query = query_to_html(query)
