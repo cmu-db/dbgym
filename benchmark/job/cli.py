@@ -3,13 +3,13 @@ from typing import Optional
 
 import click
 from gymlib.infra_paths import (
+    DEFAULT_SCALE_FACTOR,
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,
 )
 from gymlib.workspace import DBGymWorkspace, fully_resolve_path, name_to_linkname
 
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.shell import subprocess_run
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"

@@ -11,6 +11,7 @@ from typing import Any, Optional
 import click
 import sqlalchemy
 from gymlib.infra_paths import (
+    DEFAULT_SCALE_FACTOR,
     get_dbdata_tgz_symlink_path,
     get_pgbin_symlink_path,
     get_repo_symlink_path,
@@ -27,7 +28,6 @@ from gymlib.workspace import (
 )
 from sqlalchemy import text
 
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.load_info import JobLoadInfo
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass

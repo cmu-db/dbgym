@@ -2,6 +2,7 @@ import logging
 
 import click
 from gymlib.infra_paths import (
+    DEFAULT_SCALE_FACTOR,
     get_scale_factor_string,
     get_tables_dirname,
     get_tables_symlink_path,
@@ -16,7 +17,6 @@ from gymlib.workspace import (
     name_to_linkname,
 )
 
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED, NUM_TPCH_QUERIES
 from util.shell import subprocess_run
 
