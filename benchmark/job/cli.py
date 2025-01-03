@@ -268,7 +268,7 @@ def _generate_job_workload(
     elif query_subset == "a":
         query_names = [qname for qname in JOB_QUERY_NAMES if qname[-1] == "a"]
     elif query_subset == "demo":
-        query_names = [f"{i}a" for i in range(1, 6)]
+        query_names = ["1a", "2a", "3b"]
     else:
         assert False
 

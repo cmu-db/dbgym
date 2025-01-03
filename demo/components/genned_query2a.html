@@ -1,0 +1,13 @@
+<span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title<br>
+<span class='query-red'>FROM</span> company_name <span class='query-red'>AS</span> cn,
+     keyword <span class='query-red'>AS</span> k,
+     movie_companies <span class='query-red'>AS</span> mc,
+     movie_keyword <span class='query-red'>AS</span> mk,
+     title <span class='query-red'>AS</span> t<br>
+<span class='query-red'>WHERE</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>country_code</span><span class='query-red'> = </span><span class='query-darkblue'>'[de]'</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span><span class='query-red'> = </span><span class='query-darkblue'>'character-name-in-title'</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><span class='query-red'> = </span><span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>;

@@ -40,7 +40,9 @@ def query_to_html(query: str) -> str:
         "marvel-cinematic-universe",
         "%Downey%Robert%",
         "Bulgaria",
-        "%sequel%"
+        "%sequel%",
+        "[de]",
+        "character-name-in-title"
     ]
     for string in strings:
         query = query.replace(f"'{string}'", f"<span class='query-darkblue'>'{string}'</span>")
@@ -76,6 +78,20 @@ WHERE ct.kind = 'production companies'
   AND t.id = mi_idx.movie_id
   AND mc.movie_id = mi_idx.movie_id
   AND it.id = mi_idx.info_type_id;"""
+    
+    query2a = """SELECT MIN(t.title) AS movie_title<br>
+FROM company_name AS cn,
+     keyword AS k,
+     movie_companies AS mc,
+     movie_keyword AS mk,
+     title AS t<br>
+WHERE cn.country_code = '[de]'
+  AND k.keyword = 'character-name-in-title'
+  AND cn.id = mc.company_id
+  AND mc.movie_id = t.id
+  AND t.id = mk.movie_id
+  AND mk.keyword_id = k.id
+  AND mc.movie_id = mk.movie_id;"""
     
     query3b = """SELECT MIN(t.title) AS movie_title
 FROM keyword AS k,
@@ -137,7 +153,7 @@ WHERE cn.country_code != '[pl]'
   AND ml.movie_id = mc.movie_id
   AND mk.movie_id = mc.movie_id;"""
     
-    queries = [("1a", query1a), ("3b", query3b), ("6a", query6a), ("11a", query11a)]
+    queries = [("1a", query1a), ("2a", query2a), ("3b", query3b), ("6a", query6a), ("11a", query11a)]
 
     for query_name, query in queries:
         html_query = query_to_html(query)
