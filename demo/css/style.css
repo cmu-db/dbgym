@@ -69,3 +69,16 @@ body {
 #queriesTable {
     border-spacing: 15px;
 }
+
+#cmu-db-logo {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    width: 40px;
+}
+
+#printJsonButton {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
