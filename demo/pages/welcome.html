@@ -32,6 +32,7 @@
 <body>
     <div class="header-bar">
         <h1>Database Gym</h1>
+        <div id="timerDisplay"></div>
         <button class="next-button" onclick="saveAndMoveToIndexes()">Begin →</button>
     </div>
 
@@ -74,6 +75,8 @@
         </script>
     </div>
 
+    <script src="../js/timer.js"></script>
+
     <script>
         window.onload = function() {
             // Clear userData on page load
@@ -92,6 +95,9 @@
 
             // Save the JSON object to local storage
             localStorage.setItem('userData', JSON.stringify(userData));
+
+            // Start the timer
+            startTimer();
 
             // Redirect to the next page (for example, page2.html)
             window.location.href = 'indexes.html';

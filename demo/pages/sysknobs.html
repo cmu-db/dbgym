@@ -14,6 +14,7 @@
 <body>
     <div class="header-bar">
         <h1>Step 2/3: System-Wide Knobs</h1>
+        <div id="timerDisplay"></div>
         <button class="next-button" onclick="saveAndMoveToQueryKnobs()">Query Knobs →</button>
     </div>
 
@@ -78,6 +79,8 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script src="../js/timer.js"></script>
 
     <script>
         function saveAndMoveToQueryKnobs() {

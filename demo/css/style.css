@@ -82,3 +82,11 @@ body {
     bottom: 20px;
     right: 20px;
 }
+
+#timerDisplay {
+    font-size: 22px;
+    color: white;
+    margin-right: 20px;
+    flex-grow: 1;
+    text-align: right;
+}

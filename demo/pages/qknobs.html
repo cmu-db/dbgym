@@ -14,6 +14,7 @@
 <body>
     <div class="header-bar">
         <h1>Step 3/3: Per-Query Knobs</h1>
+        <div id="timerDisplay"></div>
         <button class="next-button" onclick="saveAndMoveToLeaderboard()">Submit →</button>
     </div>
 
@@ -106,6 +107,8 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script src="../js/timer.js"></script>
 
     <script>
         function saveAndMoveToLeaderboard() {

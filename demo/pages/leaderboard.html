@@ -17,7 +17,8 @@
 <body>
     <div class="header-bar">
         <h1>Leaderboard</h1>
-        <button class="next-button" onclick="window.location.href='welcome.html'">Restart ↺</button>
+        <div id="timerDisplay"></div>
+        <button class="next-button" onclick="window.location.href='welcome.html';">Restart ↺</button>
     </div>
 
     <div class="container">
@@ -71,4 +72,6 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script src="../js/timer.js"></script>
 </body>
