@@ -24,24 +24,27 @@ def submit():
     data = {"name": "John Doe"}
     time.sleep(2)
     return {
-        "your_results": {
-            "name": data["name"],
-            "runtime": 8.5,
-            "in_top_results": False,
-            "rank": 18,
-        },
+        "name": data["name"],
+        "runtime": 8.5,
+        "rank": 18,
+    }
+
+
+@app.route('/leaderboard', methods=['GET'])
+def get_leaderboard():
+    return {
         "top_results": [
             {"name": "Alice Doe", "runtime": 1.5},
             {"name": "John Doe", "runtime": 2.0},
-            {"name": "Jane Doe", "runtime": 2.5},
-            {"name": "Chris Doe", "runtime": 3.0},
-            {"name": "Emily Doe", "runtime": 3.2},
-            {"name": "Michael Doe", "runtime": 3.5},
-            {"name": "Sarah Doe", "runtime": 4.0},
-            {"name": "David Doe", "runtime": 4.5},
-            {"name": "Laura Doe", "runtime": 5.0},
-            {"name": "Tom Doe", "runtime": 5.5},
-        ],
+            {"name": "Bob Smith", "runtime": 2.5},
+            {"name": "Charlie Brown", "runtime": 3.0},
+            {"name": "Diana Prince", "runtime": 3.5},
+            {"name": "Ethan Hunt", "runtime": 4.0},
+            {"name": "Fiona Gallagher", "runtime": 4.5},
+            {"name": "George Costanza", "runtime": 5.0},
+            {"name": "Hannah Montana", "runtime": 5.5},
+            {"name": "Ivy League", "runtime": 6.0},
+        ]
     }
 
 

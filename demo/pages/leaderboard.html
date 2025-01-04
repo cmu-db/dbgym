@@ -1,0 +1,79 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Leaderboard</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <style>
+        table {
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header-bar">
+        <h1>Leaderboard</h1>
+        <div id="timerDisplay"></div>
+        <button class="next-button" onclick="window.location.href='welcome.html';">Restart ↺</button>
+    </div>
+
+    <div class="container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Runtime (sec)</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTableBody">
+                <!-- Leaderboard will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+
+    <script>
+        // Function to populate the leaderboard table
+        function populateLeaderboard() {
+            fetch('http://localhost:15721/leaderboard') // Fetch data from the leaderboard endpoint
+                .then(response => response.json())
+                .then(data => {
+                    const leaderboardTableBody = document.getElementById('leaderboardTableBody');
+
+                    if (data.top_results) {
+                        // Add leaderboard results to the table
+                        data.top_results.forEach((result, index) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${index + 1}</td>
+                                <td>${result.name}</td>
+                                <td>${result.runtime}</td>
+                            `;
+                            leaderboardTableBody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => console.error("Error fetching leaderboard data:", error));
+        }
+
+        // Call the function to populate leaderboard on page load
+        window.onload = populateLeaderboard;
+    </script>
+</body>
