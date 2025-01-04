@@ -45,7 +45,7 @@
         }
         #barrel {
             width: 100px;
-            animation: squish 0.5s ease-in-out 0.1s, spin 1.4s ease-in-out 1.5s infinite;
+            animation: squish 0.5s ease-in-out 0.1s, spin 1.2s ease-in-out 1.2s infinite;
         }
     </style>
 </head>
@@ -79,7 +79,7 @@
             
             // Send POST request to the backend server on port 15721
             try {
-                const response = await fetch('http://localhost:15721/api/example', {
+                const response = await fetch('http://localhost:15721/submit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

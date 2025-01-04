@@ -5,4 +5,11 @@ if (userData) {
     console.log('Current User Data JSON:', JSON.parse(userData));
 } else {
     console.log('No user data found in local storage.');
+}
+
+const results = localStorage.getItem('results');
+if (results) {
+    console.log('Current Results JSON:', JSON.parse(results));
+} else {
+    console.log('No results found in local storage.');
 }">Print JSON to Console</button>

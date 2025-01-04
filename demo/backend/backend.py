@@ -18,11 +18,31 @@ app = Flask(__name__)
 CORS(app)
 
 
-@app.route('/api/example', methods=['POST'])
-def example_post():
-    data = request.json
+@app.route('/submit', methods=['POST'])
+def submit():
+    # data = request.json
+    data = {"name": "John Doe"}
     time.sleep(5)
-    return {"runtime": 2.5, "did_time_out": False}
+    return {
+        "your_results": {
+            "name": data["name"],
+            "runtime": 8.5,
+            "in_top_results": False,
+            "rank": 18,
+        },
+        "top_results": [
+            {"name": "Alice Doe", "runtime": 1.5},
+            {"name": "John Doe", "runtime": 2.0},
+            {"name": "Jane Doe", "runtime": 2.5},
+            {"name": "Chris Doe", "runtime": 3.0},
+            {"name": "Emily Doe", "runtime": 3.2},
+            {"name": "Michael Doe", "runtime": 3.5},
+            {"name": "Sarah Doe", "runtime": 4.0},
+            {"name": "David Doe", "runtime": 4.5},
+            {"name": "Laura Doe", "runtime": 5.0},
+            {"name": "Tom Doe", "runtime": 5.5},
+        ],
+    }
 
 
 class DemoBackend:
