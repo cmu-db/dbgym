@@ -47,6 +47,9 @@
             width: 100px;
             animation: squish 0.5s ease-in-out 0.1s, spin 1.2s ease-in-out 1.2s infinite;
         }
+        .no-animation {
+            animation: none !important;
+        }
     </style>
 </head>
 <body>
@@ -97,7 +100,7 @@
                 });
                 const data = await response.json();
                 localStorage.setItem('results', JSON.stringify(data));
-                // window.location.href = 'results.html';
+                document.getElementById('barrel').classList.add('no-animation');
             } catch (error) {
                 console.error('Error sending POST request:', error);
             }
