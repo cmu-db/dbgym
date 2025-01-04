@@ -58,7 +58,7 @@
         <strong>Submission Complete!</strong><br>
         <br>
         <br>
-        <em>Give us a few seconds to evaluate it...</em>
+        <em>Give us a few seconds to evaluate it<span id="dot-animation">.</span></em>
     </div>
 
     <div class="centered-logo">
@@ -76,6 +76,15 @@
                     gravity: 1
                 });
             }, 550);
+
+            // Dot animation logic
+            const dotElement = document.getElementById('dot-animation');
+            let dotCount = 1;
+
+            setInterval(() => {
+                dotElement.textContent = '.'.repeat(dotCount);
+                dotCount = (dotCount % 3) + 1; // Cycle through 1, 2, 3
+            }, 300); // Change every 0.5 seconds
             
             // Send POST request to the backend server on port 15721
             try {
@@ -88,7 +97,7 @@
                 });
                 const data = await response.json();
                 localStorage.setItem('results', JSON.stringify(data));
-                window.location.href = 'results.html';
+                // window.location.href = 'results.html';
             } catch (error) {
                 console.error('Error sending POST request:', error);
             }
