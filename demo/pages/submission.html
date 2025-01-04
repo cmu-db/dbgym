@@ -12,7 +12,6 @@
             height: 100%;
         }
         .centered-text {
-            padding-top: 100px;
             font-size: 25px;
             text-align: center;
             color: #c41230;
@@ -57,11 +56,12 @@
         <h1>Submission Complete!</h1>
     </div>
 
-    <div class="centered-text">
+    <div class="centered-text" id="submission-complete-text" style="padding-top: 100px;">
         <strong>Submission Complete!</strong><br>
-        <br>
-        <br>
-        <em>Give us a few seconds to evaluate it<span id="dot-animation">.</span></em>
+    </div>
+    
+    <div class="centered-text" style="padding-top: 40px;">
+        <span id="runtime-text"><em>Give us a few seconds to evaluate it<span id="dot-animation">.</span></em></span>
     </div>
 
     <div class="centered-logo">
@@ -101,6 +101,10 @@
                 const data = await response.json();
                 localStorage.setItem('results', JSON.stringify(data));
                 document.getElementById('barrel').classList.add('no-animation');
+                document.getElementById('barrel').src = '../assets/checkmark.svg';
+                const runtime = data.your_results.runtime;
+                document.getElementById('runtime-text').innerHTML = `<span style="color: #90d67b;">Your Runtime:</span> <strong style="color: black;">${runtime} seconds</strong>`;
+                document.getElementById('submission-complete-text').style.visibility = 'hidden';
             } catch (error) {
                 console.error('Error sending POST request:', error);
             }

@@ -22,7 +22,7 @@ CORS(app)
 def submit():
     # data = request.json
     data = {"name": "John Doe"}
-    time.sleep(5)
+    time.sleep(2)
     return {
         "your_results": {
             "name": data["name"],
