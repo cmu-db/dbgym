@@ -11,14 +11,17 @@ from gymlib.pg_conn import PostgresConn
 from gymlib.workload import Workload
 from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route('/api/example', methods=['POST'])
 def example_post():
-    time.sleep(2)
+    data = request.json
+    time.sleep(5)
     return {"runtime": 2.5, "did_time_out": False}
 
 

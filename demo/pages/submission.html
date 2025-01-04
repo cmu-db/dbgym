@@ -66,7 +66,8 @@
     </div>
 
     <script>
-        window.onload = function() {
+        window.onload = async function() {
+            // Confetti effect
             setTimeout(() => {
                 confetti({
                     colors: ['#c41230'],
@@ -75,6 +76,22 @@
                     gravity: 1
                 });
             }, 550);
+            
+            // Send POST request to the backend server on port 15721
+            try {
+                const response = await fetch('http://localhost:15721/api/example', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: 'Submission completed' })
+                });
+                const data = await response.json();
+                localStorage.setItem('results', JSON.stringify(data));
+                window.location.href = 'leaderboard.html';
+            } catch (error) {
+                console.error('Error sending POST request:', error);
+            }
         };
     </script>
     
