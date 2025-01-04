@@ -88,7 +88,7 @@
                 });
                 const data = await response.json();
                 localStorage.setItem('results', JSON.stringify(data));
-                window.location.href = 'leaderboard.html';
+                window.location.href = 'results.html';
             } catch (error) {
                 console.error('Error sending POST request:', error);
             }

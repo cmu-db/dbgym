@@ -46,7 +46,7 @@ function setText(startTime) {
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == '/pages/welcome.html') {
         clearTimer();
-    } else if (window.location.pathname == '/pages/leaderboard.html') {
+    } else if (window.location.pathname == '/pages/results.html') {
         loadPausedTimer();
     } else {
         continueTimer();
