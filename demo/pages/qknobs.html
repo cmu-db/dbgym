@@ -15,7 +15,7 @@
     <div class="header-bar">
         <h1>Step 3/3: Per-Query Knobs</h1>
         <div id="timerDisplay"></div>
-        <button class="next-button" onclick="saveAndMoveToSubmission()">Submit →</button>
+        <button class="next-button" onclick="saveToUserData(); window.location.href='submission.html';">Submit →</button>
     </div>
 
     <div class="container">
@@ -127,7 +127,7 @@
     </div>
 
     <script>
-        function saveAndMoveToSubmission() {
+        function saveToUserData() {
             // Retrieve existing userData from local storage
             const userData = JSON.parse(localStorage.getItem('userData')) || {};
 
@@ -149,11 +149,6 @@
 
             // Save updated userData back to local storage
             localStorage.setItem('userData', JSON.stringify(userData));
-
-            console.log(userData); // For demonstration, log the userData
-
-            // Redirect to the submission page
-            window.location.href = 'submission.html';
         }
     </script>
 </body>

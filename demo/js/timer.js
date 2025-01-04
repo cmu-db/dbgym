@@ -1,6 +1,6 @@
 // Constant for the total timer duration in seconds
 // Remember to update welcome.html to match this value
-const TIMER_DURATION = 2; // DEBUG: change it back to 60
+const TIMER_DURATION = 5; // DEBUG: change it back to 60
 
 let timerInterval;
 
@@ -44,8 +44,6 @@ function setText(startTime) {
 
 // Call loadTimer on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log(window.location.pathname);
-
     if (window.location.pathname == '/pages/welcome.html') {
         clearTimer();
     } else if (window.location.pathname == '/pages/leaderboard.html') {
