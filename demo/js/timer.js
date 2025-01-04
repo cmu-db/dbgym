@@ -1,3 +1,7 @@
+// Constant for the total timer duration in seconds
+// Remember to update welcome.html to match this value
+const TIMER_DURATION = 2; // DEBUG: change it back to 60
+
 let timerInterval;
 
 function startTimer() {
@@ -25,11 +29,16 @@ function clearTimer() {
 
 function setText(startTime) {
     if (!startTime) {
-        document.getElementById('timerDisplay').innerText = `60.0s Remaining`;
+        document.getElementById('timerDisplay').innerText = `${TIMER_DURATION}.0s Remaining`;
     } else {
         const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
-        const remainingTime = Math.max(0, 60 - elapsedTime);
+        const remainingTime = Math.max(0, TIMER_DURATION - elapsedTime);
         document.getElementById('timerDisplay').innerText = `${remainingTime.toFixed(1)}s Remaining`;
+
+        // Show the popup when time is up
+        if (remainingTime <= 0) {
+            document.getElementById('timesUpPopup').style.display = 'flex';
+        }
     }
 }
 

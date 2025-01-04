@@ -128,19 +128,32 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
+
+    <script src="../js/timer.js"></script>
+
+    <div id="timesUpPopupContainer">
+        <script>
+            fetch('../components/timesUpPopup.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('timesUpPopupContainer').innerHTML = data;
+                })
+                .then(data => {
+                    // timer.js calls setText() but it might call it before the popup is loaded.
+                    const startTime = localStorage.getItem('startTime');
+                    setText(startTime);
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
 </body>
 
-<script src="../js/timer.js"></script>
-
 <script>
-    let indexes = [];
-
-    // Function to clear indexes in userData on page load
     function clearIndexes() {
         // Retrieve existing userData from local storage
         const userData = JSON.parse(localStorage.getItem('userData')) || {};
-
-        // Clear the indexes array
+        
+        // Clear the indexes in userData
         userData.indexes = []; // Set indexes to an empty array
 
         // Save the updated userData back to local storage
@@ -150,8 +163,6 @@
     // Call clearIndexes when the page loads
     window.onload = function() {
         clearIndexes();
-        // Optionally, you can also initialize the indexes array if needed
-        indexes = [];
     };
 
     function addIndex(event) {
@@ -161,12 +172,9 @@
         
         if (indexTable && indexColumn) {
             const newIndex = { table: indexTable, column: indexColumn }; // Create a new index object
-            indexes.push(newIndex); // Store the new index
 
             // Retrieve existing userData from local storage
             const userData = JSON.parse(localStorage.getItem('userData')) || {};
-
-            // Add the new index to the userData
             userData.indexes = userData.indexes || []; // Initialize if it doesn't exist
             userData.indexes.push(newIndex); // Add the new index
 
@@ -175,19 +183,16 @@
 
             document.getElementById('indexTable').value = '';
             document.getElementById('indexColumn').value = ''; // Clear the column selection
-            updateTable();
+            updateTable(); // Update the displayed table
         }
     }
 
     function deleteIndex(index) {
-        // Remove the index from the local indexes array
-        indexes = indexes.filter((_, i) => i !== index); // Remove the index from the array
-
         // Retrieve existing userData from local storage
         const userData = JSON.parse(localStorage.getItem('userData')) || {};
-
-        // Remove the index from the userData
         userData.indexes = userData.indexes || []; // Ensure indexes exists
+
+        // Remove the index from userData
         userData.indexes.splice(index, 1); // Remove the index from userData
 
         // Save the updated userData back to local storage
@@ -199,7 +204,11 @@
     function updateTable() {
         const tableBody = document.getElementById('indexTableBody');
         tableBody.innerHTML = '';
-        
+
+        // Retrieve existing userData from local storage
+        const userData = JSON.parse(localStorage.getItem('userData')) || {};
+        const indexes = userData.indexes || []; // Get indexes from userData
+
         indexes.forEach((index, i) => {
             const row = document.createElement('tr');
             row.innerHTML = `

@@ -82,6 +82,22 @@
 
     <script src="../js/timer.js"></script>
 
+    <div id="timesUpPopupContainer">
+        <script>
+            fetch('../components/timesUpPopup.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('timesUpPopupContainer').innerHTML = data;
+                })
+                .then(data => {
+                    // timer.js calls setText() but it might call it before the popup is loaded.
+                    const startTime = localStorage.getItem('startTime');
+                    setText(startTime);
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+
     <script>
         function saveAndMoveToQueryKnobs() {
             // Retrieve existing userData from local storage

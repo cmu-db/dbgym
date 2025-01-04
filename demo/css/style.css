@@ -20,7 +20,7 @@ body {
     margin: 0;
 }
 
-.next-button, #popupButton {
+.next-button, #popupButton, #timesUpPopupSubmitButton {
     padding: 8px 20px;
     cursor: pointer;
     font-size: 16px;
@@ -28,11 +28,11 @@ body {
     box-shadow: none;
 }
 
-.next-button {
+.next-button, #timesUpPopupSubmitButton {
     background-color: white;
 }
 
-.next-button:hover {
+.next-button:hover, #timesUpPopupSubmitButton:hover {
     background-color: #e8ebee;
 }
 
