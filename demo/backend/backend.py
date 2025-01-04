@@ -1,3 +1,4 @@
+import time
 from gymlib.infra_paths import (
     DEFAULT_SCALE_FACTOR,
     get_dbdata_tgz_symlink_path,
@@ -9,8 +10,19 @@ from gymlib.pg import DEFAULT_POSTGRES_PORT
 from gymlib.pg_conn import PostgresConn
 from gymlib.workload import Workload
 from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
+from flask import Flask, jsonify, request
 
-class Backend:
+
+app = Flask(__name__)
+
+
+@app.route('/api/example', methods=['POST'])
+def example_post():
+    time.sleep(2)
+    return {"runtime": 2.5, "did_time_out": False}
+
+
+class DemoBackend:
     def __init__(self):
         self.dbgym_workspace = make_standard_dbgym_workspace()
         self.pg_conn = PostgresConn(
@@ -49,6 +61,4 @@ class Backend:
 
 
 if __name__ == "__main__":
-    backend = Backend()
-    backend.time_workload()
-    backend.shutdown_postgres()
+    app.run(host="0.0.0.0", port=15721)
