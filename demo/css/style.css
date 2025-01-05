@@ -20,6 +20,10 @@ body {
     margin: 0;
 }
 
+button {
+    cursor: pointer;
+}
+
 .next-button, #popupButton, #timesUpPopupSubmitButton {
     padding: 8px 20px;
     cursor: pointer;
@@ -89,4 +93,8 @@ body {
     margin-right: 20px;
     flex-grow: 1;
     text-align: right;
+}
+
+select {
+    cursor: pointer;
 }
