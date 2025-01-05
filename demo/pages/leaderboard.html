@@ -86,7 +86,7 @@
                 // This means the user entered the leaderboard page directly and doesn't have results at all, so we don't show the "no name" message.
             }
 
-            fetch('http://localhost:15721/leaderboard') // Fetch data from the leaderboard endpoint
+            fetch('http://100.86.219.84:15721/leaderboard') // Fetch data from the leaderboard endpoint
                 .then(response => response.json())
                 .then(data => {
                     // Clear the table before populating

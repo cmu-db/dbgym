@@ -1,3 +1,4 @@
+import sys
 import time
 from gymlib.infra_paths import (
     DEFAULT_SCALE_FACTOR,
@@ -10,7 +11,7 @@ from gymlib.pg import DEFAULT_POSTGRES_PORT
 from gymlib.pg_conn import PostgresConn
 from gymlib.workload import Workload
 from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
-from flask import Flask, jsonify, request
+from flask import Flask
 from flask_cors import CORS
 
 
@@ -85,4 +86,5 @@ class DemoBackend:
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=15721)
+    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    app.run(host=host, port=15721)
