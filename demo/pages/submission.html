@@ -100,7 +100,7 @@
                     body: JSON.stringify({ message: 'Submission completed' })
                 });
                 const data = await response.json();
-                localStorage.setItem('your_results', JSON.stringify(data));
+                localStorage.setItem('yourResults', JSON.stringify(data));
                 document.getElementById('barrel').classList.add('no-animation');
                 document.getElementById('barrel').src = '../assets/checkmark.svg';
                 const runtime = data.runtime;

@@ -3,9 +3,6 @@
     <title>Leaderboard</title>
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
-        table {
-            padding: 20px;
-        }
         .container {
             display: flex;
             flex-direction: column;
@@ -22,6 +19,14 @@
     </div>
 
     <div class="container">
+        <div id="yourResultsContainer" style="display: none; text-align: center;">
+            <h2>Your Results</h2>
+            <p><strong>Name:</strong> <span id="yourName"></span> | <strong>Runtime:</strong> <span id="yourRuntime"></span> seconds | <strong>Rank:</strong> <span id="yourRank"></span></p>
+        </div>
+        <div id="noNameContainer" style="margin-top: 20px; display: none;">
+            <em>Note: you didn't enter a name so your results are not stored in the leaderboard.</em>
+        </div>
+        <h2>Top Results</h2>
         <table>
             <thead>
                 <tr>
@@ -51,24 +56,61 @@
 
     <script>
         // Function to populate the leaderboard table
+        // It uses both the user's own result (if there is one and if the user has a name) as well
+        // as the latest leaderboard data from the backend.
         function populateLeaderboard() {
+            // The user's own result, if it exists, will be in localStorage.
+            // This is displayed at the top. Also, if the user is in the top results, we'll highlight their row.
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            const results = JSON.parse(localStorage.getItem('yourResults'));
+            const name = userData && userData.welcomeData && userData.welcomeData.name ? userData.welcomeData.name : null; // Store name or null
+            const runtime = results ? results.runtime : null; // Store runtime or null
+            const rank = results ? results.rank : null; // Store rank or null
+            if (runtime && rank) {
+                if (name) {
+                    const yourName = document.getElementById('yourName');
+                    yourName.textContent = name;
+
+                    const yourRuntime = document.getElementById('yourRuntime');
+                    yourRuntime.textContent = runtime;
+                    const yourRank = document.getElementById('yourRank');
+                    // There is a small possible bug where this rank is not the most up-to-date rank in the leaderboard.
+                    // I'm going to ignore this bug since this is just a demo.
+                    yourRank.textContent = results.rank;
+                    document.getElementById('yourResultsContainer').style.display = 'block';
+                } else {
+                    document.getElementById('noNameContainer').style.display = 'block';
+                }
+            } else {
+                // Do nothing.
+                // This means the user entered the leaderboard page directly and doesn't have results at all, so we don't show the "no name" message.
+            }
+
             fetch('http://localhost:15721/leaderboard') // Fetch data from the leaderboard endpoint
                 .then(response => response.json())
                 .then(data => {
+                    // Clear the table before populating
                     const leaderboardTableBody = document.getElementById('leaderboardTableBody');
+                    leaderboardTableBody.innerHTML = '';
 
-                    if (data.top_results) {
-                        // Add leaderboard results to the table
-                        data.top_results.forEach((result, index) => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${index + 1}</td>
-                                <td>${result.name}</td>
-                                <td>${result.runtime}</td>
-                            `;
-                            leaderboardTableBody.appendChild(row);
-                        });
-                    }
+                    // Add leaderboard results to the table
+                    data.top_results.forEach((result, index) => {
+                        const row = document.createElement('tr');
+                        // Check if the current result matches the user's name and runtime
+                        // Note that we *don't* check whether the rank matches. Thus, if the rank is not the most up-to-date,
+                        // we'll still render this table correctly.
+                        // Even if multiple rows match it's not a big deal.
+                        if (result.name === name && result.runtime === runtime) {
+                            row.style.color = 'red';
+                            row.style.fontWeight = 'bold';
+                        }
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${result.name}</td>
+                            <td>${result.runtime}</td>
+                        `;
+                        leaderboardTableBody.appendChild(row);
+                    });
                 })
                 .catch(error => console.error("Error fetching leaderboard data:", error));
         }

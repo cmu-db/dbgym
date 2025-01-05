@@ -33,7 +33,7 @@
     <div class="header-bar">
         <h1>Database Gym</h1>
         <div id="timerDisplay"></div>
-        <button class="next-button" onclick="saveAndMoveToIndexes()">Begin →</button>
+        <button class="next-button" onclick="initializeAndMoveToIndexes()">Begin →</button>
     </div>
 
     <div class="welcomeContainer">
@@ -79,9 +79,8 @@
 
     <script>
         window.onload = function() {
-            // Clear userData on page load
-            const userData = {};
-            localStorage.setItem('userData', JSON.stringify(userData));
+            // Clear localStorage
+            localStorage.clear();
         };
 
         function initializeAndMoveToIndexes() {

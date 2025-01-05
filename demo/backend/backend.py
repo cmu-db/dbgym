@@ -21,12 +21,10 @@ CORS(app)
 @app.route('/submit', methods=['POST'])
 def submit():
     # data = request.json
-    data = {"name": "John Doe"}
     time.sleep(2)
     return {
-        "name": data["name"],
-        "runtime": 8.5,
-        "rank": 18,
+        "runtime": 2.0,
+        "rank": 2,
     }
 
 
