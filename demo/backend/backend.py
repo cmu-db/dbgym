@@ -22,9 +22,17 @@ CORS(app)
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
     # data = request.json
-    runtime, _ = demo_backend.time_workload()
+
+    # Run multiple trials and take the average since it's so short.
+    NUM_TRIALS = 3
+    total_runtime_us = 0
+    for _ in range(NUM_TRIALS):
+        runtime_us, _ = demo_backend.time_workload()
+        total_runtime_us += runtime_us
+    average_runtime_us = total_runtime_us / NUM_TRIALS
+    runtime_s = average_runtime_us / 1_000_000
     return {
-        "runtime": runtime,
+        "runtime": runtime_s,
         "rank": 2,
     }
 
@@ -60,7 +68,7 @@ class DemoBackend:
                     DEFAULT_SCALE_FACTOR,
                 )
             ),
-            self.dbgym_workspace.dbgym_tmp_path,
+            fully_resolve_path(".."),
             fully_resolve_path(
                 get_pgbin_symlink_path(self.dbgym_workspace.dbgym_workspace_path)
             ),
@@ -77,7 +85,12 @@ class DemoBackend:
                 )
             ),
         )
-        self.pg_conn.restore_pristine_snapshot()
+
+        # We put dbdata in a place where it won't get deleted every time.
+        # Thus, we only need to do this once ever. It usually takes 44s to restore so it's good to cache it.
+        if not self.pg_conn.dbdata_path.exists():
+            self.pg_conn.restore_pristine_snapshot()
+
         self.pg_conn.restart_postgres()
 
     def time_workload(self) -> tuple[float, int]:

@@ -104,7 +104,7 @@
                 document.getElementById('barrel').classList.add('no-animation');
                 document.getElementById('barrel').src = '../assets/checkmark.svg';
                 const runtime = data.runtime;
-                document.getElementById('runtime-text').innerHTML = `<span style="color: #90d67b;">Your Runtime:</span> <strong style="color: black;">${runtime} seconds</strong>`;
+                document.getElementById('runtime-text').innerHTML = `<span style="color: #90d67b;">Your Runtime:</span> <strong style="color: black;">${Number(runtime).toFixed(3)} seconds</strong>`;
                 document.getElementById('submission-complete-text').style.visibility = 'hidden';
                 document.querySelector('.next-button').style.visibility = 'visible';
             } catch (error) {
