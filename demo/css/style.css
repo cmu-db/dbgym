@@ -28,7 +28,7 @@ button {
 .next-button, #popupButton, #timesUpPopupSubmitButton {
     padding: 8px 20px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: bold;
     box-shadow: none;
 }
@@ -80,4 +80,9 @@ button {
 
 select {
     cursor: pointer;
+    font-size: 20px;
+}
+
+button {
+    font-size: 16px;
 }
