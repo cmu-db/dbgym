@@ -41,20 +41,6 @@ button {
     background-color: #e8ebee;
 }
 
-.query-text {
-    font-size: 16px;
-    font-family: monospace;
-}
-.query-red {
-    color: red;
-}
-.query-lightblue {
-    color: #4ea3ff;
-}
-.query-darkblue {
-    color: rgb(17, 17, 255);
-}
-
 .actionsContainer {
     display: flex;
     flex-direction: column;
@@ -69,10 +55,6 @@ button {
 #queriesContainer {
     width: 50%;
     margin-top: 20px;
-}
-
-#queriesTable {
-    border-spacing: 15px;
 }
 
 #cmu-db-logo {

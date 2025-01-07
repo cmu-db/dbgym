@@ -101,7 +101,7 @@
         </div>
         
         <div id="queriesContainer">
-            <script src="../js/loadQueries.js"></script>
+            <script src="../js/queriesScripts.js"></script>
             <script>
                 fetch('../components/queries.html')
                     .then(response => response.text())
@@ -110,6 +110,7 @@
                     })
                     .then(data => {
                         initializePopup();
+                        initializeAccordion();
                     })
                     .catch(error => console.error("Error loading popup:", error));
             </script>

@@ -1,17 +1,82 @@
-<table id="queriesTable">
-    <caption style="font-size: 20px;"><strong>Queries</strong></caption>
-    <tbody>
-        <tr>
-            <td>Q1</td>
-            <td class="query-text" id="query1View"></td>
-        </tr>
-        <tr>
-            <td>Q2</td>
-            <td class="query-text" id="query2View"></td>
-        </tr>
-        <tr>
-            <td>Q3</td>
-            <td class="query-text" id="query3View"></td>
-        </tr>
-    </tbody>
-</table>
+<div class="accordion-container">
+    <div class="accordion-item">
+        <h3 class="accordion-header">
+            <span class="triangle">▶</span>
+            Q1
+        </h3>
+        <div class="panel">
+            <p class="query-text" id="query1View"></p>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h3 class="accordion-header">
+            <span class="triangle">▶</span>
+            Q2
+        </h3>
+        <div class="panel">
+            <p class="query-text" id="query2View"></p>
+        </div>
+    </div>
+    <div class="accordion-item">
+        <h3 class="accordion-header">
+            <span class="triangle">▶</span>
+            Q3
+        </h3>
+        <div class="panel">
+            <p class="query-text" id="query3View"></p>
+        </div>
+    </div>
+</div>
+
+<style>
+.accordion-container {
+    width: 100%;
+}
+
+.accordion-item {
+    margin-bottom: 5px;
+}
+
+.accordion-header {
+    cursor: pointer;
+    padding: 10px;
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    margin: 0;
+}
+
+.panel {
+    display: none;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+
+.accordion-header.active {
+    background-color: #e7e7e7;
+}
+
+.query-text {
+    font-size: 16px;
+    font-family: monospace;
+}
+.query-red {
+    color: red;
+}
+.query-lightblue {
+    color: #4ea3ff;
+}
+.query-darkblue {
+    color: rgb(17, 17, 255);
+}
+
+.triangle {
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+}
+
+.accordion-header.active .triangle {
+    transform: rotate(90deg);
+}
+</style>

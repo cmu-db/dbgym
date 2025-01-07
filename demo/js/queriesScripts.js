@@ -20,3 +20,18 @@ function initializePopup() {
         })
         .catch(error => console.error('Error loading HTML:', error));
 }
+
+function initializeAccordion() {
+    const headers = document.getElementsByClassName("accordion-header");
+    for (let i = 0; i < headers.length; i++) {
+        headers[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            const panel = this.nextElementSibling;
+            if (panel.style.display === "block") {
+                panel.style.display = "none";
+            } else {
+                panel.style.display = "block";
+            }
+        });
+    }
+}

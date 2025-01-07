@@ -116,123 +116,63 @@ def query_to_html(query: str) -> str:
 
 
 if __name__ == "__main__":
-    query1a = """SELECT MIN(mc.note) AS production_note,
-       MIN(t.title) AS movie_title,
-       MIN(t.production_year) AS movie_year<br>
-FROM company_type AS ct,
-     info_type AS it,
-     movie_companies AS mc,
-     movie_info_idx AS mi_idx,
-     title AS t<br>
-WHERE ct.kind = 'production companies'
-  AND it.info = 'top 250 rank'
-  AND mc.note NOT LIKE '%(as Metro-Goldwyn-Mayer Pictures)%'
-  AND (mc.note LIKE '%(co-production)%'
-       OR mc.note LIKE '%(presents)%')
-  AND ct.id = mc.company_type_id
-  AND t.id = mc.movie_id
-  AND t.id = mi_idx.movie_id
-  AND mc.movie_id = mi_idx.movie_id
-  AND it.id = mi_idx.info_type_id;"""
+    query1a = """
+SELECT MIN(mc.note) AS production_note,<br>
+    &nbsp;MIN(t.title) AS movie_title,<br>
+    &nbsp;MIN(t.production_year) AS movie_year<br>
+FROM company_type AS ct,<br>
+    &nbsp;info_type AS it,<br>
+    &nbsp;movie_companies AS mc,<br>
+    &nbsp;movie_info_idx AS mi_idx,<br>
+    &nbsp;title AS t<br>
+WHERE ct.kind = 'production companies'<br>
+    &nbsp;AND it.info = 'top 250 rank'<br>
+    &nbsp;AND mc.note NOT LIKE '%(as Metro-Goldwyn-Mayer Pictures)%'<br>
+    &nbsp;AND (mc.note LIKE '%(co-production)%'<br>
+        &nbsp;&nbsp;OR mc.note LIKE '%(presents)%')<br>
+    &nbsp;AND ct.id = mc.company_type_id<br>
+    &nbsp;AND t.id = mc.movie_id<br>
+    &nbsp;AND t.id = mi_idx.movie_id<br>
+    &nbsp;AND mc.movie_id = mi_idx.movie_id<br>
+    &nbsp;AND it.id = mi_idx.info_type_id;"""
 
-    query2a = """SELECT MIN(t.title) AS movie_title<br>
-FROM company_name AS cn,
-     keyword AS k,
-     movie_companies AS mc,
-     movie_keyword AS mk,
-     title AS t<br>
-WHERE cn.country_code = '[de]'
-  AND k.keyword = 'character-name-in-title'
-  AND cn.id = mc.company_id
-  AND mc.movie_id = t.id
-  AND t.id = mk.movie_id
-  AND mk.keyword_id = k.id
-  AND mc.movie_id = mk.movie_id;"""
-
-    query3b = """SELECT MIN(t.title) AS movie_title
-FROM keyword AS k,
-     movie_info AS mi,
-     movie_keyword AS mk,
-     title AS t
-WHERE k.keyword LIKE '%sequel%'
-  AND mi.info IN ('Bulgaria')
-  AND t.production_year > 2010
-  AND t.id = mi.movie_id
-  AND t.id = mk.movie_id
-  AND mk.movie_id = mi.movie_id
-  AND k.id = mk.keyword_id;"""
+    query2a = """
+SELECT MIN(t.title) AS movie_title<br>
+FROM company_name AS cn,<br>
+    &nbsp;keyword AS k,<br>
+    &nbsp;movie_companies AS mc,<br>
+    &nbsp;movie_keyword AS mk,<br>
+    &nbsp;title AS t<br>
+WHERE cn.country_code = '[de]'<br>
+    &nbsp;AND k.keyword = 'character-name-in-title'<br>
+    &nbsp;AND cn.id = mc.company_id<br>
+    &nbsp;AND mc.movie_id = t.id<br>
+    &nbsp;AND t.id = mk.movie_id<br>
+    &nbsp;AND mk.keyword_id = k.id<br>
+    &nbsp;AND mc.movie_id = mk.movie_id;"""
     
-    query4a = """SELECT MIN(mi_idx.info) AS rating,
-       MIN(t.title) AS movie_title<br>
-FROM info_type AS it,
-     keyword AS k,
-     movie_info_idx AS mi_idx,
-     movie_keyword AS mk,
-     title AS t<br>
-WHERE it.info = 'rating'
-  AND k.keyword LIKE '%sequel%'
-  AND mi_idx.info > '5.0'
-  AND t.production_year > 2005
-  AND t.id = mi_idx.movie_id
-  AND t.id = mk.movie_id
-  AND mk.movie_id = mi_idx.movie_id
-  AND k.id = mk.keyword_id
-  AND it.id = mi_idx.info_type_id;"""
-
-    query6a = """SELECT MIN(k.keyword) AS movie_keyword,
-       MIN(n.name) AS actor_name,
-       MIN(t.title) AS marvel_movie<br>
-FROM cast_info AS ci,
-     keyword AS k,
-     movie_keyword AS mk,
-     name AS n,
-     title AS t<br>
-WHERE k.keyword = 'marvel-cinematic-universe'
-  AND n.name LIKE '%Downey%Robert%'
-  AND t.production_year > 2010
-  AND k.id = mk.keyword_id
-  AND t.id = mk.movie_id
-  AND t.id = ci.movie_id
-  AND ci.movie_id = mk.movie_id
-  AND n.id = ci.person_id;"""
-
-    query11a = """SELECT MIN(cn.name) AS from_company,
-       MIN(lt.link) AS movie_link_type,
-       MIN(t.title) AS non_polish_sequel_movie<br>
-FROM company_name AS cn,
-     company_type AS ct,
-     keyword AS k,
-     link_type AS lt,
-     movie_companies AS mc,
-     movie_keyword AS mk,
-     movie_link AS ml,
-     title AS t<br>
-WHERE cn.country_code != '[pl]'
-  AND (cn.name LIKE '%Film%'
-       OR cn.name LIKE '%Warner%')
-  AND ct.kind = 'production companies'
-  AND k.keyword = 'sequel'
-  AND lt.link LIKE '%follow%'
-  AND mc.note IS NULL
-  AND t.production_year BETWEEN 1950 AND 2000
-  AND lt.id = ml.link_type_id
-  AND ml.movie_id = t.id
-  AND t.id = mk.movie_id
-  AND mk.keyword_id = k.id
-  AND t.id = mc.movie_id
-  AND mc.company_type_id = ct.id
-  AND mc.company_id = cn.id
-  AND ml.movie_id = mk.movie_id
-  AND ml.movie_id = mc.movie_id
-  AND mk.movie_id = mc.movie_id;"""
+    query4a = """
+SELECT MIN(mi_idx.info) AS rating,<br>
+    &nbsp;MIN(t.title) AS movie_title<br>
+FROM info_type AS it,<br>
+    &nbsp;keyword AS k,<br>
+    &nbsp;movie_info_idx AS mi_idx,<br>
+    &nbsp;movie_keyword AS mk,<br>
+    &nbsp;title AS t<br>
+WHERE it.info = 'rating'<br>
+    &nbsp;AND k.keyword LIKE '%sequel%'<br>
+    &nbsp;AND mi_idx.info > '5.0'<br>
+    &nbsp;AND t.production_year > 2005<br>
+    &nbsp;AND t.id = mi_idx.movie_id<br>
+    &nbsp;AND t.id = mk.movie_id<br>
+    &nbsp;AND mk.movie_id = mi_idx.movie_id<br>
+    &nbsp;AND k.id = mk.keyword_id<br>
+    &nbsp;AND it.id = mi_idx.info_type_id;"""
 
     queries = [
         ("1a", query1a),
         ("2a", query2a),
-        ("3b", query3b),
         ("4a", query4a),
-        ("6a", query6a),
-        ("11a", query11a),
     ]
 
     for query_name, query in queries:
