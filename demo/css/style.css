@@ -2,7 +2,7 @@ body {
     margin: 0;
     padding: 0;
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 20px;
+    font-size: 24px;
 }
 
 .header-bar {
@@ -28,7 +28,7 @@ button {
 .next-button, #popupButton, #timesUpPopupSubmitButton {
     padding: 8px 20px;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: bold;
     box-shadow: none;
 }
@@ -59,9 +59,9 @@ button {
 
 #cmu-db-logo {
     position: fixed;
-    bottom: 15px;
-    left: 15px;
-    height: 35px;
+    bottom: 20px;
+    left: 20px;
+    height: 40px;
 }
 
 #printJsonButton {
@@ -71,7 +71,7 @@ button {
 }
 
 #timerDisplay {
-    font-size: 22px;
+    font-size: 24px;
     color: white;
     margin-right: 20px;
     flex-grow: 1;
@@ -81,8 +81,12 @@ button {
 select {
     cursor: pointer;
     font-size: 20px;
+    padding: 8px 20px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: white;
 }
 
 button {
-    font-size: 16px;
+    font-size: 20px;
 }
