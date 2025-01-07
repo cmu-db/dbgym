@@ -58,14 +58,14 @@ button {
 }
 
 #cmu-db-logo {
-    position: absolute;
+    position: fixed;
     bottom: 15px;
     left: 15px;
     height: 35px;
 }
 
 #printJsonButton {
-    position: absolute;
+    position: fixed;
     bottom: 20px;
     right: 20px;
 }
