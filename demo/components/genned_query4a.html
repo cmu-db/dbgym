@@ -1,0 +1,16 @@
+<span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info</span>) <span class='query-red'>AS</span> rating,
+       <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title<br>
+<span class='query-red'>FROM</span> info_type <span class='query-red'>AS</span> it,
+     keyword <span class='query-red'>AS</span> k,
+     movie_info_idx <span class='query-red'>AS</span> mi_idx,
+     movie_keyword <span class='query-red'>AS</span> mk,
+     title <span class='query-red'>AS</span> t<br>
+<span class='query-red'>WHERE</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>info</span><span class='query-red'> = </span><span class='query-darkblue'>'rating'</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%sequel%'</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info</span><span class='query-red'> > </span><span class='query-darkblue'>'5.0'</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>production_year</span><span class='query-red'> > </span><span class='query-lightblue'>2005</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span>
+  <span class='query-red'>AND</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info_type_id</span>;

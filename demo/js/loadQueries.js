@@ -13,7 +13,7 @@ function initializePopup() {
         })
         .catch(error => console.error('Error loading HTML:', error));
 
-    fetch('/components/genned_query3b.html')
+    fetch('/components/genned_query4a.html')
         .then(response => response.text())
         .then(data => {
             document.getElementById('query3View').innerHTML = data;

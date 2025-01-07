@@ -1,3 +1,7 @@
+"""
+To run, be in dbgym/demo/ and run `python query_html_gen.py`.
+"""
+
 def query_to_html(query: str) -> str:
     assert (
         "='" not in query
@@ -93,6 +97,8 @@ def query_to_html(query: str) -> str:
         "%sequel%",
         "[de]",
         "character-name-in-title",
+        "rating",
+        "5.0",
     ]
     for string in strings:
         query = query.replace(
@@ -100,7 +106,7 @@ def query_to_html(query: str) -> str:
         )
 
     # Numbers
-    numbers = ["1950", "2000", "2010"]
+    numbers = ["1950", "2000", "2010", "2005"]
     for number in numbers:
         query = query.replace(
             f"{number}", f"<span class='query-lightblue'>{number}</span>"
@@ -155,6 +161,23 @@ WHERE k.keyword LIKE '%sequel%'
   AND t.id = mk.movie_id
   AND mk.movie_id = mi.movie_id
   AND k.id = mk.keyword_id;"""
+    
+    query4a = """SELECT MIN(mi_idx.info) AS rating,
+       MIN(t.title) AS movie_title<br>
+FROM info_type AS it,
+     keyword AS k,
+     movie_info_idx AS mi_idx,
+     movie_keyword AS mk,
+     title AS t<br>
+WHERE it.info = 'rating'
+  AND k.keyword LIKE '%sequel%'
+  AND mi_idx.info > '5.0'
+  AND t.production_year > 2005
+  AND t.id = mi_idx.movie_id
+  AND t.id = mk.movie_id
+  AND mk.movie_id = mi_idx.movie_id
+  AND k.id = mk.keyword_id
+  AND it.id = mi_idx.info_type_id;"""
 
     query6a = """SELECT MIN(k.keyword) AS movie_keyword,
        MIN(n.name) AS actor_name,
@@ -207,6 +230,7 @@ WHERE cn.country_code != '[pl]'
         ("1a", query1a),
         ("2a", query2a),
         ("3b", query3b),
+        ("4a", query4a),
         ("6a", query6a),
         ("11a", query11a),
     ]
