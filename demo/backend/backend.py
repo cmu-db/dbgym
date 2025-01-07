@@ -1,5 +1,4 @@
 import sys
-import time
 from gymlib.infra_paths import (
     DEFAULT_SCALE_FACTOR,
     get_dbdata_tgz_symlink_path,
