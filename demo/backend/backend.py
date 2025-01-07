@@ -1,4 +1,8 @@
 import sys
+from typing import Any
+
+from flask import Flask
+from flask_cors import CORS
 from gymlib.infra_paths import (
     DEFAULT_SCALE_FACTOR,
     get_dbdata_tgz_symlink_path,
@@ -10,16 +14,13 @@ from gymlib.pg import DEFAULT_POSTGRES_PORT
 from gymlib.pg_conn import PostgresConn
 from gymlib.workload import Workload
 from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
-from flask import Flask
-from flask_cors import CORS
-
 
 app = Flask(__name__)
 CORS(app)
 
 
-@app.route('/submit', methods=['POST'])
-def submit():
+@app.route("/submit", methods=["POST"])
+def submit() -> dict[str, Any]:
     # data = request.json
     runtime, _ = demo_backend.time_workload()
     return {
@@ -28,8 +29,8 @@ def submit():
     }
 
 
-@app.route('/leaderboard', methods=['GET'])
-def get_leaderboard():
+@app.route("/leaderboard", methods=["GET"])
+def get_leaderboard() -> dict[str, Any]:
     return {
         "top_results": [
             {"name": "Alice Doe", "runtime": 1.5},
@@ -47,14 +48,16 @@ def get_leaderboard():
 
 
 class DemoBackend:
-    def __init__(self):
+    def __init__(self) -> None:
         self.dbgym_workspace = make_standard_dbgym_workspace()
         self.pg_conn = PostgresConn(
             self.dbgym_workspace,
             DEFAULT_POSTGRES_PORT,
             fully_resolve_path(
                 get_dbdata_tgz_symlink_path(
-                    self.dbgym_workspace.dbgym_workspace_path, "job", DEFAULT_SCALE_FACTOR
+                    self.dbgym_workspace.dbgym_workspace_path,
+                    "job",
+                    DEFAULT_SCALE_FACTOR,
                 )
             ),
             self.dbgym_workspace.dbgym_tmp_path,
@@ -77,10 +80,10 @@ class DemoBackend:
         self.pg_conn.restore_pristine_snapshot()
         self.pg_conn.restart_postgres()
 
-    def time_workload(self):
+    def time_workload(self) -> tuple[float, int]:
         return self.pg_conn.time_workload(self.workload)
 
-    def shutdown_postgres(self):
+    def shutdown_postgres(self) -> None:
         self.pg_conn.shutdown_postgres()
 
 

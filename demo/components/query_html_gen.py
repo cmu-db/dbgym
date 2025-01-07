@@ -2,6 +2,7 @@
 To run, be in dbgym/demo/ and run `python query_html_gen.py`.
 """
 
+
 def query_to_html(query: str) -> str:
     assert (
         "='" not in query
@@ -150,7 +151,7 @@ WHERE cn.country_code = '[de]'<br>
     &nbsp;AND t.id = mk.movie_id<br>
     &nbsp;AND mk.keyword_id = k.id<br>
     &nbsp;AND mc.movie_id = mk.movie_id;"""
-    
+
     query4a = """
 SELECT MIN(mi_idx.info) AS rating,<br>
     &nbsp;MIN(t.title) AS movie_title<br>
