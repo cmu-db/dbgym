@@ -75,14 +75,8 @@ class DemoBackend:
                 )
             ),
         )
-        time_start = time.time()
         self.pg_conn.restore_pristine_snapshot()
-        time_end = time.time()
-        print(f"Restore time taken: {time_end - time_start} seconds")
-        time_start = time.time()
         self.pg_conn.restart_postgres()
-        time_end = time.time()
-        print(f"Restart time taken: {time_end - time_start} seconds")
 
     def time_workload(self):
         return self.pg_conn.time_workload(self.workload)
@@ -97,29 +91,5 @@ demo_backend = DemoBackend()
 # TODO: make backend not have to start postgres every time. assert job table if postgres is up
 
 if __name__ == "__main__":
-    # host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    # app.run(host=host, port=15721)
-    time_start = time.time()
-    demo_backend.pg_conn.psql("CREATE INDEX ON cast_info (movie_id);");
-    time_end = time.time()
-    print(f"cast_info (movie_id) index time taken: {time_end - time_start} seconds")
-
-    time_start = time.time()
-    demo_backend.pg_conn.psql("CREATE INDEX ON movie_info (movie_id);");
-    time_end = time.time()
-    print(f"movie_info (movie_id) index time taken: {time_end - time_start} seconds")
-
-    time_start = time.time()
-    demo_backend.pg_conn.psql("CREATE INDEX ON movie_info (info_type_id);");
-    time_end = time.time()
-    print(f"movie_info (info_type_id) index time taken: {time_end - time_start} seconds")
-
-    time_start = time.time()
-    demo_backend.pg_conn.psql("CREATE INDEX ON person_info (person_id);");
-    time_end = time.time()
-    print(f"person_info (person_id) index time taken: {time_end - time_start} seconds")
-
-    time_start = time.time()
-    demo_backend.pg_conn.psql("SELECT 1;");
-    time_end = time.time()
-    print(f"Select 1 time taken: {time_end - time_start} seconds")
+    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    app.run(host=host, port=15721)
