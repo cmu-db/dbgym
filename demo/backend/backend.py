@@ -1,7 +1,7 @@
 import sys
 from typing import Any
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from gymlib.infra_paths import (
     DEFAULT_SCALE_FACTOR,
@@ -21,16 +21,32 @@ CORS(app)
 
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
-    # data = request.json
+    data = request.json
+
+    # Set system knobs (requires database restart).
+
+    # Create indexes. # TODO: create this separately.
+    demo_backend.pg_conn.psql("CREATE INDEX index0 ON movie_companies (movie_id)")
+    demo_backend.pg_conn.psql("CREATE INDEX index1 ON movie_keyword (keyword_id) INCLUDE (movie_id)")
+    demo_backend.pg_conn.psql("CREATE INDEX index2 ON movie_keyword (movie_id) INCLUDE (keyword_id)")
 
     # Run multiple trials and take the average since it's so short.
-    NUM_TRIALS = 3
+    NUM_TRIALS = 1
     total_runtime_us = 0
     for _ in range(NUM_TRIALS):
         runtime_us, _ = demo_backend.time_workload()
         total_runtime_us += runtime_us
     average_runtime_us = total_runtime_us / NUM_TRIALS
     runtime_s = average_runtime_us / 1_000_000
+
+    # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
+    # Next time restart_with_changes() is called, it will make changes from Postgres's default values.
+
+    # Drop all indexes.
+    num_indexes = 10
+    for i in range(num_indexes):
+        demo_backend.pg_conn.psql(f"DROP INDEX IF EXISTS index{i}")
+
     return {
         "runtime": runtime_s,
         "rank": 2,

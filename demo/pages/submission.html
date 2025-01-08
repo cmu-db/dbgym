@@ -97,7 +97,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ message: 'Submission completed' })
+                    body: JSON.stringify(JSON.parse(localStorage.getItem('userData')))
                 });
                 const data = await response.json();
                 localStorage.setItem('yourResults', JSON.stringify(data));

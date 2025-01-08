@@ -36,15 +36,19 @@
                             <option value="64MB">64MB</option>
                             <option value="128MB" selected>128MB</option>
                             <option value="256MB">256MB</option>
+                            <option value="512MB">512MB</option>
+                            <option value="1GB">1GB</option>
                         </select></td>
                     </tr>
                     <tr>
-                        <td>checkpoint_segments</td>
-                        <td>3</td>
-                        <td><select id="checkpoint_segments">
-                            <option value="3" selected>3</option>
-                            <option value="9">9</option>
-                            <option value="27">27</option>
+                        <td>effective_cache_size</td>
+                        <td>4GB</td>
+                        <td><select id="effective_cache_size">
+                            <option value="2GB">2GB</option>
+                            <option value="4GB" selected>4GB</option>
+                            <option value="8GB">8GB</option>
+                            <option value="16GB">16GB</option>
+                            <option value="32GB">32GB</option>
                         </select></td>
                     </tr>
                 </tbody>
@@ -110,7 +114,7 @@
 
             // Get current values from the dropdowns
             sysknobs.shared_buffers = document.getElementById('shared_buffers').value; // Get value of shared_buffers
-            sysknobs.checkpoint_segments = document.getElementById('checkpoint_segments').value; // Get value of checkpoint_segments
+            sysknobs.effective_cache_size = document.getElementById('effective_cache_size').value; // Get value of effective_cache_size
 
             // Update userData with sysknobs
             userData.sysknobs = sysknobs;
