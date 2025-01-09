@@ -1,0 +1,24 @@
+{
+    "comments": [
+        "PGTune settings: DB version = 15, OS Type = Linux, DB Type = Data warehouse, Total Memory = 187GB, Number of CPUs = 80, Number of Connections = 20, Data Storage = SSD"
+    ],
+    "sysknobs": {
+        "max_connections": "20",
+        "shared_buffers": "47872MB",
+        "effective_cache_size": "143616MB",
+        "maintenance_work_mem": "2GB",
+        "checkpoint_completion_target": "0.9",
+        "wal_buffers": "16MB",
+        "default_statistics_target": "500",
+        "random_page_cost": "1.1",
+        "effective_io_concurrency": "200",
+        "work_mem": "30638kB",
+        "huge_pages": "try",
+        "min_wal_size": "4GB",
+        "max_wal_size": "16GB",
+        "max_worker_processes": "80",
+        "max_parallel_workers_per_gather": "40",
+        "max_parallel_workers": "80",
+        "max_parallel_maintenance_workers": "4"
+    }
+}

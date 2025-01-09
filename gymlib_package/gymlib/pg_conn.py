@@ -267,20 +267,21 @@ class PostgresConn:
         multiple changes to `conf_changes`.
         """
         # Install the new configuration changes.
-        if conf_changes is not None:
-            dbdata_auto_conf_path = self.dbdata_path / "postgresql.auto.conf"
-            with open(dbdata_auto_conf_path, "w") as f:
+        dbdata_auto_conf_path = self.dbdata_path / "postgresql.auto.conf"
+        with open(dbdata_auto_conf_path, "w") as f:
+            # If conf_changes is None, we'll essentially end up clearing dbdata_auto_conf_path.
+            if conf_changes is not None:
                 f.write(
                     "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
                     + "\n"
                 )
 
-                assert (
-                    "shared_preload_libraries" not in conf_changes
-                ), f"You should not set shared_preload_libraries manually."
+            assert (
+                conf_changes is None or "shared_preload_libraries" not in conf_changes
+            ), f"You should not set shared_preload_libraries manually."
 
-                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
-                f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
+            # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
+            f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
 
         # Start postgres instance.
         self.shutdown_postgres()

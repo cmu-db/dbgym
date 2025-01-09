@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -19,13 +20,23 @@ app = Flask(__name__)
 CORS(app)
 
 
+def drop_all_indexes() -> None:
+    num_indexes = 5
+    for i in range(num_indexes):
+        demo_backend.pg_conn.psql(f"DROP INDEX IF EXISTS index{i}")
+
+
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
-    data = request.json
+    # data = request.json DEBUG
+    with open("demo/backend/pgtune.json", "r") as f:
+        data = json.load(f)
 
     # Set system knobs (requires database restart).
+    demo_backend.pg_conn.restart_with_changes(data["sysknobs"])
 
     # Create indexes. # TODO: create this separately.
+    drop_all_indexes()
     demo_backend.pg_conn.psql("CREATE INDEX index0 ON movie_companies (movie_id)")
     demo_backend.pg_conn.psql(
         "CREATE INDEX index1 ON movie_keyword (keyword_id) INCLUDE (movie_id)"
@@ -47,10 +58,9 @@ def submit() -> dict[str, Any]:
     # Next time restart_with_changes() is called, it will make changes from Postgres's default values.
 
     # Drop all indexes.
-    num_indexes = 10
-    for i in range(num_indexes):
-        demo_backend.pg_conn.psql(f"DROP INDEX IF EXISTS index{i}")
+    drop_all_indexes()
 
+    print(f"Runtime: {runtime_s:.3f}s")
     return {
         "runtime": runtime_s,
         "rank": 2,
@@ -127,5 +137,5 @@ demo_backend = DemoBackend()
 
 if __name__ == "__main__":
     # host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    # app.run(host=host, port=15721)
+    # app.run(host=host, port=15721) DEBUG
     submit()
