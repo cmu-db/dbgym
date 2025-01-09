@@ -1,5 +1,15 @@
 {
-    "sysknobs": {},
+    "sysknobs": {
+        "shared_buffers": "34MB",
+        "effective_cache_size": "64MB",
+        "checkpoint_completion_target": "0.4",
+        "default_statistics_target": "100",
+        "effective_io_concurrency": "520",
+        "max_worker_processes": "10",
+        "max_parallel_workers_per_gather": "9",
+        "max_parallel_workers": "12",
+        "work_mem": "8MB"
+    },
     "indexes": [
         {
             "table": "movie_companies",
@@ -18,6 +28,75 @@
             "type": "btree",
             "column": "movie_id",
             "include": "keyword_id"
+        },
+        {
+            "table": "movie_keyword",
+            "type": "brin",
+            "column": "keyword_id",
+            "include": null
+        },
+        {
+            "table": "movie_keyword",
+            "type": "brin",
+            "column": "movie_id",
+            "include": null
+        },
+        {
+            "table": "movie_keyword",
+            "type": "btree",
+            "column": "movie_id",
+            "include": null
         }
-    ]
+    ],
+    "qknobs": {
+        "q1": [
+            "BitmapScan(ct)",
+            "SET (enable_gathermerge off)",
+            "SET (enable_memoize off)",
+            "SET (enable_mergejoin off)",
+            "SET (enable_parallel_hash off)",
+            "SET (hash_mem_multiplier 16)",
+            "IndexOnlyScan(it)",
+            "IndexOnlyScan(mc)",
+            "BitmapScan(t)",
+            "SET (random_page_cost 127)",
+            "SET (seq_page_cost 63)"
+        ],
+        "q2": [
+            "SeqScan(cn)",
+            "SET (enable_material off)",
+            "SET (enable_memoize off)",
+            "SET (enable_mergejoin off)",
+            "SET (hash_mem_multiplier 16)",
+            "IndexOnlyScan(mk)",
+            "SET (random_page_cost 127)",
+            "SET (seq_page_cost 31)"
+        ],
+        "q3": [
+            "SET (enable_gathermerge off)",
+            "SET (enable_memoize off)",
+            "SET (enable_sort off)",
+            "SET (hash_mem_multiplier 16)",
+            "BitmapScan(it)",
+            "BitmapScan(k)",
+            "BitmapScan(mi_idx)",
+            "BitmapScan(t)",
+            "SET (random_page_cost 127)",
+            "SET (seq_page_cost 127)",
+            "IndexOnlyScan(mk)"
+        ],
+        "tmp": [
+            "SET (enable_gathermerge off)",
+            "SET (enable_memoize off)",
+            "SET (enable_sort off)",
+            "SET (hash_mem_multiplier 16)",
+            "BitmapScan(it)",
+            "BitmapScan(k)",
+            "BitmapScan(mi_idx)",
+            "IndexOnlyScan(mk)",
+            "SET (random_page_cost 127)",
+            "SET (seq_page_cost 127)",
+            "BitmapScan(t)"
+        ]
+    }
 }

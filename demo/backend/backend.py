@@ -21,7 +21,7 @@ CORS(app)
 
 # This is the max # of indexes the frontend can submit.
 # The frontend should do its own checks to prevent this.
-MAX_NUM_INDEXES = 5
+MAX_NUM_INDEXES = 10
 
 
 def drop_indexes() -> None:
@@ -47,14 +47,16 @@ def submit() -> dict[str, Any]:
         create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} USING {index_config['type']} ({index_config['column']}){includes_str}"
         demo_backend.pg_conn.psql(create_index_sql)
 
-    # Run multiple trials and take the average since it's so short.
-    NUM_TRIALS = 1
-    total_runtime_us: float = 0
-    for _ in range(NUM_TRIALS):
-        runtime_us, _ = demo_backend.time_workload()
-        total_runtime_us += runtime_us
-    average_runtime_us = total_runtime_us / NUM_TRIALS
-    runtime_s = average_runtime_us / 1_000_000
+    # Translate query knobs.
+    qknobs = {
+        "Q1a": data["qknobs"]["q1"],
+        "Q2a": data["qknobs"]["q2"],
+        "Q4a": data["qknobs"]["q3"],
+    }
+
+    # Run workload.
+    runtime_us, _ = demo_backend.time_workload(qknobs=qknobs)
+    runtime_s = runtime_us / 1_000_000
 
     # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
     # Next time restart_with_changes() is called, it will make changes from Postgres's default values.
@@ -125,8 +127,8 @@ class DemoBackend:
 
         self.pg_conn.restart_postgres()
 
-    def time_workload(self) -> tuple[float, int]:
-        return self.pg_conn.time_workload(self.workload)
+    def time_workload(self, *args, **kwargs) -> tuple[float, int]:
+        return self.pg_conn.time_workload(self.workload, *args, **kwargs)
 
     def shutdown_postgres(self) -> None:
         self.pg_conn.shutdown_postgres()
