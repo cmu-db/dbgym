@@ -27,12 +27,16 @@ def submit() -> dict[str, Any]:
 
     # Create indexes. # TODO: create this separately.
     demo_backend.pg_conn.psql("CREATE INDEX index0 ON movie_companies (movie_id)")
-    demo_backend.pg_conn.psql("CREATE INDEX index1 ON movie_keyword (keyword_id) INCLUDE (movie_id)")
-    demo_backend.pg_conn.psql("CREATE INDEX index2 ON movie_keyword (movie_id) INCLUDE (keyword_id)")
+    demo_backend.pg_conn.psql(
+        "CREATE INDEX index1 ON movie_keyword (keyword_id) INCLUDE (movie_id)"
+    )
+    demo_backend.pg_conn.psql(
+        "CREATE INDEX index2 ON movie_keyword (movie_id) INCLUDE (keyword_id)"
+    )
 
     # Run multiple trials and take the average since it's so short.
     NUM_TRIALS = 1
-    total_runtime_us = 0
+    total_runtime_us: float = 0
     for _ in range(NUM_TRIALS):
         runtime_us, _ = demo_backend.time_workload()
         total_runtime_us += runtime_us

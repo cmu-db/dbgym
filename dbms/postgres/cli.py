@@ -16,7 +16,16 @@ from gymlib.infra_paths import (
     get_pgbin_symlink_path,
     get_repo_symlink_path,
 )
-from gymlib.pg import create_sqlalchemy_conn, sql_file_execute
+from gymlib.pg import (
+    DBGYM_POSTGRES_DBNAME,
+    DBGYM_POSTGRES_PASS,
+    DBGYM_POSTGRES_USER,
+    DEFAULT_POSTGRES_DBNAME,
+    DEFAULT_POSTGRES_PORT,
+    SHARED_PRELOAD_LIBRARIES,
+    create_sqlalchemy_conn,
+    sql_file_execute,
+)
 from gymlib.workspace import (
     WORKSPACE_PATH_PLACEHOLDER,
     DBGymWorkspace,
@@ -32,13 +41,6 @@ from benchmark.job.load_info import JobLoadInfo
 from benchmark.tpch.load_info import TpchLoadInfo
 from dbms.load_info_base_class import LoadInfoBaseClass
 from util.shell import subprocess_run
-
-DBGYM_POSTGRES_USER = "dbgym_user"
-DBGYM_POSTGRES_PASS = "dbgym_pass"
-DBGYM_POSTGRES_DBNAME = "dbgym"
-DEFAULT_POSTGRES_DBNAME = "postgres"
-DEFAULT_POSTGRES_PORT = 5432
-SHARED_PRELOAD_LIBRARIES = "boot,pg_hint_plan,pg_prewarm"
 
 
 @click.group(name="postgres")
