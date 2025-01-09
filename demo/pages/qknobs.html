@@ -134,16 +134,12 @@
 
             // Initialize qknobs dictionary
             const qknobs = {};
-            qknobs.enable_nestloop = {};
-            qknobs.enable_hashjoin = {};
+            qknobs.q1 = [];
+            qknobs.q2 = [];
+            qknobs.q3 = [];
 
             // Get current values from the dropdowns
-            qknobs.enable_nestloop.q1 = document.getElementById('enable_nestloop_q1').value;
-            qknobs.enable_nestloop.q2 = document.getElementById('enable_nestloop_q2').value;
-            qknobs.enable_nestloop.q3 = document.getElementById('enable_nestloop_q3').value;
-            qknobs.enable_hashjoin.q1 = document.getElementById('enable_hashjoin_q1').value;
-            qknobs.enable_hashjoin.q2 = document.getElementById('enable_hashjoin_q2').value;
-            qknobs.enable_hashjoin.q3 = document.getElementById('enable_hashjoin_q3').value;
+            // TODO
 
             // Update userData with qknobs
             userData.qknobs = qknobs;

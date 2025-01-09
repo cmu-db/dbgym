@@ -1,4 +1,7 @@
 {
+    "welcomeData": {
+        "name": "default"
+    },
     "sysknobs": {},
     "indexes": [],
     "qknobs": {

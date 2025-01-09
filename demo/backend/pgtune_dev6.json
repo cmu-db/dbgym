@@ -4,6 +4,9 @@
         "I only kept the 10 most important knobs.",
         "I also rounded all the numbers so they'd be things the user could get in the website."
     ],
+    "welcomeData": {
+        "name": "pgtune"
+    },
     "sysknobs": {
         "shared_buffers": "32GB",
         "effective_cache_size": "128GB",

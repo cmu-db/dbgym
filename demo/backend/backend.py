@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import sys
+import sqlite3
 from typing import Any
 
 from flask import Flask, request
@@ -33,10 +34,10 @@ def drop_indexes() -> None:
 
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
-    # data = request.json DEBUG
-    with open("demo/backend/protox.json", "r") as f:
-        data = json.load(f)
+    return process_submission(request.json)
 
+
+def process_submission(data: dict[str, Any]) -> dict[str, Any]:
     # Set system knobs (requires database restart).
     demo_backend.pg_conn.restart_with_changes(data["sysknobs"])
 
@@ -60,34 +61,33 @@ def submit() -> dict[str, Any]:
     runtime_us, _ = demo_backend.time_workload(qknobs=qknobs)
     runtime_s = runtime_us / 1_000_000
 
+    # Add to leaderboard (and get the rank) if the user has a name.
+    rank = None
+    if data["welcomeData"]["name"]:
+        leaderboard = Leaderboard()
+        # We create a new leaderboard object each time because SQLite requires you to create the object in the same thread you use it in.
+        rank = leaderboard.insert_user(name=data["welcomeData"]["name"], runtime=runtime_s)
+        leaderboard.close()
+
     # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
     # Next time restart_with_changes() is called, it will make changes from Postgres's default values.
 
     # Drop all indexes.
     drop_indexes()
 
-    print(f"Runtime: {runtime_s:.3f}s")
     return {
         "runtime": runtime_s,
-        "rank": 2,
+        "rank": rank,
     }
 
 
 @app.route("/leaderboard", methods=["GET"])
 def get_leaderboard() -> dict[str, Any]:
+    leaderboard = Leaderboard()
+    top_results = leaderboard.get_top_users(10)
+    leaderboard.close()
     return {
-        "top_results": [
-            {"name": "Alice Doe", "runtime": 1.5},
-            {"name": "John Doe", "runtime": 2.0},
-            {"name": "Bob Smith", "runtime": 2.5},
-            {"name": "Charlie Brown", "runtime": 3.0},
-            {"name": "Diana Prince", "runtime": 3.5},
-            {"name": "Ethan Hunt", "runtime": 4.0},
-            {"name": "Fiona Gallagher", "runtime": 4.5},
-            {"name": "George Costanza", "runtime": 5.0},
-            {"name": "Hannah Montana", "runtime": 5.5},
-            {"name": "Ivy League", "runtime": 6.0},
-        ]
+        "top_results": top_results
     }
 
 
@@ -136,12 +136,66 @@ class DemoBackend:
         self.pg_conn.shutdown_postgres()
 
 
+class Leaderboard:
+    def __init__(self):
+        # leaderboard_dbname is set in if __name__ == "__main__"
+        # Connect to database (creates it if it doesn't exist)
+        self.conn = sqlite3.connect(leaderboard_dbname)
+
+        # Create table if it doesn't exist
+        self.cursor = self.conn.cursor()
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                runtime REAL NOT NULL
+            )
+        ''')
+        self.conn.commit()
+    
+    def insert_user(self, name: str, runtime: float) -> int:
+        self.cursor.execute('''
+            INSERT INTO users (name, runtime)
+            VALUES (?, ?)
+            ON CONFLICT(name) DO UPDATE SET runtime = excluded.runtime
+            WHERE excluded.runtime < users.runtime
+        ''', (name, runtime))
+        self.conn.commit()
+
+        # Get the rank of the user after insertion
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM users WHERE runtime < (SELECT runtime FROM users WHERE name = ?)
+        ''', (name,))
+        rank = self.cursor.fetchone()[0] + 1  # Rank is 1-based
+        return rank
+
+    def get_top_users(self, limit: int) -> list[dict[str, float]]:
+        """Fetch the top X users based on their runtime."""
+        self.cursor.execute('''
+            SELECT name, runtime FROM users
+            ORDER BY runtime ASC
+            LIMIT ?
+        ''', (limit,))
+        return [{"name": name, "runtime": runtime} for name, runtime in self.cursor.fetchall()]
+    
+    def close(self) -> None:
+        # Always close the connection when done
+        self.conn.close()
+
+
 demo_backend = DemoBackend()
 
 
 # TODO: make backend not have to start postgres every time. assert job table if postgres is up
 
 if __name__ == "__main__":
-    # host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    # app.run(host=host, port=15721)
-    submit()
+    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    leaderboard_dbname = sys.argv[2] if len(sys.argv) > 2 else "leaderboard.db"
+
+    do_process_protox = True
+    if do_process_protox:
+        with open("demo/backend/protox.json", "r") as f:
+            data = json.load(f)
+            process_submission(data)
+
+    app.run(host=host, port=15721)

@@ -10,6 +10,9 @@
         "max_parallel_workers": "12",
         "work_mem": "8MB"
     },
+    "welcomeData": {
+        "name": "protox"
+    },
     "indexes": [
         {
             "table": "movie_companies",
