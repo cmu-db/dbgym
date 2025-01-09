@@ -8,6 +8,17 @@
             flex-direction: column;
             align-items: center;
         }
+        .leaderboard-table {
+            border-collapse: collapse;
+            font-size: 20px;
+            margin-bottom: 40px;
+        }
+        .leaderboard-table th,
+        .leaderboard-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
     </style>
 </head>
 
@@ -27,7 +38,7 @@
             <em>Note: you didn't enter a name so your results are not stored in the leaderboard.</em>
         </div>
         <h2>Top Results</h2>
-        <table>
+        <table class="leaderboard-table">
             <thead>
                 <tr>
                     <th>Rank</th>

@@ -25,7 +25,10 @@
             border-radius: 10px;
         }
         #userForm {
-            width: 550px;
+            width: 600px;
+        }
+        .welcome-input {
+            font-size: 20px;
         }
     </style>
 </head>
@@ -62,11 +65,11 @@
             </div>
             <div>
                 <label for="name"><em>[Optional]</em> Leaderboard Name:</label>
-                <input type="text" id="name" placeholder="Enter your name" required>
+                <input type="text" class="welcome-input" id="name" placeholder="Enter your name" required>
             </div>
             <div style="visibility: hidden;">
                 <label for="email"><em>[Optional]</em> Notification Email:</label>
-                <input type="email" id="email" placeholder="Enter your email" required>
+                <input type="email" class="welcome-input" id="email" placeholder="Enter your email" required>
             </div>
         </form>
     </div>
