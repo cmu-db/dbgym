@@ -39,23 +39,28 @@ def submit() -> dict[str, Any]:
 
 def process_submission(data: dict[str, Any]) -> dict[str, Any]:
     # Set system knobs (requires database restart).
-    demo_backend.pg_conn.restart_with_changes(data["sysknobs"])
+    # sysknobs will not be in data if the user ran out of time before getting to the sysknobs page.
+    if "sysknobs" in data:
+        demo_backend.pg_conn.restart_with_changes(data["sysknobs"])
 
     # Create indexes.
-    # Drop first to avoid index name conflicts.
-    assert len(data["indexes"]) <= MAX_NUM_INDEXES
     drop_indexes()
-    for i, index_config in enumerate(data["indexes"]):
-        includes_str = "" if index_config["include"] is None else f" INCLUDE ({index_config['include']})"
-        create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} USING {index_config['type']} ({index_config['column']}){includes_str}"
-        demo_backend.pg_conn.psql(create_index_sql)
+    if "indexes" in data:
+        # Drop first to avoid index name conflicts.
+        assert len(data["indexes"]) <= MAX_NUM_INDEXES
+        for i, index_config in enumerate(data["indexes"]):
+            includes_str = "" if index_config["include"] is None else f" INCLUDE ({index_config['include']})"
+            create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} ({index_config['column']}){includes_str}"
+            demo_backend.pg_conn.psql(create_index_sql)
 
-    # Translate query knobs.
-    qknobs = {
-        "Q1a": data["qknobs"]["q1"],
-        "Q2a": data["qknobs"]["q2"],
-        "Q4a": data["qknobs"]["q3"],
-    }
+    # Set up query knobs.
+    qknobs = dict()
+    if "qknobs" in data:
+        qknobs = {
+            "Q1a": data["qknobs"]["q1"],
+            "Q2a": data["qknobs"]["q2"],
+            "Q4a": data["qknobs"]["q3"],
+        }
 
     # Run workload.
     total_runtime_us = 0

@@ -16,11 +16,5 @@
         "max_worker_processes": "12",
         "max_parallel_workers_per_gather": "6",
         "max_parallel_workers": "12"
-    },
-    "indexes": [],
-    "qknobs": {
-        "q1": [],
-        "q2": [],
-        "q3": []
     }
 }
