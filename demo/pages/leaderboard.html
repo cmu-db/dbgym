@@ -21,8 +21,7 @@
     <div class="container">
         <div id="yourResultsContainer" style="display: none; text-align: center;">
             <h2>Your Results</h2>
-            <p><em>The base config achieves 0.73-0.75s.</em></p>
-            <p><strong>Name:</strong> <span id="yourName"></span> | <strong>Runtime:</strong> <span id="yourRuntime"></span> seconds | <strong>Personal Best:</strong> <span id="yourBestRuntime"></span> seconds</p>
+            <p><strong>Name:</strong> <span id="yourName">n/a</span> | <strong>Runtime:</strong> <span id="yourRuntime">n/a</span> seconds | <strong>Personal Best:</strong> <span id="yourBestRuntime">n/a</span> seconds</p>
         </div>
         <div id="noNameContainer" style="margin-top: 20px; display: none;">
             <em>Note: you didn't enter a name so your results are not stored in the leaderboard.</em>
@@ -67,15 +66,16 @@
             const name = userData && userData.welcomeData && userData.welcomeData.name ? userData.welcomeData.name : null; // Store name or null
             const runtime = results ? results.runtime : null; // Store runtime or null
             if (runtime) {
-                if (name) {
-                    document.getElementById('yourResultsContainer').style.display = 'block';
+                // If runtime is set, we'll display the user's results.
+                document.getElementById('yourResultsContainer').style.display = 'block';
+                const yourRuntime = document.getElementById('yourRuntime');
+                yourRuntime.textContent = runtime.toFixed(3);
 
+                if (name) {
                     const yourName = document.getElementById('yourName');
                     yourName.textContent = name;
 
-                    const yourRuntime = document.getElementById('yourRuntime');
-                    yourRuntime.textContent = runtime.toFixed(3);
-
+                    // If name is set best runtime should also be set.
                     const best_runtime = results.best_runtime;
                     const yourBestRuntime = document.getElementById('yourBestRuntime');
                     yourBestRuntime.textContent = best_runtime.toFixed(3);

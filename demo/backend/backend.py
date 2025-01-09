@@ -66,6 +66,7 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
     runtime_s = total_runtime_us / trials / 1_000_000
 
     # Add to leaderboard if the user has a name.
+    best_runtime_s = None
     if data["welcomeData"]["name"]:
         leaderboard = Leaderboard()
         # We create a new leaderboard object each time because SQLite requires you to create the object in the same thread you use it in.
