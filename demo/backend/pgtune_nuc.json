@@ -1,0 +1,23 @@
+{
+    "comments": [
+        "PGTune settings: DB version = 15, OS Type = Linux, DB Type = Data warehouse, Total Memory = 62GB, Number of CPUs = 12, Number of Connections = 20, Data Storage = HDD",
+        "I only kept the 10 most important knobs.",
+        "I also rounded all the numbers so they'd be things the user could get in the website."
+    ],
+    "sysknobs": {
+        "shared_buffers": "16GB",
+        "effective_cache_size": "32GB",
+        "checkpoint_completion_target": "0.9",
+        "default_statistics_target": "500",
+        "effective_io_concurrency": "2",
+        "max_worker_processes": "12",
+        "max_parallel_workers_per_gather": "6",
+        "max_parallel_workers": "12"
+    },
+    "indexes": [],
+    "qknobs": {
+        "q1": [],
+        "q2": [],
+        "q3": []
+    }
+}

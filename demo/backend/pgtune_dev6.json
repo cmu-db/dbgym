@@ -15,5 +15,9 @@
         "max_parallel_workers": "80"
     },
     "indexes": [],
-    "qknobs": {}
+    "qknobs": {
+        "q1": [],
+        "q2": [],
+        "q3": []
+    }
 }

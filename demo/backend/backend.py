@@ -104,7 +104,7 @@ class DemoBackend:
                     DEFAULT_SCALE_FACTOR,
                 )
             ),
-            Path("/mnt/nvme0n1/phw2"),
+            Path(".."),
             fully_resolve_path(
                 get_pgbin_symlink_path(self.dbgym_workspace.dbgym_workspace_path)
             ),
@@ -142,5 +142,6 @@ demo_backend = DemoBackend()
 # TODO: make backend not have to start postgres every time. assert job table if postgres is up
 
 if __name__ == "__main__":
-    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    app.run(host=host, port=15721)
+    # host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    # app.run(host=host, port=15721)
+    submit()
