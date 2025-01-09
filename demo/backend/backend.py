@@ -69,7 +69,7 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
     if data["welcomeData"]["name"]:
         leaderboard = Leaderboard()
         # We create a new leaderboard object each time because SQLite requires you to create the object in the same thread you use it in.
-        leaderboard.insert_user(name=data["welcomeData"]["name"], runtime=runtime_s)
+        best_runtime_s = leaderboard.update_user_best_runtime(name=data["welcomeData"]["name"], runtime=runtime_s)
         leaderboard.close()
 
     # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
@@ -80,6 +80,7 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "runtime": runtime_s,
+        "best_runtime": best_runtime_s,
     }
 
 
@@ -155,7 +156,7 @@ class Leaderboard:
         ''')
         self.conn.commit()
     
-    def insert_user(self, name: str, runtime: float) -> None:
+    def update_user_best_runtime(self, name: str, runtime: float) -> float:
         self.cursor.execute('''
             INSERT INTO users (name, runtime)
             VALUES (?, ?)
@@ -163,6 +164,11 @@ class Leaderboard:
             WHERE excluded.runtime < users.runtime
         ''', (name, runtime))
         self.conn.commit()
+        
+        # Fetch the best runtime for the user after the update
+        self.cursor.execute('SELECT runtime FROM users WHERE name = ?', (name,))
+        best_runtime = self.cursor.fetchone()[0]
+        return best_runtime
 
     def get_top_users(self, limit: int) -> list[dict[str, float]]:
         """Fetch the top X users based on their runtime."""
