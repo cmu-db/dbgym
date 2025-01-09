@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from flask import Flask, request
@@ -19,8 +20,9 @@ from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
 app = Flask(__name__)
 CORS(app)
 
-# This is the max # of indexes the frontend can submit.
-# The frontend should do its own checks to prevent this.
+# This is the max # of indexes that can be submitted.
+# We'll throw an error if this is exceeded.
+# The frontend should prevent this from happening.
 MAX_NUM_INDEXES = 5
 
 
@@ -140,6 +142,5 @@ demo_backend = DemoBackend()
 # TODO: make backend not have to start postgres every time. assert job table if postgres is up
 
 if __name__ == "__main__":
-    # host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    # app.run(host=host, port=15721) DEBUG
-    submit()
+    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    app.run(host=host, port=15721)
