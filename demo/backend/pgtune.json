@@ -1,7 +1,8 @@
 {
     "comments": [
         "PGTune settings: DB version = 15, OS Type = Linux, DB Type = Data warehouse, Total Memory = 187GB, Number of CPUs = 80, Number of Connections = 20, Data Storage = SSD",
-        "I also only kept the 10 most important knobs."
+        "I only kept the 10 most important knobs.",
+        "I also rounded all the numbers so they'd be things the user could get in the website."
     ],
     "sysknobs": {
         "shared_buffers": "32GB",
