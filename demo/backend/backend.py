@@ -21,7 +21,7 @@ CORS(app)
 
 # This is the max # of indexes the frontend can submit.
 # The frontend should do its own checks to prevent this.
-MAX_NUM_INDEXES = 10
+MAX_NUM_INDEXES = 5
 
 
 def drop_indexes() -> None:

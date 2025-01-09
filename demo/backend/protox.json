@@ -28,24 +28,6 @@
             "type": "btree",
             "column": "movie_id",
             "include": "keyword_id"
-        },
-        {
-            "table": "movie_keyword",
-            "type": "brin",
-            "column": "keyword_id",
-            "include": null
-        },
-        {
-            "table": "movie_keyword",
-            "type": "brin",
-            "column": "movie_id",
-            "include": null
-        },
-        {
-            "table": "movie_keyword",
-            "type": "btree",
-            "column": "movie_id",
-            "include": null
         }
     ],
     "qknobs": {
@@ -78,25 +60,12 @@
             "SET (enable_sort off)",
             "SET (hash_mem_multiplier 16)",
             "BitmapScan(it)",
-            "BitmapScan(k)",
-            "BitmapScan(mi_idx)",
+            "SeqScan(k)",
+            "SeqScan(mi_idx)",
             "BitmapScan(t)",
             "SET (random_page_cost 127)",
             "SET (seq_page_cost 127)",
             "IndexOnlyScan(mk)"
-        ],
-        "tmp": [
-            "SET (enable_gathermerge off)",
-            "SET (enable_memoize off)",
-            "SET (enable_sort off)",
-            "SET (hash_mem_multiplier 16)",
-            "BitmapScan(it)",
-            "BitmapScan(k)",
-            "BitmapScan(mi_idx)",
-            "IndexOnlyScan(mk)",
-            "SET (random_page_cost 127)",
-            "SET (seq_page_cost 127)",
-            "BitmapScan(t)"
         ]
     }
 }
