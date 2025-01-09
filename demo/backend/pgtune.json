@@ -13,5 +13,6 @@
         "max_worker_processes": "80",
         "max_parallel_workers_per_gather": "40",
         "max_parallel_workers": "80"
-    }
+    },
+    "indexes": []
 }

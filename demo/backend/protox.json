@@ -1,0 +1,23 @@
+{
+    "sysknobs": {},
+    "indexes": [
+        {
+            "table": "movie_companies",
+            "type": "btree",
+            "column": "movie_id",
+            "include": null
+        },
+        {
+            "table": "movie_keyword",
+            "type": "btree",
+            "column": "keyword_id",
+            "include": "movie_id"
+        },
+        {
+            "table": "movie_keyword",
+            "type": "btree",
+            "column": "movie_id",
+            "include": "keyword_id"
+        }
+    ]
+}

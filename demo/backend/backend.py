@@ -19,31 +19,33 @@ from gymlib.workspace import fully_resolve_path, make_standard_dbgym_workspace
 app = Flask(__name__)
 CORS(app)
 
+# This is the max # of indexes the frontend can submit.
+# The frontend should do its own checks to prevent this.
+MAX_NUM_INDEXES = 5
 
-def drop_all_indexes() -> None:
-    num_indexes = 5
-    for i in range(num_indexes):
+
+def drop_indexes() -> None:
+    for i in range(MAX_NUM_INDEXES):
         demo_backend.pg_conn.psql(f"DROP INDEX IF EXISTS index{i}")
 
 
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
     # data = request.json DEBUG
-    with open("demo/backend/pgtune.json", "r") as f:
+    with open("demo/backend/protox.json", "r") as f:
         data = json.load(f)
 
     # Set system knobs (requires database restart).
     demo_backend.pg_conn.restart_with_changes(data["sysknobs"])
 
-    # Create indexes. # TODO: create this separately.
-    drop_all_indexes()
-    demo_backend.pg_conn.psql("CREATE INDEX index0 ON movie_companies (movie_id)")
-    demo_backend.pg_conn.psql(
-        "CREATE INDEX index1 ON movie_keyword (keyword_id) INCLUDE (movie_id)"
-    )
-    demo_backend.pg_conn.psql(
-        "CREATE INDEX index2 ON movie_keyword (movie_id) INCLUDE (keyword_id)"
-    )
+    # Create indexes.
+    # Drop first to avoid index name conflicts.
+    assert len(data["indexes"]) <= MAX_NUM_INDEXES
+    drop_indexes()
+    for i, index_config in enumerate(data["indexes"]):
+        includes_str = "" if index_config["include"] is None else f" INCLUDE ({index_config['include']})"
+        create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} USING {index_config['type']} ({index_config['column']}){includes_str}"
+        demo_backend.pg_conn.psql(create_index_sql)
 
     # Run multiple trials and take the average since it's so short.
     NUM_TRIALS = 1
@@ -58,7 +60,7 @@ def submit() -> dict[str, Any]:
     # Next time restart_with_changes() is called, it will make changes from Postgres's default values.
 
     # Drop all indexes.
-    drop_all_indexes()
+    drop_indexes()
 
     print(f"Runtime: {runtime_s:.3f}s")
     return {
