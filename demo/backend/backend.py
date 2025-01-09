@@ -58,15 +58,18 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
     }
 
     # Run workload.
-    runtime_us, _ = demo_backend.time_workload(qknobs=qknobs)
-    runtime_s = runtime_us / 1_000_000
+    total_runtime_us = 0
+    trials = 3
+    for _ in range(trials):
+        runtime_us, _ = demo_backend.time_workload(qknobs=qknobs)
+        total_runtime_us += runtime_us
+    runtime_s = total_runtime_us / trials / 1_000_000
 
-    # Add to leaderboard (and get the rank) if the user has a name.
-    rank = None
+    # Add to leaderboard if the user has a name.
     if data["welcomeData"]["name"]:
         leaderboard = Leaderboard()
         # We create a new leaderboard object each time because SQLite requires you to create the object in the same thread you use it in.
-        rank = leaderboard.insert_user(name=data["welcomeData"]["name"], runtime=runtime_s)
+        leaderboard.insert_user(name=data["welcomeData"]["name"], runtime=runtime_s)
         leaderboard.close()
 
     # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
@@ -77,7 +80,6 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "runtime": runtime_s,
-        "rank": rank,
     }
 
 
@@ -87,7 +89,7 @@ def get_leaderboard() -> dict[str, Any]:
     top_results = leaderboard.get_top_users(10)
     leaderboard.close()
     return {
-        "top_results": top_results
+        "top_results": top_results,
     }
 
 
@@ -153,7 +155,7 @@ class Leaderboard:
         ''')
         self.conn.commit()
     
-    def insert_user(self, name: str, runtime: float) -> int:
+    def insert_user(self, name: str, runtime: float) -> None:
         self.cursor.execute('''
             INSERT INTO users (name, runtime)
             VALUES (?, ?)
@@ -161,13 +163,6 @@ class Leaderboard:
             WHERE excluded.runtime < users.runtime
         ''', (name, runtime))
         self.conn.commit()
-
-        # Get the rank of the user after insertion
-        self.cursor.execute('''
-            SELECT COUNT(*) FROM users WHERE runtime < (SELECT runtime FROM users WHERE name = ?)
-        ''', (name,))
-        rank = self.cursor.fetchone()[0] + 1  # Rank is 1-based
-        return rank
 
     def get_top_users(self, limit: int) -> list[dict[str, float]]:
         """Fetch the top X users based on their runtime."""
