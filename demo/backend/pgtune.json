@@ -4,8 +4,8 @@
         "I also only kept the 10 most important knobs."
     ],
     "sysknobs": {
-        "shared_buffers": "47872MB",
-        "effective_cache_size": "143616MB",
+        "shared_buffers": "32GB",
+        "effective_cache_size": "128GB",
         "checkpoint_completion_target": "0.9",
         "default_statistics_target": "500",
         "effective_io_concurrency": "200",
