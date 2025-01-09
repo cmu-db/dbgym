@@ -71,7 +71,7 @@
                     yourName.textContent = name;
 
                     const yourRuntime = document.getElementById('yourRuntime');
-                    yourRuntime.textContent = runtime;
+                    yourRuntime.textContent = runtime.toFixed(3);
                     document.getElementById('yourResultsContainer').style.display = 'block';
                 } else {
                     document.getElementById('noNameContainer').style.display = 'block';
@@ -103,7 +103,7 @@
                         row.innerHTML = `
                             <td>${index + 1}</td>
                             <td>${result.name}</td>
-                            <td>${result.runtime}</td>
+                            <td>${result.runtime.toFixed(3)}</td>
                         `;
                         leaderboardTableBody.appendChild(row);
                     });
