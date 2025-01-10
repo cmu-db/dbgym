@@ -18,6 +18,9 @@
             border-radius: 10px;
             text-align: center;
         }
+        #indexForm select {
+            width: 200px;
+        }
     </style>
 
     <script>
@@ -187,7 +190,7 @@
                     <select id="indexInclude" required>
                         <option value="">Select Include</option>
                     </select>
-                    <button type="submit">Create Index</button>
+                    <button type="submit">Create</button>
                 </form>
             </div>
         
@@ -195,10 +198,10 @@
             <table id="indexTable">
                 <thead>
                     <tr>
-                        <th>Table</th>
-                        <th>Column</th>
-                        <th>Include</th>
-                        <th>Delete?</th>
+                        <th style="min-width: 200px;">Table</th>
+                        <th style="min-width: 200px;">Column</th>
+                        <th style="min-width: 200px;">Include</th>
+                        <th style="min-width: 50px;">Delete?</th>
                     </tr>
                 </thead>
                 <tbody id="indexTableBody">
