@@ -204,18 +204,25 @@
 
     function addIndex(event) {
         event.preventDefault();
+        
+        // Check if we already have 5 indexes
+        if (indexes.length >= 5) {
+            alert("Maximum of 5 indexes allowed!");
+            return;
+        }
+
         const indexTable = document.getElementById('indexTable').value.trim();
-        const indexColumn = document.getElementById('indexColumn').value.trim(); // Get the selected column
-        const indexInclude = document.getElementById('indexInclude').value.trim(); // Get the selected include
+        const indexColumn = document.getElementById('indexColumn').value.trim();
+        const indexInclude = document.getElementById('indexInclude').value.trim();
 
         if (indexTable && indexColumn && indexInclude) {
-            const newIndex = { table: indexTable, column: indexColumn, include: indexInclude }; // Create a new index object
-            indexes.push(newIndex); // Add the new index to the local array
+            const newIndex = { table: indexTable, column: indexColumn, include: indexInclude };
+            indexes.push(newIndex);
 
             document.getElementById('indexTable').value = '';
-            document.getElementById('indexColumn').value = ''; // Clear the column selection
-            document.getElementById('indexInclude').value = ''; // Clear the include selection
-            updateTable(); // Update the displayed table
+            document.getElementById('indexColumn').value = '';
+            document.getElementById('indexInclude').value = '';
+            updateTable();
         }
     }
 
