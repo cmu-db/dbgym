@@ -22,15 +22,25 @@
 
     <script>
         const tables = [
-            { value: "", text: "Select Table", columns: [{ value: "", text: "Select Column" }], includes: [{ value: "", text: "Select Include" }] },
-            { value: "title", text: "title",
-                columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }],
-                includes: [{ value: "", text: "Select Include" }, { value: null, text: "[No Include]" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }]
+            {
+                value: "",
+                text: "Select Table",
+                columns: []
             },
-            { value: "aka_title", text: "aka_title",
-                columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }],
-                includes: [{ value: "", text: "Select Include" }, { value: null, text: "[No Include]" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }]
-            }
+            {
+                value: "company_name",
+                text: null,
+                columns: [
+                    { value: "country_code", text: null }
+                ]
+            },
+            {
+                value: "company_type",
+                text: null,
+                columns: [
+                    { value: "kind", text: null }
+                ]
+            },
         ];
 
         function updateColumns() {
@@ -42,10 +52,11 @@
 
             const selectedTableObj = tables.find(table => table.value === selectedTable);
             if (selectedTableObj) {
-                selectedTableObj.columns.forEach(column => {
+                const columnOptions = [{value: "", text: "Select Column"}, ...selectedTableObj.columns];
+                columnOptions.forEach(column => {
                     const option = document.createElement('option');
                     option.value = column.value;
-                    option.textContent = column.text;
+                    option.textContent = column.text || column.value;
                     indexColumnSelect.appendChild(option);
                 });
             }
@@ -65,10 +76,17 @@
 
             const selectedTableObj = tables.find(table => table.value === selectedTable);
             if (selectedTableObj) {
-                selectedTableObj.includes.forEach(include => {
+                includePrependOptions = [{value: "", text: "Select Include"}];
+
+                if (selectedTable !== "") {
+                    includePrependOptions.push({value: null, text: "[No Include]"});
+                }
+
+                const includeOptions = [...includePrependOptions, ...selectedTableObj.columns];
+                includeOptions.forEach(include => {
                     const option = document.createElement('option');
                     option.value = include.value;
-                    option.textContent = include.text;
+                    option.textContent = include.text || include.value;
 
                     if (selectedColumn === "") {
                         if (include.value === "") {
@@ -109,7 +127,7 @@
                             tables.forEach(table => {
                                 const option = document.createElement('option');
                                 option.value = table.value;
-                                option.textContent = table.text;
+                                option.textContent = table.text || table.value;
                                 indexTableSelect.appendChild(option);
                             });
                         </script>
