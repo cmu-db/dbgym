@@ -215,6 +215,18 @@
         const indexColumn = document.getElementById('indexColumn').value.trim();
         const indexInclude = document.getElementById('indexInclude').value.trim();
 
+        // Check for duplicate index (same table and column and include)
+        const isDuplicate = indexes.some(index => 
+            index.table === indexTable && 
+            index.column === indexColumn &&
+            index.include === indexInclude
+        );
+
+        if (isDuplicate) {
+            alert("An index on this column and include already exists!");
+            return;
+        }
+
         if (indexTable && indexColumn && indexInclude) {
             const newIndex = { table: indexTable, column: indexColumn, include: indexInclude };
             indexes.push(newIndex);
