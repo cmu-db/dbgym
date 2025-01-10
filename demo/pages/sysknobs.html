@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
         #sysknobsTable {
+            margin-top: 40px;
             padding: 20px;
         }
     </style>
@@ -24,14 +25,12 @@
                 <thead>
                     <tr>
                         <th>Knob</th>
-                        <th>Default</th>
-                        <th>Current</th>
+                        <th>Value</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>shared_buffers</td>
-                        <td>128MB</td>
                         <td><select id="shared_buffers">
                             <option value="64MB">64MB</option>
                             <option value="128MB" selected>128MB</option>
@@ -42,7 +41,6 @@
                     </tr>
                     <tr>
                         <td>effective_cache_size</td>
-                        <td>4GB</td>
                         <td><select id="effective_cache_size">
                             <option value="2GB">2GB</option>
                             <option value="4GB" selected>4GB</option>
