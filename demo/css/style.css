@@ -90,3 +90,14 @@ select {
 button {
     font-size: 20px;
 }
+
+table {
+    border-collapse: collapse;
+    font-size: 20px;
+}
+table th,
+table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: left;
+}

@@ -19,6 +19,70 @@
             text-align: center;
         }
     </style>
+
+    <script>
+        const tables = [
+            { value: "", text: "Select Table", columns: [{ value: "", text: "Select Column" }], includes: [{ value: "", text: "Select Include" }] },
+            { value: "title", text: "title",
+                columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }],
+                includes: [{ value: "", text: "Select Include" }, { value: null, text: "[No Include]" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }]
+            },
+            { value: "aka_title", text: "aka_title",
+                columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }],
+                includes: [{ value: "", text: "Select Include" }, { value: null, text: "[No Include]" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }]
+            }
+        ];
+
+        function updateColumns() {
+            const indexTableSelect = document.getElementById('indexTable');
+            const selectedTable = indexTableSelect.value;
+            const indexColumnSelect = document.getElementById('indexColumn');
+            const selectedColumn = indexColumnSelect.value;
+            indexColumnSelect.innerHTML = ''; // Clear existing options
+
+            const selectedTableObj = tables.find(table => table.value === selectedTable);
+            if (selectedTableObj) {
+                selectedTableObj.columns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column.value;
+                    option.textContent = column.text;
+                    indexColumnSelect.appendChild(option);
+                });
+            }
+        }
+
+        function updateIncludes() {
+            /*
+            If a column is selected, select all options except the selected column.
+            If no column is selected, select only the "Select Include" option.
+            */
+            const indexTableSelect = document.getElementById('indexTable');
+            const selectedTable = indexTableSelect.value;
+            const indexColumnSelect = document.getElementById('indexColumn');
+            const selectedColumn = indexColumnSelect.value;
+            const indexIncludeSelect = document.getElementById('indexInclude');
+            indexIncludeSelect.innerHTML = ''; // Clear existing options
+
+            const selectedTableObj = tables.find(table => table.value === selectedTable);
+            if (selectedTableObj) {
+                selectedTableObj.includes.forEach(include => {
+                    const option = document.createElement('option');
+                    option.value = include.value;
+                    option.textContent = include.text;
+
+                    if (selectedColumn === "") {
+                        if (include.value === "") {
+                            indexIncludeSelect.appendChild(option);
+                        }
+                    } else {
+                        if (include.value !== selectedColumn) {   
+                            indexIncludeSelect.appendChild(option);
+                        }
+                    }
+                });
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -33,14 +97,8 @@
             <div id="createIndexContainer">
                 <div style="margin-top: 15px; font-size: 30px; font-weight: bold;">Create Secondary Index</div>
                 <form id="indexForm" onsubmit="addIndex(event)">
-                    <select id="indexTable" required onchange="updateColumns()">
+                    <select id="indexTable" required onchange="updateColumns(); updateIncludes()">
                         <script>
-                            const tables = [
-                                { value: "", text: "Select Table", columns: [] },
-                                { value: "title", text: "title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "kind_id", text: "kind_id" }] },
-                                { value: "aka_title", text: "aka_title", columns: [{ value: "", text: "Select Column" }, { value: "id", text: "id" }, { value: "movie_id", text: "movie_id" }] }
-                            ];
-                            
                             const indexTableSelect = document.getElementById('indexTable');
                             tables.forEach(table => {
                                 const option = document.createElement('option');
@@ -48,38 +106,13 @@
                                 option.textContent = table.text;
                                 indexTableSelect.appendChild(option);
                             });
-
-                            function updateColumns() {
-                                const selectedTable = indexTableSelect.value;
-                                const indexColumnSelect = document.getElementById('indexColumn');
-                                indexColumnSelect.innerHTML = ''; // Clear existing options
-
-                                const selectedTableObj = tables.find(table => table.value === selectedTable);
-                                if (selectedTableObj) {
-                                    selectedTableObj.columns.forEach(column => {
-                                        const option = document.createElement('option');
-                                        option.value = column.value;
-                                        option.textContent = column.text;
-                                        indexColumnSelect.appendChild(option);
-                                    });
-                                }
-                            }
                         </script>
                     </select>
-                    <select id="indexColumn" required>
-                        <script>
-                            const columns = [
-                                { value: "", text: "Select Column" },
-                            ];
-                            
-                            const indexColumnSelect = document.getElementById('indexColumn');
-                            columns.forEach(column => {
-                                const option = document.createElement('option');
-                                option.value = column.value;
-                                option.textContent = column.text;
-                                indexColumnSelect.appendChild(option);
-                            });
-                        </script>
+                    <select id="indexColumn" required onchange="updateIncludes()">
+                        <option value="">Select Column</option>
+                    </select>
+                    <select id="indexInclude" required>
+                        <option value="">Select Include</option>
                     </select>
                     <button type="submit">Create Index</button>
                 </form>
@@ -91,6 +124,7 @@
                     <tr>
                         <th>Table</th>
                         <th>Column</th>
+                        <th>Include</th>
                         <th>Delete?</th>
                     </tr>
                 </thead>
@@ -166,13 +200,15 @@
         event.preventDefault();
         const indexTable = document.getElementById('indexTable').value.trim();
         const indexColumn = document.getElementById('indexColumn').value.trim(); // Get the selected column
-        
-        if (indexTable && indexColumn) {
-            const newIndex = { table: indexTable, column: indexColumn }; // Create a new index object
+        const indexInclude = document.getElementById('indexInclude').value.trim(); // Get the selected include
+
+        if (indexTable && indexColumn && indexInclude) {
+            const newIndex = { table: indexTable, column: indexColumn, include: indexInclude }; // Create a new index object
             indexes.push(newIndex); // Add the new index to the local array
 
             document.getElementById('indexTable').value = '';
             document.getElementById('indexColumn').value = ''; // Clear the column selection
+            document.getElementById('indexInclude').value = ''; // Clear the include selection
             updateTable(); // Update the displayed table
         }
     }
@@ -192,6 +228,7 @@
             row.innerHTML = `
                 <td>${index.table}</td>
                 <td>${index.column}</td>
+                <td>${index.include}</td>
                 <td><button onclick="deleteIndex(${i})">Delete</button></td>
             `;
             tableBody.appendChild(row);
