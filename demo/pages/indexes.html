@@ -96,6 +96,12 @@
         <div class="actionsContainer">
             <div id="createIndexContainer">
                 <div style="margin-top: 15px; font-size: 30px; font-weight: bold;">Create Secondary Index</div>
+                <ul style="text-align: left;">
+                    <li>Five indexes max.</li>
+                    <li>Indexes are B-Trees.</li>
+                    <li>Indexes can only be created on a single column.</li>
+                    <li>Include is an (optional) extra column in leaf nodes.</li>
+                </ul>
                 <form id="indexForm" onsubmit="addIndex(event)">
                     <select id="indexTable" required onchange="updateColumns(); updateIncludes()">
                         <script>
