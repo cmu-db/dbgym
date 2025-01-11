@@ -220,7 +220,7 @@ if __name__ == "__main__":
     host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
     leaderboard_dbname = sys.argv[2] if len(sys.argv) > 2 else "leaderboard.db"
 
-    do_process_anchors = False
+    do_process_anchors = True
     if do_process_anchors:
         for name in ["protox", "pgtune_nuc"]:
             with open(f"demo/backend/{name}.json", "r") as f:

@@ -34,11 +34,6 @@
     "qknobs": {
         "q1": [
             "BitmapScan(ct)",
-            "SET (enable_gathermerge off)",
-            "SET (enable_memoize off)",
-            "SET (enable_mergejoin off)",
-            "SET (enable_parallel_hash off)",
-            "SET (hash_mem_multiplier 16)",
             "IndexOnlyScan(it)",
             "IndexOnlyScan(mc)",
             "BitmapScan(t)",
@@ -47,19 +42,11 @@
         ],
         "q2": [
             "SeqScan(cn)",
-            "SET (enable_material off)",
-            "SET (enable_memoize off)",
-            "SET (enable_mergejoin off)",
-            "SET (hash_mem_multiplier 16)",
             "IndexOnlyScan(mk)",
             "SET (random_page_cost 127)",
             "SET (seq_page_cost 31)"
         ],
         "q3": [
-            "SET (enable_gathermerge off)",
-            "SET (enable_memoize off)",
-            "SET (enable_sort off)",
-            "SET (hash_mem_multiplier 16)",
             "BitmapScan(it)",
             "SeqScan(k)",
             "SeqScan(mi_idx)",
