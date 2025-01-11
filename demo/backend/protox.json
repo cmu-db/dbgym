@@ -37,22 +37,22 @@
             "IndexOnlyScan(it)",
             "IndexOnlyScan(mc)",
             "BitmapScan(t)",
-            "SET (random_page_cost 127)",
-            "SET (seq_page_cost 63)"
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 64)"
         ],
         "q2": [
             "SeqScan(cn)",
             "IndexOnlyScan(mk)",
-            "SET (random_page_cost 127)",
-            "SET (seq_page_cost 31)"
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 32)"
         ],
         "q3": [
             "BitmapScan(it)",
             "SeqScan(k)",
             "SeqScan(mi_idx)",
             "BitmapScan(t)",
-            "SET (random_page_cost 127)",
-            "SET (seq_page_cost 127)",
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 128)",
             "IndexOnlyScan(mk)"
         ]
     }
