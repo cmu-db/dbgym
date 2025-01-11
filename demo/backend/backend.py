@@ -51,10 +51,13 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
         # Drop first to avoid index name conflicts.
         assert len(data["indexes"]) <= MAX_NUM_INDEXES
         for i, index_config in enumerate(data["indexes"]):
+            include = index_config["include"]
+            if include == "null":
+                include = None
             includes_str = (
                 ""
-                if index_config["include"] is None
-                else f" INCLUDE ({index_config['include']})"
+                if include is None
+                else f" INCLUDE ({include})"
             )
             create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} ({index_config['column']}){includes_str}"
             demo_backend.pg_conn.psql(create_index_sql)
@@ -213,13 +216,11 @@ class Leaderboard:
 demo_backend = DemoBackend()
 
 
-# TODO: make backend not have to start postgres every time. assert job table if postgres is up
-
 if __name__ == "__main__":
     host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
     leaderboard_dbname = sys.argv[2] if len(sys.argv) > 2 else "leaderboard.db"
 
-    do_process_anchors = True
+    do_process_anchors = False
     if do_process_anchors:
         for name in ["protox", "pgtune_nuc"]:
             with open(f"demo/backend/{name}.json", "r") as f:

@@ -131,7 +131,8 @@
                 includePrependOptions = [{value: "", text: "Select Include"}];
 
                 if (selectedTable !== "") {
-                    includePrependOptions.push({value: null, text: "[No Include]"});
+                    // We'll convert "null" to None in the backend.
+                    includePrependOptions.push({value: "null", text: "[No Include]"});
                 }
 
                 const includeOptions = [...includePrependOptions, ...selectedTableObj.columns];
@@ -281,9 +282,9 @@
             return;
         }
 
-        const indexTable = document.getElementById('indexTable').value.trim();
-        const indexColumn = document.getElementById('indexColumn').value.trim();
-        const indexInclude = document.getElementById('indexInclude').value.trim();
+        const indexTable = document.getElementById('indexTable').value;
+        const indexColumn = document.getElementById('indexColumn').value;
+        const indexInclude = document.getElementById('indexInclude').value;
 
         // Check for duplicate index (same table and column and include)
         const isDuplicate = indexes.some(index => 

@@ -18,7 +18,7 @@
         {
             "table": "movie_companies",
             "column": "movie_id",
-            "include": null
+            "include": "null"
         },
         {
             "table": "movie_keyword",
