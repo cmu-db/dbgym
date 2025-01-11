@@ -6,8 +6,13 @@
     <link rel="stylesheet" type="text/css" href="../css/style.css">
     <style>
         #qknobsTable {
-            margin-top: 40px;
             padding: 20px;
+        }
+        #qknobsTable select {
+            min-width: 100px;
+        }
+        .na {
+            text-align: center;
         }
     </style>
 </head>
@@ -21,11 +26,13 @@
 
     <div class="container">
         <div class="actionsContainer">
+            <p>
+                <em>Note: the knobs start out with "-", meaning "don't add the knob at all".</em>
+            </p>
             <table id="qknobsTable">
                 <thead>
                     <tr>
                         <th>Knob</th>
-                        <th>Default</th>
                         <th>Q1</th>
                         <th>Q2</th>
                         <th>Q3</th>
@@ -33,46 +40,239 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>enable_nestloop</td>
-                        <td>ON</td>
+                        <td>random_page_cost</td>
                         <td>
-                            <select id="enable_nestloop_q1">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="random_page_cost_q1">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
                             </select>
                         </td>
                         <td>
-                            <select id="enable_nestloop_q2">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="random_page_cost_q2">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
                             </select>
                         </td>
                         <td>
-                            <select id="enable_nestloop_q3">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="random_page_cost_q3">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
                             </select>
                         </td>
                     </tr>
                     <tr>
-                        <td>enable_hashjoin</td>
-                        <td>ON</td>
+                        <td>seq_page_cost</td>
                         <td>
-                            <select id="enable_hashjoin_q1">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="seq_page_cost_q1">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
                             </select>
                         </td>
                         <td>
-                            <select id="enable_hashjoin_q2">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="seq_page_cost_q2">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
                             </select>
                         </td>
                         <td>
-                            <select id="enable_hashjoin_q3">
-                                <option value="ON" selected>ON</option>
-                                <option value="OFF">OFF</option>
+                            <select id="seq_page_cost_q3">
+                                <option value="null" selected>-</option>
+                                <option value="16">16</option>
+                                <option value="32">32</option>
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="256">256</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: company_name</td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td>
+                            <select id="cn_scanmethod_q2">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: company_type</td>
+                        <td>
+                            <select id="ct_scanmethod_q1">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: info_type</td>
+                        <td>
+                            <select id="it_scanmethod_q1">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td>
+                            <select id="it_scanmethod_q3">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: keyword</td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td>
+                            <select id="k_scanmethod_q2">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="k_scanmethod_q3">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: movie_companies</td>
+                        <td>
+                            <select id="mc_scanmethod_q1">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="mc_scanmethod_q2">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: movie_info_idx</td>
+                        <td>
+                            <select id="mi_scanmethod_q1">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td>
+                            <select id="mi_scanmethod_q3">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: movie_keyword</td>
+                        <td class="na">
+                            n/a
+                        </td>
+                        <td>
+                            <select id="mk_scanmethod_q2">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="mk_scanmethod_q3">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Scan Method: title</td>
+                        <td>
+                            <select id="t_scanmethod_q1">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="t_scanmethod_q2">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="t_scanmethod_q3">
+                                <option value="null" selected>-</option>
+                                <option value="SeqScan">Seq</option>
+                                <option value="BitmapScan">Bitmap</option>
+                                <option value="IndexOnlyScan">Index</option>
                             </select>
                         </td>
                     </tr>
@@ -134,13 +334,34 @@
             const userData = JSON.parse(localStorage.getItem('userData')) || {};
 
             // Initialize qknobs dictionary
-            const qknobs = {};
+            let qknobs = {};
             qknobs.q1 = [];
             qknobs.q2 = [];
             qknobs.q3 = [];
 
             // Get current values from the dropdowns
-            // TODO
+            const knob_names = ['random_page_cost', 'seq_page_cost', 'cn_scanmethod', 'ct_scanmethod', 'it_scanmethod', 'k_scanmethod', 'mc_scanmethod', 'mi_scanmethod', 'mk_scanmethod', 't_scanmethod'];
+
+            for (const knob_name of knob_names) {
+                for (const q_num of [1, 2, 3]) {
+                    const value_element = document.getElementById(`${knob_name}_q${q_num}`);
+                    
+                    if (value_element !== null) {
+                        let knob_value = value_element.value;
+
+                        if (knob_value !== 'null') {
+                            if (knob_name.includes('scanmethod')) {
+                                const table_alias_name = knob_name.split('_')[0];
+                                knob_as_str = `${knob_value}(${table_alias_name})`;
+                            } else {
+                                knob_as_str = `SET (${knob_name} ${knob_value})`;
+                            }
+
+                            qknobs[`q${q_num}`].push(knob_as_str);
+                        }
+                    }
+                }
+            }
 
             // Update userData with qknobs
             userData.qknobs = qknobs;

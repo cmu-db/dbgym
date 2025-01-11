@@ -1,6 +1,6 @@
 // Constant for the total timer duration in seconds
 // Remember to update welcome.html to match this value
-const TIMER_DURATION = 10000; // DEBUG
+const TIMER_DURATION = 60;
 
 let timerInterval;
 
