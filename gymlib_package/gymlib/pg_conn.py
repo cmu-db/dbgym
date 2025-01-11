@@ -208,7 +208,9 @@ class PostgresConn:
         num_timed_out_queries: int = 0
 
         query_order_set = set(workload.get_query_order())
-        assert all(qid in query_order_set for qid in qknobs), f"All IDs in qknobs ({qknobs.keys()}) must be in {query_order_set}."
+        assert all(
+            qid in query_order_set for qid in qknobs
+        ), f"All IDs in qknobs ({qknobs.keys()}) must be in {query_order_set}."
 
         for qid in workload.get_query_order():
             query = workload.get_query(qid)

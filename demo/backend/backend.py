@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
-import sys
 import sqlite3
+import sys
+from pathlib import Path
 from typing import Any
 
 from flask import Flask, request
@@ -34,7 +34,9 @@ def drop_indexes() -> None:
 
 @app.route("/submit", methods=["POST"])
 def submit() -> dict[str, Any]:
-    return process_submission(request.json)
+    data = request.json
+    assert data is not None
+    return process_submission(data)
 
 
 def process_submission(data: dict[str, Any]) -> dict[str, Any]:
@@ -49,7 +51,11 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
         # Drop first to avoid index name conflicts.
         assert len(data["indexes"]) <= MAX_NUM_INDEXES
         for i, index_config in enumerate(data["indexes"]):
-            includes_str = "" if index_config["include"] is None else f" INCLUDE ({index_config['include']})"
+            includes_str = (
+                ""
+                if index_config["include"] is None
+                else f" INCLUDE ({index_config['include']})"
+            )
             create_index_sql = f"CREATE INDEX index{i} ON {index_config['table']} ({index_config['column']}){includes_str}"
             demo_backend.pg_conn.psql(create_index_sql)
 
@@ -63,19 +69,21 @@ def process_submission(data: dict[str, Any]) -> dict[str, Any]:
         }
 
     # Run workload.
-    total_runtime_us = 0
-    trials = 3
-    for _ in range(trials):
+    total_runtime_us: float = 0
+    NUM_TRIALS = 3
+    for _ in range(NUM_TRIALS):
         runtime_us, _ = demo_backend.time_workload(qknobs=qknobs)
         total_runtime_us += runtime_us
-    runtime_s = total_runtime_us / trials / 1_000_000
+    runtime_s = total_runtime_us / NUM_TRIALS / 1_000_000
 
     # Add to leaderboard if the user has a name.
     best_runtime_s = None
     if data["welcomeData"]["name"]:
         leaderboard = Leaderboard()
         # We create a new leaderboard object each time because SQLite requires you to create the object in the same thread you use it in.
-        best_runtime_s = leaderboard.update_user_best_runtime(name=data["welcomeData"]["name"], runtime=runtime_s)
+        best_runtime_s = leaderboard.update_user_best_runtime(
+            name=data["welcomeData"]["name"], runtime=runtime_s
+        )
         leaderboard.close()
 
     # Since restart_with_changes() is not additive (see its comment), we actually *don't* need to reset the system knobs.
@@ -138,7 +146,7 @@ class DemoBackend:
 
         self.pg_conn.restart_postgres()
 
-    def time_workload(self, *args, **kwargs) -> tuple[float, int]:
+    def time_workload(self, *args: Any, **kwargs: Any) -> tuple[float, int]:
         return self.pg_conn.time_workload(self.workload, *args, **kwargs)
 
     def shutdown_postgres(self) -> None:
@@ -146,45 +154,57 @@ class DemoBackend:
 
 
 class Leaderboard:
-    def __init__(self):
+    def __init__(self) -> None:
         # leaderboard_dbname is set in if __name__ == "__main__"
         # Connect to database (creates it if it doesn't exist)
         self.conn = sqlite3.connect(leaderboard_dbname)
 
         # Create table if it doesn't exist
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''
+        self.cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 runtime REAL NOT NULL
             )
-        ''')
+        """
+        )
         self.conn.commit()
-    
+
     def update_user_best_runtime(self, name: str, runtime: float) -> float:
-        self.cursor.execute('''
+        self.cursor.execute(
+            """
             INSERT INTO users (name, runtime)
             VALUES (?, ?)
             ON CONFLICT(name) DO UPDATE SET runtime = excluded.runtime
             WHERE excluded.runtime < users.runtime
-        ''', (name, runtime))
+        """,
+            (name, runtime),
+        )
         self.conn.commit()
-        
+
         # Fetch the best runtime for the user after the update
-        self.cursor.execute('SELECT runtime FROM users WHERE name = ?', (name,))
+        self.cursor.execute("SELECT runtime FROM users WHERE name = ?", (name,))
         best_runtime = self.cursor.fetchone()[0]
+        assert isinstance(best_runtime, float)
         return best_runtime
 
     def get_top_users(self, limit: int) -> list[dict[str, float]]:
         """Fetch the top X users based on their runtime."""
-        self.cursor.execute('''
+        self.cursor.execute(
+            """
             SELECT name, runtime FROM users
             ORDER BY runtime ASC
             LIMIT ?
-        ''', (limit,))
-        return [{"name": name, "runtime": runtime} for name, runtime in self.cursor.fetchall()]
-    
+        """,
+            (limit,),
+        )
+        return [
+            {"name": name, "runtime": runtime}
+            for name, runtime in self.cursor.fetchall()
+        ]
+
     def close(self) -> None:
         # Always close the connection when done
         self.conn.close()
