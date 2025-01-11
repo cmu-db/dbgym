@@ -33,27 +33,27 @@
     ],
     "qknobs": {
         "q1": [
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 64)",
             "BitmapScan(ct)",
             "IndexOnlyScan(it)",
             "IndexOnlyScan(mc)",
-            "BitmapScan(t)",
-            "SET (random_page_cost 128)",
-            "SET (seq_page_cost 64)"
+            "BitmapScan(t)"
         ],
         "q2": [
-            "SeqScan(cn)",
-            "IndexOnlyScan(mk)",
             "SET (random_page_cost 128)",
-            "SET (seq_page_cost 32)"
+            "SET (seq_page_cost 32)",
+            "SeqScan(cn)",
+            "IndexOnlyScan(mk)"
         ],
         "q3": [
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 128)",
             "BitmapScan(it)",
             "SeqScan(k)",
             "SeqScan(mi_idx)",
-            "BitmapScan(t)",
-            "SET (random_page_cost 128)",
-            "SET (seq_page_cost 128)",
-            "IndexOnlyScan(mk)"
+            "IndexOnlyScan(mk)",
+            "BitmapScan(t)"
         ]
     }
 }
