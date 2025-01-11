@@ -28,25 +28,105 @@
                         <th>Value</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody></tbody>
                     <tr>
-                        <td>shared_buffers</td>
-                        <td><select id="shared_buffers">
-                            <option value="64MB">64MB</option>
-                            <option value="128MB" selected>128MB</option>
-                            <option value="256MB">256MB</option>
-                            <option value="512MB">512MB</option>
-                            <option value="1GB">1GB</option>
+                        <td>checkpoint_completion_target</td>
+                        <td><select id="checkpoint_completion_target">
+                            <option value="0.1">0.1</option>
+                            <option value="0.3">0.3</option>
+                            <option value="0.5">0.5</option>
+                            <option value="0.7">0.7</option>
+                            <option value="0.9" selected>0.9</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>default_statistics_target</td>
+                        <td><select id="default_statistics_target">
+                            <option value="100" selected>100</option>
+                            <option value="200">200</option>
+                            <option value="300">300</option>
+                            <option value="400">400</option>
+                            <option value="500">500</option>
                         </select></td>
                     </tr>
                     <tr>
                         <td>effective_cache_size</td>
                         <td><select id="effective_cache_size">
-                            <option value="2GB">2GB</option>
+                            <option value="256MB">256MB</option>
+                            <option value="1GB">1GB</option>
                             <option value="4GB" selected>4GB</option>
-                            <option value="8GB">8GB</option>
                             <option value="16GB">16GB</option>
-                            <option value="32GB">32GB</option>
+                            <option value="64GB">64GB</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>effective_io_concurrency</td>
+                        <td><select id="effective_io_concurrency">
+                            <option value="1" selected>1</option>
+                            <option value="4">4</option>
+                            <option value="16">16</option>
+                            <option value="64">64</option>
+                            <option value="256">256</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>max_parallel_workers</td>
+                        <td><select id="max_parallel_workers">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>max_parallel_workers_per_gather</td>
+                        <td><select id="max_parallel_workers_per_gather">
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="4">4</option>
+                            <option value="8">8</option>
+                            <option value="16">16</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>max_worker_processes</td>
+                        <td><select id="max_worker_processes">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>shared_buffers</td>
+                        <td><select id="shared_buffers">
+                            <option value="32MB">32MB</option>
+                            <option value="128MB" selected>128MB</option>
+                            <option value="512MB">512MB</option>
+                            <option value="2GB">2GB</option>
+                            <option value="8GB">8GB</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>wal_buffers</td>
+                        <td><select id="wal_buffers">
+                            <option value="4MB" selected>4MB</option>
+                            <option value="16MB">16MB</option>
+                            <option value="64MB">64MB</option>
+                            <option value="256MB">256MB</option>
+                            <option value="1GB">1GB</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>work_mem</td>
+                        <td><select id="work_mem">
+                            <option value="4MB" selected>4MB</option>
+                            <option value="16MB">16MB</option>
+                            <option value="64MB">64MB</option>
+                            <option value="256MB">256MB</option>
+                            <option value="1GB">1GB</option>
                         </select></td>
                     </tr>
                 </tbody>

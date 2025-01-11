@@ -119,56 +119,56 @@ def query_to_html(query: str) -> str:
 if __name__ == "__main__":
     query1a = """
 SELECT MIN(mc.note) AS production_note,<br>
-    &nbsp;MIN(t.title) AS movie_title,<br>
-    &nbsp;MIN(t.production_year) AS movie_year<br>
+    <span class="sql-indent">MIN(t.title) AS movie_title,<br>
+    <span class="sql-indent">MIN(t.production_year) AS movie_year<br>
 FROM company_type AS ct,<br>
-    &nbsp;info_type AS it,<br>
-    &nbsp;movie_companies AS mc,<br>
-    &nbsp;movie_info_idx AS mi_idx,<br>
-    &nbsp;title AS t<br>
+    <span class="sql-indent">info_type AS it,<br>
+    <span class="sql-indent">movie_companies AS mc,<br>
+    <span class="sql-indent">movie_info_idx AS mi_idx,<br>
+    <span class="sql-indent">title AS t<br>
 WHERE ct.kind = 'production companies'<br>
-    &nbsp;AND it.info = 'top 250 rank'<br>
-    &nbsp;AND mc.note NOT LIKE '%(as Metro-Goldwyn-Mayer Pictures)%'<br>
-    &nbsp;AND (mc.note LIKE '%(co-production)%'<br>
-        &nbsp;&nbsp;OR mc.note LIKE '%(presents)%')<br>
-    &nbsp;AND ct.id = mc.company_type_id<br>
-    &nbsp;AND t.id = mc.movie_id<br>
-    &nbsp;AND t.id = mi_idx.movie_id<br>
-    &nbsp;AND mc.movie_id = mi_idx.movie_id<br>
-    &nbsp;AND it.id = mi_idx.info_type_id;"""
+    <span class="sql-indent">AND it.info = 'top 250 rank'<br>
+    <span class="sql-indent">AND mc.note NOT LIKE '%(as Metro-Goldwyn-Mayer Pictures)%'<br>
+    <span class="sql-indent">AND (mc.note LIKE '%(co-production)%'<br>
+        <span class="sql-indent"><span class="sql-indent">OR mc.note LIKE '%(presents)%')<br>
+    <span class="sql-indent">AND ct.id = mc.company_type_id<br>
+    <span class="sql-indent">AND t.id = mc.movie_id<br>
+    <span class="sql-indent">AND t.id = mi_idx.movie_id<br>
+    <span class="sql-indent">AND mc.movie_id = mi_idx.movie_id<br>
+    <span class="sql-indent">AND it.id = mi_idx.info_type_id;"""
 
     query2a = """
 SELECT MIN(t.title) AS movie_title<br>
 FROM company_name AS cn,<br>
-    &nbsp;keyword AS k,<br>
-    &nbsp;movie_companies AS mc,<br>
-    &nbsp;movie_keyword AS mk,<br>
-    &nbsp;title AS t<br>
+    <span class="sql-indent">keyword AS k,<br>
+    <span class="sql-indent">movie_companies AS mc,<br>
+    <span class="sql-indent">movie_keyword AS mk,<br>
+    <span class="sql-indent">title AS t<br>
 WHERE cn.country_code = '[de]'<br>
-    &nbsp;AND k.keyword = 'character-name-in-title'<br>
-    &nbsp;AND cn.id = mc.company_id<br>
-    &nbsp;AND mc.movie_id = t.id<br>
-    &nbsp;AND t.id = mk.movie_id<br>
-    &nbsp;AND mk.keyword_id = k.id<br>
-    &nbsp;AND mc.movie_id = mk.movie_id;"""
+    <span class="sql-indent">AND k.keyword = 'character-name-in-title'<br>
+    <span class="sql-indent">AND cn.id = mc.company_id<br>
+    <span class="sql-indent">AND mc.movie_id = t.id<br>
+    <span class="sql-indent">AND t.id = mk.movie_id<br>
+    <span class="sql-indent">AND mk.keyword_id = k.id<br>
+    <span class="sql-indent">AND mc.movie_id = mk.movie_id;"""
 
     query4a = """
 SELECT MIN(mi_idx.info) AS rating,<br>
-    &nbsp;MIN(t.title) AS movie_title<br>
+    <span class="sql-indent">MIN(t.title) AS movie_title<br>
 FROM info_type AS it,<br>
-    &nbsp;keyword AS k,<br>
-    &nbsp;movie_info_idx AS mi_idx,<br>
-    &nbsp;movie_keyword AS mk,<br>
-    &nbsp;title AS t<br>
+    <span class="sql-indent">keyword AS k,<br>
+    <span class="sql-indent">movie_info_idx AS mi_idx,<br>
+    <span class="sql-indent">movie_keyword AS mk,<br>
+    <span class="sql-indent">title AS t<br>
 WHERE it.info = 'rating'<br>
-    &nbsp;AND k.keyword LIKE '%sequel%'<br>
-    &nbsp;AND mi_idx.info > '5.0'<br>
-    &nbsp;AND t.production_year > 2005<br>
-    &nbsp;AND t.id = mi_idx.movie_id<br>
-    &nbsp;AND t.id = mk.movie_id<br>
-    &nbsp;AND mk.movie_id = mi_idx.movie_id<br>
-    &nbsp;AND k.id = mk.keyword_id<br>
-    &nbsp;AND it.id = mi_idx.info_type_id;"""
+    <span class="sql-indent">AND k.keyword LIKE '%sequel%'<br>
+    <span class="sql-indent">AND mi_idx.info > '5.0'<br>
+    <span class="sql-indent">AND t.production_year > 2005<br>
+    <span class="sql-indent">AND t.id = mi_idx.movie_id<br>
+    <span class="sql-indent">AND t.id = mk.movie_id<br>
+    <span class="sql-indent">AND mk.movie_id = mi_idx.movie_id<br>
+    <span class="sql-indent">AND k.id = mk.keyword_id<br>
+    <span class="sql-indent">AND it.id = mi_idx.info_type_id;"""
 
     queries = [
         ("1a", query1a),

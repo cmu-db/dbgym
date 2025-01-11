@@ -101,3 +101,7 @@ table td {
     padding: 6px;
     text-align: left;
 }
+
+.sql-indent {
+    margin-left: 2em;
+}

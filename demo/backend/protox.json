@@ -1,13 +1,14 @@
 {
     "sysknobs": {
-        "shared_buffers": "34MB",
-        "effective_cache_size": "64MB",
-        "checkpoint_completion_target": "0.4",
+        "checkpoint_completion_target": "0.3",
         "default_statistics_target": "100",
-        "effective_io_concurrency": "520",
-        "max_worker_processes": "10",
-        "max_parallel_workers_per_gather": "9",
-        "max_parallel_workers": "12",
+        "effective_cache_size": "256MB",
+        "effective_io_concurrency": "256",
+        "max_parallel_workers": "8",
+        "max_parallel_workers_per_gather": "8",
+        "max_worker_processes": "8",
+        "shared_buffers": "32MB",
+        "wal_buffers": "4MB",
         "work_mem": "8MB"
     },
     "welcomeData": {

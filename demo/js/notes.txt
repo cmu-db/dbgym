@@ -1,0 +1,7 @@
+remove optional in leaderboard name
+add 3,2,1 in begin
+show your runtime, default, and best
+show your knobs on the right on the submission page
+make screen recording
+leaderboard on a separate screen
+booth -> computer with screenshot -> database. icons from https://thenounproject.com/search/icons/?q=database

@@ -1,14 +1,14 @@
 
 <span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title<br>
 <span class='query-red'>FROM</span> company_name <span class='query-red'>AS</span> cn,<br>
-    &nbsp;keyword <span class='query-red'>AS</span> k,<br>
-    &nbsp;movie_companies <span class='query-red'>AS</span> mc,<br>
-    &nbsp;movie_keyword <span class='query-red'>AS</span> mk,<br>
-    &nbsp;title <span class='query-red'>AS</span> t<br>
+    <span class="sql-indent">keyword <span class='query-red'>AS</span> k,<br>
+    <span class="sql-indent">movie_companies <span class='query-red'>AS</span> mc,<br>
+    <span class="sql-indent">movie_keyword <span class='query-red'>AS</span> mk,<br>
+    <span class="sql-indent">title <span class='query-red'>AS</span> t<br>
 <span class='query-red'>WHERE</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>country_code</span><span class='query-red'> = </span><span class='query-darkblue'>'[de]'</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span><span class='query-red'> = </span><span class='query-darkblue'>'character-name-in-title'</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><span class='query-red'> = </span><span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>;
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span><span class='query-red'> = </span><span class='query-darkblue'>'character-name-in-title'</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>cn</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mc</span>.<span class='query-lightblue'>company_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><span class='query-red'> = </span><span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>mc</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span>;

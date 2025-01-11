@@ -1,17 +1,17 @@
 
 <span class='query-red'>SELECT</span> <span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info</span>) <span class='query-red'>AS</span> rating,<br>
-    &nbsp;<span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title<br>
+    <span class="sql-indent"><span class='query-lightblue'>MIN</span>(<span class='query-lightblue'>t</span>.<span class='query-lightblue'>title</span>) <span class='query-red'>AS</span> movie_title<br>
 <span class='query-red'>FROM</span> info_type <span class='query-red'>AS</span> it,<br>
-    &nbsp;keyword <span class='query-red'>AS</span> k,<br>
-    &nbsp;movie_info_idx <span class='query-red'>AS</span> mi_idx,<br>
-    &nbsp;movie_keyword <span class='query-red'>AS</span> mk,<br>
-    &nbsp;title <span class='query-red'>AS</span> t<br>
+    <span class="sql-indent">keyword <span class='query-red'>AS</span> k,<br>
+    <span class="sql-indent">movie_info_idx <span class='query-red'>AS</span> mi_idx,<br>
+    <span class="sql-indent">movie_keyword <span class='query-red'>AS</span> mk,<br>
+    <span class="sql-indent">title <span class='query-red'>AS</span> t<br>
 <span class='query-red'>WHERE</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>info</span><span class='query-red'> = </span><span class='query-darkblue'>'rating'</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%sequel%'</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info</span><span class='query-red'> > </span><span class='query-darkblue'>'5.0'</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>production_year</span><span class='query-red'> > </span><span class='query-lightblue'>2005</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><br>
-    &nbsp;<span class='query-red'>AND</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info_type_id</span>;
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>keyword</span> <span class='query-red'>LIKE</span> <span class='query-darkblue'>'%sequel%'</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info</span><span class='query-red'> > </span><span class='query-darkblue'>'5.0'</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>production_year</span><span class='query-red'> > </span><span class='query-lightblue'>2005</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>t</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>mk</span>.<span class='query-lightblue'>movie_id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>movie_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>k</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mk</span>.<span class='query-lightblue'>keyword_id</span><br>
+    <span class="sql-indent"><span class='query-red'>AND</span> <span class='query-lightblue'>it</span>.<span class='query-lightblue'>id</span><span class='query-red'> = </span><span class='query-lightblue'>mi_idx</span>.<span class='query-lightblue'>info_type_id</span>;
