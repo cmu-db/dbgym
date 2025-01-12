@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Your Results</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+
+    <style>
+        .centered-text {
+            font-size: 30px;
+            text-align: center;
+            margin: 20px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 300px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h1>Your Results</h1>
+        <button class="next-button" onclick="window.location.href='welcome.html';">Restart ↺</button>
+    </div>
+
+    <div class="centered-text" style="padding-top: 40px;">
+        <strong>Your Runtime:</strong> <span id="runtimeDisplay">--</span>s<br>
+        <strong>Base Runtime<sup class="tooltip">
+            <img src="../assets/info.png" alt="i" style="width: 20px; height: 20px; vertical-align: middle; cursor: help;">
+            <span class="tooltip-text">The runtime with default system knobs, no indexes, and no query knobs.</span>
+        </sup>:</strong> 0.752s <br>
+        <strong>Proto-X Runtime<sup class="tooltip">
+            <img src="../assets/info.png" alt="i" style="width: 20px; height: 20px; vertical-align: middle; cursor: help;">
+            <span class="tooltip-text">The runtime with the config discovered by our RL agent Proto-X.</span>
+        </sup>:</strong> 0.304s<br>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const yourResults = JSON.parse(localStorage.getItem('yourResults')) || {};
+            const runtime = yourResults.runtime || '--';
+            document.getElementById('runtimeDisplay').textContent = runtime.toFixed(3);
+        }
+    </script>
+    
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+</body>
+</html>
