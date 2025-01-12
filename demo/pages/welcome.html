@@ -64,12 +64,8 @@
                 Once you press <strong>Begin</strong>, the timer will start and you'll see the queries and machine information.
             </div>
             <div>
-                <label for="name"><em>[Optional]</em> Leaderboard Name:</label>
+                <label for="name">Leaderboard Name:</label>
                 <input type="text" class="welcome-input" id="name" placeholder="Enter your name" required>
-            </div>
-            <div style="visibility: hidden;">
-                <label for="email"><em>[Optional]</em> Notification Email:</label>
-                <input type="email" class="welcome-input" id="email" placeholder="Enter your email" required>
             </div>
         </form>
     </div>
@@ -96,11 +92,17 @@
         };
 
         function initializeAndMoveToIndexes() {
+            const name = document.getElementById('name').value.trim();
+            
+            if (!name) {
+                alert('Please enter a leaderboard name before continuing.');
+                return;
+            }
+
             // Create a JSON object with user data
             const userData = {
                 welcomeData: {
-                    name: document.getElementById('name').value,
-                    email: document.getElementById('email').value,
+                    name: name,
                 }
             };
 
@@ -110,7 +112,7 @@
             // Start the timer
             startTimer();
 
-            // Redirect to the next page (for example, page2.html)
+            // Redirect to the next page
             window.location.href = 'indexes.html';
         }
     </script>
