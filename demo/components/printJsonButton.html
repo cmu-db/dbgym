@@ -1,5 +1,5 @@
 <!-- Button to print JSON to console -->
-<button id="printJsonButton" onclick="
+<button id="printJsonButton" style="display: none;" onclick="
 const userData = localStorage.getItem('userData');
 if (userData) {
     console.log('Current User Data JSON:', JSON.parse(userData));
