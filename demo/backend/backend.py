@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -113,6 +114,7 @@ def get_leaderboard() -> dict[str, Any]:
 
 class DemoBackend:
     def __init__(self) -> None:
+        os.environ["DBGYM_CONFIG_PATH"] = "demo/dbgym_demo_config.yaml"
         self.dbgym_workspace = make_standard_dbgym_workspace()
         self.pg_conn = PostgresConn(
             self.dbgym_workspace,
