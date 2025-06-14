@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <style>
+        form {
+            padding: 20px;
+        }
+        .welcomeContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input {
+            padding: 5px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+        #taskDescription {
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #bcc3ca;
+            border-radius: 10px;
+        }
+        #userForm {
+            width: 600px;
+        }
+        .welcome-input {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h1>Database Gym</h1>
+        <div id="timerDisplay"></div>
+        <button class="next-button" onclick="initializeAndMoveToIndexes()">Begin →</button>
+    </div>
+
+    <div class="welcomeContainer">
+        <form id="userForm">
+            <div id="taskDescription">
+                <div style="font-size: 30px; font-weight: bold;">Your task:</div>
+                <br>
+                You will have <strong>60 seconds</strong> to:
+                <ol>
+                    <li>
+                        <img src="../assets/triangle.svg" alt="Image 1" style="width: 20px; height: 20px; margin-right: 5px;">
+                        Create indexes
+                    </li>
+                    <li>
+                        <img src="../assets/gear.png" alt="Image 2" style="width: 20px; height: 20px; margin-right: 5px;">
+                        Set system-wide knobs
+                    </li>
+                    <li>
+                        <img src="../assets/magnifying-glass.png" alt="Image 3" style="width: 20px; height: 20px; margin-right: 5px;">
+                        Add optimizer hints
+                    </li>
+                </ol>
+                to minimize the runtime of <strong>three JOB queries</strong>.<br>
+                <br>
+                Once you press <strong>Begin</strong>, the timer will start and you'll see the queries and machine information.
+            </div>
+            <div>
+                <label for="name">Leaderboard Name:</label>
+                <input type="text" class="welcome-input" id="name" placeholder="Enter your name" required>
+            </div>
+        </form>
+    </div>
+
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+
+    <script src="../js/timer.js"></script>
+
+    <script>
+        window.onload = function() {
+            // Clear localStorage
+            localStorage.clear();
+        };
+
+        function initializeAndMoveToIndexes() {
+            const name = document.getElementById('name').value.trim();
+            
+            if (!name) {
+                alert('Please enter a leaderboard name before continuing.');
+                return;
+            }
+
+            // Create a JSON object with user data
+            const userData = {
+                welcomeData: {
+                    name: name,
+                }
+            };
+
+            // Save the JSON object to local storage
+            localStorage.setItem('userData', JSON.stringify(userData));
+
+            // Start the timer
+            startTimer();
+
+            // Redirect to the next page
+            window.location.href = 'indexes.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Submission Complete!</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            height: 100%;
+        }
+        .centered-text {
+            font-size: 30px;
+            text-align: center;
+            color: #c41230;
+            margin: 20px;
+        }
+        .centered-logo {
+            position: absolute;
+            top: 70%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        @keyframes squish {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1, 0.9);
+            }
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            75% {
+                transform: rotate(360deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        #barrel {
+            width: 100px;
+            animation: squish 0.5s ease-in-out 0.1s, spin 1.2s ease-in-out 1.2s infinite;
+        }
+        .no-animation {
+            animation: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h1>Submission Complete!</h1>
+    </div>
+
+    <div class="centered-text" id="submission-complete-text" style="padding-top: 100px;">
+        <strong>Submission Complete!</strong><br>
+    </div>
+    
+    <div class="centered-text" style="padding-top: 40px;">
+        <span id="runtime-text"><em>Give us a few seconds to evaluate it<span id="dot-animation">.</span></em></span>
+    </div>
+
+    <div class="centered-logo">
+        <img id="barrel" src="../assets/cmu-db-logo-barrel.svg" alt="CMU DB Logo Barrel">
+    </div>
+
+    <script>
+        window.onload = async function() {
+            // Confetti effect
+            setTimeout(() => {
+                confetti({
+                    colors: ['#c41230'],
+                    origin: { y: 0.7 },
+                    spread: 110,
+                    gravity: 1
+                });
+            }, 550);
+
+            // Dot animation logic
+            const dotElement = document.getElementById('dot-animation');
+            let dotCount = 1;
+
+            setInterval(() => {
+                dotElement.textContent = '.'.repeat(dotCount);
+                dotCount = (dotCount % 3) + 1; // Cycle through 1, 2, 3
+            }, 300); // Change every 0.5 seconds
+            
+            // Send POST request to the backend server on port 15721
+            try {
+                const response = await fetch('http://100.86.219.84:15721/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(JSON.parse(localStorage.getItem('userData')))
+                });
+                const data = await response.json();
+                localStorage.setItem('yourResults', JSON.stringify(data));
+                window.location.href='results.html';
+            } catch (error) {
+                console.error('Error sending POST request:', error);
+            }
+        };
+    </script>
+    
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+</body>
+</html>

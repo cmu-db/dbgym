@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Step 1/3: Indexes</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <style>
+        form {
+            padding: 20px;
+        }
+        #indexTable {
+            padding: 20px;
+            padding-top: 0;
+        }
+        #createIndexContainer {
+            margin: 10px;
+            background-color: #bcc3ca;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #indexForm select {
+            width: 200px;
+        }
+    </style>
+
+    <script>
+        const tables = [
+            {
+                value: "",
+                text: "Select Table",
+                columns: []
+            },
+            {
+                value: "company_name",
+                text: null,
+                columns: [
+                    { value: "country_code", text: null }
+                ]
+            },
+            {
+                value: "company_type",
+                text: null,
+                columns: [
+                    { value: "kind", text: null }
+                ]
+            },
+            {
+                value: "info_type",
+                text: null,
+                columns: [
+                    { value: "info", text: null }
+                ]
+            },
+            {
+                value: "keyword",
+                text: null,
+                columns: [
+                    { value: "keyword", text: null }
+                ]
+            },
+            {
+                value: "movie_companies",
+                text: null,
+                columns: [
+                    { value: "company_id", text: null },
+                    { value: "company_type_id", text: null },
+                    { value: "movie_id", text: null },
+                    { value: "note", text: null }
+                ]
+            },
+            {
+                value: "movie_info_idx",
+                text: null,
+                columns: [
+                    { value: "info", text: null },
+                    { value: "info_type_id", text: null },
+                    { value: "movie_id", text: null }
+                ]
+            },
+            {
+                value: "movie_keyword",
+                text: null,
+                columns: [
+                    { value: "keyword_id", text: null },
+                    { value: "movie_id", text: null }
+                ]
+            },
+            {
+                value: "title",
+                text: null,
+                columns: [
+                    { value: "title", text: null },
+                    { value: "production_year", text: null }
+                ]
+            }
+        ];
+
+        function updateColumns() {
+            const indexTableSelect = document.getElementById('indexTable');
+            const selectedTable = indexTableSelect.value;
+            const indexColumnSelect = document.getElementById('indexColumn');
+            const selectedColumn = indexColumnSelect.value;
+            indexColumnSelect.innerHTML = ''; // Clear existing options
+
+            const selectedTableObj = tables.find(table => table.value === selectedTable);
+            if (selectedTableObj) {
+                const columnOptions = [{value: "", text: "Select Column"}, ...selectedTableObj.columns];
+                columnOptions.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column.value;
+                    option.textContent = column.text || column.value;
+                    indexColumnSelect.appendChild(option);
+                });
+            }
+        }
+
+        function updateIncludes() {
+            /*
+            If a column is selected, select all options except the selected column.
+            If no column is selected, select only the "Select Include" option.
+            */
+            const indexTableSelect = document.getElementById('indexTable');
+            const selectedTable = indexTableSelect.value;
+            const indexColumnSelect = document.getElementById('indexColumn');
+            const selectedColumn = indexColumnSelect.value;
+            const indexIncludeSelect = document.getElementById('indexInclude');
+            indexIncludeSelect.innerHTML = ''; // Clear existing options
+
+            const selectedTableObj = tables.find(table => table.value === selectedTable);
+            if (selectedTableObj) {
+                includePrependOptions = [{value: "", text: "Select Include"}];
+
+                if (selectedTable !== "") {
+                    // We'll convert "null" to None in the backend.
+                    includePrependOptions.push({value: "null", text: "[No Include]"});
+                }
+
+                const includeOptions = [...includePrependOptions, ...selectedTableObj.columns];
+                includeOptions.forEach(include => {
+                    const option = document.createElement('option');
+                    option.value = include.value;
+                    option.textContent = include.text || include.value;
+
+                    if (selectedColumn === "") {
+                        if (include.value === "") {
+                            indexIncludeSelect.appendChild(option);
+                        }
+                    } else {
+                        if (include.value !== selectedColumn) {   
+                            indexIncludeSelect.appendChild(option);
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div class="header-bar">
+        <h1>Step 1/3: Indexes</h1>
+        <div id="timerDisplay"></div>
+        <button class="next-button" onclick="saveToUserData(); window.location.href='sysknobs.html'">System Knobs →</button>
+    </div>
+
+    <div class="container">
+        <div class="actionsContainer">
+            <div id="createIndexContainer">
+                <div style="margin-top: 15px; font-size: 30px; font-weight: bold;">Create Secondary Index</div>
+                <ul style="text-align: left;">
+                    <li>Five indexes max.</li>
+                    <li>Indexes are B+ Trees.</li>
+                    <li>Indexes can only be created on a single column.</li>
+                    <li>Include is an (optional) extra column in leaf nodes.</li>
+                </ul>
+                <form id="indexForm" onsubmit="addIndex(event)">
+                    <select id="indexTable" required onchange="updateColumns(); updateIncludes()">
+                        <script>
+                            const indexTableSelect = document.getElementById('indexTable');
+                            tables.forEach(table => {
+                                const option = document.createElement('option');
+                                option.value = table.value;
+                                option.textContent = table.text || table.value;
+                                indexTableSelect.appendChild(option);
+                            });
+                        </script>
+                    </select>
+                    <select id="indexColumn" required onchange="updateIncludes()">
+                        <option value="">Select Column</option>
+                    </select>
+                    <select id="indexInclude" required>
+                        <option value="">Select Include</option>
+                    </select>
+                    <button type="submit">Create</button>
+                </form>
+            </div>
+        
+            <div style="margin-bottom: 10px; font-size: 30px; font-weight: bold;">Existing Secondary Indexes</div>
+            <table id="indexTable">
+                <thead>
+                    <tr>
+                        <th style="min-width: 200px;">Table</th>
+                        <th style="min-width: 200px;">Column</th>
+                        <th style="min-width: 200px;">Include</th>
+                        <th style="min-width: 50px;">Delete?</th>
+                    </tr>
+                </thead>
+                <tbody id="indexTableBody">
+                    <!-- Table rows will be added here dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="queriesContainer">
+            <script src="../js/queriesScripts.js"></script>
+            <script>
+                fetch('../components/queries.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('queriesContainer').innerHTML = data;
+                    })
+                    .then(data => {
+                        initializePopup();
+                        initializeAccordion();
+                    })
+                    .catch(error => console.error("Error loading popup:", error));
+            </script>
+        </div>
+    </div>
+
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+
+    <script src="../js/timer.js"></script>
+
+    <div id="timesUpPopupContainer">
+        <script>
+            fetch('../components/timesUpPopup.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('timesUpPopupContainer').innerHTML = data;
+                })
+                .then(() => {
+                    const startTime = localStorage.getItem('startTime');
+                    setText(startTime);
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+</body>
+
+<script>
+    let indexes = []; // Local array to hold indexes
+
+    function saveToUserData() {
+        // Retrieve existing userData from local storage
+        const userData = JSON.parse(localStorage.getItem('userData')) || {};
+        
+        // Save the indexes array to userData
+        userData.indexes = indexes;
+
+        // Save the updated userData back to local storage
+        localStorage.setItem('userData', JSON.stringify(userData));
+    }
+
+    function addIndex(event) {
+        event.preventDefault();
+        
+        // Check if we already have 5 indexes
+        if (indexes.length >= 5) {
+            alert("Maximum of 5 indexes allowed!");
+            return;
+        }
+
+        const indexTable = document.getElementById('indexTable').value;
+        const indexColumn = document.getElementById('indexColumn').value;
+        const indexInclude = document.getElementById('indexInclude').value;
+
+        // Check for duplicate index (same table and column and include)
+        const isDuplicate = indexes.some(index => 
+            index.table === indexTable && 
+            index.column === indexColumn &&
+            index.include === indexInclude
+        );
+
+        if (isDuplicate) {
+            alert("An index on this column and include already exists!");
+            return;
+        }
+
+        if (indexTable && indexColumn && indexInclude) {
+            const newIndex = { table: indexTable, column: indexColumn, include: indexInclude };
+            indexes.push(newIndex);
+
+            document.getElementById('indexTable').value = '';
+            document.getElementById('indexColumn').value = '';
+            document.getElementById('indexInclude').value = '';
+            updateTable();
+        }
+    }
+
+    function deleteIndex(index) {
+        // Remove the index from the local array
+        indexes.splice(index, 1); // Remove the index from the local array
+        updateTable(); // Update the displayed table
+    }
+
+    function updateTable() {
+        const tableBody = document.getElementById('indexTableBody');
+        tableBody.innerHTML = '';
+
+        indexes.forEach((index, i) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index.table}</td>
+                <td>${index.column}</td>
+                <td>${index.include}</td>
+                <td><button onclick="deleteIndex(${i})">Delete</button></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+</script>

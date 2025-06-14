@@ -1,0 +1,122 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Leaderboard</title>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .leaderboard-table {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header-bar">
+        <h1>Leaderboard</h1>
+        <div id="timerDisplay"></div>
+        <button class="next-button" onclick="window.location.href='welcome.html';">Restart ↺</button>
+    </div>
+
+    <div class="container">
+        <div id="yourResultsContainer" style="display: none; text-align: center;">
+            <h2>Your Results</h2>
+            <p><strong>Name:</strong> <span id="yourName">n/a</span> | <strong>Runtime:</strong> <span id="yourRuntime">n/a</span> seconds | <strong>Personal Best:</strong> <span id="yourBestRuntime">n/a</span> seconds</p>
+        </div>
+        <div id="noNameContainer" style="margin-top: 20px; display: none;">
+            <em>Note: you didn't enter a name so your results are not stored in the leaderboard.</em>
+        </div>
+        <h2>Top Results</h2>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Runtime (sec)</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTableBody">
+                <!-- Leaderboard will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
+
+    <div id="printJsonButtonContainer">
+        <script>
+            fetch('../components/printJsonButton.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('printJsonButtonContainer').innerHTML = data;
+                })
+                .catch(error => console.error("Error loading popup:", error));
+        </script>
+    </div>
+
+    <script>
+        // Function to populate the leaderboard table
+        // It uses both the user's own result (if there is one and if the user has a name) as well
+        // as the latest leaderboard data from the backend.
+        function populateLeaderboard() {
+            // The user's own result, if it exists, will be in localStorage.
+            // This is displayed at the top. Also, if the user is in the top results, we'll highlight their row.
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            const results = JSON.parse(localStorage.getItem('yourResults'));
+            const name = userData && userData.welcomeData && userData.welcomeData.name ? userData.welcomeData.name : null; // Store name or null
+            const runtime = results ? results.runtime : null; // Store runtime or null
+            if (runtime) {
+                // If runtime is set, we'll display the user's results.
+                document.getElementById('yourResultsContainer').style.display = 'block';
+                const yourRuntime = document.getElementById('yourRuntime');
+                yourRuntime.textContent = runtime.toFixed(3);
+
+                if (name) {
+                    const yourName = document.getElementById('yourName');
+                    yourName.textContent = name;
+
+                    // If name is set best runtime should also be set.
+                    const best_runtime = results.best_runtime;
+                    const yourBestRuntime = document.getElementById('yourBestRuntime');
+                    yourBestRuntime.textContent = best_runtime.toFixed(3);
+                } else {
+                    document.getElementById('noNameContainer').style.display = 'block';
+                }
+            } else {
+                // Do nothing.
+                // This means the user entered the leaderboard page directly and doesn't have results at all, so we don't show the "no name" message.
+            }
+
+            fetch('http://100.86.219.84:15721/leaderboard' + (name ? '?name=' + name : '')) // Fetch data from the leaderboard endpoint
+                .then(response => response.json())
+                .then(data => {
+                    // Clear the table before populating
+                    const leaderboardTableBody = document.getElementById('leaderboardTableBody');
+                    leaderboardTableBody.innerHTML = '';
+
+                    // Add leaderboard results to the table
+                    data.top_results.forEach((result, index) => {
+                        const row = document.createElement('tr');
+                        // The backend enforces that each user name should only appear once in the leaderboard.
+                        if (result.name === name) {
+                            row.style.color = 'red';
+                            row.style.fontWeight = 'bold';
+                        }
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${result.name}</td>
+                            <td>${result.runtime.toFixed(3)}</td>
+                        `;
+                        leaderboardTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Error fetching leaderboard data:", error));
+        }
+
+        // Call the function to populate leaderboard on page load
+        window.onload = populateLeaderboard;
+    </script>
+</body>

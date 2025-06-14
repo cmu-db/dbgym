@@ -1,7 +1,7 @@
 # 🛢️ Database Gym 🏋️
 [\[Slides\]](http://www.cidrdb.org/cidr2023/slides/p27-lim-slides.pdf) [\[Paper\]](https://www.cidrdb.org/cidr2023/papers/p27-lim.pdf)
 
-*An end-to-end research vehicle for the field of self-driving DBMSs.*
+*An end-to-end research vehicle for self-driving databases.*
 
 ## Quickstart
 

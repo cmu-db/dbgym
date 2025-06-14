@@ -3,13 +3,13 @@ from typing import Optional
 
 import click
 from gymlib.infra_paths import (
+    DEFAULT_SCALE_FACTOR,
     get_tables_dirname,
     get_workload_dirname,
     get_workload_suffix,
 )
 from gymlib.workspace import DBGymWorkspace, fully_resolve_path, name_to_linkname
 
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from util.shell import subprocess_run
 
 JOB_TABLES_URL = "https://event.cwi.nl/da/job/imdb.tgz"
@@ -268,7 +268,7 @@ def _generate_job_workload(
     elif query_subset == "a":
         query_names = [qname for qname in JOB_QUERY_NAMES if qname[-1] == "a"]
     elif query_subset == "demo":
-        query_names = [f"{i}a" for i in range(1, 6)]
+        query_names = ["1a", "2a", "4a"]
     else:
         assert False
 

@@ -11,6 +11,7 @@ from gymlib.workspace import DBGYM_APP_NAME, SYMLINKS_DNAME, name_to_linkname
 SCALE_FACTOR_PLACEHOLDER: str = "[scale_factor]"
 BENCHMARK_NAME_PLACEHOLDER: str = "[benchmark_name]"
 WORKLOAD_NAME_PLACEHOLDER: str = "[workload_name]"
+DEFAULT_SCALE_FACTOR = 1.0
 
 
 def get_scale_factor_string(scale_factor: float | str) -> str:

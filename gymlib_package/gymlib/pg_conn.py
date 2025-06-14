@@ -20,6 +20,7 @@ import psutil
 import psycopg
 import yaml
 from gymlib.pg import DBGYM_POSTGRES_DBNAME, SHARED_PRELOAD_LIBRARIES, get_kv_connstr
+from gymlib.workload import Workload
 from gymlib.workspace import DBGymWorkspace, parent_path_of_path
 from plumbum import local
 from psycopg.errors import ProgramLimitExceeded, QueryCanceled
@@ -190,6 +191,39 @@ class PostgresConn:
         # qid_runtime is in microseconds.
         return qid_runtime, did_time_out, explain_data
 
+    def time_workload(
+        self,
+        workload: Workload,
+        qknobs: dict[str, list[str]] = {},
+        query_timeout: int = 0,
+    ) -> tuple[float, int]:
+        """
+        Returns the total runtime and the number of timed out queries.
+
+        It's possible that your agent will want to run the workload in a more complex manner (e.g. only running
+        a subset of queries, trying many types of qknobs, etc.). It's okay to ignore the time_workload() function
+        in that case and write your own function. This is simply a nice "default" implementation.
+        """
+        total_runtime: float = 0
+        num_timed_out_queries: int = 0
+
+        query_order_set = set(workload.get_query_order())
+        assert all(
+            qid in query_order_set for qid in qknobs
+        ), f"All IDs in qknobs ({qknobs.keys()}) must be in {query_order_set}."
+
+        for qid in workload.get_query_order():
+            query = workload.get_query(qid)
+            this_query_knobs = qknobs[qid] if qid in qknobs else []
+            runtime, did_time_out, _ = self.time_query(
+                query, query_knobs=this_query_knobs, timeout=query_timeout
+            )
+            total_runtime += runtime
+            if did_time_out:
+                num_timed_out_queries += 1
+
+        return total_runtime, num_timed_out_queries
+
     def shutdown_postgres(self) -> None:
         """Shuts down postgres."""
         self.disconnect()
@@ -238,20 +272,21 @@ class PostgresConn:
         multiple changes to `conf_changes`.
         """
         # Install the new configuration changes.
-        if conf_changes is not None:
-            dbdata_auto_conf_path = self.dbdata_path / "postgresql.auto.conf"
-            with open(dbdata_auto_conf_path, "w") as f:
+        dbdata_auto_conf_path = self.dbdata_path / "postgresql.auto.conf"
+        with open(dbdata_auto_conf_path, "w") as f:
+            # If conf_changes is None, we'll essentially end up clearing dbdata_auto_conf_path.
+            if conf_changes is not None:
                 f.write(
                     "\n".join([f"{knob} = {val}" for knob, val in conf_changes.items()])
                     + "\n"
                 )
 
-                assert (
-                    "shared_preload_libraries" not in conf_changes
-                ), f"You should not set shared_preload_libraries manually."
+            assert (
+                conf_changes is None or "shared_preload_libraries" not in conf_changes
+            ), f"You should not set shared_preload_libraries manually."
 
-                # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
-                f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
+            # Using single quotes around SHARED_PRELOAD_LIBRARIES works for both single or multiple libraries.
+            f.write(f"shared_preload_libraries = '{SHARED_PRELOAD_LIBRARIES}'")
 
         # Start postgres instance.
         self.shutdown_postgres()

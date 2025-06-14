@@ -1,0 +1,59 @@
+{
+    "sysknobs": {
+        "checkpoint_completion_target": "0.3",
+        "default_statistics_target": "100",
+        "effective_cache_size": "256MB",
+        "effective_io_concurrency": "256",
+        "max_parallel_workers": "8",
+        "max_parallel_workers_per_gather": "8",
+        "max_worker_processes": "8",
+        "shared_buffers": "32MB",
+        "wal_buffers": "4MB",
+        "work_mem": "8MB"
+    },
+    "welcomeData": {
+        "name": "protox"
+    },
+    "indexes": [
+        {
+            "table": "movie_companies",
+            "column": "movie_id",
+            "include": "null"
+        },
+        {
+            "table": "movie_keyword",
+            "column": "keyword_id",
+            "include": "movie_id"
+        },
+        {
+            "table": "movie_keyword",
+            "column": "movie_id",
+            "include": "keyword_id"
+        }
+    ],
+    "qknobs": {
+        "q1": [
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 64)",
+            "BitmapScan(ct)",
+            "IndexOnlyScan(it)",
+            "IndexOnlyScan(mc)",
+            "BitmapScan(t)"
+        ],
+        "q2": [
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 32)",
+            "SeqScan(cn)",
+            "IndexOnlyScan(mk)"
+        ],
+        "q3": [
+            "SET (random_page_cost 128)",
+            "SET (seq_page_cost 128)",
+            "BitmapScan(it)",
+            "SeqScan(k)",
+            "SeqScan(mi_idx)",
+            "IndexOnlyScan(mk)",
+            "BitmapScan(t)"
+        ]
+    }
+}

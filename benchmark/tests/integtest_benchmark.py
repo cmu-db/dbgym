@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from gymlib.infra_paths import (
+    DEFAULT_SCALE_FACTOR,
     get_tables_symlink_path,
     get_workload_suffix,
     get_workload_symlink_path,
@@ -14,7 +15,6 @@ from gymlib.workspace import (
 )
 
 # It's ok to import private functions from the benchmark module because this is an integration test.
-from benchmark.constants import DEFAULT_SCALE_FACTOR
 from benchmark.job.cli import _job_tables, _job_workload
 from benchmark.tpch.cli import _tpch_tables, _tpch_workload
 from benchmark.tpch.constants import DEFAULT_TPCH_SEED
