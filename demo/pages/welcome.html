@@ -72,8 +72,6 @@
 
     <img id="cmu-db-logo" src="../assets/cmu-db-logo.svg" alt="CMU DB Logo">
 
-    <div id="distractionPopupContainer"></div>
-
     <div id="printJsonButtonContainer">
         <script>
             fetch('../components/printJsonButton.html')
@@ -117,25 +115,6 @@
             // Redirect to the next page
             window.location.href = 'indexes.html';
         }
-
-        // Load the distraction popup component
-        fetch('../components/distractionEmail.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('distractionPopupContainer').innerHTML = data;
-            })
-            .catch(error => console.error("Error loading distraction popup:", error));
-
-        function showDistractionPopup() {
-            document.getElementById('distractionPopup').style.display = 'block';
-        }
-        function closeDistractionPopup() {
-            document.getElementById('distractionPopup').style.display = 'none';
-        }
-        // Show the distraction popup after 5 seconds
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(showDistractionPopup, 5000);
-        });
     </script>
 </body>
 </html>

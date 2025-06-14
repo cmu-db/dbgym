@@ -163,6 +163,8 @@
         <button class="next-button" onclick="saveToUserData(); window.location.href='sysknobs.html'">System Knobs →</button>
     </div>
 
+    <div id="distractionPopupContainer"></div>
+
     <div class="container">
         <div class="actionsContainer">
             <div id="createIndexContainer">
@@ -257,77 +259,97 @@
                 .catch(error => console.error("Error loading popup:", error));
         </script>
     </div>
-</body>
 
-<script>
-    let indexes = []; // Local array to hold indexes
+    <script>
+        let indexes = []; // Local array to hold indexes
 
-    function saveToUserData() {
-        // Retrieve existing userData from local storage
-        const userData = JSON.parse(localStorage.getItem('userData')) || {};
-        
-        // Save the indexes array to userData
-        userData.indexes = indexes;
+        function saveToUserData() {
+            // Retrieve existing userData from local storage
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+            
+            // Save the indexes array to userData
+            userData.indexes = indexes;
 
-        // Save the updated userData back to local storage
-        localStorage.setItem('userData', JSON.stringify(userData));
-    }
-
-    function addIndex(event) {
-        event.preventDefault();
-        
-        // Check if we already have 5 indexes
-        if (indexes.length >= 5) {
-            alert("Maximum of 5 indexes allowed!");
-            return;
+            // Save the updated userData back to local storage
+            localStorage.setItem('userData', JSON.stringify(userData));
         }
 
-        const indexTable = document.getElementById('indexTable').value;
-        const indexColumn = document.getElementById('indexColumn').value;
-        const indexInclude = document.getElementById('indexInclude').value;
+        function addIndex(event) {
+            event.preventDefault();
+            
+            // Check if we already have 5 indexes
+            if (indexes.length >= 5) {
+                alert("Maximum of 5 indexes allowed!");
+                return;
+            }
 
-        // Check for duplicate index (same table and column and include)
-        const isDuplicate = indexes.some(index => 
-            index.table === indexTable && 
-            index.column === indexColumn &&
-            index.include === indexInclude
-        );
+            const indexTable = document.getElementById('indexTable').value;
+            const indexColumn = document.getElementById('indexColumn').value;
+            const indexInclude = document.getElementById('indexInclude').value;
 
-        if (isDuplicate) {
-            alert("An index on this column and include already exists!");
-            return;
+            // Check for duplicate index (same table and column and include)
+            const isDuplicate = indexes.some(index => 
+                index.table === indexTable && 
+                index.column === indexColumn &&
+                index.include === indexInclude
+            );
+
+            if (isDuplicate) {
+                alert("An index on this column and include already exists!");
+                return;
+            }
+
+            if (indexTable && indexColumn && indexInclude) {
+                const newIndex = { table: indexTable, column: indexColumn, include: indexInclude };
+                indexes.push(newIndex);
+
+                document.getElementById('indexTable').value = '';
+                document.getElementById('indexColumn').value = '';
+                document.getElementById('indexInclude').value = '';
+                updateTable();
+            }
         }
 
-        if (indexTable && indexColumn && indexInclude) {
-            const newIndex = { table: indexTable, column: indexColumn, include: indexInclude };
-            indexes.push(newIndex);
-
-            document.getElementById('indexTable').value = '';
-            document.getElementById('indexColumn').value = '';
-            document.getElementById('indexInclude').value = '';
-            updateTable();
+        function deleteIndex(index) {
+            // Remove the index from the local array
+            indexes.splice(index, 1); // Remove the index from the local array
+            updateTable(); // Update the displayed table
         }
-    }
 
-    function deleteIndex(index) {
-        // Remove the index from the local array
-        indexes.splice(index, 1); // Remove the index from the local array
-        updateTable(); // Update the displayed table
-    }
+        function updateTable() {
+            const tableBody = document.getElementById('indexTableBody');
+            tableBody.innerHTML = '';
 
-    function updateTable() {
-        const tableBody = document.getElementById('indexTableBody');
-        tableBody.innerHTML = '';
+            indexes.forEach((index, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index.table}</td>
+                    <td>${index.column}</td>
+                    <td>${index.include}</td>
+                    <td><button onclick="deleteIndex(${i})">Delete</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
 
-        indexes.forEach((index, i) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${index.table}</td>
-                <td>${index.column}</td>
-                <td>${index.include}</td>
-                <td><button onclick="deleteIndex(${i})">Delete</button></td>
-            `;
-            tableBody.appendChild(row);
+        // Load the distraction popup component
+        fetch('../components/distractionEmail.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('distractionPopupContainer').innerHTML = data;
+            })
+            .catch(error => console.error("Error loading distraction popup:", error));
+
+        function showDistractionPopup() {
+            document.getElementById('distractionPopup').style.display = 'block';
+        }
+        function closeDistractionPopup() {
+            document.getElementById('distractionPopup').style.display = 'none';
+        }
+        // Show the distraction popup after 5 seconds
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(showDistractionPopup, 5000);
         });
-    }
-</script>
+    </script>
+</body>
+</html>
