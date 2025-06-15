@@ -66,16 +66,16 @@
     <div class="email-popup-content" id="distractionPopupContent">
         <span class="popup-close" onclick="this.closest('.email-popup-overlay').style.display='none'">&times;</span>
         <div class="email-header">
-            <div class="email-subject">URGENT: DB is a Disaster</div>
-            <div class="email-meta">From: CTO@company.com</div>
+            <div class="email-subject">{{subject}}</div>
+            <div class="email-meta">From: {{from}}</div>
             <div class="email-meta">To: You</div>
             <div class="email-meta">Time: Just now</div>
         </div>
         <div class="email-body">
-            <p>DB is a mess. Customers are furious. Fix it now or I'll find someone who can.</p>
+            <p>{{body}}</p>
         </div>
         <div class="email-signature">
-            - Your CTO
+            {{signature}}
         </div>
     </div>
 </div>
