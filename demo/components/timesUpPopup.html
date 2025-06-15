@@ -1,13 +1,5 @@
-<div id="timesUpPopup" class="popup-overlay" style="display: none;">
-    <div class="popup-content">
-        <h1>Time is Up!</h1>
-        <!-- Every file needs to implement saveToUserData() -->
-        <button id="timesUpPopupSubmitButton" onclick="saveToUserData(); window.location.href='submission.html';">Submit</button>
-    </div>
-</div>
-
 <style>
-    .popup-overlay {
+    .times-up-popup-overlay {
         position: fixed;
         top: 0;
         left: 0;
@@ -20,9 +12,17 @@
         z-index: 1000;
     }
 
-    .popup-content {
+    .times-up-popup-content {
         color: white;
         font-size: 2em;
         text-align: center;
     }
 </style>
+
+<div id="timesUpPopup" class="times-up-popup-overlay" style="display: none;">
+    <div class="times-up-popup-content">
+        <h1>Time is Up!</h1>
+        <!-- Every file needs to implement saveToUserData() -->
+        <button id="timesUpPopupSubmitButton" onclick="saveToUserData(); window.location.href='submission.html';">Submit</button>
+    </div>
+</div>
