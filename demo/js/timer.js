@@ -1,6 +1,6 @@
 // Constant for the total timer duration in seconds
 // Remember to update welcome.html to match this value
-const TIMER_DURATION = 20;
+const TIMER_DURATION = 120;
 
 let timerInterval;
 let hasPlayedSound = false;
