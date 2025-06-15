@@ -11,7 +11,14 @@ function showDistractionPopup() {
             // Replace the static IDs with unique ones
             data = data.replace('id="distractionPopup"', `id="${overlayId}"`);
             data = data.replace('id="distractionPopupContent"', `id="${contentId}"`);
-            document.body.innerHTML += data;
+
+            // Insert the popup before the times up popup container if it exists
+            const timesUpContainer = document.getElementById('timesUpPopupContainer');
+            if (timesUpContainer) {
+                timesUpContainer.insertAdjacentHTML('beforebegin', data);
+            } else {
+                document.body.innerHTML += data;
+            }
 
             // Show the distraction popup (now that it's in the DOM)
             const overlay = document.getElementById(overlayId);
