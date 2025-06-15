@@ -41,33 +41,25 @@ let distractionEmails = [
 // Initialize the email index from localStorage or default to 0
 let currentEmailIndex = parseInt(localStorage.getItem('currentEmailIndex')) || 0;
 
-function showDistractionPopup() {
-    // Get the next email in sequence
-    const email = distractionEmails[currentEmailIndex];
-    currentEmailIndex = (currentEmailIndex + 1) % distractionEmails.length;
-    // Store the updated index in localStorage
-    localStorage.setItem('currentEmailIndex', currentEmailIndex.toString());
+// Get active popups from localStorage or initialize empty array
+let activePopups = JSON.parse(localStorage.getItem('activePopups')) || [];
 
-    // Generate unique IDs for this popup instance
-    const uniqueId = 'distraction_' + currentEmailIndex;
-    const overlayId = uniqueId + '_overlay';
-    const contentId = uniqueId + '_content';
-
-    // Load the distraction popup component
-    fetch('../components/distractionEmail.html')
+// Shared function to create and display a popup
+function createPopup(popupInfo, position = null) {
+    return fetch('../components/distractionEmail.html')
         .then(response => response.text())
         .then(data => {
             // Replace the static IDs with unique ones
-            data = data.replace('id="distractionPopup"', `id="${overlayId}"`);
-            data = data.replace('id="distractionPopupContent"', `id="${contentId}"`);
+            data = data.replace('id="distractionPopup"', `id="${popupInfo.overlayId}"`);
+            data = data.replace('id="distractionPopupContent"', `id="${popupInfo.contentId}"`);
 
             // Replace the email content
-            data = data.replace('{{subject}}', email.subject);
-            data = data.replace('{{from}}', email.from);
-            data = data.replace('{{body}}', email.body);
-            data = data.replace('{{signature}}', email.signature);
+            data = data.replace('{{subject}}', popupInfo.email.subject);
+            data = data.replace('{{from}}', popupInfo.email.from);
+            data = data.replace('{{body}}', popupInfo.email.body);
+            data = data.replace('{{signature}}', popupInfo.email.signature);
 
-            // Insert the popup before the times up popup container if it exists
+            // Insert the popup
             const timesUpContainer = document.getElementById('timesUpPopupContainer');
             if (timesUpContainer) {
                 timesUpContainer.insertAdjacentHTML('beforebegin', data);
@@ -75,37 +67,91 @@ function showDistractionPopup() {
                 document.body.innerHTML += data;
             }
 
-            // Show the distraction popup (now that it's in the DOM)
-            const overlay = document.getElementById(overlayId);
-            const popup = document.getElementById(contentId);
+            // Show the popup
+            const overlay = document.getElementById(popupInfo.overlayId);
+            const popup = document.getElementById(popupInfo.contentId);
             overlay.style.display = 'block';
 
-            // Get viewport size
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
+            // Position the popup
+            if (position) {
+                popup.style.left = position.left + 'px';
+                popup.style.top = position.top + 'px';
+            } else {
+                // Get viewport size
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
 
-            // Get popup size (after display:block)
-            popup.style.left = '0px';
-            popup.style.top = '0px';
-            const rect = popup.getBoundingClientRect();
-            const pw = rect.width;
-            const ph = rect.height;
+                // Get popup size (after display:block)
+                popup.style.left = '0px';
+                popup.style.top = '0px';
+                const rect = popup.getBoundingClientRect();
+                const pw = rect.width;
+                const ph = rect.height;
 
-            // Add buffer zone (50px from edges)
-            const buffer = 50;
-            const maxLeft = Math.max(buffer, vw - pw - buffer);
-            const maxTop = Math.max(buffer, vh - ph - buffer);
-            const left = Math.random() * (maxLeft - buffer) + buffer;
-            const top = Math.random() * (maxTop - buffer) + buffer;
+                // Add buffer zone (50px from edges)
+                const buffer = 50;
+                const maxLeft = Math.max(buffer, vw - pw - buffer);
+                const maxTop = Math.max(buffer, vh - ph - buffer);
+                const left = Math.random() * (maxLeft - buffer) + buffer;
+                const top = Math.random() * (maxTop - buffer) + buffer;
 
-            popup.style.left = left + 'px';
-            popup.style.top = top + 'px';
+                popup.style.left = left + 'px';
+                popup.style.top = top + 'px';
+                
+                // Update position in popupInfo
+                popupInfo.position = { left, top };
+                localStorage.setItem('activePopups', JSON.stringify(activePopups));
+            }
+
+            // Add close handler
+            const closeBtn = overlay.querySelector('.popup-close');
+            closeBtn.onclick = function() {
+                overlay.style.display = 'none';
+                activePopups = activePopups.filter(p => p.id !== popupInfo.id);
+                localStorage.setItem('activePopups', JSON.stringify(activePopups));
+            };
         })
-        .catch(error => console.error("Error loading distraction popup:", error));
+        .catch(error => console.error("Error creating popup:", error));
+}
+
+function showDistractionPopup() {
+    // Get the next email in sequence
+    const email = distractionEmails[currentEmailIndex];
+    currentEmailIndex = (currentEmailIndex + 1) % distractionEmails.length;
+    localStorage.setItem('currentEmailIndex', currentEmailIndex.toString());
+
+    // Generate unique IDs for this popup instance
+    const uniqueId = 'distraction_' + currentEmailIndex;
+    const overlayId = uniqueId + '_overlay';
+    const contentId = uniqueId + '_content';
+
+    // Store popup info in activePopups
+    const popupInfo = {
+        id: uniqueId,
+        overlayId: overlayId,
+        contentId: contentId,
+        email: email,
+        position: null
+    };
+    activePopups.push(popupInfo);
+    localStorage.setItem('activePopups', JSON.stringify(activePopups));
+
+    // Create and show the popup
+    createPopup(popupInfo);
+}
+
+// Function to restore active popups
+function restoreActivePopups() {
+    activePopups.forEach(popupInfo => {
+        createPopup(popupInfo, popupInfo.position);
+    });
 }
 
 // Start showing popups every second until time runs out
 window.addEventListener('DOMContentLoaded', function() {
+    // Restore any existing popups first
+    restoreActivePopups();
+    
     // Add initial 10 second delay
     setTimeout(() => {
         const emailInterval = setInterval(() => {
