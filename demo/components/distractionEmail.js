@@ -12,6 +12,8 @@ function showDistractionPopup() {
             data = data.replace('id="distractionPopup"', `id="${overlayId}"`);
             data = data.replace('id="distractionPopupContent"', `id="${contentId}"`);
 
+            
+
             // Insert the popup before the times up popup container if it exists
             const timesUpContainer = document.getElementById('timesUpPopupContainer');
             if (timesUpContainer) {
@@ -47,14 +49,6 @@ function showDistractionPopup() {
             popup.style.top = top + 'px';
         })
         .catch(error => console.error("Error loading distraction popup:", error));
-}
-
-function closeDistractionPopup() {
-    // Find all distraction popups and close them
-    const popups = document.querySelectorAll('[id^="distraction_"]');
-    popups.forEach(popup => {
-        popup.style.display = 'none';
-    });
 }
 
 // Start showing popups every second until time runs out

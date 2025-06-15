@@ -64,7 +64,7 @@
 
 <div class="email-popup-overlay" id="distractionPopup" style="display:none;">
     <div class="email-popup-content" id="distractionPopupContent">
-        <span class="popup-close" onclick="closeDistractionPopup()">&times;</span>
+        <span class="popup-close" onclick="this.closest('.email-popup-overlay').style.display='none'">&times;</span>
         <div class="email-header">
             <div class="email-subject">URGENT: DB is a Disaster</div>
             <div class="email-meta">From: CTO@company.com</div>
