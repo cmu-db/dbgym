@@ -49,7 +49,7 @@ function showDistractionPopup() {
     localStorage.setItem('currentEmailIndex', currentEmailIndex.toString());
 
     // Generate unique IDs for this popup instance
-    const uniqueId = 'distraction_' + Date.now();
+    const uniqueId = 'distraction_' + currentEmailIndex;
     const overlayId = uniqueId + '_overlay';
     const contentId = uniqueId + '_content';
 
