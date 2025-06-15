@@ -342,20 +342,5 @@
             document.getElementById('distractionPopupContainer').innerHTML = data;
         })
         .catch(error => console.error("Error loading distraction popup:", error));
-
-    // Show the distraction popup when timer hits 115 seconds
-    window.addEventListener('DOMContentLoaded', function() {
-        const checkTimer = setInterval(() => {
-            const timerDisplay = document.getElementById('timerDisplay');
-            const timeText = timerDisplay.innerText;
-            const remainingTime = parseFloat(timeText);
-            const distractionShown = localStorage.getItem('distractionShown');
-            
-            if (!distractionShown && remainingTime <= 120) {
-                showDistractionPopup();
-                clearInterval(checkTimer);
-            }
-        }, 100);
-    });
 </script>
 </html>

@@ -27,3 +27,10 @@ function showDistractionPopup() {
 function closeDistractionPopup() {
     document.getElementById('distractionPopup').style.display = 'none';
 }
+
+// Start showing popups every 5 seconds
+window.addEventListener('DOMContentLoaded', function() {
+    setInterval(() => {
+        showDistractionPopup();
+    }, 1000);
+});
