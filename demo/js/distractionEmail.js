@@ -4,37 +4,43 @@ let distractionEmails = [
         subject: "HELP! Database broken!",
         from: "intern@company.com",
         body: "I think I broke the database... all the queries are slow. Should I turn it off and on again?",
-        signature: "- The Intern"
+        signature: "- The Intern",
+        sound: new Audio("../sounds/youve-got-mail.mp3")
     },
     {
         subject: "URGENT: Database Crisis",
         from: "cto@company.com",
         body: "Fix the database now or you're fired. Customers are leaving.",
-        signature: "- Your CTO"
+        signature: "- Your CTO",
+        sound: new Audio("../sounds/futuristic-ding.mp3")
     },
     {
         subject: "We need to talk about Alex",
         from: "spouse@personal.com",
         body: "I've been seeing a lot of messages from someone named Alex. Who is this person? Are you hiding something from me?",
-        signature: "- Your Spouse"
+        signature: "- Your Spouse",
+        sound: new Audio("../sounds/four-bells.mp3")
     },
     {
         subject: "Your Replacement is Being Hired",
         from: "cto@company.com",
         body: "I've already posted your job on LinkedIn. Better hurry up with that database fix if you want to keep it.",
-        signature: "- Your CTO"
+        signature: "- Your CTO",
+        sound: new Audio("../sounds/email.mp3")
     },
     {
         subject: "Taking Over Database Fix",
         from: "coworker@company.com",
         body: "Hey, I've started working on the database fix. The CTO says I'll get your job if I solve it first. Just FYI 😉",
-        signature: "- Your 'Friend' at Work"
+        signature: "- Your 'Friend' at Work",
+        sound: new Audio("../sounds/boing.mp3")
     },
     {
         subject: "Intern's Gone, You're Next",
         from: "cto@company.com",
         body: "Just fired the intern for breaking the database. You're the only one left to blame. Clock is ticking.",
-        signature: "- Your CTO"
+        signature: "- Your CTO",
+        sound: new Audio("../sounds/tune.mp3")
     }
 ];
 
@@ -49,6 +55,11 @@ let shownThresholds = JSON.parse(localStorage.getItem('shownThresholds')) || [];
 
 // Shared function to create and display a popup
 function createPopup(popupInfo, position = null) {
+    // Play notification sound for new emails (not for restored ones)
+    if (!position) {
+        popupInfo.email.sound.play().catch(error => console.error("Error playing sound:", error));
+    }
+
     return fetch('../components/distractionEmail.html')
         .then(response => response.text())
         .then(data => {
@@ -166,8 +177,9 @@ window.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Show popups at specific time thresholds (115s, 95s, 75s, etc.)
-        const thresholds = [115, 95, 75, 55, 35, 15];
+        // Show popups at specific time thresholds (85s, 70s, etc.)
+        // const thresholds = [85, 70, 55, 40, 25, 10];
+        const thresholds = [88, 86, 84, 82, 80, 78];
         thresholds.forEach(threshold => {
             if (remainingTime <= threshold && !shownThresholds.includes(threshold)) {
                 showDistractionPopup();
