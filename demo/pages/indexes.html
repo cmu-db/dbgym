@@ -356,7 +356,7 @@
             const remainingTime = parseFloat(timeText);
             const distractionShown = localStorage.getItem('distractionShown');
             
-            if (!distractionShown && remainingTime <= 115 && remainingTime > 114.9) {
+            if (!distractionShown && remainingTime <= 120) {
                 showDistractionPopup();
                 clearInterval(checkTimer);
             }
