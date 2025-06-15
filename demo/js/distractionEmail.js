@@ -38,13 +38,15 @@ let distractionEmails = [
     }
 ];
 
-// Initialize the email index
-let currentEmailIndex = 0;
+// Initialize the email index from localStorage or default to 0
+let currentEmailIndex = parseInt(localStorage.getItem('currentEmailIndex')) || 0;
 
 function showDistractionPopup() {
     // Get the next email in sequence
     const email = distractionEmails[currentEmailIndex];
     currentEmailIndex = (currentEmailIndex + 1) % distractionEmails.length;
+    // Store the updated index in localStorage
+    localStorage.setItem('currentEmailIndex', currentEmailIndex.toString());
 
     // Generate unique IDs for this popup instance
     const uniqueId = 'distraction_' + Date.now();
