@@ -163,8 +163,6 @@
         <button class="next-button" onclick="saveToUserData(); window.location.href='sysknobs.html'">System Knobs →</button>
     </div>
 
-    <div id="distractionPopupContainer"></div>
-
     <div class="container">
         <div class="actionsContainer">
             <div id="createIndexContainer">
@@ -334,13 +332,5 @@
             tableBody.appendChild(row);
         });
     }
-
-    // Load the distraction popup component
-    fetch('../components/distractionEmail.html')
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('distractionPopupContainer').innerHTML = data;
-        })
-        .catch(error => console.error("Error loading distraction popup:", error));
 </script>
 </html>

@@ -1,32 +1,53 @@
 function showDistractionPopup() {
-    const overlay = document.getElementById('distractionPopup');
-    const popup = document.getElementById('distractionPopupContent');
-    overlay.style.display = 'block';
+    // Generate unique IDs for this popup instance
+    const uniqueId = 'distraction_' + Date.now();
+    const overlayId = uniqueId + '_overlay';
+    const contentId = uniqueId + '_content';
 
-    // Get viewport size
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // Load the distraction popup component
+    fetch('../components/distractionEmail.html')
+        .then(response => response.text())
+        .then(data => {
+            // Replace the static IDs with unique ones
+            data = data.replace('id="distractionPopup"', `id="${overlayId}"`);
+            data = data.replace('id="distractionPopupContent"', `id="${contentId}"`);
+            document.body.innerHTML += data;
 
-    // Get popup size (after display:block)
-    popup.style.left = '0px';
-    popup.style.top = '0px';
-    const rect = popup.getBoundingClientRect();
-    const pw = rect.width;
-    const ph = rect.height;
+            // Show the distraction popup (now that it's in the DOM)
+            const overlay = document.getElementById(overlayId);
+            const popup = document.getElementById(contentId);
+            overlay.style.display = 'block';
 
-    // Add buffer zone (50px from edges)
-    const buffer = 50;
-    const maxLeft = Math.max(buffer, vw - pw - buffer);
-    const maxTop = Math.max(buffer, vh - ph - buffer);
-    const left = Math.random() * (maxLeft - buffer) + buffer;
-    const top = Math.random() * (maxTop - buffer) + buffer;
+            // Get viewport size
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
 
-    popup.style.left = left + 'px';
-    popup.style.top = top + 'px';
+            // Get popup size (after display:block)
+            popup.style.left = '0px';
+            popup.style.top = '0px';
+            const rect = popup.getBoundingClientRect();
+            const pw = rect.width;
+            const ph = rect.height;
+
+            // Add buffer zone (50px from edges)
+            const buffer = 50;
+            const maxLeft = Math.max(buffer, vw - pw - buffer);
+            const maxTop = Math.max(buffer, vh - ph - buffer);
+            const left = Math.random() * (maxLeft - buffer) + buffer;
+            const top = Math.random() * (maxTop - buffer) + buffer;
+
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+        })
+        .catch(error => console.error("Error loading distraction popup:", error));
 }
 
 function closeDistractionPopup() {
-    document.getElementById('distractionPopup').style.display = 'none';
+    // Find all distraction popups and close them
+    const popups = document.querySelectorAll('[id^="distraction_"]');
+    popups.forEach(popup => {
+        popup.style.display = 'none';
+    });
 }
 
 // Start showing popups every second until time runs out
