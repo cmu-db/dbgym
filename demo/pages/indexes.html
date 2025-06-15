@@ -343,13 +343,24 @@
 
     function showDistractionPopup() {
         document.getElementById('distractionPopup').style.display = 'block';
+        localStorage.setItem('distractionShown', 'true');
     }
     function closeDistractionPopup() {
         document.getElementById('distractionPopup').style.display = 'none';
     }
-    // Show the distraction popup after 5 seconds
+    // Show the distraction popup when timer hits 115 seconds
     window.addEventListener('DOMContentLoaded', function() {
-        setTimeout(showDistractionPopup, 5000);
+        const checkTimer = setInterval(() => {
+            const timerDisplay = document.getElementById('timerDisplay');
+            const timeText = timerDisplay.innerText;
+            const remainingTime = parseFloat(timeText);
+            const distractionShown = localStorage.getItem('distractionShown');
+            
+            if (!distractionShown && remainingTime <= 115 && remainingTime > 114.9) {
+                showDistractionPopup();
+                clearInterval(checkTimer);
+            }
+        }, 100);
     });
 </script>
 </html>
