@@ -1,37 +1,55 @@
+// Global array of distraction emails
+let distractionEmails = [
+    {
+        subject: "Urgent: Meeting Tomorrow",
+        from: "boss@company.com",
+        body: "Hi there, I need to confirm your attendance for tomorrow's important strategy meeting at 10 AM. Please respond ASAP.",
+        signature: "- Your Boss"
+    },
+    {
+        subject: "Your Package Delivery",
+        from: "delivery@amazon.com",
+        body: "Your package #12345 has been delivered to your front porch. Please confirm receipt.",
+        signature: "- Amazon Delivery"
+    },
+    {
+        subject: "Password Reset Request",
+        from: "security@company.com",
+        body: "We noticed unusual activity on your account. Please reset your password immediately.",
+        signature: "- Security Team"
+    },
+    {
+        subject: "New Message from LinkedIn",
+        from: "notifications@linkedin.com",
+        body: "You have 3 new connection requests and 2 unread messages waiting for you.",
+        signature: "- LinkedIn Team"
+    },
+    {
+        subject: "Your Subscription is Expiring",
+        from: "support@netflix.com",
+        body: "Your premium subscription will expire in 3 days. Click here to renew now.",
+        signature: "- Netflix Support"
+    }
+];
+
+// Shuffle the array using Fisher-Yates algorithm
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Initialize the email index
+let currentEmailIndex = 0;
+
+// Shuffle the emails when the script loads
+shuffleArray(distractionEmails);
+
 function showDistractionPopup() {
-    // List of possible distraction emails
-    const distractionEmails = [
-        {
-            subject: "Urgent: Meeting Tomorrow",
-            from: "boss@company.com",
-            body: "Hi there, I need to confirm your attendance for tomorrow's important strategy meeting at 10 AM. Please respond ASAP.",
-            signature: "- Your Boss"
-        },
-        {
-            subject: "Your Package Delivery",
-            from: "delivery@amazon.com",
-            body: "Your package #12345 has been delivered to your front porch. Please confirm receipt.",
-            signature: "- Amazon Delivery"
-        },
-        {
-            subject: "Password Reset Request",
-            from: "security@company.com",
-            body: "We noticed unusual activity on your account. Please reset your password immediately.",
-            signature: "- Security Team"
-        },
-        {
-            subject: "New Message from LinkedIn",
-            from: "notifications@linkedin.com",
-            body: "You have 3 new connection requests and 2 unread messages waiting for you.",
-            signature: "- LinkedIn Team"
-        },
-        {
-            subject: "Your Subscription is Expiring",
-            from: "support@netflix.com",
-            body: "Your premium subscription will expire in 3 days. Click here to renew now.",
-            signature: "- Netflix Support"
-        }
-    ];
+    // Get the next email in sequence
+    const email = distractionEmails[currentEmailIndex];
+    currentEmailIndex = (currentEmailIndex + 1) % distractionEmails.length;
 
     // Generate unique IDs for this popup instance
     const uniqueId = 'distraction_' + Date.now();
@@ -46,12 +64,11 @@ function showDistractionPopup() {
             data = data.replace('id="distractionPopup"', `id="${overlayId}"`);
             data = data.replace('id="distractionPopupContent"', `id="${contentId}"`);
 
-            // Randomly select an email from the list
-            const randomEmail = distractionEmails[Math.floor(Math.random() * distractionEmails.length)];
-            data = data.replace('{{subject}}', randomEmail.subject);
-            data = data.replace('{{from}}', randomEmail.from);
-            data = data.replace('{{body}}', randomEmail.body);
-            data = data.replace('{{signature}}', randomEmail.signature);
+            // Replace the email content
+            data = data.replace('{{subject}}', email.subject);
+            data = data.replace('{{from}}', email.from);
+            data = data.replace('{{body}}', email.body);
+            data = data.replace('{{signature}}', email.signature);
 
             // Insert the popup before the times up popup container if it exists
             const timesUpContainer = document.getElementById('timesUpPopupContainer');
