@@ -5,8 +5,8 @@
         position: fixed;
         top: 0; left: 0;
         width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.5);
         z-index: 1000;
+        pointer-events: none;
     }
     .email-popup-overlay[style*="block"] {
         display: flex !important;
@@ -23,6 +23,7 @@
         position: relative;
         font-family: Arial, sans-serif;
         border: 1px solid #d3d3d3;
+        pointer-events: auto;
     }
     .popup-close {
         position: absolute;
