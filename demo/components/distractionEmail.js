@@ -14,11 +14,12 @@ function showDistractionPopup() {
     const pw = rect.width;
     const ph = rect.height;
 
-    // Calculate random position (ensure popup stays within viewport)
-    const maxLeft = Math.max(0, vw - pw);
-    const maxTop = Math.max(0, vh - ph);
-    const left = Math.random() * maxLeft;
-    const top = Math.random() * maxTop;
+    // Add buffer zone (50px from edges)
+    const buffer = 50;
+    const maxLeft = Math.max(buffer, vw - pw - buffer);
+    const maxTop = Math.max(buffer, vh - ph - buffer);
+    const left = Math.random() * (maxLeft - buffer) + buffer;
+    const top = Math.random() * (maxTop - buffer) + buffer;
 
     popup.style.left = left + 'px';
     popup.style.top = top + 'px';
@@ -28,9 +29,17 @@ function closeDistractionPopup() {
     document.getElementById('distractionPopup').style.display = 'none';
 }
 
-// Start showing popups every 5 seconds
+// Start showing popups every second until time runs out
 window.addEventListener('DOMContentLoaded', function() {
-    setInterval(() => {
-        showDistractionPopup();
+    const emailInterval = setInterval(() => {
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timeText = timerDisplay.innerText;
+        const remainingTime = parseFloat(timeText);
+        
+        if (remainingTime <= 0) {
+            clearInterval(emailInterval);
+        } else {
+            showDistractionPopup();
+        }
     }, 1000);
 });
