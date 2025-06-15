@@ -44,6 +44,9 @@ let currentEmailIndex = parseInt(localStorage.getItem('currentEmailIndex')) || 0
 // Get active popups from localStorage or initialize empty array
 let activePopups = JSON.parse(localStorage.getItem('activePopups')) || [];
 
+// Get shown thresholds from localStorage or initialize empty array
+let shownThresholds = JSON.parse(localStorage.getItem('shownThresholds')) || [];
+
 // Shared function to create and display a popup
 function createPopup(popupInfo, position = null) {
     return fetch('../components/distractionEmail.html')
@@ -147,23 +150,30 @@ function restoreActivePopups() {
     });
 }
 
-// Start showing popups every second until time runs out
+// Start showing popups based on remaining time
 window.addEventListener('DOMContentLoaded', function() {
     // Restore any existing popups first
     restoreActivePopups();
     
-    // Add initial 10 second delay
-    setTimeout(() => {
-        const emailInterval = setInterval(() => {
-            const timerDisplay = document.getElementById('timerDisplay');
-            const timeText = timerDisplay.innerText;
-            const remainingTime = parseFloat(timeText);
-            
-            if (remainingTime <= 0) {
-                clearInterval(emailInterval);
-            } else {
+    // Check timer every second
+    const checkInterval = setInterval(() => {
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timeText = timerDisplay.innerText;
+        const remainingTime = parseFloat(timeText);
+        
+        if (remainingTime <= 0) {
+            clearInterval(checkInterval);
+            return;
+        }
+
+        // Show popups at specific time thresholds (115s, 95s, 75s, etc.)
+        const thresholds = [115, 95, 75, 55, 35, 15];
+        thresholds.forEach(threshold => {
+            if (remainingTime <= threshold && !shownThresholds.includes(threshold)) {
                 showDistractionPopup();
+                shownThresholds.push(threshold);
+                localStorage.setItem('shownThresholds', JSON.stringify(shownThresholds));
             }
-        }, 5000);
-    }, 1000);
+        });
+    }, 500);
 });
