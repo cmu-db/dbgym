@@ -178,8 +178,8 @@ window.addEventListener('DOMContentLoaded', function() {
         }
 
         // Show popups at specific time thresholds (85s, 70s, etc.)
-        // const thresholds = [85, 70, 55, 40, 25, 10];
-        const thresholds = [88, 86, 84, 82, 80, 78];
+        const thresholds = [85, 70, 55, 40, 25, 10];
+        // const thresholds = [88, 86, 84, 82, 80, 78];
         thresholds.forEach(threshold => {
             if (remainingTime <= threshold && !shownThresholds.includes(threshold)) {
                 showDistractionPopup();

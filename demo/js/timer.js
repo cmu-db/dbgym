@@ -1,8 +1,10 @@
 // Constant for the total timer duration in seconds
 // Remember to update welcome.html to match this value
-const TIMER_DURATION = 90;
+const TIMER_DURATION = 3;
 
 let timerInterval;
+let hasPlayedSound = false;
+const timesUpSound = new Audio('../sounds/times-up.mp3');
 
 function startTimer() {
     const startTime = Date.now();
@@ -35,9 +37,11 @@ function setText(startTime) {
         const remainingTime = Math.max(0, TIMER_DURATION - elapsedTime);
         document.getElementById('timerDisplay').innerText = `${remainingTime.toFixed(1)}s Remaining`;
 
-        // Show the popup when time is up
-        if (remainingTime <= 0) {
+        // Show the popup and play sound when time is up
+        if (remainingTime <= 0 && !hasPlayedSound) {
             document.getElementById('timesUpPopup').style.display = 'flex';
+            timesUpSound.play().catch(error => console.error("Error playing sound:", error));
+            hasPlayedSound = true;
         }
     }
 }
