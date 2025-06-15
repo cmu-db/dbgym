@@ -261,6 +261,8 @@
     </div>
 </body>
 
+<script src="../components/distractionEmail.js"></script>
+
 <script>
     let indexes = []; // Local array to hold indexes
 
@@ -341,13 +343,6 @@
         })
         .catch(error => console.error("Error loading distraction popup:", error));
 
-    function showDistractionPopup() {
-        document.getElementById('distractionPopup').style.display = 'block';
-        localStorage.setItem('distractionShown', 'true');
-    }
-    function closeDistractionPopup() {
-        document.getElementById('distractionPopup').style.display = 'none';
-    }
     // Show the distraction popup when timer hits 115 seconds
     window.addEventListener('DOMContentLoaded', function() {
         const checkTimer = setInterval(() => {

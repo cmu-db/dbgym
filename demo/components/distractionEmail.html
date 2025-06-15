@@ -8,11 +8,6 @@
         z-index: 1000;
         pointer-events: none;
     }
-    .email-popup-overlay[style*="block"] {
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-    }
     .email-popup-content {
         background: #fff;
         border-radius: 10px;
@@ -20,7 +15,7 @@
         padding: 0;
         max-width: 420px;
         width: 90vw;
-        position: relative;
+        position: absolute;
         font-family: Arial, sans-serif;
         border: 1px solid #d3d3d3;
         pointer-events: auto;
@@ -68,7 +63,7 @@
 </style>
 
 <div class="email-popup-overlay" id="distractionPopup" style="display:none;">
-    <div class="email-popup-content">
+    <div class="email-popup-content" id="distractionPopupContent">
         <span class="popup-close" onclick="closeDistractionPopup()">&times;</span>
         <div class="email-header">
             <div class="email-subject">URGENT: DB is a Disaster</div>
@@ -83,4 +78,4 @@
             - Your CTO
         </div>
     </div>
-</div> 
+</div>
