@@ -1,50 +1,45 @@
 // Global array of distraction emails
 let distractionEmails = [
     {
-        subject: "Urgent: Meeting Tomorrow",
-        from: "boss@company.com",
-        body: "Hi there, I need to confirm your attendance for tomorrow's important strategy meeting at 10 AM. Please respond ASAP.",
-        signature: "- Your Boss"
+        subject: "HELP! Database broken!",
+        from: "intern@company.com",
+        body: "I think I broke the database... all the queries are slow. Should I turn it off and on again?",
+        signature: "- The Intern"
     },
     {
-        subject: "Your Package Delivery",
-        from: "delivery@amazon.com",
-        body: "Your package #12345 has been delivered to your front porch. Please confirm receipt.",
-        signature: "- Amazon Delivery"
+        subject: "URGENT: Database Crisis",
+        from: "cto@company.com",
+        body: "Fix the database now or you're fired. Customers are leaving.",
+        signature: "- Your CTO"
     },
     {
-        subject: "Password Reset Request",
-        from: "security@company.com",
-        body: "We noticed unusual activity on your account. Please reset your password immediately.",
-        signature: "- Security Team"
+        subject: "We need to talk about Alex",
+        from: "spouse@personal.com",
+        body: "I've been seeing a lot of messages from someone named Alex. Who is this person? Are you hiding something from me?",
+        signature: "- Your Spouse"
     },
     {
-        subject: "New Message from LinkedIn",
-        from: "notifications@linkedin.com",
-        body: "You have 3 new connection requests and 2 unread messages waiting for you.",
-        signature: "- LinkedIn Team"
+        subject: "Your Replacement is Being Hired",
+        from: "cto@company.com",
+        body: "I've already posted your job on LinkedIn. Better hurry up with that database fix if you want to keep it.",
+        signature: "- Your CTO"
     },
     {
-        subject: "Your Subscription is Expiring",
-        from: "support@netflix.com",
-        body: "Your premium subscription will expire in 3 days. Click here to renew now.",
-        signature: "- Netflix Support"
+        subject: "Taking Over Database Fix",
+        from: "coworker@company.com",
+        body: "Hey, I've started working on the database fix. The CTO says I'll get your job if I solve it first. Just FYI 😉",
+        signature: "- Your 'Friend' at Work"
+    },
+    {
+        subject: "Intern's Gone, You're Next",
+        from: "cto@company.com",
+        body: "Just fired the intern for breaking the database. You're the only one left to blame. Clock is ticking.",
+        signature: "- Your CTO"
     }
 ];
 
-// Shuffle the array using Fisher-Yates algorithm
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
 // Initialize the email index
 let currentEmailIndex = 0;
-
-// Shuffle the emails when the script loads
-shuffleArray(distractionEmails);
 
 function showDistractionPopup() {
     // Get the next email in sequence
@@ -109,15 +104,18 @@ function showDistractionPopup() {
 
 // Start showing popups every second until time runs out
 window.addEventListener('DOMContentLoaded', function() {
-    const emailInterval = setInterval(() => {
-        const timerDisplay = document.getElementById('timerDisplay');
-        const timeText = timerDisplay.innerText;
-        const remainingTime = parseFloat(timeText);
-        
-        if (remainingTime <= 0) {
-            clearInterval(emailInterval);
-        } else {
-            showDistractionPopup();
-        }
-    }, 1000);
+    // Add initial 10 second delay
+    setTimeout(() => {
+        const emailInterval = setInterval(() => {
+            const timerDisplay = document.getElementById('timerDisplay');
+            const timeText = timerDisplay.innerText;
+            const remainingTime = parseFloat(timeText);
+            
+            if (remainingTime <= 0) {
+                clearInterval(emailInterval);
+            } else {
+                showDistractionPopup();
+            }
+        }, 20000);
+    }, 10000);
 });
