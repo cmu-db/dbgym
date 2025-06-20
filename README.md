@@ -56,8 +56,30 @@ The first prototype was written by [Patrick Wang](https://github.com/wangpatrick
 
 ## Citing This Repository
 
-If you use this repository in an academic paper, please cite:
+If you use this repository in an academic paper, please cite one or more of the following based on your usage:
 
+### Reference Implementation (`dbgym`)
+```
+@inproceedings{10.1145/3722212.3725083,
+  author = {Wang, Patrick and Lim, Wan Shen and Zhang, William and Arch, Samuel and Pavlo, Andrew},
+  title = {Automated Database Tuning vs. Human-Based Tuning in a Simulated Stressful Work Environment: A Demonstration of the Database Gym},
+  year = {2025},
+  isbn = {9798400715648},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/3722212.3725083},
+  doi = {10.1145/3722212.3725083},
+  abstract = {Machine learning (ML) has gained traction in academia and industry for database management system (DBMS) automation. Although studies demonstrate that ML-based tuning agents match or exceed human expert performance in optimizing DBMSs, researchers continue to build bespoke tuning pipelines from the ground up. The lack of a reusable infrastructure leads to redundant engineering effort and increased difficulty in comparing modeling methods. This paper demonstrates the database gym framework, a standardized training environment that provides a unified API of pluggable components. The database gym simplifies ML model training and evaluation to accelerate autonomous DBMS research. In this demonstration, we showcase the effectiveness of automated tuning and the gym's ease of use by allowing a human expert to compete against an ML-based tuning agent implemented in the gym.},
+  booktitle = {Companion of the 2025 International Conference on Management of Data},
+  pages = {247–250},
+  numpages = {4},
+  keywords = {OpenAI gym, automated database tuning, database systems},
+  location = {Berlin, Germany},
+  series = {SIGMOD/PODS '25}
+}
+```
+
+### General Idea (Database Gyms)
 ```
 @inproceedings{lim23,
   author = {Lim, Wan Shen and Butrovich, Matthew and Zhang, William and Crotty, Andrew and Ma, Lin and Xu, Peijing and Gehrke, Johannes and Pavlo, Andrew},
@@ -68,18 +90,30 @@ If you use this repository in an academic paper, please cite:
  }
 ```
 
-Additionally, please cite any module-specific paper that is relevant to your use.
-
-**Accelerating Training Data Generation**
-
+### Accelerating Training Data Generation
 ```
-(citation pending)
-Boot, appearing at VLDB 2024.
+@article{lim24boot,
+  author = {Lim, Wan Shen and Ma, Lin and Zhang, William and Butrovich, Matthew and Arch, Samuel I and Pavlo, Andrew},
+  title = {Hit the Gym: Accelerating Query Execution to Efficiently Bootstrap Behavior Models for Self-Driving Database Management Systems},
+  journal = {Proc. {VLDB} Endow.},
+  volume = {17},
+  number = {11},
+  pages = {3680--3693},
+  year = {2024},
+  url = {https://www.vldb.org/pvldb/vol17/p3680-lim.pdf},
+}
 ```
 
-**Simultaneously Tuning Multiple Configuration Spaces with Proto Actions**
-
+### Simultaneously Tuning Multiple Configuration Spaces with Proto Actions
 ```
-(citation pending)
-Proto-X, appearing at VLDB 2024.
+@article{zhang24holon,
+  author = {Zhang, William and Lim, Wan Shen and Butrovich, Matthew and Pavlo, Andrew},
+  title = {The Holon Approach for Simultaneously Tuning Multiple Components in a Self-Driving Database Management System with Machine Learning via Synthesized Proto-Actions},
+  journal = {Proc. {VLDB} Endow.},
+  volume = {17},
+  number = {11},
+  pages = {3373--3387},
+  year = {2024},
+  url = {https://www.vldb.org/pvldb/vol17/p3373-zhang.pdf},
+}
 ```
