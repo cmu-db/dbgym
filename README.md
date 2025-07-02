@@ -60,22 +60,16 @@ If you use this repository in an academic paper, please cite one or more of the 
 
 ### Reference Implementation (`dbgym`)
 ```
-@inproceedings{10.1145/3722212.3725083,
+@inproceedings{wang25demo,
   author = {Wang, Patrick and Lim, Wan Shen and Zhang, William and Arch, Samuel and Pavlo, Andrew},
   title = {Automated Database Tuning vs. Human-Based Tuning in a Simulated Stressful Work Environment: A Demonstration of the Database Gym},
   year = {2025},
-  isbn = {9798400715648},
-  publisher = {Association for Computing Machinery},
-  address = {New York, NY, USA},
-  url = {https://doi.org/10.1145/3722212.3725083},
   doi = {10.1145/3722212.3725083},
-  abstract = {Machine learning (ML) has gained traction in academia and industry for database management system (DBMS) automation. Although studies demonstrate that ML-based tuning agents match or exceed human expert performance in optimizing DBMSs, researchers continue to build bespoke tuning pipelines from the ground up. The lack of a reusable infrastructure leads to redundant engineering effort and increased difficulty in comparing modeling methods. This paper demonstrates the database gym framework, a standardized training environment that provides a unified API of pluggable components. The database gym simplifies ML model training and evaluation to accelerate autonomous DBMS research. In this demonstration, we showcase the effectiveness of automated tuning and the gym's ease of use by allowing a human expert to compete against an ML-based tuning agent implemented in the gym.},
   booktitle = {Companion of the 2025 International Conference on Management of Data},
-  pages = {247–250},
+  pages = {247--250},
   numpages = {4},
-  keywords = {OpenAI gym, automated database tuning, database systems},
-  location = {Berlin, Germany},
-  series = {SIGMOD/PODS '25}
+  series = {SIGMOD/PODS '25},
+  url = {https://db.cs.cmu.edu/papers/2025/wang-sigmoddemo2025.pdf},
 }
 ```
 
